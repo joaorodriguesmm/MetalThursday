@@ -1,61 +1,98 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# MetalThursday 🤘
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Website oficial do **MetalThursday**, desenvolvido em [Laravel](https://laravel.com).
 
-## About Laravel
+![Version](https://img.shields.io/badge/version-1.0.0-red)
+![Laravel](https://img.shields.io/badge/Laravel-framework-red?logo=laravel)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 📖 Sobre o projeto
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+O MetalThursday é uma aplicação web construída com Laravel, PHP, Blade, JavaScript e SCSS.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+> ✏️ _Substitui este parágrafo por uma descrição mais detalhada do projeto: o que é o MetalThursday, para que serve, e quem é o público-alvo._
 
-## Learning Laravel
+## 🛠️ Tecnologias
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+- **Backend:** PHP / Laravel
+- **Templates:** Blade
+- **Frontend:** JavaScript, SCSS
+- **Build tool:** Vite
+- **Gestor de dependências:** Composer + NPM
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## 🚀 Instalação
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Pré-requisitos
 
-## Laravel Sponsors
+- PHP >= 8.1
+- Composer
+- Node.js + NPM
+- Base de dados (MySQL/MariaDB/SQLite, conforme configurado em `.env`)
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### Passos
 
-### Premium Partners
+```bash
+# 1. Clonar o repositório
+git clone https://github.com/Joao-Rodrigues-Multimedia/MetalThursday.git
+cd MetalThursday
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+# 2. Instalar dependências PHP
+composer install
 
-## Contributing
+# 3. Instalar dependências JavaScript
+npm install
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+# 4. Configurar o ambiente
+cp .env.example .env
+php artisan key:generate
 
-## Code of Conduct
+# 5. Configurar a base de dados no ficheiro .env e depois correr as migrações
+php artisan migrate
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+# 6. Compilar os assets (frontend)
+npm run dev
+# ou, para produção:
+npm run build
 
-## Security Vulnerabilities
+# 7. Iniciar o servidor local
+php artisan serve
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+A aplicação ficará disponível em `http://localhost:8000`.
 
-## License
+## 📂 Estrutura do projeto
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```
+MetalThursday/
+├── app/          # Lógica da aplicação (Controllers, Models, etc.)
+├── bootstrap/    # Ficheiros de arranque da framework
+├── config/       # Ficheiros de configuração
+├── database/     # Migrações, seeders e factories
+├── lang/         # Ficheiros de tradução
+├── public/       # Ponto de entrada público
+├── resources/    # Views (Blade), CSS/SCSS, JS
+├── routes/       # Definição de rotas
+└── storage/      # Ficheiros gerados/logs/cache
+```
+
+## 🗺️ Roadmap
+
+- [ ] _(adicionar próximas funcionalidades planeadas)_
+
+## 🤝 Contribuir
+
+Contribuições são bem-vindas! Para contribuir:
+
+1. Faz um fork do repositório
+2. Cria uma branch para a tua funcionalidade (`git checkout -b feature/nome-da-funcionalidade`)
+3. Faz commit das alterações (`git commit -m 'Adiciona nova funcionalidade'`)
+4. Faz push para a branch (`git push origin feature/nome-da-funcionalidade`)
+5. Abre um Pull Request
+
+## 📄 Licença
+
+Este projeto está licenciado sob a licença MIT — consulta o ficheiro [LICENSE](LICENSE) para mais detalhes.
+
+## 📌 Versão atual
+
+**v1.0.0** — consulta o [CHANGELOG.md](CHANGELOG.md) para o histórico de alterações.
