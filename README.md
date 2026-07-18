@@ -1,16 +1,12 @@
 # MetalThursday 🤘
 
-Website oficial do **MetalThursday**, desenvolvido em [Laravel](https://laravel.com).
-
 ![Version](https://img.shields.io/badge/version-1.0.0-red)
 ![Laravel](https://img.shields.io/badge/Laravel-framework-red?logo=laravel)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 ## 📖 Sobre o projeto
 
-O MetalThursday é uma aplicação web construída com Laravel, PHP, Blade, JavaScript e SCSS.
-
-> ✏️ _Substitui este parágrafo por uma descrição mais detalhada do projeto: o que é o MetalThursday, para que serve, e quem é o público-alvo._
+O **MetalThursday** é o website de uma rubrica semanal, criada por um grupo de amigos, dedicada à partilha de álbuns e músicas de metal. Todas as quintas-feiras, o grupo reúne e divulga as suas descobertas e recomendações dentro do género, num espaço próprio para preservar e organizar essas partilhas ao longo do tempo.
 
 ## 🛠️ Tecnologias
 
@@ -75,19 +71,9 @@ MetalThursday/
 └── storage/      # Ficheiros gerados/logs/cache
 ```
 
-## 🗺️ Roadmap
+## 🔒 Projeto fechado
 
-- [ ] _(adicionar próximas funcionalidades planeadas)_
-
-## 🤝 Contribuir
-
-Contribuições são bem-vindas! Para contribuir:
-
-1. Faz um fork do repositório
-2. Cria uma branch para a tua funcionalidade (`git checkout -b feature/nome-da-funcionalidade`)
-3. Faz commit das alterações (`git commit -m 'Adiciona nova funcionalidade'`)
-4. Faz push para a branch (`git push origin feature/nome-da-funcionalidade`)
-5. Abre um Pull Request
+Este é um projeto pessoal, mantido apenas pelo grupo de amigos do MetalThursday. Não são aceites pull requests, issues ou outras contribuições externas.
 
 ## 📄 Licença
 
@@ -95,4 +81,4 @@ Este projeto está licenciado sob a licença MIT — consulta o ficheiro [LICENS
 
 ## 📌 Versão atual
 
-**v1.0.0** — consulta o [CHANGELOG.md](CHANGELOG.md) para o histórico de alterações.
+**v1.0.0** (28/12/2025) — consulta o [CHANGELOG.md](CHANGELOG.md) para o histórico de alterações.
