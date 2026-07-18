@@ -44,9 +44,9 @@ class InteractionHandler {
         });
 
         this.container.addEventListener('mouseover', (e) => {
-            const likesSpan = e.target.closest('.likes-count[data-comment-id]');
-            if (likesSpan && !likesSpan.dataset.loaded) {
-                this.handleLikesTooltip(likesSpan);
+            const likesWrapper = e.target.closest('[data-comment-id][data-bs-toggle="tooltip"]');
+            if (likesWrapper && !likesWrapper.dataset.loaded) {
+                this.handleLikesTooltip(likesWrapper);
             }
         });
     }
@@ -182,14 +182,25 @@ class InteractionHandler {
     updateUI(button, type, data) {
         switch (type) {
             case 'like':
-                const countSpan = button.querySelector('.likes-count');
-                countSpan.textContent = data.likes_count;
-                delete countSpan.dataset.loaded;
-                this.updateTooltip(countSpan, "A carregar...");
-                const icon = button.querySelector('i');
-                icon.classList.toggle('bi-heart', !data.liked);
-                icon.classList.toggle('bi-heart-fill', data.liked);
-                icon.classList.toggle('text-danger', data.liked);
+                const wrapper = button.querySelector('[data-comment-id]');
+                if (wrapper) {
+                    const countElement = wrapper.querySelector('.current-count');
+                    if (countElement) {
+                        countElement.textContent = data.likes_count;
+                    }
+                    delete wrapper.dataset.loaded;
+
+                    const icon = wrapper.querySelector('i');
+                    if (icon) {
+                        icon.classList.toggle('bi-heart', !data.liked);
+                        icon.classList.toggle('bi-heart-fill', data.liked);
+                        icon.classList.toggle('text-danger', data.liked);
+                    }
+
+                    try {
+                        this.updateTooltip(wrapper, "A carregar...");
+                    } catch (e) {}
+                }
                 break;
             case 'listen':
                 const buttonTextSpan = button.querySelector('span');

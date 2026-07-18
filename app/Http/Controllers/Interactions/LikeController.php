@@ -53,7 +53,9 @@ class LikeController extends Controller
 
         return response()->json([
             'liked'       => $liked,
-            'likes_count' => $comment->likes()->count()
+            'likes_count' => $comment->likes()->count(),
+            'message'     => $liked ? 'Gosto adicionado!' : 'Gosto removido!',
+            'tooltip_html' => 'A carregar...'
         ]);
     }
 

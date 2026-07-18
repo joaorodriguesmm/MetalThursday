@@ -30,15 +30,15 @@
 
             <div class="comment-actions small mt-2 d-flex align-items-center">
                 <button class="btn btn-sm btn-link text-muted text-decoration-none p-0" data-interaction-type="like" data-url="{{ route('likes.toggle', $comment) }}">
-                    <span class="likes-count"
+                    <span class="likes-count-wrapper"
                         data-bs-toggle="tooltip"
                         data-bs-html="true"
                         data-comment-id="{{ $comment->id }}"
-                        title="A carregar..."
-                    >
+                        title="A carregar...">
+
                         <i class="bi {{ $comment->is_liked_by_user ? 'bi-heart-fill text-danger' : 'bi-heart' }}"></i>
                         Gosto
-                        ({{ $comment->likes_count }})
+                        (<span class="current-count">{{ $comment->likes_count }}</span>)
                     </span>
                 </button>
                 <span class="text-muted mx-1">&middot;</span>
