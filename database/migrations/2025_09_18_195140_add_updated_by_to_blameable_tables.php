@@ -1,55 +1,97 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Retorna a migração para adicionar a coluna 'updated_by' aos modelos 'bands', 'genres', 'mt_editions', 'metal_thursdays' e 'mt_sections'.
+ * Retorna a migração responsável por adicionar a coluna de auditoria
+ * `updated_by` às tabelas auditáveis.
  *
- * @return Migration - Migração para adicionar a coluna 'updated_by' aos modelos 'bands', 'genres', 'mt_editions', 'metal_thursdays' e 'mt_sections'.
+ * A coluna identifica o utilizador responsável pela última atualização de
+ * cada registo.
  *
- * @since 1.0
- * @version 1.0
+ * Os nomes físicos das tabelas e colunas permanecem temporariamente em
+ * inglês para garantir compatibilidade com a estrutura atual da base de
+ * dados.
+ *
+ * @return Migration - Migração da coluna de auditoria de atualização.
+ *
+ * @since 1.0.0
+ *
+ * @version 2.0.0
  */
 return new class extends Migration
 {
     /**
-     * Executa a migração.
+     * Tabelas que recebem a coluna de auditoria `updated_by`.
      *
-     * @return void
+     * @var array<int, string>
      *
-     * @since 1.0
-     * @version 1.0
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const TABELAS_COM_AUDITORIA = [
+        'bands',
+        'genres',
+        'mt_editions',
+        'metal_thursdays',
+        'mt_sections',
+    ];
+
+    /**
+     * Adiciona a coluna de auditoria `updated_by` às tabelas configuradas.
+     *
+     * A coluna é anulável para preservar o registo quando o utilizador
+     * responsável pela atualização for eliminado fisicamente.
+     *
+     *
+     * @since 1.0.0
+     *
+     * @version 2.0.0
      */
     public function up(): void
     {
-        $tables = ['bands', 'genres', 'mt_editions', 'metal_thursdays', 'mt_sections'];
-
-        foreach ($tables as $table) {
-            Schema::table($table, function (Blueprint $table) {
-                $table->foreignId('updated_by')->nullable()->after('created_by')->constrained('users')->onDelete('set null');
-            });
+        foreach (self::TABELAS_COM_AUDITORIA as $nomeTabela) {
+            Schema::table(
+                $nomeTabela,
+                function (Blueprint $tabela): void {
+                    $tabela
+                        ->foreignId('updated_by')
+                        ->nullable()
+                        ->constrained('users')
+                        ->nullOnDelete();
+                },
+            );
         }
     }
 
     /**
-     * Reverte a migração.
+     * Remove a coluna de auditoria `updated_by` das tabelas configuradas.
      *
-     * @return void
+     * A chave estrangeira e a respetiva coluna são removidas em conjunto.
      *
-     * @since 1.0
-     * @version 1.0
+     *
+     * @since 1.0.0
+     *
+     * @version 2.0.0
      */
     public function down(): void
     {
-        $tables = ['bands', 'genres', 'mt_editions', 'metal_thursdays', 'mt_sections'];
-
-        foreach ($tables as $table) {
-            Schema::table($table, function (Blueprint $table) {
-                $table->dropForeign(['updated_by']);
-                $table->dropColumn('updated_by');
-            });
+        foreach (
+            array_reverse(self::TABELAS_COM_AUDITORIA) as $nomeTabela
+        ) {
+            Schema::table(
+                $nomeTabela,
+                function (Blueprint $tabela): void {
+                    $tabela->dropConstrainedForeignId(
+                        'updated_by',
+                    );
+                },
+            );
         }
     }
 };

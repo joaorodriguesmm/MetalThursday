@@ -1,51 +1,76 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Retorna a migração para criar a tabela de notificações.
+ * Retorna a migração responsável pela criação da tabela utilizada pelo
+ * sistema de notificações do Laravel.
  *
- * @return Migration - Migração para criar a tabela de notificações.
+ * Os nomes da tabela e das colunas permanecem em inglês porque fazem parte
+ * do contrato interno do sistema de notificações do Laravel.
  *
- * @since 1.0
- * @version 1.0
+ * @return Migration - Migração da tabela de notificações.
+ *
+ * @since 1.0.0
+ *
+ * @version 2.0.0
  */
 return new class extends Migration
 {
     /**
-     * Executa a migração.
+     * Cria a tabela utilizada pelo sistema de notificações do Laravel.
      *
-     * @return void
+     * A relação polimórfica permite associar notificações a diferentes tipos
+     * de entidades notificáveis.
      *
-     * @since 1.0
-     * @version 1.0
+     *
+     * @since 1.0.0
+     *
+     * @version 2.0.0
      */
     public function up(): void
     {
-        // Cria a tabela notifications
-        Schema::create('notifications', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->string('type');
-            $table->morphs('notifiable');
-            $table->text('data');
-            $table->timestamp('read_at')->nullable();
-            $table->timestamps();
-        });
+        Schema::create(
+            'notifications',
+            function (Blueprint $tabela): void {
+                $tabela
+                    ->uuid('id')
+                    ->primary();
+
+                $tabela->string('type');
+
+                /*
+                 * Cria as colunas notifiable_type e notifiable_id, juntamente
+                 * com o índice composto necessário para localizar rapidamente
+                 * as notificações de uma entidade.
+                 */
+                $tabela->morphs('notifiable');
+
+                $tabela->text('data');
+
+                $tabela
+                    ->timestamp('read_at')
+                    ->nullable();
+
+                $tabela->timestamps();
+            },
+        );
     }
 
     /**
-     * Reverte a migração.
+     * Elimina a tabela utilizada pelo sistema de notificações do Laravel.
      *
-     * @return void
      *
-     * @since 1.0
-     * @version 1.0
+     * @since 1.0.0
+     *
+     * @version 2.0.0
      */
     public function down(): void
     {
-        // Elimina a tabela notifications
         Schema::dropIfExists('notifications');
     }
 };

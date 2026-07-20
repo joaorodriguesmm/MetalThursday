@@ -1,121 +1,221 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Retorna a migração consolidada para criar as tabelas base do Laravel.
+ * Retorna a migração responsável pela criação das tabelas base utilizadas
+ * pelo Laravel.
  *
- * @return Migration - Migração consolidada.
+ * Esta migração contém as tabelas de utilizadores, recuperação de
+ * palavra-passe, sessões, cache e filas.
  *
- * @since 1.0
- * @version 1.0
+ * Os nomes das tabelas e colunas permanecem em inglês por fazerem parte dos
+ * contratos e convenções dos componentes internos do Laravel.
+ *
+ * @return Migration - Migração das tabelas base do Laravel.
+ *
+ * @since 1.0.0
+ *
+ * @version 2.0.0
  */
 return new class extends Migration
 {
     /**
-     * Executa a migração.
+     * Cria as tabelas base utilizadas pelo Laravel.
      *
-     * @return void
      *
-     * @since 1.0
-     * @version 1.0
+     * @since 1.0.0
+     *
+     * @version 2.0.0
      */
     public function up(): void
     {
-        // Cria a tabela users.
-        Schema::create('users', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('email')->nullable()->unique();
-            $table->timestamp('email_verified_at')->nullable();
-            $table->string('password')->nullable();
-            $table->string('photo')->nullable();
-            $table->string('invite_code')->unique();
-            $table->rememberToken();
-            $table->timestamps();
-        });
+        Schema::create(
+            'users',
+            function (Blueprint $tabela): void {
+                $tabela->id();
+                $tabela->string('name');
 
-        // Cria a tabela password_reset_tokens.
-        Schema::create('password_reset_tokens', function (Blueprint $table) {
-            $table->string('email')->primary();
-            $table->string('token');
-            $table->timestamp('created_at')->nullable();
-        });
+                $tabela
+                    ->string('email')
+                    ->nullable()
+                    ->unique();
 
-        // Cria a tabela sessions.
-        Schema::create('sessions', function (Blueprint $table) {
-            $table->string('id')->primary();
-            $table->foreignId('user_id')->nullable()->index();
-            $table->string('ip_address', 45)->nullable();
-            $table->text('user_agent')->nullable();
-            $table->longText('payload');
-            $table->integer('last_activity')->index();
-        });
+                $tabela
+                    ->timestamp('email_verified_at')
+                    ->nullable();
 
-        // Cria a tabela cache.
-        Schema::create('cache', function (Blueprint $table) {
-            $table->string('key')->primary();
-            $table->mediumText('value');
-            $table->integer('expiration');
-        });
+                $tabela
+                    ->string('password')
+                    ->nullable();
 
-        // Cria a tabela cache_locks.
-        Schema::create('cache_locks', function (Blueprint $table) {
-            $table->string('key')->primary();
-            $table->string('owner');
-            $table->integer('expiration');
-        });
+                $tabela
+                    ->string('photo')
+                    ->nullable();
 
-        // Cria a tabela jobs.
-        Schema::create('jobs', function (Blueprint $table) {
-            $table->id();
-            $table->string('queue')->index();
-            $table->longText('payload');
-            $table->unsignedTinyInteger('attempts');
-            $table->unsignedInteger('reserved_at')->nullable();
-            $table->unsignedInteger('available_at');
-            $table->unsignedInteger('created_at');
-        });
+                $tabela
+                    ->string('invite_code')
+                    ->unique();
 
-        // Cria a tabela job_batches.
-        Schema::create('job_batches', function (Blueprint $table) {
-            $table->string('id')->primary();
-            $table->string('name');
-            $table->integer('total_jobs');
-            $table->integer('pending_jobs');
-            $table->integer('failed_jobs');
-            $table->longText('failed_job_ids');
-            $table->mediumText('options')->nullable();
-            $table->integer('cancelled_at')->nullable();
-            $table->integer('created_at');
-            $table->integer('finished_at')->nullable();
-        });
+                $tabela->rememberToken();
+                $tabela->timestamps();
+            },
+        );
 
-        // Cria a tabela failed_jobs.
-        Schema::create('failed_jobs', function (Blueprint $table) {
-            $table->id();
-            $table->string('uuid')->unique();
-            $table->text('connection');
-            $table->text('queue');
-            $table->longText('payload');
-            $table->longText('exception');
-            $table->timestamp('failed_at')->useCurrent();
-        });
+        Schema::create(
+            'password_reset_tokens',
+            function (Blueprint $tabela): void {
+                $tabela
+                    ->string('email')
+                    ->primary();
+
+                $tabela->string('token');
+
+                $tabela
+                    ->timestamp('created_at')
+                    ->nullable();
+            },
+        );
+
+        Schema::create(
+            'sessions',
+            function (Blueprint $tabela): void {
+                $tabela
+                    ->string('id')
+                    ->primary();
+
+                $tabela
+                    ->foreignId('user_id')
+                    ->nullable()
+                    ->index();
+
+                $tabela
+                    ->string('ip_address', 45)
+                    ->nullable();
+
+                $tabela
+                    ->text('user_agent')
+                    ->nullable();
+
+                $tabela->longText('payload');
+
+                $tabela
+                    ->integer('last_activity')
+                    ->index();
+            },
+        );
+
+        Schema::create(
+            'cache',
+            function (Blueprint $tabela): void {
+                $tabela
+                    ->string('key')
+                    ->primary();
+
+                $tabela->mediumText('value');
+                $tabela->integer('expiration');
+            },
+        );
+
+        Schema::create(
+            'cache_locks',
+            function (Blueprint $tabela): void {
+                $tabela
+                    ->string('key')
+                    ->primary();
+
+                $tabela->string('owner');
+                $tabela->integer('expiration');
+            },
+        );
+
+        Schema::create(
+            'jobs',
+            function (Blueprint $tabela): void {
+                $tabela->id();
+
+                $tabela
+                    ->string('queue')
+                    ->index();
+
+                $tabela->longText('payload');
+                $tabela->unsignedTinyInteger('attempts');
+
+                $tabela
+                    ->unsignedInteger('reserved_at')
+                    ->nullable();
+
+                $tabela->unsignedInteger('available_at');
+                $tabela->unsignedInteger('created_at');
+            },
+        );
+
+        Schema::create(
+            'job_batches',
+            function (Blueprint $tabela): void {
+                $tabela
+                    ->string('id')
+                    ->primary();
+
+                $tabela->string('name');
+                $tabela->integer('total_jobs');
+                $tabela->integer('pending_jobs');
+                $tabela->integer('failed_jobs');
+                $tabela->longText('failed_job_ids');
+
+                $tabela
+                    ->mediumText('options')
+                    ->nullable();
+
+                $tabela
+                    ->integer('cancelled_at')
+                    ->nullable();
+
+                $tabela->integer('created_at');
+
+                $tabela
+                    ->integer('finished_at')
+                    ->nullable();
+            },
+        );
+
+        Schema::create(
+            'failed_jobs',
+            function (Blueprint $tabela): void {
+                $tabela->id();
+
+                $tabela
+                    ->string('uuid')
+                    ->unique();
+
+                $tabela->text('connection');
+                $tabela->text('queue');
+                $tabela->longText('payload');
+                $tabela->longText('exception');
+
+                $tabela
+                    ->timestamp('failed_at')
+                    ->useCurrent();
+            },
+        );
     }
 
     /**
-     * Reverte a migração.
+     * Elimina as tabelas base utilizadas pelo Laravel.
      *
-     * @return void
+     * As tabelas são eliminadas pela ordem inversa à respetiva criação.
      *
-     * @since 1.0
-     * @version 1.0
+     *
+     * @since 1.0.0
+     *
+     * @version 2.0.0
      */
     public function down(): void
     {
-        // Elimina as tabelas por ordem inversa à da criação.
         Schema::dropIfExists('failed_jobs');
         Schema::dropIfExists('job_batches');
         Schema::dropIfExists('jobs');
