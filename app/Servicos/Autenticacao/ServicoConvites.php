@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Servicos\Autenticacao;
 
 use App\Models\Autenticacao\Convite;
-use App\Models\User;
+use App\Models\Autenticacao\Utilizador;
 use App\Resultados\Autenticacao\ConviteCriado;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -99,7 +99,7 @@ final class ServicoConvites
      * @param  string  $nomeConvidado  - Nome da pessoa convidada.
      * @param  string|null  $emailDestino  - E-mail ao qual o convite fica
      *                                     limitado.
-     * @param  User|null  $criador  - Utilizador responsável pela criação.
+     * @param  Utilizador|null  $criador  - Utilizador responsável pela criação.
      * @param  CarbonInterface|null  $expiraEm  - Momento de expiração.
      * @return ConviteCriado - Convite persistido e respetivo código original.
      *
@@ -114,7 +114,7 @@ final class ServicoConvites
     public function criar(
         string $nomeConvidado,
         ?string $emailDestino = null,
-        ?User $criador = null,
+        ?Utilizador $criador = null,
         ?CarbonInterface $expiraEm = null,
     ): ConviteCriado {
         $nomeNormalizado = $this->normalizarNome($nomeConvidado);
@@ -345,7 +345,7 @@ final class ServicoConvites
     /**
      * Valida o utilizador responsável pela criação.
      *
-     * @param  User|null  $criador  - Utilizador recebido.
+     * @param  Utilizador|null  $criador  - Utilizador recebido.
      *
      * @throws InvalidArgumentException Quando o utilizador ainda não foi
      *                                  persistido.
@@ -355,7 +355,7 @@ final class ServicoConvites
      * @version 1.0.0
      */
     private function validarCriador(
-        ?User $criador,
+        ?Utilizador $criador,
     ): void {
         if ($criador === null) {
             return;

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models\Autenticacao;
 
-use App\Models\User;
 use Carbon\CarbonInterface;
 use Database\Factories\ConviteFactory;
 use DomainException;
@@ -34,8 +33,8 @@ use InvalidArgumentException;
  * @property CarbonInterface|null $revogado_em
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
- * @property-read User|null $criador
- * @property-read User|null $utilizador
+ * @property-read Utilizador|null $criador
+ * @property-read Utilizador|null $utilizador
  *
  * @since 2.0.0
  *
@@ -132,7 +131,7 @@ class Convite extends Model
     /**
      * Obtém o utilizador responsável pela criação do convite.
      *
-     * @return BelongsTo<User, Convite> - Relação com o criador do convite.
+     * @return BelongsTo<Utilizador, Convite> - Relação com o criador do convite.
      *
      * @since 2.0.0
      *
@@ -141,7 +140,7 @@ class Convite extends Model
     public function criador(): BelongsTo
     {
         return $this->belongsTo(
-            User::class,
+            Utilizador::class,
             'criado_por',
         );
     }
@@ -149,8 +148,8 @@ class Convite extends Model
     /**
      * Obtém o utilizador criado ou associado através do convite.
      *
-     * @return BelongsTo<User, Convite> - Relação com o utilizador que aceitou
-     *                                  o convite.
+     * @return BelongsTo<Utilizador, Convite> - Relação com o utilizador que aceitou
+     *                                        o convite.
      *
      * @since 2.0.0
      *
@@ -159,7 +158,7 @@ class Convite extends Model
     public function utilizador(): BelongsTo
     {
         return $this->belongsTo(
-            User::class,
+            Utilizador::class,
             'utilizado_por',
         );
     }
@@ -352,7 +351,7 @@ class Convite extends Model
      * realizada pelo serviço dentro de uma transação e com bloqueio do registo
      * para impedir a utilização simultânea do mesmo convite.
      *
-     * @param  User  $utilizador  - Utilizador criado através do convite.
+     * @param  Utilizador  $utilizador  - Utilizador criado através do convite.
      * @param  CarbonInterface|null  $momento  - Momento da utilização.
      *
      * @throws DomainException Quando o convite não está disponível.
@@ -362,7 +361,7 @@ class Convite extends Model
      * @version 1.0.0
      */
     public function utilizar(
-        User $utilizador,
+        Utilizador $utilizador,
         ?CarbonInterface $momento = null,
     ): void {
         $momentoUtilizacao = $momento ?? now();

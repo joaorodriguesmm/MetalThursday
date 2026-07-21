@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Servicos\Autenticacao;
 
 use App\Models\Autenticacao\Convite;
-use App\Models\User;
+use App\Models\Autenticacao\Utilizador;
 use App\Servicos\Autenticacao\ServicoConvites;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -284,13 +284,13 @@ final class ServicoConvitesTest extends TestCase
      * A inserção direta evita depender de factories ou das regras de
      * atribuição em massa do modelo durante esta fase da refatoração.
      *
-     * @return User - Utilizador criado.
+     * @return Utilizador - Utilizador criado.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    private function criarUtilizador(): User
+    private function criarUtilizador(): Utilizador
     {
         $identificador = DB::table('users')->insertGetId([
             'name' => 'Administrador de testes',
@@ -298,12 +298,11 @@ final class ServicoConvitesTest extends TestCase
             'email_verified_at' => null,
             'password' => null,
             'photo' => null,
-            'invite_code' => 'MT-CRIADOR-TESTES',
             'remember_token' => null,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
-        return User::query()->findOrFail($identificador);
+        return Utilizador::query()->findOrFail($identificador);
     }
 }

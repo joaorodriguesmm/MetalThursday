@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Models\Autenticacao;
 
 use App\Models\Autenticacao\Convite;
-use App\Models\User;
+use App\Models\Autenticacao\Utilizador;
 use Carbon\CarbonImmutable;
 use DomainException;
 use InvalidArgumentException;
@@ -209,7 +209,7 @@ final class ConviteTest extends TestCase
             '2026-07-21 12:00:00',
         );
 
-        $utilizador = new User;
+        $utilizador = new Utilizador;
 
         $utilizador->forceFill([
             'id' => 42,
@@ -263,7 +263,7 @@ final class ConviteTest extends TestCase
             '2026-07-21 12:00:00',
         );
 
-        $utilizador = new User;
+        $utilizador = new Utilizador;
 
         $utilizador->forceFill([
             'id' => 42,
@@ -338,7 +338,7 @@ final class ConviteTest extends TestCase
             '2026-07-21 12:00:00',
         );
 
-        $utilizador = new User;
+        $utilizador = new Utilizador;
 
         $utilizador->forceFill([
             'id' => 42,
