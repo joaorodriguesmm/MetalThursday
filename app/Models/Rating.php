@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Autenticacao\Utilizador;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * Gere a tabela 'ratings' da base de dados.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 class Rating extends Model
@@ -19,7 +21,7 @@ class Rating extends Model
 
     protected $fillable = [
         'user_id',
-        'rating'
+        'rating',
     ];
 
     /**
@@ -28,6 +30,7 @@ class Rating extends Model
      * @return MorphTo - Relação com a tabela do objeto avaliado.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function rateable(): MorphTo
@@ -41,10 +44,11 @@ class Rating extends Model
      * @return BelongsTo - Relação com a tabela users.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Utilizador::class);
     }
 }

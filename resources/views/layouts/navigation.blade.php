@@ -22,7 +22,7 @@
 
                 <li class="nav-item d-md-none"><hr></li>
                 <li class="nav-item d-md-none">
-                    <a class="nav-link {{ request()->routeIs('profile.edit') ? 'active' : '' }}" href="{{ route('profile.edit') }}">Editar Perfil</a>
+                    <a class="nav-link {{ request()->routeIs('profile.edit') ? 'active' : '' }}" href="{{ route('perfil.editar') }}">Editar Perfil</a>
                 </li>
                 <li class="nav-item d-md-none">
                     <a class="nav-link logout-link" id="mobile-logout-link" href="#">Sair</a>
@@ -44,7 +44,7 @@
                         </div>
                     </a>
                     <div class="dropdown-menu dropdown-menu-end bg-dark border-secondary" aria-labelledby="navbarDropdownDesktop">
-                        <a class="dropdown-item text-white {{ request()->routeIs('profile.edit') ? 'active' : '' }}" href="{{ route('profile.edit') }}">Editar Perfil</a>
+                        <a class="dropdown-item text-white {{ request()->routeIs('profile.edit') ? 'active' : '' }}" href="{{ route('perfil.editar') }}">Editar Perfil</a>
                         <hr class="dropdown-divider border-secondary">
                         <a class="dropdown-item text-white logout-link" id="desktop-logout-link" href="#">Sair</a>
                     </div>

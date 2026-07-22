@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Interactions;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Interactions\StoreCommentRequest;
 use App\Http\Requests\Interactions\UpdateCommentRequest;
-use App\Models\MetalThursday;
 use App\Models\Comment;
+use App\Models\MetalThursday;
 use App\Models\MtSection;
 use App\Traits\NotifiesUsers;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
  * Gere os comentários.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 class CommentController extends Controller
@@ -26,18 +27,19 @@ class CommentController extends Controller
     /**
      * Guarda um comentário.
      *
-     * @param Request $request - Pedido HTTP.
-     * @param string $commentableType - Tipo de destino do comentário.
-     * @param int $commentableId - Id do tipo de destino.
+     * @param  Request  $request  - Pedido HTTP.
+     * @param  string  $commentableType  - Tipo de destino do comentário.
+     * @param  int  $commentableId  - Id do tipo de destino.
      * @return string - HTML do comentário.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function store(StoreCommentRequest $request, string $commentableType, int $commentableId): string
     {
-        $validated   = $request->validated();
-        $modelClass  = $commentableType === 'section' ? MtSection::class : MetalThursday::class;
+        $validated = $request->validated();
+        $modelClass = $commentableType === 'section' ? MtSection::class : MetalThursday::class;
         $commentable = $modelClass::findOrFail($commentableId);
 
         $comment = $commentable->comments()->create([
@@ -58,11 +60,12 @@ class CommentController extends Controller
     /**
      * Guarda uma resposta a um comentário.
      *
-     * @param Request $request - Pedido HTTP.
-     * @param Comment $comment - Comentário a responder.
+     * @param  Request  $request  - Pedido HTTP.
+     * @param  Comment  $comment  - Comentário a responder.
      * @return string - HTML da resposta.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function storeReply(StoreCommentRequest $request, Comment $comment): string
@@ -70,9 +73,9 @@ class CommentController extends Controller
         $validated = $request->validated();
 
         $reply = $comment->replies()->create([
-            'user_id'          => $request->user()->id,
-            'content'          => $validated['content'],
-            'commentable_id'   => $comment->commentable_id,
+            'user_id' => $request->user()->id,
+            'content' => $validated['content'],
+            'commentable_id' => $comment->commentable_id,
             'commentable_type' => $comment->commentable_type,
         ]);
 
@@ -88,15 +91,16 @@ class CommentController extends Controller
     }
 
     /**
-     * Atualiza um comentário.
-     *
-     * @param UpdateCommentRequest $request - Pedido HTTP.
-     * @param Comment $comment - Comentário a atualizar.
-     * @return JsonResponse - Resposta JSON com o conteúdo atualizado.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
+     * Atualiza um comentário.
+     *
+     * @param  UpdateCommentRequest  $request  - Pedido HTTP.
+     * @param  Comment  $comment  - Comentário a atualizar.
+     * @return JsonResponse - Resposta JSON com o conteúdo atualizado.
+     *
+     * @since 1.0
+     *
+     * @version 1.0
+     */
     public function update(UpdateCommentRequest $request, Comment $comment): JsonResponse
     {
         $this->authorize('update', $comment);
@@ -105,25 +109,27 @@ class CommentController extends Controller
         $comment->update(['content' => $validated['content']]);
 
         return response()->json([
-            'success'      => true,
-            'content'      => $comment->content,
-            'content_html' => nl2br(e($comment->content))
+            'success' => true,
+            'content' => $comment->content,
+            'content_html' => nl2br(e($comment->content)),
         ]);
     }
 
     /**
      * Elimina um comentário.
      *
-     * @param Comment $comment - Comentário a eliminar.
+     * @param  Comment  $comment  - Comentário a eliminar.
      * @return JsonResponse - Mensagem de sucesso.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function destroy(Comment $comment): JsonResponse
     {
         $this->authorize('delete', $comment);
         $comment->delete();
+
         return response()->json(['message' => 'Comentário eliminado com sucesso!']);
     }
 }

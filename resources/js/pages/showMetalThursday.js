@@ -5,9 +5,9 @@
  * @version 1.0
  */
 import AjaxFormHandler from '../modules/AjaxFormHandler';
-import FormValidator from '../modules/FormValidator';
+import ValidadorFormulario from '../modulos/ValidadorFormulario';
 import RatingModalHandler from '../modules/RatingModalHandler';
-import TooltipInitializer from '../modules/TooltipInitializer';
+import InicializadorTooltips from '../modulos/InicializadorTooltips';
 
 /**
  * Define os comportamentos a executar após o carregamento da página.
@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
      * @since 1.0
      * @version 1.0
      */
-    new TooltipInitializer();
+    new InicializadorTooltips();
 
     /**
      * Inicia o gestor de modais de avaliação.
@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 initializeCommentForms(newCommentElement);
-                new TooltipInitializer();
+                new InicializadorTooltips();
             });
 
             new FormValidator(

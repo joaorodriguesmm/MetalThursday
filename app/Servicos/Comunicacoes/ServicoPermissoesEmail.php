@@ -11,15 +11,33 @@ use InvalidArgumentException;
 /**
  * Gere a validação e sincronização das permissões de e-mail.
  *
- * Este serviço pode ser reutilizado no registo, perfil e administração dos
- * utilizadores.
+ * Este serviço pode ser reutilizado no registo, no perfil e na administração
+ * dos utilizadores.
+ *
+ * Quando não existe uma transação exterior, a sincronização é executada numa
+ * transação própria. Quando já existe uma transação, o serviço participa
+ * diretamente nessa transação.
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 1.1.0
  */
 final class ServicoPermissoesEmail
 {
+    /**
+     * Número máximo de tentativas perante conflitos transitórios.
+     *
+     * Esta repetição é utilizada apenas quando o serviço inicia a própria
+     * transação.
+     *
+     * @var int
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const TENTATIVAS_TRANSACAO = 3;
+
     /**
      * Normaliza identificadores de permissões.
      *
@@ -89,7 +107,7 @@ final class ServicoPermissoesEmail
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function sincronizar(
         Utilizador $utilizador,
@@ -108,13 +126,54 @@ final class ServicoPermissoesEmail
             $identificadores,
         );
 
-        $this->validarExistencia($normalizados);
+        if (DB::transactionLevel() > 0) {
+            return $this->sincronizarDentroDaTransacao(
+                $utilizador,
+                $normalizados,
+            );
+        }
+
+        return DB::transaction(
+            fn (): array => $this->sincronizarDentroDaTransacao(
+                $utilizador,
+                $normalizados,
+            ),
+            self::TENTATIVAS_TRANSACAO,
+        );
+    }
+
+    /**
+     * Sincroniza as permissões dentro de uma transação ativa.
+     *
+     * @param  Utilizador  $utilizador  - Utilizador persistido.
+     * @param  array<int, int>  $identificadores  - Identificadores normalizados.
+     * @return array<int, int> - Identificadores sincronizados.
+     *
+     * @throws InvalidArgumentException Quando alguma permissão não existe.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function sincronizarDentroDaTransacao(
+        Utilizador $utilizador,
+        array $identificadores,
+    ): array {
+        $this->validarExistencia($identificadores);
 
         $utilizador
             ->permissoesEmail()
-            ->sync($normalizados);
+            ->sync($identificadores);
 
-        return $normalizados;
+        /*
+         * Evita que uma relação carregada anteriormente continue a apresentar
+         * valores desatualizados depois da sincronização.
+         */
+        $utilizador->unsetRelation(
+            'permissoesEmail',
+        );
+
+        return $identificadores;
     }
 
     /**
@@ -141,7 +200,9 @@ final class ServicoPermissoesEmail
             ->whereIn('id', $identificadores)
             ->pluck('id')
             ->map(
-                static fn (mixed $identificador): int => (int) $identificador,
+                static fn (
+                    mixed $identificador,
+                ): int => (int) $identificador,
             )
             ->all();
 

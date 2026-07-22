@@ -4,15 +4,18 @@ namespace App\Http\Controllers\Interactions;
 
 use App\Http\Controllers\Controller;
 use App\Models\Comment;
+use App\Notifications\UserInteractionOccurred;
 use App\Traits\NotifiesUsers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
 
 /**
  * Gere os gostos a comentários.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 class LikeController extends Controller
@@ -22,16 +25,17 @@ class LikeController extends Controller
     /**
      * Adiciona ou remove um gosto a um comentário.
      *
-     * @param Request $request - Pedido HTTP.
-     * @param Comment $comment - Comentário.
+     * @param  Request  $request  - Pedido HTTP.
+     * @param  Comment  $comment  - Comentário.
      * @return JsonResponse - Resposta JSON.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function toggleLike(Request $request, Comment $comment): JsonResponse
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return response()->json(['message' => 'Não autenticado.'], 401);
         }
 
@@ -46,16 +50,16 @@ class LikeController extends Controller
             $liked = true;
             $commentAuthor = $comment->user;
             if ($commentAuthor && $user->id !== $commentAuthor->id) {
-                $notification = new \App\Notifications\UserInteractionOccurred($comment, $user, 'gostou do');
-                \Illuminate\Support\Facades\Notification::send($commentAuthor, $notification);
+                $notification = new UserInteractionOccurred($comment, $user, 'gostou do');
+                Notification::send($commentAuthor, $notification);
             }
         }
 
         return response()->json([
-            'liked'       => $liked,
+            'liked' => $liked,
             'likes_count' => $comment->likes()->count(),
-            'message'     => $liked ? 'Gosto adicionado!' : 'Gosto removido!',
-            'tooltip_html' => 'A carregar...'
+            'message' => $liked ? 'Gosto adicionado!' : 'Gosto removido!',
+            'tooltip_html' => 'A carregar...',
         ]);
     }
 
@@ -69,7 +73,7 @@ class LikeController extends Controller
 
         return response()->json([
             'names' => $names,
-            'html' => count($names) > 0 ? implode('<br>', $names) : 'Ainda não há gostos.'
+            'html' => count($names) > 0 ? implode('<br>', $names) : 'Ainda não há gostos.',
         ]);
     }
 }

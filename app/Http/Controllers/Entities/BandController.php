@@ -28,10 +28,11 @@ class BandController extends Controller
         $query = Band::with('country', 'genres')->orderBy('name', 'asc');
 
         if (request('search')) {
-            $query->where('name', 'like', '%' . request('search') . '%');
+            $query->where('name', 'like', '%'.request('search').'%');
         }
 
         $bands = $query->paginate(20)->withQueryString();
+
         return view('entities.bands.index', compact('bands'));
     }
 
@@ -41,6 +42,7 @@ class BandController extends Controller
     public function create(): View
     {
         $this->authorize('create', Band::class);
+
         return view('entities.bands.create', [
             'countries' => Country::orderBy('name')->get(),
             'genres' => Genre::orderBy('name')->get(),
@@ -61,12 +63,14 @@ class BandController extends Controller
                 'country_id' => $validated['country_id'],
             ]);
             $band->genres()->attach($validated['genres']);
+
             return $band;
         });
 
         if ($request->wantsJson()) {
             return response()->json($band->load('country'));
         }
+
         return redirect()->route('bands.index')->with('success', 'Banda criada com sucesso!');
     }
 
@@ -76,6 +80,7 @@ class BandController extends Controller
     public function edit(Band $band): View
     {
         $this->authorize('update', $band);
+
         return view('entities.bands.edit', [
             'band' => $band,
             'countries' => Country::orderBy('name')->get(),
@@ -110,6 +115,7 @@ class BandController extends Controller
         $this->authorize('delete', $band);
 
         $band->delete();
+
         return redirect()->route('bands.index')->with('success', 'Banda eliminada com sucesso!');
     }
 

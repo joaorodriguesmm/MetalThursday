@@ -1,5 +1,5 @@
 import AjaxFormHandler from './AjaxFormHandler';
-import FormValidator from './FormValidator';
+import ValidadorFormulario from '../modulos/ValidadorFormulario';
 
 /**
  * Gera as modais.

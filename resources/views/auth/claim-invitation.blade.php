@@ -101,6 +101,6 @@
     </form>
 
     @push('page-scripts')
-        @vite(['resources/js/pages/inviteRegister.js'])
+        @vite('resources/js/paginas/registoConvite.js')
     @endpush
 </x-guest-layout>

@@ -3,12 +3,13 @@
 namespace App\Policies;
 
 use App\Models\MetalThursday;
-use App\Models\User;
+use App\Models\Autenticacao\Utilizador;
 
 /**
  * Define as permissões para executar ações em MetalThursdays.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 class MetalThursdayPolicy
@@ -16,14 +17,15 @@ class MetalThursdayPolicy
     /**
      * Permite que um super-administrador execute qualquer ação.
      *
-     * @param User $user - O utilizador autenticado.
-     * @param string $ability - A ação a executar.
+     * @param  Utilizador  $user  - O utilizador autenticado.
+     * @param  string  $ability  - A ação a executar.
      * @return bool|null - Verdadeiro se o utilizador for super-administrador.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
-    public function before(User $user, string $ability): ?bool
+    public function before(Utilizador $user, string $ability): ?bool
     {
         if ($user->id === 1) {
             return true;
@@ -35,31 +37,33 @@ class MetalThursdayPolicy
     /**
      * Obtém se o utilizador pode editar a MetalThursday.
      *
-     * @param User $user - O utilizador autenticado.
-     * @param MetalThursday $metalThursday - A MetalThursday.
+     * @param  Utilizador  $user  - O utilizador autenticado.
+     * @param  MetalThursday  $metalThursday  - A MetalThursday.
      * @return bool - Verdadeiro se o utilizador for o autor ou criador da MetalThursday.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
-    public function update(User $user, MetalThursday $metalThursday): bool
+    public function update(Utilizador $user, MetalThursday $metalThursday): bool
     {
-        return (int)$user->id === (int)$metalThursday->created_by
-            || (int)$user->id === (int)$metalThursday->author_id;
+        return (int) $user->id === (int) $metalThursday->created_by
+            || (int) $user->id === (int) $metalThursday->author_id;
     }
 
     /**
      * Obtém se o utilizador pode apagar a MetalThursday.
      *
-     * @param User $user - O utilizador autenticado.
-     * @param MetalThursday $metalThursday - A MetalThursday.
+     * @param  Utilizador  $user  - O utilizador autenticado.
+     * @param  MetalThursday  $metalThursday  - A MetalThursday.
      * @return bool - Verdadeiro se o utilizador for o criador da MetalThursday.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
-    public function delete(User $user, MetalThursday $metalThursday): bool
+    public function delete(Utilizador $user, MetalThursday $metalThursday): bool
     {
-        return (int)$user->id === (int)$metalThursday->created_by;
+        return (int) $user->id === (int) $metalThursday->created_by;
     }
 }

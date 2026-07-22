@@ -13,7 +13,7 @@ use App\Models\MetalThursday;
 use App\Models\MtEdition;
 use App\Models\MtSection;
 use App\Models\MtSectionType;
-use App\Models\User;
+use App\Models\Autenticacao\Utilizador;
 use App\Notifications\NewMetalThursdayCreated;
 use App\Notifications\UserNominated;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -29,6 +29,7 @@ use Illuminate\View\View;
  * Gere as MetalThursdays.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 class MetalThursdayController extends Controller
@@ -38,11 +39,12 @@ class MetalThursdayController extends Controller
     /**
      * Apresenta a página inicial (Listagem de MetalThursdays).
      *
-     * @param Request $request - Pedido HTTP.
-     * @param MetalThursdayFilters $filters - Filtros de MetalThursdays.
+     * @param  Request  $request  - Pedido HTTP.
+     * @param  MetalThursdayFilters  $filters  - Filtros de MetalThursdays.
      * @return View - Página inicial.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function index(Request $request, MetalThursdayFilters $filters): View
@@ -60,22 +62,28 @@ class MetalThursdayController extends Controller
                 ->withAvg('ratings', 'rating')
                 ->whereHas('sectionType', fn($q) => $q->where('has_details', true));
 
-            $query->addSelect(['parent_date' => MetalThursday::select('date')
-                ->whereColumn('id', 'mt_sections.metal_thursday_id')
-                ->limit(1)
+            $query->addSelect([
+                'parent_date' => MetalThursday::select('date')
+                    ->whereColumn('id', 'mt_sections.metal_thursday_id')
+                    ->limit(1),
             ]);
         } else {
             $query = MetalThursday::query()
                 ->withCount(['comments', 'ratings', 'listens'])->withAvg('ratings', 'rating')
                 ->with([
-                    'edition', 'author', 'nextNominee', 'ratings.user', 'listens.user',
-                    'userRatingRelation', 'userListenRelation',
+                    'edition',
+                    'author',
+                    'nextNominee',
+                    'ratings.user',
+                    'listens.user',
+                    'userRatingRelation',
+                    'userListenRelation',
                     'sections' => function ($query) {
                         $query->withCount(['comments', 'ratings', 'listens'])
                             ->withAvg('ratings', 'rating')
                             ->with(['sectionType', 'band', 'ratings.user', 'listens.user', 'userRatingRelation', 'userListenRelation'])
                             ->orderBy('id');
-                    }
+                    },
                 ]);
         }
 
@@ -124,17 +132,17 @@ class MetalThursdayController extends Controller
         ];
 
         return view('metalthursday.index', [
-            'metalThursdays'   => $metalThursdays,
+            'metalThursdays' => $metalThursdays,
             'simplifiedSections' => $simplifiedSections,
-            'editions'         => MtEdition::orderBy('name')->get(),
-            'users'            => User::selectable()->get(),
-            'bands'            => Band::orderBy('name')->get(),
-            'genres'           => Genre::select('genres.*')->distinct()->orderBy('name')->get(),
-            'perPageOptions'   => $perPageOptions,
-            'perPage'          => $perPage,
-            'viewType'         => $viewType,
+            'editions' => MtEdition::orderBy('name')->get(),
+            'users' => Utilizador::selectable()->get(),
+            'bands' => Band::orderBy('name')->get(),
+            'genres' => Genre::select('genres.*')->distinct()->orderBy('name')->get(),
+            'perPageOptions' => $perPageOptions,
+            'perPage' => $perPage,
+            'viewType' => $viewType,
             'availableFilters' => config('filters.metalthursday', []),
-            'viewParams'       => $viewParams,
+            'viewParams' => $viewParams,
         ]);
     }
 
@@ -144,40 +152,43 @@ class MetalThursdayController extends Controller
      * @return View - Página de criação de MetalThursday.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function create(): View
     {
-        $editions     = MtEdition::orderBy('start_date', 'desc')->get();
-        $users        = User::selectable()->get();
+        $editions = MtEdition::orderBy('start_date', 'desc')->get();
+        $users = Utilizador::selectable()->get();
         $sectionTypes = MtSectionType::orderBy('name')->get();
-        $bands        = Band::orderBy('name')->get();
-        $countries    = Country::orderBy('name')->get();
-        $genres       = Genre::select('genres.*')->distinct()->orderBy('name')->get();
+        $bands = Band::orderBy('name')->get();
+        $countries = Country::orderBy('name')->get();
+        $genres = Genre::select('genres.*')->distinct()->orderBy('name')->get();
+
         return view('metalthursday.create', compact('editions', 'users', 'sectionTypes', 'bands', 'countries', 'genres'));
     }
 
     /**
      * Processa o formulário de criação de MetalThursday.
      *
-     * @param StoreMetalThursdayRequest $request - Pedido de criação de MetalThursday.
+     * @param  StoreMetalThursdayRequest  $request  - Pedido de criação de MetalThursday.
      * @return RedirectResponse - Redirecionamento para a página de listagem de MetalThursdays ou para a página de criação de MetalThursday.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function store(StoreMetalThursdayRequest $request): RedirectResponse
     {
         $validatedData = $request->validated();
-        $creator       = $request->user();
+        $creator = $request->user();
 
         try {
-            $metalThursday = DB::transaction(function () use ($validatedData, $creator) {
+            $metalThursday = DB::transaction(function () use ($validatedData) {
                 $mt = MetalThursday::create([
-                    'edition_id'      => $validatedData['edition_id'],
-                    'date'            => $validatedData['date'],
-                    'name'            => $validatedData['name'] ?? null,
-                    'author_id'       => $validatedData['author_id'],
+                    'edition_id' => $validatedData['edition_id'],
+                    'date' => $validatedData['date'],
+                    'name' => $validatedData['name'] ?? null,
+                    'author_id' => $validatedData['author_id'],
                     'next_nominee_id' => $validatedData['next_nominee_id'],
                 ]);
 
@@ -185,14 +196,15 @@ class MetalThursdayController extends Controller
                     $sectionType = MtSectionType::find($sectionData['type_id']);
                     $mt->sections()->create([
                         'section_type_id' => $sectionData['type_id'],
-                        'band_id'         => $sectionType->has_details ? ($sectionData['band_id'] ?? null) : null,
-                        'title'           => $sectionType->has_details ? ($sectionData['title'] ?? null) : null,
-                        'link'            => $sectionType->has_details ? ($sectionData['link'] ?? null) : null,
-                        'embed_type'      => $sectionType->has_details ? ($sectionData['embed_type'] ?? 'link') : null,
-                        'year'            => $sectionType->has_details ? ($sectionData['year'] ?? null) : null,
-                        'description'     => $sectionData['description'],
+                        'band_id' => $sectionType->has_details ? ($sectionData['band_id'] ?? null) : null,
+                        'title' => $sectionType->has_details ? ($sectionData['title'] ?? null) : null,
+                        'link' => $sectionType->has_details ? ($sectionData['link'] ?? null) : null,
+                        'embed_type' => $sectionType->has_details ? ($sectionData['embed_type'] ?? 'link') : null,
+                        'year' => $sectionType->has_details ? ($sectionData['year'] ?? null) : null,
+                        'description' => $sectionData['description'],
                     ]);
                 }
+
                 return $mt;
             });
 
@@ -204,7 +216,7 @@ class MetalThursdayController extends Controller
                     $nominee->notify(new UserNominated($metalThursday));
                 }
 
-                $recipients = User::selectable()
+                $recipients = Utilizador::selectable()
                     ->where('id', '!=', $creator->id)
                     ->where('id', '!=', $nominee?->id)
                     ->get();
@@ -213,23 +225,25 @@ class MetalThursdayController extends Controller
             }
 
             return redirect()
-                   ->route('home')
-                   ->with('success', 'MetalThursday criada com sucesso!');
+                ->route('home')
+                ->with('success', 'MetalThursday criada com sucesso!');
         } catch (\Exception $e) {
             Log::error('Falha ao criar MetalThursday: ' . $e->getMessage());
+
             return back()
-                   ->withInput()
-                   ->with('error', 'Ocorreu um erro inesperado ao guardar a MetalThursday.');
+                ->withInput()
+                ->with('error', 'Ocorreu um erro inesperado ao guardar a MetalThursday.');
         }
     }
 
     /**
      * Apresenta a página de edição de MetalThursday.
      *
-     * @param int $metalThursdayId - Id da MetalThursday a editar.
+     * @param  int  $metalThursdayId  - Id da MetalThursday a editar.
      * @return View - Página de edição de MetalThursday.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function edit(int $metalThursdayId): View
@@ -237,12 +251,12 @@ class MetalThursdayController extends Controller
         $metalThursday = MetalThursday::findOrFail($metalThursdayId);
         $this->authorize('update', $metalThursday);
 
-        $editions     = MtEdition::orderBy('start_date', 'desc')->get();
-        $users        = User::selectable()->get();
+        $editions = MtEdition::orderBy('start_date', 'desc')->get();
+        $users = Utilizador::selectable()->get();
         $sectionTypes = MtSectionType::orderBy('name')->get();
-        $bands        = Band::orderBy('name')->get();
-        $countries    = Country::orderBy('name')->get();
-        $genres       = Genre::select('genres.*')->distinct()->orderBy('name')->get();
+        $bands = Band::orderBy('name')->get();
+        $countries = Country::orderBy('name')->get();
+        $genres = Genre::select('genres.*')->distinct()->orderBy('name')->get();
 
         return view('metalthursday.edit', compact('metalThursday', 'editions', 'users', 'sectionTypes', 'bands', 'countries', 'genres'));
     }
@@ -250,11 +264,12 @@ class MetalThursdayController extends Controller
     /**
      * Processa o formulário de edição de MetalThursday.
      *
-     * @param StoreMetalThursdayRequest $request - Pedido de edição de MetalThursday.
-     * @param int $metalThursdayId - Id da MetalThursday a editar.
+     * @param  StoreMetalThursdayRequest  $request  - Pedido de edição de MetalThursday.
+     * @param  int  $metalThursdayId  - Id da MetalThursday a editar.
      * @return RedirectResponse - Redirecionamento para a página de listagem de MetalThursdays.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function update(StoreMetalThursdayRequest $request, int $metalThursdayId): RedirectResponse
@@ -266,10 +281,10 @@ class MetalThursdayController extends Controller
 
         DB::transaction(function () use ($validatedData, $metalThursday) {
             $metalThursday->update([
-                'edition_id'      => $validatedData['edition_id'],
-                'date'            => $validatedData['date'],
-                'name'            => $validatedData['name'] ?? null,
-                'author_id'       => $validatedData['author_id'],
+                'edition_id' => $validatedData['edition_id'],
+                'date' => $validatedData['date'],
+                'name' => $validatedData['name'] ?? null,
+                'author_id' => $validatedData['author_id'],
                 'next_nominee_id' => $validatedData['next_nominee_id'],
             ]);
 
@@ -282,29 +297,30 @@ class MetalThursdayController extends Controller
                     ['id' => $sectionData['id'] ?? null],
                     [
                         'section_type_id' => $sectionData['type_id'],
-                        'band_id'         => $sectionType->has_details ? ($sectionData['band_id'] ?? null) : null,
-                        'title'           => $sectionType->has_details ? ($sectionData['title'] ?? null) : null,
-                        'link'            => $sectionType->has_details ? ($sectionData['link'] ?? null) : null,
-                        'embed_type'      => $sectionType->has_details ? ($sectionData['embed_type'] ?? 'link') : null,
-                        'year'            => $sectionType->has_details ? ($sectionData['year'] ?? null) : null,
-                        'description'     => $sectionData['description'],
+                        'band_id' => $sectionType->has_details ? ($sectionData['band_id'] ?? null) : null,
+                        'title' => $sectionType->has_details ? ($sectionData['title'] ?? null) : null,
+                        'link' => $sectionType->has_details ? ($sectionData['link'] ?? null) : null,
+                        'embed_type' => $sectionType->has_details ? ($sectionData['embed_type'] ?? 'link') : null,
+                        'year' => $sectionType->has_details ? ($sectionData['year'] ?? null) : null,
+                        'description' => $sectionData['description'],
                     ]
                 );
             }
         });
 
         return redirect()
-               ->route('home')
-               ->with('success', 'MetalThursday atualizada com sucesso!');
+            ->route('home')
+            ->with('success', 'MetalThursday atualizada com sucesso!');
     }
 
     /**
      * Elimina uma MetalThursday.
      *
-     * @param int $metalThursdayId - Id da MetalThursday a eliminar.
+     * @param  int  $metalThursdayId  - Id da MetalThursday a eliminar.
      * @return JsonResponse - Mensagem de sucesso.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function destroy(int $metalThursdayId): JsonResponse
@@ -312,9 +328,10 @@ class MetalThursdayController extends Controller
         $metalThursday = MetalThursday::findOrFail($metalThursdayId);
         $this->authorize('delete', $metalThursday);
         $metalThursday->delete();
+
         return response()->json([
             'success' => true,
-            'message' => 'MetalThursday eliminada com sucesso!'
+            'message' => 'MetalThursday eliminada com sucesso!',
         ]);
     }
 
@@ -324,21 +341,22 @@ class MetalThursdayController extends Controller
      * @return JsonResponse - Utilizador que não é nomeado há mais tempo.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function getLongestNotNominatedUser(): JsonResponse
     {
-        $eligibleUsers           = User::selectable()->pluck('id');
-        $lastNominated           = MetalThursday::select('next_nominee_id', DB::raw('MAX(created_at) as last_nominated_at'))
-                                                ->whereIn('next_nominee_id', $eligibleUsers)
-                                                ->groupBy('next_nominee_id');
-        $usersWithNominationDate = User::leftJoinSub($lastNominated, 'last_nominations', function ($join) {
-                                           $join->on('users.id', '=', 'last_nominations.next_nominee_id');
-                                       })
-                                       ->whereIn('users.id', $eligibleUsers)
-                                       ->orderBy('last_nominations.last_nominated_at', 'asc')
-                                       ->select('users.id')
-                                       ->first();
+        $eligibleUsers = Utilizador::selectable()->pluck('id');
+        $lastNominated = MetalThursday::select('next_nominee_id', DB::raw('MAX(created_at) as last_nominated_at'))
+            ->whereIn('next_nominee_id', $eligibleUsers)
+            ->groupBy('next_nominee_id');
+        $usersWithNominationDate = Utilizador::leftJoinSub($lastNominated, 'last_nominations', function ($join) {
+            $join->on('users.id', '=', 'last_nominations.next_nominee_id');
+        })
+            ->whereIn('users.id', $eligibleUsers)
+            ->orderBy('last_nominations.last_nominated_at', 'asc')
+            ->select('users.id')
+            ->first();
 
         return response()->json($usersWithNominationDate);
     }
@@ -346,25 +364,31 @@ class MetalThursdayController extends Controller
     /**
      * Apresenta a página de detalhes de uma MetalThursday.
      *
-     * @param MetalThursday $metalThursday - MetalThursday a apresentar.
+     * @param  MetalThursday  $metalThursday  - MetalThursday a apresentar.
      * @return View - Página de detalhes de MetalThursday.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function show(MetalThursday $metalThursday): View
     {
         $metalThursday->loadCount(['comments', 'ratings', 'listens'])
-                      ->loadAvg('ratings', 'rating')
-                      ->load([
-                          'edition', 'author', 'nextNominee', 'creator', 'ratings.user', 'listens.user',
-                          'sections' => function ($query) {
-                              $query->withCount(['comments', 'ratings', 'listens'])
-                                    ->withAvg('ratings', 'rating')
-                                    ->with('ratings.user', 'listens.user', 'sectionType', 'band')
-                                    ->orderBy('id');
-                          }
-                      ]);
+            ->loadAvg('ratings', 'rating')
+            ->load([
+                'edition',
+                'author',
+                'nextNominee',
+                'creator',
+                'ratings.user',
+                'listens.user',
+                'sections' => function ($query) {
+                    $query->withCount(['comments', 'ratings', 'listens'])
+                        ->withAvg('ratings', 'rating')
+                        ->with('ratings.user', 'listens.user', 'sectionType', 'band')
+                        ->orderBy('id');
+                },
+            ]);
 
         return view('metalthursday.show', ['mt' => $metalThursday]);
     }

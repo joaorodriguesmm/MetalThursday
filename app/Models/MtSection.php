@@ -6,8 +6,8 @@ use App\Traits\Blameable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 
@@ -15,11 +15,12 @@ use Illuminate\Support\Facades\Auth;
  * Gere a tabela 'mt_sections' da base de dados.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 class MtSection extends Model
 {
-    use SoftDeletes, Blameable;
+    use Blameable, SoftDeletes;
 
     protected $table = 'mt_sections';
 
@@ -42,6 +43,7 @@ class MtSection extends Model
      * @return BelongsTo - Relação com a tabela metal_thursdays.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function metalThursday(): BelongsTo
@@ -55,6 +57,7 @@ class MtSection extends Model
      * @return BelongsTo - Relação com a tabela mt_section_types.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function sectionType(): BelongsTo
@@ -68,6 +71,7 @@ class MtSection extends Model
      * @return BelongsTo - Relação com a tabela bands.
      *
      * @version 1.0
+     *
      * @since 1.0
      */
     public function band(): BelongsTo
@@ -81,6 +85,7 @@ class MtSection extends Model
      * @return MorphMany - Relação com a tabela comments.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function comments(): MorphMany
@@ -94,6 +99,7 @@ class MtSection extends Model
      * @return MorphMany - Relação com a tabela ratings.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function ratings(): MorphMany
@@ -107,6 +113,7 @@ class MtSection extends Model
      * @return MorphMany - Relação com a tabela listens.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function listens()
@@ -120,6 +127,7 @@ class MtSection extends Model
      * @return MorphOne - Relação com a tabela ratings.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function userRatingRelation(): MorphOne
@@ -133,6 +141,7 @@ class MtSection extends Model
      * @return MorphOne - Relação com a tabela listens.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function userListenRelation(): MorphOne
@@ -146,6 +155,7 @@ class MtSection extends Model
      * @return Attribute - Atributo virtual.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     protected function userRating(): Attribute
@@ -161,6 +171,7 @@ class MtSection extends Model
      * @return Attribute - Atributo virtual.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     protected function userHasListened(): Attribute

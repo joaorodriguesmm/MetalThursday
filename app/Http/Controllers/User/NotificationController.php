@@ -12,6 +12,7 @@ use Illuminate\View\View;
  * Gere as notificações do utilizador autenticado.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 class NotificationController extends Controller
@@ -22,26 +23,27 @@ class NotificationController extends Controller
      * @return View - Página de notificações.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function index(): View
     {
         $notifications = Auth::user()
-                             ->notifications()
-                             ->latest()
-                             ->paginate(15);
+            ->notifications()
+            ->latest()
+            ->paginate(15);
 
         return view('notifications.index', compact('notifications'));
     }
 
-
     /**
      * Marca uma notificação específica como lida.
      *
-     * @param string $id Id da notificação.
+     * @param  string  $id  Id da notificação.
      * @return RedirectResponse - Redirecionamento para a página de notificações.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function markAsRead(Notification $notification): RedirectResponse
@@ -51,6 +53,7 @@ class NotificationController extends Controller
         }
 
         $notification->markAsRead();
+
         return back()->with('success', 'Notificação marcada como lida.');
     }
 
@@ -60,11 +63,13 @@ class NotificationController extends Controller
      * @return RedirectResponse - Redirecionamento para a página de notificações.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function markAllAsRead(): RedirectResponse
     {
         Auth::user()->unreadNotifications->markAsRead();
+
         return back()->with('success', 'Todas as notificações marcadas como lidas.');
     }
 }

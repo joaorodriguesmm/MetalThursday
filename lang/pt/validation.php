@@ -4,6 +4,7 @@
  * Retorna os textos de validação em português.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 return [
@@ -151,9 +152,9 @@ return [
     ],
 
     'attributes' => [
-        'email'                 => 'e-mail',
-        'password'              => 'password',
+        'email' => 'e-mail',
+        'password' => 'password',
         'password_confirmation' => 'confirmação da password',
-        'name'                  => 'nome',
+        'name' => 'nome',
     ],
 ];

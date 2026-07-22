@@ -3,14 +3,14 @@
 namespace App\Policies;
 
 use App\Models\Band;
-use App\Models\User;
+use App\Models\Autenticacao\Utilizador;
 
 class BandPolicy
 {
     /**
      * Permite que um super-administrador (ID 1) execute qualquer ação.
      */
-    public function before(User $user, string $ability): ?bool
+    public function before(Utilizador $user, string $ability): ?bool
     {
         return $user->id === 1 ? true : null;
     }
@@ -18,7 +18,7 @@ class BandPolicy
     /**
      * Determina se o utilizador pode ver a lista de bandas.
      */
-    public function viewAny(User $user): bool
+    public function viewAny(Utilizador $user): bool
     {
         return true;
     }
@@ -26,7 +26,7 @@ class BandPolicy
     /**
      * Determina se o utilizador pode criar bandas.
      */
-    public function create(User $user): bool
+    public function create(Utilizador $user): bool
     {
         // Qualquer utilizador autenticado pode criar.
         return true;
@@ -35,7 +35,7 @@ class BandPolicy
     /**
      * Determina se o utilizador pode atualizar a banda.
      */
-    public function update(User $user, Band $band): bool
+    public function update(Utilizador $user, Band $band): bool
     {
         // Apenas o utilizador que criou a banda pode atualizá-la.
         return $user->id === $band->created_by;
@@ -44,13 +44,13 @@ class BandPolicy
     /**
      * Determina se o utilizador pode apagar a banda.
      */
-    public function delete(User $user, Band $band): bool
+    public function delete(Utilizador $user, Band $band): bool
     {
         // Apenas o utilizador que criou a banda pode apagá-la.
         return $user->id === $band->created_by;
     }
 
-    public function view(User $user, Band $band): bool
+    public function view(Utilizador $user, Band $band): bool
     {
         return true;
     }

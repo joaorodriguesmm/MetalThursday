@@ -1,4 +1,4 @@
-import FormValidator from '../modules/FormValidator';
+import ValidadorFormulario from '../modulos/ValidadorFormulario';
 import TomSelectInitializer from '../modules/TomSelectInitializer';
 
 document.addEventListener('DOMContentLoaded', () => {

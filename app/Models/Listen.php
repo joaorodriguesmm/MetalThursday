@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Autenticacao\Utilizador;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,11 +12,13 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * Gere a tabela 'listens' da base de dados.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 class Listen extends Model
 {
     use HasFactory;
+
     protected $fillable = ['user_id'];
 
     /**
@@ -24,6 +27,7 @@ class Listen extends Model
      * @return MorphTo - Relação com a tabela do item ouvido.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function listenable(): MorphTo
@@ -37,10 +41,11 @@ class Listen extends Model
      * @return BelongsTo - Relação com a tabela users.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Utilizador::class);
     }
 }

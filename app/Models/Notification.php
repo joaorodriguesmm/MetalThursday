@@ -9,12 +9,14 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * Gere a tabela 'notifications' da base de dados.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 class Notification extends Model
 {
     public $incrementing = false;
-    protected $keyType   = 'string';
+
+    protected $keyType = 'string';
 
     protected $fillable = [
         'id',
@@ -26,7 +28,7 @@ class Notification extends Model
     ];
 
     protected $casts = [
-        'data'    => 'array',
+        'data' => 'array',
         'read_at' => 'datetime',
     ];
 
@@ -36,6 +38,7 @@ class Notification extends Model
      * @return MorphTo - Relação com a tabela users.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function notifiable(): MorphTo
@@ -46,9 +49,9 @@ class Notification extends Model
     /**
      * Marca a notificação como lida.
      *
-     * @return void
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function markAsRead(): void
@@ -61,14 +64,14 @@ class Notification extends Model
     /**
      * Marca a notificação como não lida.
      *
-     * @return void
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function markAsUnread(): void
     {
-        if (!is_null($this->read_at)) {
+        if (! is_null($this->read_at)) {
             $this->forceFill(['read_at' => null])->save();
         }
     }
@@ -79,6 +82,7 @@ class Notification extends Model
      * @return bool - Verdadeiro se a notificação foi lida.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function read(): bool
@@ -92,6 +96,7 @@ class Notification extends Model
      * @return bool - Verdadeiro se a notificação não foi lida.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function unread(): bool

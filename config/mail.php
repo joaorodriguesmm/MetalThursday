@@ -4,20 +4,21 @@
  * Retorna as configurações de e-mail.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 return [
     'default' => env('MAIL_MAILER', 'log'),
     'mailers' => [
         'smtp' => [
-            'transport'    => 'smtp',
-            'scheme'       => env('MAIL_SCHEME'),
-            'url'          => env('MAIL_URL'),
-            'host'         => env('MAIL_HOST', '127.0.0.1'),
-            'port'         => env('MAIL_PORT', 2525),
-            'username'     => env('MAIL_USERNAME'),
-            'password'     => env('MAIL_PASSWORD'),
-            'timeout'      => null,
+            'transport' => 'smtp',
+            'scheme' => env('MAIL_SCHEME'),
+            'url' => env('MAIL_URL'),
+            'host' => env('MAIL_HOST', '127.0.0.1'),
+            'port' => env('MAIL_PORT', 2525),
+            'username' => env('MAIL_USERNAME'),
+            'password' => env('MAIL_PASSWORD'),
+            'timeout' => null,
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],
         'ses' => [
@@ -31,18 +32,18 @@ return [
         ],
         'sendmail' => [
             'transport' => 'sendmail',
-            'path'      => env('MAIL_SENDMAIL_PATH', '/usr/sbin/sendmail -bs -i'),
+            'path' => env('MAIL_SENDMAIL_PATH', '/usr/sbin/sendmail -bs -i'),
         ],
         'log' => [
             'transport' => 'log',
-            'channel'   => env('MAIL_LOG_CHANNEL'),
+            'channel' => env('MAIL_LOG_CHANNEL'),
         ],
         'array' => [
             'transport' => 'array',
         ],
         'failover' => [
             'transport' => 'failover',
-            'mailers'   => [
+            'mailers' => [
                 'smtp',
                 'log',
             ],
@@ -50,7 +51,7 @@ return [
         ],
         'roundrobin' => [
             'transport' => 'roundrobin',
-            'mailers'   => [
+            'mailers' => [
                 'ses',
                 'postmark',
             ],
@@ -59,6 +60,6 @@ return [
     ],
     'from' => [
         'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
-        'name'    => env('MAIL_FROM_NAME', 'Example'),
+        'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 ];

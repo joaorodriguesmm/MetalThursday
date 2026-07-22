@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Autenticacao\Utilizador;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
  * Gere a tabela 'comments' da base de dados.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 class Comment extends Model
@@ -33,11 +35,12 @@ class Comment extends Model
      * @return BelongsTo - Relação com a tabela users.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Utilizador::class);
     }
 
     /**
@@ -46,6 +49,7 @@ class Comment extends Model
      * @return MorphTo - Relação com a tabela do objeto comentado.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function commentable()
@@ -59,6 +63,7 @@ class Comment extends Model
      * @return HasMany - Relação com a tabela likes.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function likes(): HasMany
@@ -72,6 +77,7 @@ class Comment extends Model
      * @return BelongsTo - Relação com a tabela comments.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function parent(): BelongsTo
@@ -85,6 +91,7 @@ class Comment extends Model
      * @return HasMany - Relação com a tabela comments.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function replies(): HasMany
@@ -98,12 +105,13 @@ class Comment extends Model
      * @return Attribute - Atributo virtual.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     protected function likesCount(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->likes->count(),
+            get: fn() => $this->likes->count(),
         );
     }
 
@@ -113,6 +121,7 @@ class Comment extends Model
      * @return BelongsTo - Relação com a tabela metal_thursdays.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function metalThursday(): BelongsTo
@@ -134,12 +143,13 @@ class Comment extends Model
      * @return Attribute - Atributo virtual.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     protected function isLikedByUser(): Attribute
     {
         return Attribute::make(
-            get: fn () => Auth::check() ? $this->likes->contains('user_id', Auth::id()) : false
+            get: fn() => Auth::check() ? $this->likes->contains('user_id', Auth::id()) : false
         );
     }
 }

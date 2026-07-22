@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Autenticacao\Utilizador;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -9,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Gere a tabela 'email_permission_user' da base de dados.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 class EmailPermissionUser extends Model
@@ -26,11 +28,12 @@ class EmailPermissionUser extends Model
      * @return BelongsTo - Relação com a tabela users.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Utilizador::class);
     }
 
     /**
@@ -39,9 +42,10 @@ class EmailPermissionUser extends Model
      * @return BelongsTo - Relação com a tabela email_permissions.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
-     public function emailpermission(): BelongsTo
+    public function emailpermission(): BelongsTo
     {
         return $this->belongsTo(EmailPermission::class, 'email_permission_id');
     }

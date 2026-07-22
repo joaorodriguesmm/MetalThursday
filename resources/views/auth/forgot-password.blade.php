@@ -26,6 +26,6 @@
     </form>
 
     @push('page-scripts')
-        @vite(['resources/js/pages/forgotPassword.js'])
+        @vite(['resources/js/paginas/recuperarPalavraPasse.js'])
     @endpush
 </x-guest-layout>

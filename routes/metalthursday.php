@@ -2,12 +2,12 @@
 
 use App\Http\Controllers\Entities\BandController;
 use App\Http\Controllers\Entities\GenreController;
-use App\Http\Controllers\MetalThursday\MetalThursdayController;
-use App\Http\Controllers\MetalThursday\MtEditionController;
 use App\Http\Controllers\Interactions\CommentController;
 use App\Http\Controllers\Interactions\LikeController;
 use App\Http\Controllers\Interactions\ListenController;
 use App\Http\Controllers\Interactions\RatingController;
+use App\Http\Controllers\MetalThursday\MetalThursdayController;
+use App\Http\Controllers\MetalThursday\MtEditionController;
 use App\Http\Controllers\User\NotificationController;
 use Illuminate\Support\Facades\Route;
 
@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Route;
  * Estas rotas requerem que o utilizador esteja autenticado e com o e-mail verificado.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 Route::middleware(['auth', 'verified'])->group(function () {

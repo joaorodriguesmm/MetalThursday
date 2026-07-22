@@ -9,6 +9,7 @@ use Illuminate\View\View;
  * Composer para o menu de navegação.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 class NavigationComposer
@@ -16,10 +17,10 @@ class NavigationComposer
     /**
      * Liga os dados à view.
      *
-     * @param View $view - View a ligar os dados.
-     * @return void
+     * @param  View  $view  - View a ligar os dados.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function compose(View $view): void

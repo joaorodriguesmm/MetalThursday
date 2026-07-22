@@ -1,172 +1,236 @@
 <?php
 
+declare(strict_types=1);
+
+use App\Http\Controllers\Autenticacao\ControladorRegistoConvite;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\HandleEmailVerificationController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
-use App\Http\Controllers\User\ProfileController;
-use App\Http\Controllers\Auth\RegisteredUserController;
-use App\Http\Controllers\Auth\HandleEmailVerificationController;
+use App\Http\Controllers\Utilizadores\ControladorPalavraPasse;
+use App\Http\Controllers\Utilizadores\ControladorPerfil;
+use App\Http\Controllers\Utilizadores\ControladorPermissoesEmail;
 use Illuminate\Support\Facades\Route;
 
 /**
- * Rotas de autenticação.
+ * Define as rotas de autenticação e gestão do perfil.
  *
- * @since 1.0
- * @version 1.0
+ * Os nomes exigidos pelos contratos técnicos do Laravel permanecem com a
+ * nomenclatura original. As rotas específicas da aplicação utilizam
+ * nomenclatura portuguesa.
+ *
+ * @since 1.0.0
+ *
+ * @version 2.0.0
  */
 
-/**
- * Rotas de autenticação para utilizadores sem sessão iniciada.
- *
- * @since 1.0
- * @version 1.0
- */
-Route::middleware('guest')->group(function () {
-    /**
-     * Rota /convite/{codigo_convite} (GET).
-     * Apresenta o formulário de registo por convite.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::get('/convite/{codigo_convite}', [RegisteredUserController::class, 'create'])
-         ->name('registo.convite');
+/*
+|--------------------------------------------------------------------------
+| Rotas de aceitação de convites
+|--------------------------------------------------------------------------
+|
+| Apenas visitantes sem uma sessão autenticada podem consultar ou aceitar
+| convites.
+|
+*/
 
-    /**
-     * Rota /convite (POST).
-     * Processa o formulário de registo por convite.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::post('/convite', [RegisteredUserController::class, 'store'])
-         ->name('registo.finalizar');
+Route::middleware('guest')->group(
+    static function (): void {
+        Route::get(
+            'convites/{codigoConvite}',
+            [
+                ControladorRegistoConvite::class,
+                'apresentar',
+            ],
+        )
+            ->where(
+                'codigoConvite',
+                '[A-Za-z0-9_-]{10,128}',
+            )
+            ->name('convites.aceitar');
 
-    /**
-     * Rota /password-esquecida (GET).
-     * Apresenta o formulário de recuperação de password.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::get('password-esquecida', [PasswordResetLinkController::class, 'create'])
-         ->name('password.request');
+        Route::post(
+            'convites/aceitar',
+            [
+                ControladorRegistoConvite::class,
+                'registar',
+            ],
+        )
+            ->middleware('throttle:6,1')
+            ->name('convites.registar');
+    },
+);
 
-    /**
-     * Rota /forgot-password (POST).
-     * Processa o formulário de recuperação de password.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
-         ->name('password.email');
+/*
+|--------------------------------------------------------------------------
+| Rotas de recuperação da palavra-passe
+|--------------------------------------------------------------------------
+|
+| Os nomes `password.*` são mantidos por constituírem contratos técnicos do
+| sistema de reposição de palavras-passe do Laravel.
+|
+*/
 
-    /**
-     * Rota /redefinir-password/{token} (GET).
-     * Apresenta o formulário de redefinição de password.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::get('redefinir-password/{token}', [NewPasswordController::class, 'create'])
-         ->name('password.reset');
+Route::middleware('guest')->group(
+    static function (): void {
+        Route::get(
+            'palavra-passe/esquecida',
+            [
+                PasswordResetLinkController::class,
+                'create',
+            ],
+        )->name('password.request');
 
-    /**
-     * Rota /reset-password (POST).
-     * Processa o formulário de redefinição de password.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::post('reset-password', [NewPasswordController::class, 'store'])
-         ->name('password.store');
+        Route::post(
+            'palavra-passe/esquecida',
+            [
+                PasswordResetLinkController::class,
+                'store',
+            ],
+        )
+            ->middleware('throttle:6,1')
+            ->name('password.email');
 
-    /**
-     * Rota /login (GET).
-     * Apresenta o formulário de login.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::get('login', [AuthenticatedSessionController::class, 'create'])
-         ->name('login');
+        Route::get(
+            'palavra-passe/redefinir/{token}',
+            [
+                NewPasswordController::class,
+                'create',
+            ],
+        )->name('password.reset');
 
-    /**
-     * Rota /login (POST).
-     * Processa o formulário de login.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::post('login', [AuthenticatedSessionController::class, 'store']);
-});
+        Route::post(
+            'palavra-passe/redefinir',
+            [
+                NewPasswordController::class,
+                'store',
+            ],
+        )
+            ->middleware('throttle:6,1')
+            ->name('password.store');
+    },
+);
 
-/**
- * Rotas de autenticação para utilizadores com sessão iniciada.
- *
- * @since 1.0
- * @version 1.0
- */
-Route::middleware('auth')->group(function () {
-    /**
-     * Rota /logout (POST).
-     * Processa o logout.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
-         ->name('logout');
+/*
+|--------------------------------------------------------------------------
+| Rotas de início de sessão
+|--------------------------------------------------------------------------
+|
+| O nome `login` é mantido por ser utilizado pelo middleware de autenticação
+| do Laravel como destino dos visitantes não autenticados.
+|
+*/
 
-    /**
-     * Rota /profile (GET).
-     * Apresenta o formulário de edição de perfil.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::get('/perfil', [ProfileController::class, 'edit'])
-         ->name('profile.edit');
+Route::middleware('guest')->group(
+    static function (): void {
+        Route::get(
+            'entrar',
+            [
+                AuthenticatedSessionController::class,
+                'create',
+            ],
+        )->name('login');
 
-    /**
-     * Rota /profile (PATCH).
-     * Processa o formulário de edição de perfil.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::patch('/perfil', [ProfileController::class, 'update'])
-         ->name('profile.update');
+        Route::post(
+            'entrar',
+            [
+                AuthenticatedSessionController::class,
+                'store',
+            ],
+        )->name('autenticacao.iniciar');
+    },
+);
 
-    /**
-     * Rota /profile/email-permissions (PATCH).
-     * Processa o formulário de edição de permissões de e-mail.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::patch('/perfil/email-permissions', [ProfileController::class, 'updateEmailPermissions'])
-         ->name('profile.email_permissions.update');
+/*
+|--------------------------------------------------------------------------
+| Rotas autenticadas
+|--------------------------------------------------------------------------
+|
+| `auth.session` permite detetar alterações da hash da palavra-passe e
+| terminar sessões invalidadas noutros dispositivos.
+|
+*/
 
-    /**
-     * Rota /profile/password (PUT).
-     * Processa o formulário de edição de password.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::put('/perfil/password', [ProfileController::class, 'updatePassword'])
-         ->name('profile.password.update');
-});
+Route::middleware([
+    'auth',
+    'auth.session',
+])->group(
+    static function (): void {
+        Route::post(
+            'sair',
+            [
+                AuthenticatedSessionController::class,
+                'destroy',
+            ],
+        )->name('autenticacao.sair');
 
-/**
- * Rota /verificar-email/{id}/{hash} (GET).
- * Processa a verificação de e-mail.
- *
- * @since 1.0
- * @version 1.0
- */
-Route::get('/verificar-email/{id}/{hash}', HandleEmailVerificationController::class)
-     ->middleware(['signed'])
-     ->name('verification.verify');
+        /*
+        |--------------------------------------------------------------------------
+        | Perfil
+        |--------------------------------------------------------------------------
+        */
+
+        Route::prefix('perfil')
+            ->name('perfil.')
+            ->group(
+                static function (): void {
+                    Route::get(
+                        '/',
+                        [
+                            ControladorPerfil::class,
+                            'editar',
+                        ],
+                    )->name('editar');
+
+                    Route::patch(
+                        '/',
+                        [
+                            ControladorPerfil::class,
+                            'atualizar',
+                        ],
+                    )->name('atualizar');
+
+                    Route::patch(
+                        'permissoes-email',
+                        [
+                            ControladorPermissoesEmail::class,
+                            'atualizar',
+                        ],
+                    )->name(
+                        'permissoes-email.atualizar',
+                    );
+
+                    Route::put(
+                        'palavra-passe',
+                        [
+                            ControladorPalavraPasse::class,
+                            'atualizar',
+                        ],
+                    )->name(
+                        'palavra-passe.atualizar',
+                    );
+                },
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Verificação do endereço de e-mail
+        |--------------------------------------------------------------------------
+        |
+        | O nome `verification.verify` é exigido pelo sistema de verificação
+        | do Laravel e, por isso, permanece inalterado.
+        |
+        */
+
+        Route::get(
+            'verificar-email/{id}/{hash}',
+            HandleEmailVerificationController::class,
+        )
+            ->middleware([
+                'signed',
+                'throttle:6,1',
+            ])
+            ->whereNumber('id')
+            ->name('verification.verify');
+    },
+);

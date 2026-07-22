@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * Gere os pedidos de recuperação de password.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 class ForgotPasswordRequest extends FormRequest
@@ -18,6 +19,7 @@ class ForgotPasswordRequest extends FormRequest
      * @return bool - Verdadeiro se o utilizador é autorizado.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function authorize(): bool
@@ -31,6 +33,7 @@ class ForgotPasswordRequest extends FormRequest
      * @return array - Regras de validação.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function rules(): array
@@ -46,15 +49,16 @@ class ForgotPasswordRequest extends FormRequest
      * @return array - Mensagens de erro.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function messages(): array
     {
         return [
             'email.required' => 'Por favor, insere o teu e-mail.',
-            'email.string'   => 'O e-mail deve ser uma sequência de caracteres.',
-            'email.email'    => 'Por favor, insere um e-mail válido.',
-            'email.exists'   => 'Não existe nenhum utilizador com o e-mail inserido.',
+            'email.string' => 'O e-mail deve ser uma sequência de caracteres.',
+            'email.email' => 'Por favor, insere um e-mail válido.',
+            'email.exists' => 'Não existe nenhum utilizador com o e-mail inserido.',
         ];
     }
 }

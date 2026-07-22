@@ -14,7 +14,7 @@ class PaginationComposer
         $paginator = $view->paginator;
 
         // Se não for o nosso paginador principal, não faz nada
-        if (!$paginator instanceof LengthAwarePaginator) {
+        if (! $paginator instanceof LengthAwarePaginator) {
             return;
         }
 

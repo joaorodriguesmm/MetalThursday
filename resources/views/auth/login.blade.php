@@ -9,7 +9,7 @@
         <h2 class="h3 mb-3 fw-normal">Iniciar Sessão</h2>
     </div>
 
-    <form method="POST" action="{{ route('login') }}" id="login-form" novalidate>
+    <form method="POST" action="{{ route('login') }}" id="formulario-iniciar-sessao" novalidate>
         @csrf
         <div class="form-field-group mb-3">
             <div class="form-floating">
@@ -41,6 +41,6 @@
     </form>
 
     @push('page-scripts')
-        @vite(['resources/js/pages/login.js'])
+        @vite(['resources/js/paginas/iniciarSessao.js'])
     @endpush
 </x-guest-layout>

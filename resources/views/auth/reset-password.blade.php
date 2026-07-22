@@ -46,6 +46,6 @@
     @endif
 
     @push('page-scripts')
-        @vite(['resources/js/pages/resetPassword.js'])
+        @vite(['resources/js/paginas/redefinirPalavraPasse.js'])
     @endpush
 </x-guest-layout>

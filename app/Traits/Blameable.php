@@ -2,7 +2,7 @@
 
 namespace App\Traits;
 
-use App\Models\User;
+use App\Models\Autenticacao\Utilizador;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 
@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
  * Gere automaticamente os atributos blameable.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 trait Blameable
@@ -17,9 +18,9 @@ trait Blameable
     /**
      * Inicia as funcionalidades de blameable num modelo.
      *
-     * @return void
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public static function bootBlameable(): void
@@ -50,11 +51,12 @@ trait Blameable
      * @return BelongsTo - Relação com a tabela users.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function creator(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(Utilizador::class, 'created_by');
     }
 
     /**
@@ -63,10 +65,11 @@ trait Blameable
      * @return BelongsTo - Relação com a tabela users.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function updater(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'updated_by');
+        return $this->belongsTo(Utilizador::class, 'updated_by');
     }
 }

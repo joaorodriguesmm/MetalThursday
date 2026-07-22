@@ -14,6 +14,7 @@ use Illuminate\View\View;
  * Gere a autenticação de utilizadores.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 class AuthenticatedSessionController extends Controller
@@ -24,6 +25,7 @@ class AuthenticatedSessionController extends Controller
      * @return View - Página de login.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function create(): View
@@ -34,10 +36,11 @@ class AuthenticatedSessionController extends Controller
     /**
      * Processa o formulário de login.
      *
-     * @param LoginRequest $request - Pedido de autenticação.
+     * @param  LoginRequest  $request  - Pedido de autenticação.
      * @return RedirectResponse - Redirecionamento para a página de login ou para a página inicial.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function store(LoginRequest $request): RedirectResponse
@@ -45,7 +48,7 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
         $user = Auth::user();
 
-        if ($user instanceof MustVerifyEmail && !$user->hasVerifiedEmail()) {
+        if ($user instanceof MustVerifyEmail && ! $user->hasVerifiedEmail()) {
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
@@ -54,16 +57,18 @@ class AuthenticatedSessionController extends Controller
         }
 
         $request->session()->regenerate();
+
         return redirect()->intended(route('home', [], false));
     }
 
     /**
      * Termina a sessão do utilizador.
      *
-     * @param Request $request - Pedido HTTP.
+     * @param  Request  $request  - Pedido HTTP.
      * @return RedirectResponse - Redirecionamento para a página de login.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function destroy(Request $request): RedirectResponse
@@ -71,6 +76,7 @@ class AuthenticatedSessionController extends Controller
         Auth::guard('web')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect()->route('login');
     }
 }

@@ -54,7 +54,7 @@ final class ControladorRegistoConvite extends Controller
 
         if ($convite === null) {
             return redirect()
-                ->route('autenticacao.entrar')
+                ->route('login')
                 ->with(
                     'erro',
                     'Este convite é inválido ou já não está disponível.',
@@ -140,7 +140,7 @@ final class ControladorRegistoConvite extends Controller
         event(new Registered($utilizador));
 
         return redirect()
-            ->route('autenticacao.entrar')
+            ->route('login')
             ->with(
                 'estado',
                 'Registo concluído. Foi enviado um link de verificação para o teu endereço de e-mail.',

@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
  * Gere os ouvidos.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 class ListenController extends Controller
@@ -23,19 +24,20 @@ class ListenController extends Controller
     /**
      * Marca ou desmarca o ouvido.
      *
-     * @param Request $request - Pedido HTTP.
-     * @param string $listenableType - Tipo de destino do ouvido.
-     * @param int $listenableId - Id do tipo de destino.
+     * @param  Request  $request  - Pedido HTTP.
+     * @param  string  $listenableType  - Tipo de destino do ouvido.
+     * @param  int  $listenableId  - Id do tipo de destino.
      * @return JsonResponse - Resposta JSON com o estado do ouvido e o contador de ouvidos.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function toggleListen(Request $request, string $listenableType, int $listenableId): JsonResponse
     {
         $modelClass = $listenableType === 'section' ? MtSection::class : MetalThursday::class;
         $listenable = $modelClass::findOrFail($listenableId);
-        $listen     = $listenable->listens()->where('user_id', Auth::id())->first();
+        $listen = $listenable->listens()->where('user_id', Auth::id())->first();
 
         if ($listen) {
             $listen->delete();
@@ -63,9 +65,9 @@ class ListenController extends Controller
         }
 
         return response()->json([
-            'has_heard'     => $hasHeard,
+            'has_heard' => $hasHeard,
             'listens_count' => $listenable->listens->count(),
-            'tooltip_html'  => $tooltipContent,
+            'tooltip_html' => $tooltipContent,
         ]);
     }
 }

@@ -8,6 +8,7 @@ use Illuminate\Database\Seeder;
  * Seeder da base de dados.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 class DatabaseSeeder extends Seeder
@@ -15,9 +16,9 @@ class DatabaseSeeder extends Seeder
     /**
      * Executa os seeders registados.
      *
-     * @return void
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function run(): void
@@ -26,7 +27,7 @@ class DatabaseSeeder extends Seeder
             CountrySeeder::class,
             EmailPermissionSeeder::class,
             MtSectionTypeSeeder::class,
-            //UserSeeder::class,
+            // UserSeeder::class,
         ]);
     }
 }

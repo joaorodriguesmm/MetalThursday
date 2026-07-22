@@ -5,8 +5,8 @@
  * @version 1.0
  */
 import EmbedTester from '../modules/EmbedTester';
-import FormValidator from '../modules/FormValidator';
-import TooltipInitializer from '../modules/TooltipInitializer';
+import ValidadorFormulario from '../modulos/ValidadorFormulario';
+import InicializadorTooltips from '../modulos/InicializadorTooltips';
 import SectionManager from '../modules/SectionManager';
 import ModalManager from '../modules/ModalManager';
 import NomineeSelector from '../modules/NomineeSelector';
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @since 1.0
      * @version 1.0
      */
-    new TooltipInitializer();
+    new InicializadorTooltips();
 
     /**
      * Inicializa os componentes de uma secção.
@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const initComponentsForSection = (sectionElement) => {
         sectionElement.querySelectorAll('select').forEach(el => tomSelects.init(el));
         new EmbedTester(sectionElement);
-        new TooltipInitializer();
+        new InicializadorTooltips();
     };
 
     /**

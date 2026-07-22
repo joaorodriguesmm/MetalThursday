@@ -5,34 +5,40 @@ namespace App\Notifications;
 use App\Models\Comment;
 use App\Models\MetalThursday;
 use App\Models\MtSection;
-use App\Models\User;
+use App\Models\Autenticacao\Utilizador;
 use Illuminate\Database\Eloquent\Model;
 
 /**
  * Define a notificação de interação de utilizador.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 class UserInteractionOccurred extends AppNotification
 {
     public string $subjectClass;
+
     public int $subjectId;
-    public User $causer;
+
+    public Utilizador $causer;
+
     public string $actionText;
+
     private ?Model $retrievedSubject = null;
 
     /**
      * Cria uma nova notificação de interação de utilizador.
      *
-     * @param mixed $interactionSubject - O objeto da interação.
-     * @param User $causer - O utilizador que realizou a interação.
-     * @param string $actionText - O texto que descreve a interação.
+     * @param  mixed  $interactionSubject  - O objeto da interação.
+     * @param  Utilizador  $causer  - O utilizador que realizou a interação.
+     * @param  string  $actionText  - O texto que descreve a interação.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
-    public function __construct($interactionSubject, User $causer, string $actionText)
+    public function __construct($interactionSubject, Utilizador $causer, string $actionText)
     {
         $this->afterCommit();
 
@@ -48,6 +54,7 @@ class UserInteractionOccurred extends AppNotification
      * @return Model|null - O objeto da interação.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     private function getInteractionSubject(): ?Model
@@ -55,6 +62,7 @@ class UserInteractionOccurred extends AppNotification
         if ($this->retrievedSubject) {
             return $this->retrievedSubject;
         }
+
         return $this->retrievedSubject = $this->subjectClass::find($this->subjectId);
     }
 
@@ -64,6 +72,7 @@ class UserInteractionOccurred extends AppNotification
      * @return MetalThursday|null - O post pai (MetalThursday) da interação.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     private function getParentPost(): ?MetalThursday
@@ -79,22 +88,24 @@ class UserInteractionOccurred extends AppNotification
         if ($subject instanceof Comment) {
             return $subject->metalThursday()->first();
         }
+
         return null;
     }
 
     /**
      * Obtém se deve enviar um e-mail para o utilizador.
      *
-     * @param User $notifiable - O utilizador que recebe a notificação.
+     * @param  Utilizador  $notifiable  - O utilizador que recebe a notificação.
      * @return bool - Se deve enviar um e-mail para o utilizador.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
-    protected function shouldSendEmail(User $notifiable): bool
+    protected function shouldSendEmail(Utilizador $notifiable): bool
     {
         $parentPost = $this->getParentPost();
-        if (!$parentPost) {
+        if (! $parentPost) {
             return false;
         }
 
@@ -108,32 +119,34 @@ class UserInteractionOccurred extends AppNotification
     /**
      * Obtém a representação da notificação em array para guardar na base de dados.
      *
-     * @param User $notifiable - O utilizador que recebe a notificação.
+     * @param  Utilizador  $notifiable  - O utilizador que recebe a notificação.
      * @return array - A representação da notificação em array.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
-    public function toArray(User $notifiable): array
+    public function toArray(Utilizador $notifiable): array
     {
         return [
             'message' => $this->getMessageLine($notifiable),
-            'url'     => $this->getActionUrl($notifiable),
-            'icon'    => 'bi-chat-quote-fill',
-            'color'   => 'text-info',
+            'url' => $this->getActionUrl($notifiable),
+            'icon' => 'bi-chat-quote-fill',
+            'color' => 'text-info',
         ];
     }
 
     /**
      * Obtém o assunto da notificação.
      *
-     * @param User $notifiable - O utilizador que recebe a notificação.
+     * @param  Utilizador  $notifiable  - O utilizador que recebe a notificação.
      * @return string - O assunto da notificação.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
-    protected function getSubject(User $notifiable): string
+    protected function getSubject(Utilizador $notifiable): string
     {
         $action = $this->actionText;
         $subjectName = $this->getSubjectName();
@@ -152,11 +165,15 @@ class UserInteractionOccurred extends AppNotification
         }
 
         $corrections = [
-            ' do o ' => ' do ', ' do a ' => ' da ', ' em o ' => ' no ',
-            ' em a ' => ' na ', ' a o ' => ' ao ', ' a a ' => ' à ',
+            ' do o ' => ' do ',
+            ' do a ' => ' da ',
+            ' em o ' => ' no ',
+            ' em a ' => ' na ',
+            ' a o ' => ' ao ',
+            ' a a ' => ' à ',
         ];
 
-        $cleanMessage = str_replace(array_keys($corrections), array_values($corrections), " " . $baseMessage);
+        $cleanMessage = str_replace(array_keys($corrections), array_values($corrections), ' ' . $baseMessage);
 
         return "Nova Interação: {$this->causer->name} " . trim($cleanMessage);
     }
@@ -164,13 +181,14 @@ class UserInteractionOccurred extends AppNotification
     /**
      * Obtém a linha da mensagem da notificação.
      *
-     * @param User $notifiable - O utilizador que recebe a notificação.
+     * @param  Utilizador  $notifiable  - O utilizador que recebe a notificação.
      * @return string - A linha da mensagem da notificação.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
-    protected function getMessageLine(User $notifiable): string
+    protected function getMessageLine(Utilizador $notifiable): string
     {
         $causerName = $this->causer->name;
         $action = $this->actionText;
@@ -191,8 +209,12 @@ class UserInteractionOccurred extends AppNotification
         }
 
         $corrections = [
-            ' do o ' => ' do ', ' do a ' => ' da ', ' em o ' => ' no ',
-            ' em a ' => ' na ', ' a o ' => ' ao ', ' a a ' => ' à ',
+            ' do o ' => ' do ',
+            ' do a ' => ' da ',
+            ' em o ' => ' no ',
+            ' em a ' => ' na ',
+            ' a o ' => ' ao ',
+            ' a a ' => ' à ',
         ];
 
         return str_replace(array_keys($corrections), array_values($corrections), $baseMessage);
@@ -201,13 +223,14 @@ class UserInteractionOccurred extends AppNotification
     /**
      * Obtém o texto do botão da notificação.
      *
-     * @param User $notifiable - O utilizador que recebe a notificação.
+     * @param  Utilizador  $notifiable  - O utilizador que recebe a notificação.
      * @return string - O texto do botão da notificação.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
-    protected function getActionText(User $notifiable): string
+    protected function getActionText(Utilizador $notifiable): string
     {
         return 'Ver Atividade';
     }
@@ -215,17 +238,18 @@ class UserInteractionOccurred extends AppNotification
     /**
      * Obtém a URL do botão da notificação.
      *
-     * @param User $notifiable - O utilizador que recebe a notificação.
+     * @param  Utilizador  $notifiable  - O utilizador que recebe a notificação.
      * @return string - A URL do botão da notificação.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
-    protected function getActionUrl(User $notifiable): string
+    protected function getActionUrl(Utilizador $notifiable): string
     {
         $parentPost = $this->getParentPost();
 
-        if (!$parentPost) {
+        if (! $parentPost) {
             return route('home');
         }
 
@@ -238,6 +262,7 @@ class UserInteractionOccurred extends AppNotification
      * @return string - O nome do assunto da notificação.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     private function getSubjectName(): string
@@ -246,18 +271,18 @@ class UserInteractionOccurred extends AppNotification
         if ($subject instanceof Comment) {
             return $this->getDetailedDescription($subject->commentable);
         }
+
         return $this->getDetailedDescription($subject);
     }
 
     /**
      * Gera uma descrição detalhada para um objeto (MetalThursday ou MtSection).
      *
-     * @param mixed $item
-     * @return string
+     * @param  mixed  $item
      */
     private function getDetailedDescription($item): string
     {
-        if (!$item) {
+        if (! $item) {
             return 'algo que foi entretanto removido';
         }
 
@@ -268,6 +293,7 @@ class UserInteractionOccurred extends AppNotification
             if ($item->name) {
                 $title .= " - {$item->name}";
             }
+
             return $title;
         }
 
@@ -275,10 +301,11 @@ class UserInteractionOccurred extends AppNotification
             $sectionTypeName = $item->sectionType?->name ?? 'secção';
             $bandName = $item->band?->name ?? 'Banda Desconhecida';
             $sectionTitle = $item->title ?? 'sem título';
-            if (!$item->sectionType?->has_details) {
+            if (! $item->sectionType?->has_details) {
                 return "a secção de texto {$sectionTitle}";
             }
             $article = substr(strtolower($sectionTypeName), -1) === 'a' ? 'a' : 'o';
+
             return "{$article} {$sectionTypeName} {$bandName} - {$sectionTitle}";
         }
 

@@ -5,34 +5,37 @@ namespace App\Http\Requests\Interactions;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Gere os pedidos de atualização de comentários.
- *
- * @since 1.0
- * @version 1.0
- */
+ * Gere os pedidos de atualização de comentários.
+ *
+ * @since 1.0
+ *
+ * @version 1.0
+ */
 class UpdateCommentRequest extends FormRequest
 {
     /**
-     * Determina se o utilizador está autorizado a fazer o pedido.
-     *
-     * @return bool - Verdadeiro se o utilizador é autorizado.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
+     * Determina se o utilizador está autorizado a fazer o pedido.
+     *
+     * @return bool - Verdadeiro se o utilizador é autorizado.
+     *
+     * @since 1.0
+     *
+     * @version 1.0
+     */
     public function authorize(): bool
     {
         return true;
     }
 
     /**
-     * Obtém as regras de validação que se aplicam ao pedido.
-     *
-     * @return array - Regras de validação.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
+     * Obtém as regras de validação que se aplicam ao pedido.
+     *
+     * @return array - Regras de validação.
+     *
+     * @since 1.0
+     *
+     * @version 1.0
+     */
     public function rules(): array
     {
         return [
@@ -41,16 +44,14 @@ class UpdateCommentRequest extends FormRequest
     }
 
     /**
-     * Obtém as mensagens de erro para o pedido.
-     *
-     * @return array
-     */
+     * Obtém as mensagens de erro para o pedido.
+     */
     public function messages(): array
     {
         return [
             'content.required' => 'Por favor, insere o texto do comentário.',
-            'content.string'   => 'O comentário deve ser uma sequência de caracteres.',
-            'content.max'      => 'O comentário deve ter no máximo 2000 caracteres.',
+            'content.string' => 'O comentário deve ser uma sequência de caracteres.',
+            'content.max' => 'O comentário deve ter no máximo 2000 caracteres.',
         ];
     }
 }

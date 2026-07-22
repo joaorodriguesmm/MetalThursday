@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * Gere os pedidos de criação/edição de avaliação.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 class StoreRatingRequest extends FormRequest
@@ -18,6 +19,7 @@ class StoreRatingRequest extends FormRequest
      * @return bool - Verdadeiro se o utilizador é autorizado.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function authorize(): bool
@@ -31,6 +33,7 @@ class StoreRatingRequest extends FormRequest
      * @return array - Regras de validação.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function rules(): array
@@ -46,6 +49,7 @@ class StoreRatingRequest extends FormRequest
      * @return array - Mensagens de erro.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function messages(): array

@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * Gere os pedidos de criação de comentários.
  *
  * @version 1.0
+ *
  * @since 1.0
  */
 class StoreCommentRequest extends FormRequest
@@ -18,6 +19,7 @@ class StoreCommentRequest extends FormRequest
      * @return bool - Verdadeiro se o utilizador é autorizado.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function authorize(): bool
@@ -31,6 +33,7 @@ class StoreCommentRequest extends FormRequest
      * @return array - Regras de validação.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function rules(): array
@@ -46,14 +49,15 @@ class StoreCommentRequest extends FormRequest
      * @return array - Mensagens de erro.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function messages(): array
     {
         return [
             'content.required' => 'Por favor, insere o texto do comentário.',
-            'content.string'   => 'O comentário deve ser uma sequência de caracteres.',
-            'content.max'      => 'O comentário deve ter no máximo 2000 caracteres.',
+            'content.string' => 'O comentário deve ser uma sequência de caracteres.',
+            'content.max' => 'O comentário deve ter no máximo 2000 caracteres.',
         ];
     }
 }

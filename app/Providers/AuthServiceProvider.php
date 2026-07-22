@@ -18,6 +18,7 @@ use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvid
  * Define as permissões dependentes de autenticação para executar ações na aplicação.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 class AuthServiceProvider extends ServiceProvider
@@ -26,20 +27,22 @@ class AuthServiceProvider extends ServiceProvider
      * Define as permissões para ações nos modelos.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     protected $policies = [
-        Band::class          => BandPolicy::class,
-        Comment::class       => CommentPolicy::class,
-        Genre::class         => GenrePolicy::class,
+        Band::class => BandPolicy::class,
+        Comment::class => CommentPolicy::class,
+        Genre::class => GenrePolicy::class,
         MetalThursday::class => MetalThursdayPolicy::class,
-        MtEdition::class     => MtEditionPolicy::class,
+        MtEdition::class => MtEditionPolicy::class,
     ];
 
     /**
      * Regista os serviços de autenticação.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function boot(): void

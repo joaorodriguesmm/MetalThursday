@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * Gere a tabela 'countries' da base de dados.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 class Country extends Model
@@ -19,7 +20,7 @@ class Country extends Model
 
     protected $fillable = [
         'name',
-        'code'
+        'code',
     ];
 
     /**
@@ -28,6 +29,7 @@ class Country extends Model
      * @return HasMany - Relação com a tabela bands.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function bands(): HasMany

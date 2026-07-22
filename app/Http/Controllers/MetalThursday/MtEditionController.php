@@ -7,7 +7,7 @@ use App\Http\Requests\MetalThursday\StoreEditionRequest;
 use App\Http\Requests\MetalThursday\UpdateEditionRequest;
 use App\Models\EditionRanking;
 use App\Models\MtEdition;
-use App\Models\User;
+use App\Models\Autenticacao\Utilizador;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -23,12 +23,14 @@ class MtEditionController extends Controller
     {
         $this->authorize('viewAny', MtEdition::class);
         $editions = MtEdition::latest()->paginate(20);
+
         return view('entities.editions.index', compact('editions'));
     }
 
     public function create(): View
     {
         $this->authorize('create', MtEdition::class);
+
         return view('entities.editions.create');
     }
 
@@ -41,12 +43,14 @@ class MtEditionController extends Controller
         if ($request->wantsJson()) {
             return response()->json($edition->append('display_text'));
         }
+
         return redirect()->route('editions.index')->with('success', 'Edição criada com sucesso!');
     }
 
     public function edit(MtEdition $edition): View
     {
         $this->authorize('update', $edition);
+
         return view('entities.editions.edit', compact('edition'));
     }
 
@@ -55,6 +59,7 @@ class MtEditionController extends Controller
         $this->authorize('update', $edition);
         $validated = $request->validated();
         $edition->update($validated);
+
         return redirect()->route('editions.index')->with('success', 'Edição atualizada com sucesso!');
     }
 
@@ -62,6 +67,7 @@ class MtEditionController extends Controller
     {
         $this->authorize('delete', $edition);
         $edition->delete();
+
         return redirect()->route('editions.index')->with('success', 'Edição eliminada com sucesso!');
     }
 
@@ -70,7 +76,7 @@ class MtEditionController extends Controller
         $this->authorize('view', $edition);
 
         $rankings = $edition->rankings->groupBy('user_id');
-        $users = User::selectable()->get();
+        $users = Utilizador::selectable()->get();
 
         $totalEntries = $rankings->flatten()->count();
         $isLocked = $totalEntries >= ($users->count() * 3);
@@ -92,7 +98,7 @@ class MtEditionController extends Controller
                 EditionRanking::where('edition_id', $edition->id)->where('user_id', $userId)->delete();
 
                 foreach ($entries as $entryText) {
-                    if (!empty($entryText)) {
+                    if (! empty($entryText)) {
                         EditionRanking::create([
                             'edition_id' => $edition->id,
                             'user_id' => $userId,

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Autenticacao\Utilizador;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Gere a tabela 'likes' da base de dados.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 class Like extends Model
@@ -27,6 +29,7 @@ class Like extends Model
      * @return BelongsTo - Relação com a tabela comments.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function comment(): BelongsTo
@@ -40,10 +43,11 @@ class Like extends Model
      * @return BelongsTo - Relação com a tabela users.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Utilizador::class);
     }
 }

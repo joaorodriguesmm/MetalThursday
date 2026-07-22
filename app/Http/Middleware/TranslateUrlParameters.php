@@ -10,18 +10,22 @@ use Symfony\Component\HttpFoundation\Response;
  * Traduz os parâmetros da URL para português.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 class TranslateUrlParameters
 {
     protected array $paramMap;
+
     protected array $valueMap;
+
     protected array $filterMap;
 
     /**
      * Cria um novo middleware de tradução de parâmetros da URL.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function __construct()
@@ -35,6 +39,7 @@ class TranslateUrlParameters
      * Traduz os parâmetros da URL para português.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function handle(Request $request, Closure $next): Response
@@ -42,13 +47,14 @@ class TranslateUrlParameters
         $translatedQuery = [];
 
         foreach ($request->query() as $param => $value) {
-            $translatedKey   = $this->paramMap[$param] ?? $this->filterMap[$param] ?? $param;
+            $translatedKey = $this->paramMap[$param] ?? $this->filterMap[$param] ?? $param;
             $translatedValue = $this->valueMap[$param][$value] ?? $value;
 
             $translatedQuery[$translatedKey] = $translatedValue;
         }
 
         $request->query->replace($translatedQuery);
+
         return $next($request);
     }
 
@@ -56,6 +62,7 @@ class TranslateUrlParameters
      * Cria o mapa de tradução dos parâmetros da URL.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     private function buildParamMap(): array
@@ -64,6 +71,7 @@ class TranslateUrlParameters
         foreach (config('filters.params', []) as $englishKey => $config) {
             $map[$config['param']] = $englishKey;
         }
+
         return $map;
     }
 
@@ -71,6 +79,7 @@ class TranslateUrlParameters
      * Cria o mapa de tradução dos valores dos parâmetros da URL.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     private function buildValueMap(): array
@@ -86,6 +95,7 @@ class TranslateUrlParameters
                 $map[$config['param']] = $valueMap;
             }
         }
+
         return $map;
     }
 
@@ -93,15 +103,17 @@ class TranslateUrlParameters
      * Cria o mapa de tradução dos filtros da URL.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     private function buildFilterMap(): array
     {
         $map = [];
-        $filters = collect(config('filters.metalthursday', []))->flatMap(fn($group) => $group);
+        $filters = collect(config('filters.metalthursday', []))->flatMap(fn ($group) => $group);
         foreach ($filters as $filter) {
-            $map['filtro_' . $filter['param']] = 'filter_' . $filter['key'];
+            $map['filtro_'.$filter['param']] = 'filter_'.$filter['key'];
         }
+
         return $map;
     }
 
@@ -109,23 +121,23 @@ class TranslateUrlParameters
      * Cria o mapa de tradução reverso dos parâmetros da URL.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public static function getReverseParamMap(): array
     {
         $reverseMap = [];
         $params = config('filters.params', []);
-        $filters = collect(config('filters.metalthursday', []))->flatMap(fn($group) => $group);
+        $filters = collect(config('filters.metalthursday', []))->flatMap(fn ($group) => $group);
 
         foreach ($params as $englishKey => $config) {
             $reverseMap[$englishKey] = $config['param'];
         }
 
         foreach ($filters as $filter) {
-            $reverseMap['filter_' . $filter['key']] = 'filtro_' . $filter['param'];
+            $reverseMap['filter_'.$filter['key']] = 'filtro_'.$filter['param'];
         }
 
         return $reverseMap;
     }
-
 }

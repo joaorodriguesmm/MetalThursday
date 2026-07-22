@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Autenticacao\Utilizador;
 use App\Traits\Blameable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 
@@ -16,11 +17,12 @@ use Illuminate\Support\Facades\Auth;
  * Gere a tabela 'metal_thursdays' da base de dados.
  *
  * @since 1.0
+ *
  * @version 1.0
  */
 class MetalThursday extends Model
 {
-    use SoftDeletes, Blameable;
+    use Blameable, SoftDeletes;
 
     protected $table = 'metal_thursdays';
 
@@ -44,6 +46,7 @@ class MetalThursday extends Model
      * @return BelongsTo - Relação com a tabela mt_editions.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function edition(): BelongsTo
@@ -57,11 +60,12 @@ class MetalThursday extends Model
      * @return BelongsTo - Relação com a tabela users.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function author(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'author_id');
+        return $this->belongsTo(Utilizador::class, 'author_id');
     }
 
     /**
@@ -70,11 +74,12 @@ class MetalThursday extends Model
      * @return BelongsTo - Relação com a tabela users.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function nextNominee(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'next_nominee_id');
+        return $this->belongsTo(Utilizador::class, 'next_nominee_id');
     }
 
     /**
@@ -83,6 +88,7 @@ class MetalThursday extends Model
      * @return HasMany - Relação com a tabela mt_sections.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function sections(): HasMany
@@ -96,18 +102,19 @@ class MetalThursday extends Model
      * @return int|null - Número da semana da MetalThursday ou null.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function getWeekNumberInEditionAttribute(): ?int
     {
-        if (!$this->relationLoaded('edition') || !$this->edition) {
+        if (! $this->relationLoaded('edition') || ! $this->edition) {
             return null;
         }
 
         return $this->edition->metalThursdays()
-                    ->orderBy('date', 'asc')
-                    ->pluck('id')
-                    ->search($this->id) + 1;
+            ->orderBy('date', 'asc')
+            ->pluck('id')
+            ->search($this->id) + 1;
     }
 
     /**
@@ -116,6 +123,7 @@ class MetalThursday extends Model
      * @return MorphMany - Relação com a tabela comments.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function comments(): MorphMany
@@ -129,6 +137,7 @@ class MetalThursday extends Model
      * @return MorphMany - Relação com a tabela ratings.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function ratings(): MorphMany
@@ -142,6 +151,7 @@ class MetalThursday extends Model
      * @return MorphMany - Relação com a tabela listens.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function listens(): MorphMany
@@ -155,6 +165,7 @@ class MetalThursday extends Model
      * @return MorphOne - Relação com a tabela ratings.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function userRatingRelation(): MorphOne
@@ -168,6 +179,7 @@ class MetalThursday extends Model
      * @return MorphOne - Relação com a tabela listens.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     public function userListenRelation(): MorphOne
@@ -181,12 +193,13 @@ class MetalThursday extends Model
      * @return Attribute - Atributo virtual.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     protected function userRating(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->userRatingRelation->rating ?? 0,
+            get: fn() => $this->userRatingRelation->rating ?? 0,
         );
     }
 
@@ -196,12 +209,13 @@ class MetalThursday extends Model
      * @return Attribute - Atributo virtual.
      *
      * @since 1.0
+     *
      * @version 1.0
      */
     protected function userHasListened(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->userListenRelation !== null,
+            get: fn() => $this->userListenRelation !== null,
         );
     }
 }
