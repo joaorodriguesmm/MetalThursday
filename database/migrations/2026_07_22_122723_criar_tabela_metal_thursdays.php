@@ -11,8 +11,6 @@ use Illuminate\Support\Facades\Schema;
  *
  * Cada registo representa uma publicação do MetalThursday.
  *
- * @return Migration Migração da tabela das MetalThursdays.
- *
  * @since 2.0.0
  *
  * @version 1.0.0
@@ -21,7 +19,6 @@ return new class extends Migration
 {
     /**
      * Cria a tabela das MetalThursdays.
-     *
      *
      * @since 2.0.0
      *
@@ -87,7 +84,6 @@ return new class extends Migration
 
     /**
      * Elimina a tabela das MetalThursdays.
-     *
      *
      * @since 2.0.0
      *

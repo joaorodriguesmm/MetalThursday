@@ -9,7 +9,8 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Cria a tabela dos tipos de secção.
  *
- * @return Migration Migração da tabela dos tipos de secção.
+ * Os tipos de secção definem a natureza e o comportamento das secções
+ * existentes numa MetalThursday.
  *
  * @since 2.0.0
  *
@@ -20,7 +21,6 @@ return new class extends Migration
     /**
      * Cria a tabela dos tipos de secção.
      *
-     *
      * @since 2.0.0
      *
      * @version 1.0.0
@@ -28,7 +28,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create(
-            'tipos_secao',
+            'tipos_seccao',
             function (Blueprint $tabela): void {
                 $tabela->id();
 
@@ -50,13 +50,14 @@ return new class extends Migration
     /**
      * Elimina a tabela dos tipos de secção.
      *
-     *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
     public function down(): void
     {
-        Schema::dropIfExists('tipos_secao');
+        Schema::dropIfExists(
+            'tipos_seccao',
+        );
     }
 };

@@ -9,8 +9,6 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Cria a tabela intermédia entre bandas e géneros musicais.
  *
- * @return Migration Migração da associação entre bandas e géneros.
- *
  * @since 2.0.0
  *
  * @version 1.0.0
@@ -19,7 +17,6 @@ return new class extends Migration
 {
     /**
      * Cria a tabela intermédia entre bandas e géneros.
-     *
      *
      * @since 2.0.0
      *
@@ -47,13 +44,17 @@ return new class extends Migration
                     ],
                     'banda_genero_pk',
                 );
+
+                $tabela->index(
+                    'genero_id',
+                    'banda_genero_genero_indice',
+                );
             },
         );
     }
 
     /**
      * Elimina a tabela intermédia entre bandas e géneros.
-     *
      *
      * @since 2.0.0
      *

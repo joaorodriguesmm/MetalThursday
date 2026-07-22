@@ -13,8 +13,6 @@ use Illuminate\Support\Facades\Schema;
  * através de uma relação polimórfica e podem responder a outros
  * comentários.
  *
- * @return Migration Migração da tabela dos comentários.
- *
  * @since 2.0.0
  *
  * @version 1.0.0
@@ -23,7 +21,6 @@ return new class extends Migration
 {
     /**
      * Cria a tabela dos comentários.
-     *
      *
      * @since 2.0.0
      *
@@ -80,7 +77,6 @@ return new class extends Migration
 
     /**
      * Elimina a tabela dos comentários.
-     *
      *
      * @since 2.0.0
      *

@@ -9,8 +9,6 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Cria as tabelas técnicas de cache do Laravel.
  *
- * @return Migration Migração das tabelas de cache.
- *
  * @since 2.0.0
  *
  * @version 1.0.0
@@ -19,7 +17,6 @@ return new class extends Migration
 {
     /**
      * Cria as tabelas de cache e bloqueios de cache.
-     *
      *
      * @since 2.0.0
      *
@@ -60,7 +57,6 @@ return new class extends Migration
 
     /**
      * Elimina as tabelas de cache.
-     *
      *
      * @since 2.0.0
      *

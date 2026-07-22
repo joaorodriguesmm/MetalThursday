@@ -12,8 +12,6 @@ use Illuminate\Support\Facades\Schema;
  * Cada utilizador pode selecionar três músicas favoritas por edição,
  * indicando a respetiva posição de preferência.
  *
- * @return Migration Migração das músicas favoritas das edições.
- *
  * @since 2.0.0
  *
  * @version 1.0.0
@@ -22,7 +20,6 @@ return new class extends Migration
 {
     /**
      * Cria a tabela das músicas favoritas das edições.
-     *
      *
      * @since 2.0.0
      *
@@ -43,14 +40,13 @@ return new class extends Migration
                 /*
                  * Utilizador a quem pertence a escolha.
                  *
-                 * A referência fica anulável para permitir preservar o
-                 * histórico caso a conta seja eliminada fisicamente.
+                 * A referência fica restrita para evitar que o utilizador
+                 * seja eliminado.
                  */
                 $tabela
                     ->foreignId('utilizador_id')
-                    ->nullable()
                     ->constrained('utilizadores')
-                    ->nullOnDelete();
+                    ->restrictOnDelete();
 
                 /*
                  * Posição da música entre as três favoritas.
@@ -122,7 +118,6 @@ return new class extends Migration
 
     /**
      * Elimina a tabela das músicas favoritas das edições.
-     *
      *
      * @since 2.0.0
      *

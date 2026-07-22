@@ -13,8 +13,6 @@ use Illuminate\Support\Facades\Schema;
  * do código é persistido, impedindo a recuperação do código original através
  * da base de dados.
  *
- * @return Migration Migração da tabela dos convites.
- *
  * @since 2.0.0
  *
  * @version 1.0.0
@@ -58,11 +56,22 @@ return new class extends Migration
         'convites_expira_em_indice';
 
     /**
+     * Nome da restrição única do utilizador criado pelo convite.
+     *
+     * @var string
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const UTILIZADO_POR_UNICO =
+        'convites_utilizado_por_unico';
+
+    /**
      * Cria a tabela dos convites.
      *
      * O estado do convite é determinado pelas datas de utilização,
      * revogação e expiração, evitando uma coluna de estado redundante.
-     *
      *
      * @since 2.0.0
      *
@@ -134,6 +143,11 @@ return new class extends Migration
                     self::CODIGO_HASH_UNICO,
                 );
 
+                $tabela->unique(
+                    'utilizado_por_id',
+                    self::UTILIZADO_POR_UNICO,
+                );
+
                 $tabela->index(
                     'email_destino',
                     self::EMAIL_DESTINO_INDICE,
@@ -149,7 +163,6 @@ return new class extends Migration
 
     /**
      * Elimina a tabela dos convites.
-     *
      *
      * @since 2.0.0
      *

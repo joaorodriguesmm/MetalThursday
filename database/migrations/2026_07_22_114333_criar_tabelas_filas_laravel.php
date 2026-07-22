@@ -9,8 +9,6 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Cria as tabelas técnicas das filas do Laravel.
  *
- * @return Migration Migração das tabelas de filas.
- *
  * @since 2.0.0
  *
  * @version 1.0.0
@@ -19,7 +17,6 @@ return new class extends Migration
 {
     /**
      * Cria as tabelas de trabalhos, lotes e falhas.
-     *
      *
      * @since 2.0.0
      *
@@ -100,7 +97,6 @@ return new class extends Migration
 
     /**
      * Elimina as tabelas das filas.
-     *
      *
      * @since 2.0.0
      *

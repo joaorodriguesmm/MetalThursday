@@ -9,8 +9,6 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Cria a tabela das permissões de e-mail.
  *
- * @return Migration Migração da tabela das permissões de e-mail.
- *
  * @since 2.0.0
  *
  * @version 1.0.0
@@ -19,7 +17,6 @@ return new class extends Migration
 {
     /**
      * Cria a tabela das permissões de e-mail.
-     *
      *
      * @since 2.0.0
      *
@@ -51,7 +48,6 @@ return new class extends Migration
 
     /**
      * Elimina a tabela das permissões de e-mail.
-     *
      *
      * @since 2.0.0
      *

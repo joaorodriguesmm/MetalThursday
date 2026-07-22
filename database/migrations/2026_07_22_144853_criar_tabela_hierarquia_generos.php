@@ -12,8 +12,6 @@ use Illuminate\Support\Facades\Schema;
  * Um género pode possuir vários géneros ascendentes e cada género
  * ascendente pode estar relacionado com vários géneros descendentes.
  *
- * @return Migration Migração da hierarquia dos géneros.
- *
  * @since 2.0.0
  *
  * @version 1.0.0
@@ -22,7 +20,6 @@ return new class extends Migration
 {
     /**
      * Cria a tabela intermédia da hierarquia dos géneros.
-     *
      *
      * @since 2.0.0
      *
@@ -53,13 +50,17 @@ return new class extends Migration
                     ],
                     'hierarquia_generos_pk',
                 );
+
+                $tabela->index(
+                    'genero_pai_id',
+                    'hierarquia_generos_genero_pai_indice',
+                );
             },
         );
     }
 
     /**
      * Elimina a tabela intermédia da hierarquia dos géneros.
-     *
      *
      * @since 2.0.0
      *

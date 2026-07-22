@@ -9,8 +9,6 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Cria a tabela dos gostos atribuídos aos comentários.
  *
- * @return Migration Migração da tabela dos gostos.
- *
  * @since 2.0.0
  *
  * @version 1.0.0
@@ -19,7 +17,6 @@ return new class extends Migration
 {
     /**
      * Cria a tabela dos gostos.
-     *
      *
      * @since 2.0.0
      *
@@ -51,13 +48,17 @@ return new class extends Migration
                     ],
                     'gostos_utilizador_comentario_unico',
                 );
+
+                $tabela->index(
+                    'comentario_id',
+                    'gostos_comentario_indice',
+                );
             },
         );
     }
 
     /**
      * Elimina a tabela dos gostos.
-     *
      *
      * @since 2.0.0
      *

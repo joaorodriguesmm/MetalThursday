@@ -12,8 +12,6 @@ use Illuminate\Support\Facades\Schema;
  * Os registos de audição podem pertencer a diferentes entidades da
  * aplicação através de uma relação polimórfica.
  *
- * @return Migration Migração da tabela dos registos de audição.
- *
  * @since 2.0.0
  *
  * @version 1.0.0
@@ -25,7 +23,6 @@ return new class extends Migration
      *
      * Cada utilizador pode marcar apenas uma vez a mesma entidade como
      * ouvida.
-     *
      *
      * @since 2.0.0
      *
@@ -70,8 +67,8 @@ return new class extends Migration
                 $tabela->unique(
                     [
                         'utilizador_id',
-                        'audivel_id',
                         'tipo_audivel',
+                        'audivel_id',
                     ],
                     'audicoes_utilizador_audivel_unico',
                 );
@@ -81,7 +78,6 @@ return new class extends Migration
 
     /**
      * Elimina a tabela dos registos de audição.
-     *
      *
      * @since 2.0.0
      *

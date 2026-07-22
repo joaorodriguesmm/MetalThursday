@@ -9,8 +9,6 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Cria a tabela das edições do MetalThursday.
  *
- * @return Migration Migração da tabela das edições.
- *
  * @since 2.0.0
  *
  * @version 1.0.0
@@ -19,7 +17,6 @@ return new class extends Migration
 {
     /**
      * Cria a tabela das edições.
-     *
      *
      * @since 2.0.0
      *
@@ -69,7 +66,6 @@ return new class extends Migration
 
     /**
      * Elimina a tabela das edições.
-     *
      *
      * @since 2.0.0
      *

@@ -12,8 +12,6 @@ use Illuminate\Support\Facades\Schema;
  * Os nomes físicos da tabela e das colunas permanecem de acordo com o
  * contrato do canal de notificações em base de dados do Laravel.
  *
- * @return Migration Migração da tabela das notificações.
- *
  * @since 2.0.0
  *
  * @version 1.0.0
@@ -22,7 +20,6 @@ return new class extends Migration
 {
     /**
      * Cria a tabela das notificações.
-     *
      *
      * @since 2.0.0
      *
@@ -58,7 +55,6 @@ return new class extends Migration
 
     /**
      * Elimina a tabela das notificações.
-     *
      *
      * @since 2.0.0
      *

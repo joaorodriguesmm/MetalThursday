@@ -12,8 +12,6 @@ use Illuminate\Support\Facades\Schema;
  * As avaliações podem pertencer a diferentes entidades da aplicação
  * através de uma relação polimórfica.
  *
- * @return Migration Migração da tabela das avaliações.
- *
  * @since 2.0.0
  *
  * @version 1.0.0
@@ -25,7 +23,6 @@ return new class extends Migration
      *
      * Cada utilizador pode atribuir apenas uma avaliação a cada entidade
      * avaliável.
-     *
      *
      * @since 2.0.0
      *
@@ -76,8 +73,8 @@ return new class extends Migration
                 $tabela->unique(
                     [
                         'utilizador_id',
-                        'avaliavel_id',
                         'tipo_avaliavel',
+                        'avaliavel_id',
                     ],
                     'avaliacoes_utilizador_avaliavel_unico',
                 );
@@ -87,7 +84,6 @@ return new class extends Migration
 
     /**
      * Elimina a tabela das avaliações.
-     *
      *
      * @since 2.0.0
      *

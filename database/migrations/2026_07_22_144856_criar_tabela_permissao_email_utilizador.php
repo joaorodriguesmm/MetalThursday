@@ -9,8 +9,6 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Cria a tabela intermédia entre utilizadores e permissões de e-mail.
  *
- * @return Migration Migração das permissões de e-mail dos utilizadores.
- *
  * @since 2.0.0
  *
  * @version 1.0.0
@@ -19,7 +17,6 @@ return new class extends Migration
 {
     /**
      * Cria a tabela intermédia das permissões de e-mail.
-     *
      *
      * @since 2.0.0
      *
@@ -53,7 +50,6 @@ return new class extends Migration
 
     /**
      * Elimina a tabela intermédia das permissões de e-mail.
-     *
      *
      * @since 2.0.0
      *

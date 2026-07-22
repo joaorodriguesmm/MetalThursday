@@ -9,8 +9,6 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Cria a tabela dos utilizadores da aplicação.
  *
- * @return Migration Migração da tabela de utilizadores.
- *
  * @since 2.0.0
  *
  * @version 1.0.0
@@ -19,7 +17,6 @@ return new class extends Migration
 {
     /**
      * Cria a tabela dos utilizadores.
-     *
      *
      * @since 2.0.0
      *
@@ -64,7 +61,6 @@ return new class extends Migration
 
     /**
      * Elimina a tabela dos utilizadores.
-     *
      *
      * @since 2.0.0
      *

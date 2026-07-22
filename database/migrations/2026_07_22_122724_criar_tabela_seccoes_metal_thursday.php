@@ -9,11 +9,12 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Cria a tabela das secções das MetalThursdays.
  *
- * @return Migration Migração da tabela das secções.
+ * Cada secção pertence a uma MetalThursday e a um tipo de secção. Pode ainda
+ * estar associada a uma banda e conter diferentes elementos de apresentação.
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 1.1.0
  */
 return new class extends Migration
 {
@@ -23,12 +24,12 @@ return new class extends Migration
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function up(): void
     {
         Schema::create(
-            'secoes_metal_thursday',
+            'seccoes_metal_thursday',
             function (Blueprint $tabela): void {
                 $tabela->id();
 
@@ -38,9 +39,20 @@ return new class extends Migration
                     ->cascadeOnDelete();
 
                 $tabela
-                    ->foreignId('tipo_secao_id')
-                    ->constrained('tipos_secao')
+                    ->foreignId('tipo_seccao_id')
+                    ->constrained('tipos_seccao')
                     ->restrictOnDelete();
+
+                /*
+                 * Posição da secção dentro da MetalThursday.
+                 *
+                 * A ordenação começa em 1 e a unicidade entre secções ativas
+                 * será garantida pela aplicação, devido ao uso de eliminação
+                 * lógica.
+                 */
+                $tabela->unsignedSmallInteger(
+                    'ordem',
+                );
 
                 $tabela
                     ->string('titulo')
@@ -57,11 +69,17 @@ return new class extends Migration
                     ->nullOnDelete();
 
                 $tabela
-                    ->string('ligacao', 2048)
+                    ->string(
+                        'ligacao',
+                        2048,
+                    )
                     ->nullable();
 
                 $tabela
-                    ->string('tipo_incorporacao', 32)
+                    ->string(
+                        'tipo_incorporacao',
+                        32,
+                    )
                     ->nullable();
 
                 $tabela
@@ -86,9 +104,22 @@ return new class extends Migration
                 $tabela->index(
                     [
                         'metal_thursday_id',
-                        'tipo_secao_id',
+                        'tipo_seccao_id',
                     ],
-                    'secoes_metal_thursday_tipo_indice',
+                    'seccoes_metal_thursday_tipo_indice',
+                );
+
+                /*
+                 * Otimiza a consulta das secções ativas de uma MetalThursday
+                 * pela ordem definida.
+                 */
+                $tabela->index(
+                    [
+                        'metal_thursday_id',
+                        'deleted_at',
+                        'ordem',
+                    ],
+                    'seccoes_metal_thursday_ordem_indice',
                 );
             },
         );
@@ -105,7 +136,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists(
-            'secoes_metal_thursday',
+            'seccoes_metal_thursday',
         );
     }
 };
