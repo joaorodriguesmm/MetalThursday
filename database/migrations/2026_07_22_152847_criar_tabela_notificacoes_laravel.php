@@ -7,30 +7,26 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Retorna a migração responsável pela criação da tabela utilizada pelo
- * sistema de notificações do Laravel.
+ * Cria a tabela técnica das notificações do Laravel.
  *
- * Os nomes da tabela e das colunas permanecem em inglês porque fazem parte
- * do contrato interno do sistema de notificações do Laravel.
+ * Os nomes físicos da tabela e das colunas permanecem de acordo com o
+ * contrato do canal de notificações em base de dados do Laravel.
  *
- * @return Migration - Migração da tabela de notificações.
+ * @return Migration Migração da tabela das notificações.
  *
- * @since 1.0.0
+ * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 1.0.0
  */
 return new class extends Migration
 {
     /**
-     * Cria a tabela utilizada pelo sistema de notificações do Laravel.
-     *
-     * A relação polimórfica permite associar notificações a diferentes tipos
-     * de entidades notificáveis.
+     * Cria a tabela das notificações.
      *
      *
-     * @since 1.0.0
+     * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 1.0.0
      */
     public function up(): void
     {
@@ -44,9 +40,8 @@ return new class extends Migration
                 $tabela->string('type');
 
                 /*
-                 * Cria as colunas notifiable_type e notifiable_id, juntamente
-                 * com o índice composto necessário para localizar rapidamente
-                 * as notificações de uma entidade.
+                 * Cria notifiable_type e notifiable_id, assim como o
+                 * respetivo índice composto.
                  */
                 $tabela->morphs('notifiable');
 
@@ -62,12 +57,12 @@ return new class extends Migration
     }
 
     /**
-     * Elimina a tabela utilizada pelo sistema de notificações do Laravel.
+     * Elimina a tabela das notificações.
      *
      *
-     * @since 1.0.0
+     * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 1.0.0
      */
     public function down(): void
     {
