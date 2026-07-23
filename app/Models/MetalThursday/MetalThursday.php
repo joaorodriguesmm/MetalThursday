@@ -8,7 +8,7 @@ use App\Models\Autenticacao\Utilizador;
 use App\Models\Interacoes\Audicao;
 use App\Models\Interacoes\Avaliacao;
 use App\Models\Interacoes\Comentario;
-use App\Traits\Blameable;
+use App\Traits\Auditoria\RegistaAutoria;
 use App\Traits\Interacoes\TemAudicoes;
 use App\Traits\Interacoes\TemAvaliacoes;
 use App\Traits\Interacoes\TemComentarios;
@@ -60,11 +60,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class MetalThursday extends Model
 {
-    use Blameable;
-
     /** @use HasFactory<MetalThursdayFactory> */
     use HasFactory;
 
+    use RegistaAutoria;
     use SoftDeletes;
     use TemAudicoes;
     use TemAvaliacoes;
@@ -85,7 +84,7 @@ class MetalThursday extends Model
      * Atributos permitidos em operações de atribuição em massa.
      *
      * Os identificadores de auditoria são preenchidos automaticamente pelo
-     * trait {@see Blameable}.
+     * trait {@see RegistaAutoria}.
      *
      * @var array<int, string>
      *

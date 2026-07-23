@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Models\Musica;
 
 use App\Models\Geografia\Pais;
-use App\Traits\Blameable;
+use App\Traits\Auditoria\RegistaAutoria;
 use Carbon\CarbonInterface;
 use Database\Factories\Musica\BandaFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -40,11 +40,10 @@ use InvalidArgumentException;
  */
 class Banda extends Model
 {
-    use Blameable;
-
     /** @use HasFactory<BandaFactory> */
     use HasFactory;
 
+    use RegistaAutoria;
     use SoftDeletes;
 
     /**
@@ -75,7 +74,7 @@ class Banda extends Model
      *
      * O país deve ser associado explicitamente através da relação `pais()`.
      * As colunas de auditoria são preenchidas automaticamente pelo trait
-     * {@see Blameable}.
+     * {@see RegistaAutoria}.
      *
      * @var array<int, string>
      *

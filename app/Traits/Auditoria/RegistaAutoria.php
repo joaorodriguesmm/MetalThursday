@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Traits;
+namespace App\Traits\Auditoria;
 
 use App\Models\Autenticacao\Utilizador;
 use Illuminate\Database\Eloquent\Model;
@@ -10,31 +10,62 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * Gere automaticamente os dados de auditoria dos modelos.
+ * Regista automaticamente a autoria da criação e atualização dos modelos.
  *
- * O trait preenche o utilizador responsável pela criação e pela última
- * atualização quando existe um utilizador autenticado. Em execuções sem
- * autenticação, como factories, seeders e comandos Artisan, os atributos
- * permanecem nulos ou conservam os valores definidos explicitamente.
+ * Quando existe um utilizador autenticado, o trait preenche os atributos
+ * `criado_por_id` e `atualizado_por_id`. Em execuções sem autenticação,
+ * como factories, seeders e comandos Artisan, conserva os valores definidos
+ * explicitamente ou mantém os atributos nulos.
+ *
+ * @mixin Model
  *
  * @since 1.0.0
  *
  * @version 2.0.0
  */
-trait Blameable
+trait RegistaAutoria
 {
     /**
-     * Inicia os eventos responsáveis pela auditoria do modelo.
+     * Regista um callback executado durante a criação do modelo.
      *
-     * Durante a criação, os dois identificadores são preenchidos quando ainda
-     * não tiverem um valor. Durante a atualização, o utilizador autenticado
-     * passa a ser o responsável pela última alteração.
+     * Este contrato é fornecido pelo modelo Eloquent através dos respetivos
+     * mecanismos internos de eventos.
+     *
+     * @param  mixed  $callback  Callback do evento.
+     * @return void
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    abstract public static function creating($callback);
+
+    /**
+     * Regista um callback executado durante a atualização do modelo.
+     *
+     * Este contrato é fornecido pelo modelo Eloquent através dos respetivos
+     * mecanismos internos de eventos.
+     *
+     * @param  mixed  $callback  Callback do evento.
+     * @return void
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    abstract public static function updating($callback);
+
+    /**
+     * Inicia os eventos responsáveis pelo registo da autoria.
+     *
+     * O nome deste método deve corresponder ao nome do trait para que o
+     * Eloquent o execute automaticamente durante o arranque do modelo.
      *
      * @since 1.0.0
      *
      * @version 2.0.0
      */
-    public static function bootBlameable(): void
+    public static function bootRegistaAutoria(): void
     {
         static::creating(
             static function (

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models\Musica;
 
-use App\Traits\Blameable;
+use App\Traits\Auditoria\RegistaAutoria;
 use Carbon\CarbonInterface;
 use Database\Factories\Musica\GeneroFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -40,11 +40,10 @@ use InvalidArgumentException;
  */
 class Genero extends Model
 {
-    use Blameable;
-
     /** @use HasFactory<GeneroFactory> */
     use HasFactory;
 
+    use RegistaAutoria;
     use SoftDeletes;
 
     /**
@@ -86,7 +85,7 @@ class Genero extends Model
      * Atributos permitidos em operações de atribuição em massa.
      *
      * Os identificadores de auditoria são atribuídos automaticamente pelo
-     * trait {@see Blameable}.
+     * trait {@see RegistaAutoria}.
      *
      * @var array<int, string>
      *

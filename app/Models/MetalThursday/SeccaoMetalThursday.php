@@ -8,7 +8,7 @@ use App\Models\Interacoes\Audicao;
 use App\Models\Interacoes\Avaliacao;
 use App\Models\Interacoes\Comentario;
 use App\Models\Musica\Banda;
-use App\Traits\Blameable;
+use App\Traits\Auditoria\RegistaAutoria;
 use App\Traits\Interacoes\TemAudicoes;
 use App\Traits\Interacoes\TemAvaliacoes;
 use App\Traits\Interacoes\TemComentarios;
@@ -62,11 +62,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class SeccaoMetalThursday extends Model
 {
-    use Blameable;
-
     /** @use HasFactory<SeccaoMetalThursdayFactory> */
     use HasFactory;
 
+    use RegistaAutoria;
     use SoftDeletes;
     use TemAudicoes;
     use TemAvaliacoes;
@@ -90,7 +89,7 @@ class SeccaoMetalThursday extends Model
      * explicitamente através das respetivas relações.
      *
      * Os identificadores de auditoria são preenchidos automaticamente pelo
-     * trait {@see Blameable}.
+     * trait {@see RegistaAutoria}.
      *
      * @var array<int, string>
      *

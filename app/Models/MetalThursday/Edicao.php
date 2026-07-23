@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models\MetalThursday;
 
-use App\Traits\Blameable;
+use App\Traits\Auditoria\RegistaAutoria;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Database\Factories\MetalThursday\EdicaoFactory;
@@ -42,11 +42,10 @@ use InvalidArgumentException;
  */
 class Edicao extends Model
 {
-    use Blameable;
-
     /** @use HasFactory<EdicaoFactory> */
     use HasFactory;
 
+    use RegistaAutoria;
     use SoftDeletes;
 
     /**
@@ -64,7 +63,7 @@ class Edicao extends Model
      * Atributos permitidos em operações de atribuição em massa.
      *
      * Os identificadores de auditoria são preenchidos automaticamente pelo
-     * trait {@see Blameable}.
+     * trait {@see RegistaAutoria}.
      *
      * @var array<int, string>
      *
