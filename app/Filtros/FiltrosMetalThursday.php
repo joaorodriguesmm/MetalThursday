@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace App\Filtros;
 
-use App\Models\Genero;
-use App\Models\MetalThursday;
-use App\Models\MtSection;
+use App\Enumeracoes\DirecaoOrdenacao;
+use App\Enumeracoes\OrdenacaoMetalThursday;
+use App\Enumeracoes\RespostaBinaria;
+use App\Models\MetalThursday\MetalThursday;
+use App\Models\MetalThursday\SeccaoMetalThursday;
+use App\Models\Musica\Genero;
 use Carbon\CarbonImmutable;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -18,86 +22,93 @@ use Throwable;
 /**
  * Aplica filtros e ordenações às consultas de MetalThursdays e secções.
  *
+ * Suporta exclusivamente consultas dos modelos `MetalThursday` e
+ * `SeccaoMetalThursday`.
+ *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 final class FiltrosMetalThursday
 {
     /**
-     * Mapa dos parâmetros de filtro permitidos e dos métodos responsáveis
-     * pela sua aplicação.
+     * Parâmetros de filtro permitidos.
      *
-     * A existência deste mapa impede que um parâmetro da URL possa executar
-     * arbitrariamente outros métodos privados da classe.
-     *
-     * @var array<string, string>
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const MAPA_FILTROS = [
-        'filtro_autor' => 'filtrarPorAutor',
-        'filtro_banda' => 'filtrarPorBanda',
-        'filtro_autoria_utilizador' => 'filtrarPorAutoriaDoUtilizador',
-        'filtro_data_ate' => 'filtrarPorDataAte',
-        'filtro_data_desde' => 'filtrarPorDataDesde',
-        'filtro_data' => 'filtrarPorData',
-        'filtro_edicao' => 'filtrarPorEdicao',
-        'filtro_nomeacao' => 'filtrarPorNomeacaoDoUtilizador',
-        'filtro_genero' => 'filtrarPorGenero',
-        'filtro_avaliacao' => 'filtrarPorAvaliacaoDoUtilizador',
-        'filtro_audicao' => 'filtrarPorAudicaoDoUtilizador',
-    ];
-
-    /**
-     * Ordenações permitidas.
+     * A lista impede que parâmetros arbitrários do pedido possam invocar
+     * métodos internos da classe.
      *
      * @var array<int, string>
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
-    private const ORDENACOES_PERMITIDAS = [
-        'data',
-        'classificacao',
-        'minha_classificacao',
-    ];
-
-    /**
-     * Mapa entre as direções apresentadas na URL e as direções reconhecidas
-     * pelo sistema de base de dados.
-     *
-     * @var array<string, string>
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const MAPA_DIRECOES_SQL = [
-        'ascendente' => 'asc',
-        'descendente' => 'desc',
+    private const PARAMETROS_FILTROS = [
+        'filtro_autor',
+        'filtro_banda',
+        'filtro_autoria_utilizador',
+        'filtro_data_ate',
+        'filtro_data_desde',
+        'filtro_data',
+        'filtro_edicao',
+        'filtro_nomeacao',
+        'filtro_genero',
+        'filtro_avaliacao',
+        'filtro_audicao',
     ];
 
     /**
      * Modelos que podem ser filtrados por esta classe.
      *
-     * @var array<int, class-string>
+     * @var array<int, class-string<Model>>
+     *
+     * @since 2.0.0
+     *
+     * @version 1.1.0
+     */
+    private const MODELOS_SUPORTADOS = [
+        MetalThursday::class,
+        SeccaoMetalThursday::class,
+    ];
+
+    /**
+     * Alias da classificação média calculada pela consulta.
+     *
+     * @var string
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    private const MODELOS_SUPORTADOS = [
-        MetalThursday::class,
-        MtSection::class,
-    ];
+    private const COLUNA_CLASSIFICACAO_MEDIA =
+        'classificacao_media';
+
+    /**
+     * Alias da classificação atribuída pelo utilizador autenticado.
+     *
+     * @var string
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const COLUNA_CLASSIFICACAO_UTILIZADOR =
+        'classificacao_utilizador';
+
+    /**
+     * Alias da data da MetalThursday associada a uma secção.
+     *
+     * @var string
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const COLUNA_DATA_METAL_THURSDAY =
+        'data_metal_thursday';
 
     /**
      * Pedido HTTP que contém os parâmetros dos filtros e da ordenação.
-     *
      *
      * @since 1.0.0
      *
@@ -106,9 +117,9 @@ final class FiltrosMetalThursday
     private readonly Request $pedido;
 
     /**
-     * Construtor de consultas Eloquent ao qual são aplicados os filtros e a
-     * ordenação.
+     * Construtor de consultas ao qual são aplicados os filtros.
      *
+     * @var Builder<Model>
      *
      * @since 1.0.0
      *
@@ -119,7 +130,7 @@ final class FiltrosMetalThursday
     /**
      * Nome completo da classe do modelo associado à consulta.
      *
-     * @var class-string
+     * @var class-string<Model>
      *
      * @since 1.0.0
      *
@@ -128,37 +139,38 @@ final class FiltrosMetalThursday
     private string $classeModelo;
 
     /**
-     * Instancia a classe.
+     * Cria o serviço de filtragem.
      *
-     * @param  Request  $pedido  - Pedido HTTP.
-     * @return void
+     * @param  Request  $pedido  Pedido HTTP.
      *
      * @since 1.0.0
      *
      * @version 2.0.0
      */
-    public function __construct(Request $pedido)
-    {
+    public function __construct(
+        Request $pedido,
+    ) {
         $this->pedido = $pedido;
     }
 
     /**
      * Aplica os filtros e a ordenação à consulta.
      *
-     * @param  Builder  $construtorConsulta  - Construtor de consultas Eloquent.
-     * @return Builder - Construtor de consultas com os filtros e a ordenação
-     *                 aplicados.
+     * @param  Builder<Model>  $construtorConsulta  Construtor da consulta.
+     * @return Builder<Model> Consulta com filtros e ordenação aplicados.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
-    public function aplicar(Builder $construtorConsulta): Builder
-    {
-        $this->construtorConsulta = $construtorConsulta;
-        $this->classeModelo = get_class(
-            $construtorConsulta->getModel(),
-        );
+    public function aplicar(
+        Builder $construtorConsulta,
+    ): Builder {
+        $this->construtorConsulta =
+            $construtorConsulta;
+
+        $this->classeModelo = $construtorConsulta
+            ->getModel()::class;
 
         $this->garantirModeloSuportado();
         $this->aplicarFiltros();
@@ -168,238 +180,381 @@ final class FiltrosMetalThursday
     }
 
     /**
-     * Aplica apenas os filtros explicitamente permitidos.
-     *
+     * Aplica os filtros explicitamente permitidos.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function aplicarFiltros(): void
     {
-        foreach (self::MAPA_FILTROS as $parametro => $metodo) {
-            $valor = $this->pedido->query($parametro);
+        foreach (
+            self::PARAMETROS_FILTROS as $parametro
+        ) {
+            $valor = $this->pedido->query(
+                $parametro,
+            );
 
             if (! $this->valorPodeSerAplicado($valor)) {
                 continue;
             }
 
-            $this->{$metodo}($valor);
+            $this->aplicarFiltroPermitido(
+                $parametro,
+                $valor,
+            );
+        }
+    }
+
+    /**
+     * Aplica um filtro previamente autorizado.
+     *
+     * @param  string  $parametro  Nome do parâmetro.
+     * @param  mixed  $valor  Valor recebido.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function aplicarFiltroPermitido(
+        string $parametro,
+        mixed $valor,
+    ): void {
+        switch ($parametro) {
+            case 'filtro_autor':
+                $this->filtrarPorAutor($valor);
+
+                return;
+
+            case 'filtro_banda':
+                $this->filtrarPorBanda($valor);
+
+                return;
+
+            case 'filtro_autoria_utilizador':
+                $this->filtrarPorAutoriaDoUtilizador(
+                    $valor,
+                );
+
+                return;
+
+            case 'filtro_data_ate':
+                $this->filtrarPorDataAte($valor);
+
+                return;
+
+            case 'filtro_data_desde':
+                $this->filtrarPorDataDesde($valor);
+
+                return;
+
+            case 'filtro_data':
+                $this->filtrarPorData($valor);
+
+                return;
+
+            case 'filtro_edicao':
+                $this->filtrarPorEdicao($valor);
+
+                return;
+
+            case 'filtro_nomeacao':
+                $this->filtrarPorNomeacaoDoUtilizador(
+                    $valor,
+                );
+
+                return;
+
+            case 'filtro_genero':
+                $this->filtrarPorGenero($valor);
+
+                return;
+
+            case 'filtro_avaliacao':
+                $this->filtrarPorAvaliacaoDoUtilizador(
+                    $valor,
+                );
+
+                return;
+
+            case 'filtro_audicao':
+                $this->filtrarPorAudicaoDoUtilizador(
+                    $valor,
+                );
+
+                return;
         }
     }
 
     /**
      * Aplica a ordenação pedida à consulta.
      *
-     * Quando a ordenação ou a direção recebida não é válida, são utilizados
-     * os valores predefinidos: data e direção descendente.
-     *
+     * São utilizadas a data e a direção descendente quando os valores
+     * recebidos não são reconhecidos.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     private function aplicarOrdenacao(): void
     {
-        $ordenacao = $this->pedido->query(
-            'ordenar_por',
-            'data',
-        );
-
-        $direcaoRecebida = $this->pedido->query(
-            'direcao_ordenacao',
-            'descendente',
-        );
-
-        if (
-            ! is_string($ordenacao)
-            || ! in_array(
-                $ordenacao,
-                self::ORDENACOES_PERMITIDAS,
-                true,
+        $ordenacao =
+            OrdenacaoMetalThursday::tentarCriar(
+                $this->pedido->query(
+                    'ordenar_por',
+                ),
             )
-        ) {
-            $ordenacao = 'data';
-        }
+            ?? OrdenacaoMetalThursday::Data;
 
-        if (
-            ! is_string($direcaoRecebida)
-            || ! array_key_exists(
-                $direcaoRecebida,
-                self::MAPA_DIRECOES_SQL,
+        $direcao =
+            DirecaoOrdenacao::tentarCriar(
+                $this->pedido->query(
+                    'direcao_ordenacao',
+                ),
             )
-        ) {
-            $direcaoRecebida = 'descendente';
-        }
-
-        $direcaoSql = self::MAPA_DIRECOES_SQL[$direcaoRecebida];
+            ?? DirecaoOrdenacao::Descendente;
 
         match ($ordenacao) {
-            'classificacao' => $this->ordenarPorClassificacaoMedia($direcaoSql),
-            'minha_classificacao' => $this->ordenarPorClassificacaoDoUtilizador($direcaoSql),
-            default => $this->ordenarPorData($direcaoSql),
+            OrdenacaoMetalThursday::Classificacao => $this->ordenarPorClassificacaoMedia(
+                $direcao,
+            ),
+
+            OrdenacaoMetalThursday::MinhaClassificacao => $this->ordenarPorClassificacaoDoUtilizador(
+                $direcao,
+            ),
+
+            OrdenacaoMetalThursday::Data => $this->ordenarPorData(
+                $direcao,
+            ),
         };
     }
 
     /**
      * Ordena a consulta pela classificação média.
      *
-     * Os registos sem classificação são sempre apresentados no fim.
+     * Os registos sem classificação são apresentados no fim.
      *
-     * @param  string  $direcao  - Direção SQL da ordenação.
+     * @param  DirecaoOrdenacao  $direcao  Direção pretendida.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function ordenarPorClassificacaoMedia(
-        string $direcao,
+        DirecaoOrdenacao $direcao,
     ): void {
-        $this->construtorConsulta
-            ->orderByRaw(
-                'CASE WHEN ratings_avg_rating IS NULL '
-                    .'THEN 1 ELSE 0 END ASC',
+        $modelo = $this
+            ->construtorConsulta
+            ->getModel();
+
+        $subconsulta = DB::table(
+            'avaliacoes',
+        )
+            ->selectRaw(
+                'AVG(pontuacao)',
             )
-            ->orderBy(
-                'ratings_avg_rating',
-                $direcao,
+            ->whereColumn(
+                'avaliavel_id',
+                $modelo->getQualifiedKeyName(),
+            )
+            ->where(
+                'tipo_avaliavel',
+                $modelo->getMorphClass(),
             );
 
-        $this->adicionarCriterioDesempate($direcao);
+        $this->construtorConsulta
+            ->addSelect([
+                self::COLUNA_CLASSIFICACAO_MEDIA => $subconsulta,
+            ])
+            ->orderByRaw(
+                sprintf(
+                    'CASE WHEN %s IS NULL THEN 1 ELSE 0 END ASC',
+                    self::COLUNA_CLASSIFICACAO_MEDIA,
+                ),
+            )
+            ->orderBy(
+                self::COLUNA_CLASSIFICACAO_MEDIA,
+                $direcao->paraSql(),
+            );
+
+        $this->adicionarCriterioDesempate(
+            $direcao,
+        );
     }
 
     /**
-     * Ordena a consulta pela classificação atribuída pelo utilizador
-     * autenticado.
+     * Ordena pela classificação atribuída pelo utilizador autenticado.
      *
-     * Quando não existe um utilizador autenticado, a consulta é ordenada pela
-     * data.
+     * Quando não existe utilizador autenticado, é utilizada a data.
      *
-     * @param  string  $direcao  - Direção SQL da ordenação.
+     * @param  DirecaoOrdenacao  $direcao  Direção pretendida.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     private function ordenarPorClassificacaoDoUtilizador(
-        string $direcao,
+        DirecaoOrdenacao $direcao,
     ): void {
-        $identificadorUtilizador = $this->obterIdentificadorUtilizador();
+        $identificadorUtilizador =
+            $this->obterIdentificadorUtilizador();
 
         if ($identificadorUtilizador === null) {
-            $this->ordenarPorData($direcao);
+            $this->ordenarPorData(
+                $direcao,
+            );
 
             return;
         }
 
-        $modelo = $this->construtorConsulta->getModel();
-        $chaveQualificada = $modelo->getQualifiedKeyName();
-        $tipoMorfologico = $modelo->getMorphClass();
-        $nomeColuna = 'classificacao_utilizador';
+        $modelo = $this
+            ->construtorConsulta
+            ->getModel();
 
-        $subconsulta = DB::table('ratings')
-            ->select('rating')
+        $subconsulta = DB::table(
+            'avaliacoes',
+        )
+            ->select(
+                'pontuacao',
+            )
             ->whereColumn(
-                'rateable_id',
-                $chaveQualificada,
+                'avaliavel_id',
+                $modelo->getQualifiedKeyName(),
             )
             ->where(
-                'rateable_type',
-                $tipoMorfologico,
+                'tipo_avaliavel',
+                $modelo->getMorphClass(),
             )
             ->where(
-                'user_id',
+                'utilizador_id',
                 $identificadorUtilizador,
             )
             ->limit(1);
 
         $this->construtorConsulta
             ->addSelect([
-                $nomeColuna => $subconsulta,
+                self::COLUNA_CLASSIFICACAO_UTILIZADOR => $subconsulta,
             ])
             ->orderByRaw(
-                "CASE WHEN {$nomeColuna} IS NULL "
-                    .'THEN 1 ELSE 0 END ASC',
+                sprintf(
+                    'CASE WHEN %s IS NULL THEN 1 ELSE 0 END ASC',
+                    self::COLUNA_CLASSIFICACAO_UTILIZADOR,
+                ),
             )
             ->orderBy(
-                $nomeColuna,
-                $direcao,
+                self::COLUNA_CLASSIFICACAO_UTILIZADOR,
+                $direcao->paraSql(),
             );
 
-        $this->adicionarCriterioDesempate($direcao);
+        $this->adicionarCriterioDesempate(
+            $direcao,
+        );
     }
 
     /**
      * Ordena a consulta pela data da MetalThursday.
      *
-     * Nas consultas de secções é utilizada a coluna calculada `parent_date`,
-     * definida pela consulta principal.
+     * Nas consultas de secções, a data é obtida através de uma subconsulta à
+     * MetalThursday relacionada.
      *
-     * @param  string  $direcao  - Direção SQL da ordenação.
+     * @param  DirecaoOrdenacao  $direcao  Direção pretendida.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
-    private function ordenarPorData(string $direcao): void
-    {
-        $coluna = $this->eConsultaDeSecoes()
-            ? 'parent_date'
-            : 'date';
+    private function ordenarPorData(
+        DirecaoOrdenacao $direcao,
+    ): void {
+        if ($this->eConsultaDeMetalThursdays()) {
+            $this->construtorConsulta->orderBy(
+                $this
+                    ->construtorConsulta
+                    ->getModel()
+                    ->qualifyColumn('data'),
+                $direcao->paraSql(),
+            );
 
-        $this->construtorConsulta->orderBy(
-            $coluna,
+            $this->adicionarCriterioDesempate(
+                $direcao,
+            );
+
+            return;
+        }
+
+        $subconsulta = DB::table(
+            'metal_thursdays',
+        )
+            ->select(
+                'data',
+            )
+            ->whereColumn(
+                'metal_thursdays.id',
+                'seccoes_metal_thursday.metal_thursday_id',
+            )
+            ->limit(1);
+
+        $this->construtorConsulta
+            ->addSelect([
+                self::COLUNA_DATA_METAL_THURSDAY => $subconsulta,
+            ])
+            ->orderBy(
+                self::COLUNA_DATA_METAL_THURSDAY,
+                $direcao->paraSql(),
+            );
+
+        $this->adicionarCriterioDesempate(
             $direcao,
         );
-
-        $this->adicionarCriterioDesempate($direcao);
     }
 
     /**
-     * Adiciona um segundo critério de ordenação baseado no identificador do
-     * modelo.
+     * Adiciona o identificador como critério de desempate.
      *
-     * Este critério torna a ordenação estável quando vários registos possuem
-     * o mesmo valor no primeiro critério, evitando resultados repetidos ou
-     * deslocados durante a paginação.
-     *
-     * @param  string  $direcao  - Direção SQL da ordenação.
+     * @param  DirecaoOrdenacao  $direcao  Direção pretendida.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function adicionarCriterioDesempate(
-        string $direcao,
+        DirecaoOrdenacao $direcao,
     ): void {
         $this->construtorConsulta->orderBy(
-            $this->construtorConsulta
+            $this
+                ->construtorConsulta
                 ->getModel()
                 ->getQualifiedKeyName(),
-            $direcao,
+            $direcao->paraSql(),
         );
     }
 
     /**
      * Filtra os registos por autor.
      *
-     * @param  mixed  $valor  - Identificador do autor recebido através da URL.
+     * @param  mixed  $valor  Identificador recebido.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
-    private function filtrarPorAutor(mixed $valor): void
-    {
-        $identificadorAutor = $this->converterParaIdentificador($valor);
+    private function filtrarPorAutor(
+        mixed $valor,
+    ): void {
+        $identificadorAutor =
+            $this->converterParaIdentificador(
+                $valor,
+            );
 
         if ($identificadorAutor === null) {
             return;
         }
 
         $this->aplicarRestricaoNaMetalThursday(
-            fn (Builder $consulta): Builder => $consulta->where(
-                'author_id',
+            static fn (
+                Builder $consulta,
+            ): Builder => $consulta->where(
+                'autor_id',
                 $identificadorAutor,
             ),
         );
@@ -408,16 +563,19 @@ final class FiltrosMetalThursday
     /**
      * Filtra os registos por banda.
      *
-     * @param  mixed  $valor  - Identificador da banda recebido através da URL.
+     * @param  mixed  $valor  Identificador recebido.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
-    private function filtrarPorBanda(mixed $valor): void
-    {
+    private function filtrarPorBanda(
+        mixed $valor,
+    ): void {
         $identificadorBanda =
-            $this->converterParaIdentificador($valor);
+            $this->converterParaIdentificador(
+                $valor,
+            );
 
         if ($identificadorBanda === null) {
             return;
@@ -425,8 +583,10 @@ final class FiltrosMetalThursday
 
         if ($this->eConsultaDeMetalThursdays()) {
             $this->construtorConsulta->whereHas(
-                'sections.band',
-                fn (Builder $consulta): Builder => $consulta->whereKey(
+                'seccoes.banda',
+                static fn (
+                    Builder $consulta,
+                ): Builder => $consulta->whereKey(
                     $identificadorBanda,
                 ),
             );
@@ -435,26 +595,30 @@ final class FiltrosMetalThursday
         }
 
         $this->construtorConsulta->where(
-            'band_id',
+            'banda_id',
             $identificadorBanda,
         );
     }
 
     /**
-     * Filtra os registos pela autoria do utilizador autenticado.
+     * Filtra pela autoria do utilizador autenticado.
      *
-     * @param  mixed  $valor  - Valor `sim` ou `nao` recebido através da URL.
+     * @param  mixed  $valor  Resposta binária recebida.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     private function filtrarPorAutoriaDoUtilizador(
         mixed $valor,
     ): void {
-        $deveCoincidir = $this->converterParaBooleanoSimNao($valor);
+        $deveCoincidir =
+            $this->converterParaBooleano(
+                $valor,
+            );
 
-        $identificadorUtilizador = $this->obterIdentificadorUtilizador();
+        $identificadorUtilizador =
+            $this->obterIdentificadorUtilizador();
 
         if (
             $deveCoincidir === null
@@ -464,32 +628,37 @@ final class FiltrosMetalThursday
         }
 
         $this->aplicarCorrespondenciaNaMetalThursday(
-            'author_id',
+            'autor_id',
             $identificadorUtilizador,
             $deveCoincidir,
         );
     }
 
     /**
-     * Filtra os registos cuja data seja anterior ou igual à data recebida.
+     * Filtra por data anterior ou igual à data recebida.
      *
-     * @param  mixed  $valor  - Data no formato AAAA-MM-DD.
+     * @param  mixed  $valor  Data recebida.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
-    private function filtrarPorDataAte(mixed $valor): void
-    {
-        $data = $this->converterParaData($valor);
+    private function filtrarPorDataAte(
+        mixed $valor,
+    ): void {
+        $data = $this->converterParaData(
+            $valor,
+        );
 
         if ($data === null) {
             return;
         }
 
         $this->aplicarRestricaoNaMetalThursday(
-            fn (Builder $consulta): Builder => $consulta->where(
-                'date',
+            static fn (
+                Builder $consulta,
+            ): Builder => $consulta->whereDate(
+                'data',
                 '<=',
                 $data->toDateString(),
             ),
@@ -497,25 +666,30 @@ final class FiltrosMetalThursday
     }
 
     /**
-     * Filtra os registos cuja data seja posterior ou igual à data recebida.
+     * Filtra por data posterior ou igual à data recebida.
      *
-     * @param  mixed  $valor  - Data no formato AAAA-MM-DD.
+     * @param  mixed  $valor  Data recebida.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
-    private function filtrarPorDataDesde(mixed $valor): void
-    {
-        $data = $this->converterParaData($valor);
+    private function filtrarPorDataDesde(
+        mixed $valor,
+    ): void {
+        $data = $this->converterParaData(
+            $valor,
+        );
 
         if ($data === null) {
             return;
         }
 
         $this->aplicarRestricaoNaMetalThursday(
-            fn (Builder $consulta): Builder => $consulta->where(
-                'date',
+            static fn (
+                Builder $consulta,
+            ): Builder => $consulta->whereDate(
+                'data',
                 '>=',
                 $data->toDateString(),
             ),
@@ -523,25 +697,30 @@ final class FiltrosMetalThursday
     }
 
     /**
-     * Filtra os registos por uma data exata.
+     * Filtra por uma data exata.
      *
-     * @param  mixed  $valor  - Data no formato AAAA-MM-DD.
+     * @param  mixed  $valor  Data recebida.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
-    private function filtrarPorData(mixed $valor): void
-    {
-        $data = $this->converterParaData($valor);
+    private function filtrarPorData(
+        mixed $valor,
+    ): void {
+        $data = $this->converterParaData(
+            $valor,
+        );
 
         if ($data === null) {
             return;
         }
 
         $this->aplicarRestricaoNaMetalThursday(
-            fn (Builder $consulta): Builder => $consulta->where(
-                'date',
+            static fn (
+                Builder $consulta,
+            ): Builder => $consulta->whereDate(
+                'data',
                 $data->toDateString(),
             ),
         );
@@ -550,45 +729,53 @@ final class FiltrosMetalThursday
     /**
      * Filtra os registos por edição.
      *
-     * @param  mixed  $valor  - Identificador da edição recebido através da URL.
+     * @param  mixed  $valor  Identificador recebido.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
-    private function filtrarPorEdicao(mixed $valor): void
-    {
+    private function filtrarPorEdicao(
+        mixed $valor,
+    ): void {
         $identificadorEdicao =
-            $this->converterParaIdentificador($valor);
+            $this->converterParaIdentificador(
+                $valor,
+            );
 
         if ($identificadorEdicao === null) {
             return;
         }
 
         $this->aplicarRestricaoNaMetalThursday(
-            fn (Builder $consulta): Builder => $consulta->where(
-                'edition_id',
+            static fn (
+                Builder $consulta,
+            ): Builder => $consulta->where(
+                'edicao_id',
                 $identificadorEdicao,
             ),
         );
     }
 
     /**
-     * Filtra os registos pela nomeação do utilizador autenticado.
+     * Filtra pela nomeação do utilizador autenticado.
      *
-     * @param  mixed  $valor  - Valor `sim` ou `nao` recebido através da URL.
+     * @param  mixed  $valor  Resposta binária recebida.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     private function filtrarPorNomeacaoDoUtilizador(
         mixed $valor,
     ): void {
         $deveCoincidir =
-            $this->converterParaBooleanoSimNao($valor);
+            $this->converterParaBooleano(
+                $valor,
+            );
 
-        $identificadorUtilizador = $this->obterIdentificadorUtilizador();
+        $identificadorUtilizador =
+            $this->obterIdentificadorUtilizador();
 
         if (
             $deveCoincidir === null
@@ -598,43 +785,55 @@ final class FiltrosMetalThursday
         }
 
         $this->aplicarCorrespondenciaNaMetalThursday(
-            'next_nominee_id',
+            'proximo_nomeado_id',
             $identificadorUtilizador,
             $deveCoincidir,
         );
     }
 
     /**
-     * Filtra os registos por género, incluindo todos os seus descendentes.
+     * Filtra por género, incluindo os respetivos descendentes.
      *
-     * @param  mixed  $valor  - Identificador do género recebido através da URL.
+     * @param  mixed  $valor  Identificador recebido.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
-    private function filtrarPorGenero(mixed $valor): void
-    {
-        $identificadorGenero = $this->converterParaIdentificador($valor);
+    private function filtrarPorGenero(
+        mixed $valor,
+    ): void {
+        $identificadorGenero =
+            $this->converterParaIdentificador(
+                $valor,
+            );
 
         if ($identificadorGenero === null) {
             return;
         }
 
-        $genero = Genero::query()
-            ->find($identificadorGenero);
+        $genero = Genero::query()->find(
+            $identificadorGenero,
+        );
 
         if ($genero === null) {
             return;
         }
 
         $identificadoresGeneros =
-            $genero->obterIdentificadoresComDescendentes();
+            $genero
+                ->obterIdentificadoresComDescendentes();
+
+        if ($identificadoresGeneros === []) {
+            return;
+        }
 
         if ($this->eConsultaDeMetalThursdays()) {
             $this->construtorConsulta->whereHas(
-                'sections.band.genres',
-                fn (Builder $consulta): Builder => $consulta->whereKey(
+                'seccoes.banda.generos',
+                static fn (
+                    Builder $consulta,
+                ): Builder => $consulta->whereKey(
                     $identificadoresGeneros,
                 ),
             );
@@ -643,72 +842,31 @@ final class FiltrosMetalThursday
         }
 
         $this->construtorConsulta->whereHas(
-            'band.genres',
-            fn (Builder $consulta): Builder => $consulta->whereKey(
+            'banda.generos',
+            static fn (
+                Builder $consulta,
+            ): Builder => $consulta->whereKey(
                 $identificadoresGeneros,
             ),
         );
     }
 
     /**
-     * Filtra os registos pela existência de uma avaliação do utilizador
-     * autenticado.
+     * Filtra pela existência de avaliação do utilizador autenticado.
      *
-     * @param  mixed  $valor  - Valor `sim` ou `nao` recebido através da URL.
+     * @param  mixed  $valor  Resposta binária recebida.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     private function filtrarPorAvaliacaoDoUtilizador(
         mixed $valor,
     ): void {
-        $deveExistir = $this->converterParaBooleanoSimNao($valor);
-
-        $identificadorUtilizador = $this->obterIdentificadorUtilizador();
-
-        if (
-            $deveExistir === null
-            || $identificadorUtilizador === null
-        ) {
-            return;
-        }
-
-        $restricao = fn (Builder $consulta): Builder => $consulta->where(
-            'user_id',
-            $identificadorUtilizador,
-        );
-
-        if ($deveExistir) {
-            $this->construtorConsulta->whereHas(
-                'ratings',
-                $restricao,
-            );
-
-            return;
-        }
-
-        $this->construtorConsulta->whereDoesntHave(
-            'ratings',
-            $restricao,
-        );
-    }
-
-    /**
-     * Filtra os registos pela existência de uma audição do utilizador
-     * autenticado.
-     *
-     * @param  mixed  $valor  - Valor `sim` ou `nao` recebido através da URL.
-     *
-     * @since 1.0.0
-     *
-     * @version 2.0.0
-     */
-    private function filtrarPorAudicaoDoUtilizador(
-        mixed $valor,
-    ): void {
         $deveExistir =
-            $this->converterParaBooleanoSimNao($valor);
+            $this->converterParaBooleano(
+                $valor,
+            );
 
         $identificadorUtilizador =
             $this->obterIdentificadorUtilizador();
@@ -720,14 +878,16 @@ final class FiltrosMetalThursday
             return;
         }
 
-        $restricao = fn (Builder $consulta): Builder => $consulta->where(
-            'user_id',
+        $restricao = static fn (
+            Builder $consulta,
+        ): Builder => $consulta->where(
+            'utilizador_id',
             $identificadorUtilizador,
         );
 
         if ($deveExistir) {
             $this->construtorConsulta->whereHas(
-                'listens',
+                'avaliacoes',
                 $restricao,
             );
 
@@ -735,17 +895,67 @@ final class FiltrosMetalThursday
         }
 
         $this->construtorConsulta->whereDoesntHave(
-            'listens',
+            'avaliacoes',
             $restricao,
         );
     }
 
     /**
-     * Aplica uma restrição diretamente à MetalThursday ou através da relação
-     * da secção com a respetiva MetalThursday.
+     * Filtra pela existência de audição do utilizador autenticado.
      *
-     * @param  Closure(Builder): Builder  $restricao  - Restrição a aplicar à
-     *                                                consulta da MetalThursday.
+     * @param  mixed  $valor  Resposta binária recebida.
+     *
+     * @since 1.0.0
+     *
+     * @version 2.1.0
+     */
+    private function filtrarPorAudicaoDoUtilizador(
+        mixed $valor,
+    ): void {
+        $deveExistir =
+            $this->converterParaBooleano(
+                $valor,
+            );
+
+        $identificadorUtilizador =
+            $this->obterIdentificadorUtilizador();
+
+        if (
+            $deveExistir === null
+            || $identificadorUtilizador === null
+        ) {
+            return;
+        }
+
+        $restricao = static fn (
+            Builder $consulta,
+        ): Builder => $consulta->where(
+            'utilizador_id',
+            $identificadorUtilizador,
+        );
+
+        if ($deveExistir) {
+            $this->construtorConsulta->whereHas(
+                'audicoes',
+                $restricao,
+            );
+
+            return;
+        }
+
+        $this->construtorConsulta->whereDoesntHave(
+            'audicoes',
+            $restricao,
+        );
+    }
+
+    /**
+     * Aplica uma restrição à MetalThursday.
+     *
+     * Nas consultas de secções, a restrição é aplicada através da relação
+     * `metalThursday`.
+     *
+     * @param  Closure(Builder<Model>): Builder<Model>  $restricao  Restrição.
      *
      * @since 2.0.0
      *
@@ -755,7 +965,9 @@ final class FiltrosMetalThursday
         Closure $restricao,
     ): void {
         if ($this->eConsultaDeMetalThursdays()) {
-            $restricao($this->construtorConsulta);
+            $restricao(
+                $this->construtorConsulta,
+            );
 
             return;
         }
@@ -767,15 +979,14 @@ final class FiltrosMetalThursday
     }
 
     /**
-     * Aplica uma condição de correspondência ou não correspondência a uma
-     * coluna da MetalThursday.
+     * Aplica correspondência ou não correspondência a uma coluna.
      *
-     * Quando a condição não deve coincidir, os valores nulos são também
+     * Quando não deve existir correspondência, os valores nulos também são
      * incluídos.
      *
-     * @param  string  $coluna  - Nome físico atual da coluna.
-     * @param  int  $identificador  - Identificador a comparar.
-     * @param  bool  $deveCoincidir  - Indica se os valores devem coincidir.
+     * @param  string  $coluna  Nome da coluna.
+     * @param  int  $identificador  Identificador a comparar.
+     * @param  bool  $deveCoincidir  Estado da correspondência.
      *
      * @since 2.0.0
      *
@@ -787,7 +998,9 @@ final class FiltrosMetalThursday
         bool $deveCoincidir,
     ): void {
         $this->aplicarRestricaoNaMetalThursday(
-            function (Builder $consulta) use (
+            static function (
+                Builder $consulta,
+            ) use (
                 $coluna,
                 $identificador,
                 $deveCoincidir,
@@ -800,12 +1013,16 @@ final class FiltrosMetalThursday
                 }
 
                 return $consulta->where(
-                    function (Builder $subconsulta) use (
+                    static function (
+                        Builder $subconsulta,
+                    ) use (
                         $coluna,
                         $identificador,
                     ): void {
                         $subconsulta
-                            ->whereNull($coluna)
+                            ->whereNull(
+                                $coluna,
+                            )
                             ->orWhere(
                                 $coluna,
                                 '!=',
@@ -820,9 +1037,8 @@ final class FiltrosMetalThursday
     /**
      * Converte um valor num identificador inteiro positivo.
      *
-     * @param  mixed  $valor  - Valor a converter.
-     * @return int|null - Identificador convertido ou null quando o valor não
-     *                  é válido.
+     * @param  mixed  $valor  Valor recebido.
+     * @return int|null Identificador válido ou nulo.
      *
      * @since 2.0.0
      *
@@ -843,43 +1059,36 @@ final class FiltrosMetalThursday
 
         return $identificador === false
             ? null
-            : $identificador;
+            : (int) $identificador;
     }
 
     /**
-     * Converte os valores `sim` e `nao` num valor booleano.
+     * Converte uma resposta binária num valor booleano.
      *
-     * @param  mixed  $valor  - Valor a converter.
-     * @return bool|null - Valor booleano ou null quando o valor não é
-     *                   reconhecido.
+     * @param  mixed  $valor  Valor recebido.
+     * @return bool|null Valor convertido ou nulo.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    private function converterParaBooleanoSimNao(
+    private function converterParaBooleano(
         mixed $valor,
     ): ?bool {
-        return match ($valor) {
-            'sim' => true,
-            'nao' => false,
-            default => null,
-        };
+        return RespostaBinaria::tentarCriar(
+            $valor,
+        )?->paraBooleano();
     }
 
     /**
-     * Converte uma data no formato AAAA-MM-DD numa instância imutável.
+     * Converte uma data no formato AAAA-MM-DD.
      *
-     * Datas relativas, formatos alternativos e datas inexistentes são
-     * rejeitados.
-     *
-     * @param  mixed  $valor  - Valor a converter.
-     * @return CarbonImmutable|null - Data convertida ou null quando o valor
-     *                              não é válido.
+     * @param  mixed  $valor  Valor recebido.
+     * @return CarbonImmutable|null Data válida ou nula.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function converterParaData(
         mixed $valor,
@@ -888,10 +1097,18 @@ final class FiltrosMetalThursday
             return null;
         }
 
+        $valorNormalizado = trim(
+            $valor,
+        );
+
+        if ($valorNormalizado === '') {
+            return null;
+        }
+
         try {
             $data = CarbonImmutable::createFromFormat(
                 '!Y-m-d',
-                $valor,
+                $valorNormalizado,
             );
         } catch (Throwable) {
             return null;
@@ -899,7 +1116,8 @@ final class FiltrosMetalThursday
 
         if (
             $data === false
-            || $data->format('Y-m-d') !== $valor
+            || $data->format('Y-m-d')
+            !== $valorNormalizado
         ) {
             return null;
         }
@@ -910,16 +1128,16 @@ final class FiltrosMetalThursday
     /**
      * Obtém o identificador do utilizador autenticado.
      *
-     * @return int|null - Identificador do utilizador ou null quando não existe
-     *                  um utilizador autenticado.
+     * @return int|null Identificador ou nulo.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function obterIdentificadorUtilizador(): ?int
     {
-        $identificador = $this->pedido
+        $identificador = $this
+            ->pedido
             ->user()
             ?->getAuthIdentifier();
 
@@ -927,32 +1145,41 @@ final class FiltrosMetalThursday
             return null;
         }
 
-        return (int) $identificador;
+        $identificadorNormalizado =
+            (int) $identificador;
+
+        return $identificadorNormalizado > 0
+            ? $identificadorNormalizado
+            : null;
     }
 
     /**
-     * Determina se o valor de um parâmetro pode ser utilizado como filtro.
+     * Determina se o valor pode ser utilizado como filtro.
      *
-     * São rejeitados valores nulos, vazios e estruturas compostas.
-     *
-     * @param  mixed  $valor  - Valor recebido através da URL.
-     * @return bool - Verdadeiro quando o valor pode ser processado.
+     * @param  mixed  $valor  Valor recebido.
+     * @return bool Verdadeiro quando o valor pode ser processado.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function valorPodeSerAplicado(
         mixed $valor,
     ): bool {
-        return ! is_array($valor)
-            && $valor !== null
-            && $valor !== '';
+        if (
+            $valor === null
+            || is_array($valor)
+            || is_object($valor)
+        ) {
+            return false;
+        }
+
+        return ! is_string($valor)
+            || trim($valor) !== '';
     }
 
     /**
-     * Confirma que a consulta está associada a um modelo suportado.
-     *
+     * Confirma que a consulta utiliza um modelo suportado.
      *
      * @throws InvalidArgumentException Quando o modelo não é suportado.
      *
@@ -982,9 +1209,9 @@ final class FiltrosMetalThursday
     }
 
     /**
-     * Determina se a consulta está associada ao modelo MetalThursday.
+     * Determina se a consulta utiliza o modelo MetalThursday.
      *
-     * @return bool - Verdadeiro quando a consulta é de MetalThursdays.
+     * @return bool Estado da verificação.
      *
      * @since 2.0.0
      *
@@ -992,20 +1219,7 @@ final class FiltrosMetalThursday
      */
     private function eConsultaDeMetalThursdays(): bool
     {
-        return $this->classeModelo === MetalThursday::class;
-    }
-
-    /**
-     * Determina se a consulta está associada ao modelo de secções.
-     *
-     * @return bool - Verdadeiro quando a consulta é de secções.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private function eConsultaDeSecoes(): bool
-    {
-        return $this->classeModelo === MtSection::class;
+        return $this->classeModelo
+            === MetalThursday::class;
     }
 }
