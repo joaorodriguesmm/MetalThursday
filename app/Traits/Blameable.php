@@ -1,75 +1,131 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Traits;
 
 use App\Models\Autenticacao\Utilizador;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * Gere automaticamente os atributos blameable.
+ * Gere automaticamente os dados de auditoria dos modelos.
  *
- * @since 1.0
+ * O trait preenche o utilizador responsável pela criação e pela última
+ * atualização quando existe um utilizador autenticado. Em execuções sem
+ * autenticação, como factories, seeders e comandos Artisan, os atributos
+ * permanecem nulos ou conservam os valores definidos explicitamente.
  *
- * @version 1.0
+ * @since 1.0.0
+ *
+ * @version 2.0.0
  */
 trait Blameable
 {
     /**
-     * Inicia as funcionalidades de blameable num modelo.
+     * Inicia os eventos responsáveis pela auditoria do modelo.
      *
+     * Durante a criação, os dois identificadores são preenchidos quando ainda
+     * não tiverem um valor. Durante a atualização, o utilizador autenticado
+     * passa a ser o responsável pela última alteração.
      *
-     * @since 1.0
+     * @since 1.0.0
      *
-     * @version 1.0
+     * @version 2.0.0
      */
     public static function bootBlameable(): void
     {
-        static::creating(function ($model) {
-            if (Auth::check()) {
-                $userId = Auth::id();
-                if (is_null($model->created_by)) {
-                    $model->created_by = $userId;
+        static::creating(
+            static function (
+                Model $modelo,
+            ): void {
+                $utilizadorId = Auth::id();
+
+                if ($utilizadorId === null) {
+                    return;
                 }
 
-                if (is_null($model->updated_by)) {
-                    $model->updated_by = $userId;
+                if (
+                    $modelo->getAttribute(
+                        'criado_por_id',
+                    ) === null
+                ) {
+                    $modelo->setAttribute(
+                        'criado_por_id',
+                        (int) $utilizadorId,
+                    );
                 }
-            }
-        });
 
-        static::updating(function ($model) {
-            if (Auth::check()) {
-                $model->updated_by = Auth::id();
-            }
-        });
+                if (
+                    $modelo->getAttribute(
+                        'atualizado_por_id',
+                    ) === null
+                ) {
+                    $modelo->setAttribute(
+                        'atualizado_por_id',
+                        (int) $utilizadorId,
+                    );
+                }
+            },
+        );
+
+        static::updating(
+            static function (
+                Model $modelo,
+            ): void {
+                $utilizadorId = Auth::id();
+
+                if ($utilizadorId === null) {
+                    return;
+                }
+
+                $modelo->setAttribute(
+                    'atualizado_por_id',
+                    (int) $utilizadorId,
+                );
+            },
+        );
     }
 
     /**
-     * Obtém o utilizador que criou o registo.
+     * Obtém o utilizador responsável pela criação do registo.
      *
-     * @return BelongsTo - Relação com a tabela users.
+     * A relação pode ser nula quando o registo foi criado sem autenticação
+     * ou quando o respetivo utilizador foi eliminado.
      *
-     * @since 1.0
+     * @return BelongsTo<Utilizador, $this> Relação com o utilizador criador.
      *
-     * @version 1.0
+     * @since 1.0.0
+     *
+     * @version 2.0.0
      */
-    public function creator(): BelongsTo
+    public function criadoPor(): BelongsTo
     {
-        return $this->belongsTo(Utilizador::class, 'created_by');
+        return $this->belongsTo(
+            Utilizador::class,
+            'criado_por_id',
+        );
     }
 
     /**
-     * Obtém o utilizador que atualizou o registo pela última vez.
+     * Obtém o utilizador responsável pela última atualização do registo.
      *
-     * @return BelongsTo - Relação com a tabela users.
+     * A relação pode ser nula quando o registo nunca foi atualizado por um
+     * utilizador autenticado ou quando esse utilizador foi eliminado.
      *
-     * @since 1.0
+     * @return BelongsTo<Utilizador, $this> Relação com o último utilizador
+     *                                      responsável pela atualização.
      *
-     * @version 1.0
+     * @since 1.0.0
+     *
+     * @version 2.0.0
      */
-    public function updater(): BelongsTo
+    public function atualizadoPor(): BelongsTo
     {
-        return $this->belongsTo(Utilizador::class, 'updated_by');
+        return $this->belongsTo(
+            Utilizador::class,
+            'atualizado_por_id',
+        );
     }
 }

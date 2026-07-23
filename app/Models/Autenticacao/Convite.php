@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Models\Autenticacao;
 
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
-use Database\Factories\ConviteFactory;
+use Database\Factories\Autenticacao\ConviteFactory;
 use DomainException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,8 +17,9 @@ use InvalidArgumentException;
 /**
  * Representa um convite para registo na aplicação.
  *
- * O convite existe independentemente de um utilizador. Quando é aceite, o
- * utilizador criado fica associado através da coluna `utilizado_por`.
+ * O convite existe independentemente de um utilizador. Quando é aceite,
+ * o utilizador criado fica associado através da coluna
+ * `utilizado_por_id`.
  *
  * O código original nunca é persistido. A base de dados guarda apenas o
  * respetivo hash SHA-256.
@@ -26,11 +28,11 @@ use InvalidArgumentException;
  * @property string $nome_convidado
  * @property string|null $email_destino
  * @property string $codigo_hash
- * @property int|null $criado_por
- * @property int|null $utilizado_por
- * @property CarbonInterface|null $expira_em
- * @property CarbonInterface|null $utilizado_em
- * @property CarbonInterface|null $revogado_em
+ * @property int|null $criado_por_id
+ * @property int|null $utilizado_por_id
+ * @property CarbonImmutable|null $expira_em
+ * @property CarbonImmutable|null $utilizado_em
+ * @property CarbonImmutable|null $revogado_em
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
  * @property-read Utilizador|null $criador
@@ -38,7 +40,7 @@ use InvalidArgumentException;
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.1.0
  */
 class Convite extends Model
 {
@@ -48,7 +50,7 @@ class Convite extends Model
     /**
      * Algoritmo utilizado para calcular o hash dos códigos.
      *
-     * Os códigos deverão ser gerados com entropia suficiente para que um hash
+     * Os códigos devem ser gerados com entropia suficiente para que um hash
      * rápido seja adequado. Não se trata de uma palavra-passe escolhida pelo
      * utilizador.
      *
@@ -74,7 +76,7 @@ class Convite extends Model
     /**
      * Atributos permitidos em operações de atribuição em massa.
      *
-     * Os campos de segurança e de controlo do estado não são atribuíveis em
+     * Os campos de segurança e controlo do estado não são atribuíveis em
      * massa. Devem ser alterados através dos métodos próprios do modelo.
      *
      * @var array<int, string>
@@ -92,8 +94,8 @@ class Convite extends Model
     /**
      * Atributos omitidos das representações serializadas.
      *
-     * Embora o hash não permita recuperar diretamente o código original, não
-     * existe motivo para o expor através de respostas JSON ou registos.
+     * Embora o hash não permita recuperar diretamente o código original,
+     * não existe motivo para o expor através de respostas JSON.
      *
      * @var array<int, string>
      *
@@ -106,22 +108,22 @@ class Convite extends Model
     ];
 
     /**
-     * Conversões aplicadas aos atributos do modelo.
+     * Define as conversões aplicadas aos atributos do modelo.
      *
      * As datas são convertidas em objetos imutáveis para impedir alterações
      * acidentais ao estado temporal do convite.
      *
-     * @return array<string, string> - Conversões dos atributos.
+     * @return array<string, string> Conversões dos atributos.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     protected function casts(): array
     {
         return [
-            'criado_por' => 'integer',
-            'utilizado_por' => 'integer',
+            'criado_por_id' => 'integer',
+            'utilizado_por_id' => 'integer',
             'expira_em' => 'immutable_datetime',
             'utilizado_em' => 'immutable_datetime',
             'revogado_em' => 'immutable_datetime',
@@ -129,55 +131,70 @@ class Convite extends Model
     }
 
     /**
-     * Obtém o utilizador responsável pela criação do convite.
+     * Cria a factory associada ao modelo.
      *
-     * @return BelongsTo<Utilizador, Convite> - Relação com o criador do convite.
+     * @return ConviteFactory Factory dos convites.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
+    protected static function newFactory(): ConviteFactory
+    {
+        return ConviteFactory::new();
+    }
+
+    /**
+     * Obtém o utilizador responsável pela criação do convite.
+     *
+     * @return BelongsTo<Utilizador, $this> Relação com o criador.
+     *
+     * @since 2.0.0
+     *
+     * @version 2.0.0
+     */
     public function criador(): BelongsTo
     {
         return $this->belongsTo(
             Utilizador::class,
-            'criado_por',
+            'criado_por_id',
         );
     }
 
     /**
      * Obtém o utilizador criado ou associado através do convite.
      *
-     * @return BelongsTo<Utilizador, Convite> - Relação com o utilizador que aceitou
-     *                                        o convite.
+     * @return BelongsTo<Utilizador, $this> Relação com o utilizador que
+     *                                      aceitou o convite.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function utilizador(): BelongsTo
     {
         return $this->belongsTo(
             Utilizador::class,
-            'utilizado_por',
+            'utilizado_por_id',
         );
     }
 
     /**
      * Limita a consulta aos convites ainda não utilizados nem revogados.
      *
-     * Este escopo não verifica a expiração. Para obter convites que possam ser
-     * usados neste momento deve utilizar-se o escopo `disponiveis`.
+     * Este escopo não verifica a expiração. Para obter convites que possam
+     * ser usados neste momento deve utilizar-se o escopo `disponiveis`.
      *
-     * @param  Builder<Convite>  $consulta  - Consulta dos convites.
-     * @return Builder<Convite> - Consulta dos convites pendentes.
+     * @param  Builder<Convite>  $consulta  Consulta dos convites.
+     * @return Builder<Convite> Consulta dos convites pendentes.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    public function scopePendentes(Builder $consulta): Builder
-    {
+    public function scopePendentes(
+        Builder $consulta,
+    ): Builder {
         return $consulta
             ->whereNull('utilizado_em')
             ->whereNull('revogado_em');
@@ -186,26 +203,33 @@ class Convite extends Model
     /**
      * Limita a consulta aos convites atualmente disponíveis.
      *
-     * Um convite está disponível quando não foi utilizado, não foi revogado e
-     * não possui uma data de expiração já ultrapassada.
+     * Um convite está disponível quando não foi utilizado, não foi revogado
+     * e não possui uma data de expiração já ultrapassada.
      *
-     * @param  Builder<Convite>  $consulta  - Consulta dos convites.
-     * @return Builder<Convite> - Consulta dos convites disponíveis.
+     * @param  Builder<Convite>  $consulta  Consulta dos convites.
+     * @return Builder<Convite> Consulta dos convites disponíveis.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    public function scopeDisponiveis(Builder $consulta): Builder
-    {
+    public function scopeDisponiveis(
+        Builder $consulta,
+    ): Builder {
         return $consulta
             ->whereNull('utilizado_em')
             ->whereNull('revogado_em')
             ->where(
-                function (Builder $consultaExpiracao): void {
+                function (
+                    Builder $consultaExpiracao,
+                ): void {
                     $consultaExpiracao
                         ->whereNull('expira_em')
-                        ->orWhere('expira_em', '>', now());
+                        ->orWhere(
+                            'expira_em',
+                            '>',
+                            now(),
+                        );
                 },
             );
     }
@@ -213,9 +237,9 @@ class Convite extends Model
     /**
      * Limita a consulta ao convite correspondente ao código recebido.
      *
-     * @param  Builder<Convite>  $consulta  - Consulta dos convites.
-     * @param  string  $codigo  - Código original recebido.
-     * @return Builder<Convite> - Consulta limitada ao hash do código.
+     * @param  Builder<Convite>  $consulta  Consulta dos convites.
+     * @param  string  $codigo  Código original recebido.
+     * @return Builder<Convite> Consulta limitada ao hash do código.
      *
      * @throws InvalidArgumentException Quando o código está vazio.
      *
@@ -229,7 +253,9 @@ class Convite extends Model
     ): Builder {
         return $consulta->where(
             'codigo_hash',
-            self::calcularHashCodigo($codigo),
+            self::calcularHashCodigo(
+                $codigo,
+            ),
         );
     }
 
@@ -240,7 +266,7 @@ class Convite extends Model
      * ao criador do convite pelo serviço responsável e descartado depois
      * dessa operação.
      *
-     * @param  string  $codigo  - Código original do convite.
+     * @param  string  $codigo  Código original do convite.
      *
      * @throws InvalidArgumentException Quando o código está vazio.
      *
@@ -248,9 +274,13 @@ class Convite extends Model
      *
      * @version 1.0.0
      */
-    public function definirCodigo(string $codigo): void
-    {
-        $this->codigo_hash = self::calcularHashCodigo($codigo);
+    public function definirCodigo(
+        string $codigo,
+    ): void {
+        $this->codigo_hash =
+            self::calcularHashCodigo(
+                $codigo,
+            );
     }
 
     /**
@@ -259,8 +289,8 @@ class Convite extends Model
      * A comparação utiliza `hash_equals` para evitar diferenças temporais
      * dependentes da posição do primeiro caráter divergente.
      *
-     * @param  string  $codigo  - Código original recebido.
-     * @return bool - Verdadeiro quando o código corresponde ao convite.
+     * @param  string  $codigo  Código original recebido.
+     * @return bool Verdadeiro quando o código corresponde ao convite.
      *
      * @throws InvalidArgumentException Quando o código está vazio.
      *
@@ -268,18 +298,28 @@ class Convite extends Model
      *
      * @version 1.0.0
      */
-    public function correspondeAoCodigo(string $codigo): bool
-    {
+    public function correspondeAoCodigo(
+        string $codigo,
+    ): bool {
+        if (
+            ! isset($this->codigo_hash)
+            || $this->codigo_hash === ''
+        ) {
+            return false;
+        }
+
         return hash_equals(
             $this->codigo_hash,
-            self::calcularHashCodigo($codigo),
+            self::calcularHashCodigo(
+                $codigo,
+            ),
         );
     }
 
     /**
      * Determina se o convite já foi utilizado.
      *
-     * @return bool - Verdadeiro quando o convite já foi utilizado.
+     * @return bool Verdadeiro quando o convite já foi utilizado.
      *
      * @since 2.0.0
      *
@@ -293,7 +333,7 @@ class Convite extends Model
     /**
      * Determina se o convite foi revogado.
      *
-     * @return bool - Verdadeiro quando o convite foi revogado.
+     * @return bool Verdadeiro quando o convite foi revogado.
      *
      * @since 2.0.0
      *
@@ -307,8 +347,8 @@ class Convite extends Model
     /**
      * Determina se o convite expirou.
      *
-     * @param  CarbonInterface|null  $momento  - Momento usado na comparação.
-     * @return bool - Verdadeiro quando o prazo já terminou.
+     * @param  CarbonInterface|null  $momento  Momento usado na comparação.
+     * @return bool Verdadeiro quando o prazo já terminou.
      *
      * @since 2.0.0
      *
@@ -329,8 +369,8 @@ class Convite extends Model
     /**
      * Determina se o convite pode ser utilizado.
      *
-     * @param  CarbonInterface|null  $momento  - Momento usado na validação.
-     * @return bool - Verdadeiro quando o convite está disponível.
+     * @param  CarbonInterface|null  $momento  Momento usado na validação.
+     * @return bool Verdadeiro quando o convite está disponível.
      *
      * @since 2.0.0
      *
@@ -341,39 +381,64 @@ class Convite extends Model
     ): bool {
         return ! $this->foiUtilizado()
             && ! $this->foiRevogado()
-            && ! $this->estaExpirado($momento);
+            && ! $this->estaExpirado(
+                $momento,
+            );
     }
 
     /**
      * Associa o convite ao utilizador que o aceitou.
      *
      * O método apenas altera o estado do modelo. A persistência deve ser
-     * realizada pelo serviço dentro de uma transação e com bloqueio do registo
-     * para impedir a utilização simultânea do mesmo convite.
+     * realizada pelo serviço dentro de uma transação e com bloqueio do
+     * registo para impedir a utilização simultânea do mesmo convite.
      *
-     * @param  Utilizador  $utilizador  - Utilizador criado através do convite.
-     * @param  CarbonInterface|null  $momento  - Momento da utilização.
+     * @param  Utilizador  $utilizador  Utilizador criado através do convite.
+     * @param  CarbonInterface|null  $momento  Momento da utilização.
      *
-     * @throws DomainException Quando o convite não está disponível.
+     * @throws DomainException Quando o convite não está disponível ou quando
+     *                         o utilizador ainda não foi persistido.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.1.0
      */
     public function utilizar(
         Utilizador $utilizador,
         ?CarbonInterface $momento = null,
     ): void {
-        $momentoUtilizacao = $momento ?? now();
+        $momentoUtilizacao =
+            $momento ?? now();
 
-        if (! $this->estaDisponivel($momentoUtilizacao)) {
+        if (
+            ! $this->estaDisponivel(
+                $momentoUtilizacao,
+            )
+        ) {
             throw new DomainException(
                 'O convite não está disponível para utilização.',
             );
         }
 
-        $this->utilizado_por = $utilizador->getKey();
-        $this->utilizado_em = $momentoUtilizacao;
+        if (
+            ! $utilizador->exists
+            || $utilizador->getKey() === null
+        ) {
+            throw new DomainException(
+                'O utilizador associado ao convite ainda não foi persistido.',
+            );
+        }
+
+        $this->utilizado_por_id =
+            (int) $utilizador->getKey();
+
+        $this->utilizado_em =
+            $momentoUtilizacao;
+
+        $this->setRelation(
+            'utilizador',
+            $utilizador,
+        );
     }
 
     /**
@@ -382,7 +447,7 @@ class Convite extends Model
      * Um convite utilizado já produziu efeitos e não pode ser posteriormente
      * revogado. Revogar novamente um convite já revogado não altera o estado.
      *
-     * @param  CarbonInterface|null  $momento  - Momento da revogação.
+     * @param  CarbonInterface|null  $momento  Momento da revogação.
      *
      * @throws DomainException Quando o convite já foi utilizado.
      *
@@ -403,7 +468,8 @@ class Convite extends Model
             return;
         }
 
-        $this->revogado_em = $momento ?? now();
+        $this->revogado_em =
+            $momento ?? now();
     }
 
     /**
@@ -413,8 +479,8 @@ class Convite extends Model
      * preservada. Assim, os códigos permanecem sensíveis a maiúsculas e
      * minúsculas.
      *
-     * @param  string  $codigo  - Código original do convite.
-     * @return string - Hash hexadecimal do código.
+     * @param  string  $codigo  Código original do convite.
+     * @return string Hash hexadecimal do código.
      *
      * @throws InvalidArgumentException Quando o código está vazio.
      *
@@ -425,7 +491,8 @@ class Convite extends Model
     public static function calcularHashCodigo(
         string $codigo,
     ): string {
-        $codigoNormalizado = trim($codigo);
+        $codigoNormalizado =
+            trim($codigo);
 
         if ($codigoNormalizado === '') {
             throw new InvalidArgumentException(

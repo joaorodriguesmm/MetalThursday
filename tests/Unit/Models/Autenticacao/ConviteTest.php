@@ -197,7 +197,6 @@ final class ConviteTest extends TestCase
     /**
      * Confirma que a utilização associa o utilizador e regista o momento.
      *
-     *
      * @since 2.0.0
      *
      * @version 1.0.0
@@ -226,7 +225,7 @@ final class ConviteTest extends TestCase
 
         self::assertSame(
             42,
-            $convite->utilizado_por,
+            $convite->utilizado_por_id,
         );
 
         self::assertNotNull(
@@ -240,11 +239,24 @@ final class ConviteTest extends TestCase
         );
 
         self::assertTrue(
+            $convite->relationLoaded(
+                'utilizador',
+            ),
+        );
+
+        self::assertSame(
+            $utilizador,
+            $convite->utilizador,
+        );
+
+        self::assertTrue(
             $convite->foiUtilizado(),
         );
 
         self::assertFalse(
-            $convite->estaDisponivel($momentoUtilizacao),
+            $convite->estaDisponivel(
+                $momentoUtilizacao,
+            ),
         );
     }
 

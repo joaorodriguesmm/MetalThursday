@@ -5,24 +5,29 @@ declare(strict_types=1);
 namespace App\Models\Autenticacao;
 
 use App\Enumeracoes\PapelUtilizador;
-use App\Models\Comment;
-use App\Models\EditionRanking;
-use App\Models\EmailPermission;
-use App\Models\Like;
-use App\Models\Listen;
-use App\Models\MetalThursday;
-use App\Models\MtEdition;
-use App\Models\Rating;
+use App\Models\Comunicacao\PermissaoEmail;
+use App\Models\Interacoes\Audicao;
+use App\Models\Interacoes\Avaliacao;
+use App\Models\Interacoes\Comentario;
+use App\Models\Interacoes\Gosto;
+use App\Models\MetalThursday\Edicao;
+use App\Models\MetalThursday\MetalThursday;
+use App\Models\MetalThursday\MusicaFavoritaEdicao;
 use App\Notifications\CustomResetPasswordNotification;
 use App\Notifications\CustomVerifyEmailNotification;
 use App\ObjetosValor\Utilizadores\EnderecoEmail;
 use App\ObjetosValor\Utilizadores\NomeUtilizador;
+use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
+use Database\Factories\Autenticacao\UtilizadorFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -33,34 +38,46 @@ use SensitiveParameter;
 /**
  * Representa um utilizador autenticável da aplicação.
  *
- * O modelo mantém temporariamente a ligação à tabela física `users`, enquanto
- * as classes, relações, métodos e atributos públicos do projeto passam a
- * utilizar nomenclatura portuguesa.
- *
  * Os nomes `email`, `password`, `remember_token` e `email_verified_at`
- * permanecem como contratos técnicos do sistema de autenticação do Laravel.
+ * permanecem por fazerem parte dos contratos técnicos de autenticação,
+ * recuperação de palavra-passe e verificação de e-mail do Laravel.
  *
  * @property int $id
- * @property string $name
  * @property string $nome
- * @property string|null $email
- * @property string|null $email_verified_at
- * @property string|null $password
- * @property string|null $photo
+ * @property string $email
+ * @property CarbonImmutable|null $email_verified_at
+ * @property string $password
  * @property string|null $fotografia
  * @property PapelUtilizador $papel
  * @property string|null $remember_token
+ * @property CarbonInterface|null $created_at
+ * @property CarbonInterface|null $updated_at
  * @property-read string|null $url_fotografia
  * @property-read string $iniciais
  * @property-read string $primeiro_nome
+ * @property-read Collection<int, PermissaoEmail> $permissoesEmail
+ * @property-read Collection<int, Convite> $convitesCriados
+ * @property-read Convite|null $conviteUtilizado
+ * @property-read Collection<int, Edicao> $edicoesCriadas
+ * @property-read Collection<int, MetalThursday> $metalThursdaysComoAutor
+ * @property-read Collection<int, MetalThursday> $metalThursdaysComoNomeado
+ * @property-read Collection<int, MetalThursday> $metalThursdaysCriadas
+ * @property-read Collection<int, Comentario> $comentarios
+ * @property-read Collection<int, Gosto> $gostos
+ * @property-read Collection<int, Audicao> $audicoes
+ * @property-read Collection<int, Avaliacao> $avaliacoes
+ * @property-read Collection<int, MusicaFavoritaEdicao> $musicasFavoritasEdicao
+ * @property-read Collection<int, MusicaFavoritaEdicao> $musicasFavoritasEdicaoRegistadas
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
-final class Utilizador extends Authenticatable implements MustVerifyEmail
+class Utilizador extends Authenticatable implements MustVerifyEmail
 {
+    /** @use HasFactory<UtilizadorFactory> */
     use HasFactory;
+
     use Notifiable;
 
     /**
@@ -72,16 +89,10 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
      *
      * @version 2.0.0
      */
-    protected $table = 'users';
+    protected $table = 'utilizadores';
 
     /**
      * Atributos permitidos em operações de atribuição em massa.
-     *
-     * `nome` e `fotografia` são atributos portugueses que escrevem,
-     * respetivamente, nas colunas físicas `name` e `photo`.
-     *
-     * `password` é mantido por ser um contrato técnico da autenticação do
-     * Laravel.
      *
      * @var array<int, string>
      *
@@ -100,9 +111,6 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
     /**
      * Atributos omitidos nas representações serializadas.
      *
-     * As colunas físicas `name` e `photo` são ocultadas porque são expostas
-     * através dos atributos portugueses `nome` e `fotografia`.
-     *
      * @var array<int, string>
      *
      * @since 1.0.0
@@ -110,8 +118,6 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
      * @version 2.0.0
      */
     protected $hidden = [
-        'name',
-        'photo',
         'password',
         'remember_token',
     ];
@@ -126,8 +132,6 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
      * @version 2.0.0
      */
     protected $appends = [
-        'nome',
-        'fotografia',
         'url_fotografia',
         'iniciais',
         'primeiro_nome',
@@ -136,7 +140,7 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
     /**
      * Define as conversões dos atributos do modelo.
      *
-     * @return array<string, string> - Conversões dos atributos.
+     * @return array<string, string> Conversões dos atributos.
      *
      * @since 1.0.0
      *
@@ -152,9 +156,26 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * Expõe a coluna física `name` através do atributo `nome`.
+     * Cria a factory associada ao modelo.
      *
-     * @return Attribute<string, string> - Atributo do nome.
+     * A associação é explícita porque o modelo e a factory se encontram em
+     * namespaces próprios.
+     *
+     * @return UtilizadorFactory Factory dos utilizadores.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    protected static function newFactory(): UtilizadorFactory
+    {
+        return UtilizadorFactory::new();
+    }
+
+    /**
+     * Normaliza o nome antes da persistência.
+     *
+     * @return Attribute<string, string> Atributo do nome.
      *
      * @since 2.0.0
      *
@@ -163,26 +184,18 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
     protected function nome(): Attribute
     {
         return Attribute::make(
-            get: static fn (
-                mixed $valor,
-                array $atributos,
-            ): string => (string) ($atributos['name'] ?? ''),
-
-            set: static fn (mixed $valor): array => [
-                'name' => NomeUtilizador::deTexto(
-                    (string) $valor,
-                )->valor(),
-            ],
+            set: static fn (mixed $valor): string => NomeUtilizador::deTexto(
+                (string) $valor,
+            )->valor(),
         );
     }
 
     /**
      * Normaliza o endereço de e-mail antes da persistência.
      *
-     * O valor nulo permanece permitido temporariamente devido aos registos
-     * históricos que ainda possam não ter concluído o registo.
+     * A estrutura não permite endereços de e-mail nulos ou vazios.
      *
-     * @return Attribute<string|null, string|null> - Atributo do e-mail.
+     * @return Attribute<string, string> Atributo do endereço de e-mail.
      *
      * @since 2.0.0
      *
@@ -191,33 +204,16 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
     protected function email(): Attribute
     {
         return Attribute::make(
-            get: static fn (mixed $valor): ?string => is_string($valor) && $valor !== ''
-                ? $valor
-                : null,
-
-            set: static function (mixed $valor): ?string {
-                if (
-                    $valor === null
-                    || (
-                        is_string($valor)
-                        && trim($valor) === ''
-                    )
-                ) {
-                    return null;
-                }
-
-                return EnderecoEmail::deTexto(
-                    (string) $valor,
-                )->valor();
-            },
+            set: static fn (mixed $valor): string => EnderecoEmail::deTexto(
+                (string) $valor,
+            )->valor(),
         );
     }
 
     /**
-     * Expõe a coluna física `photo` através do atributo `fotografia`.
+     * Normaliza o caminho da fotografia.
      *
-     * @return Attribute<string|null, string|null> - Atributo do caminho da
-     *                                             fotografia.
+     * @return Attribute<string|null, string|null> Atributo da fotografia.
      *
      * @since 2.0.0
      *
@@ -226,25 +222,20 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
     protected function fotografia(): Attribute
     {
         return Attribute::make(
-            get: static fn (
-                mixed $valor,
-                array $atributos,
-            ): ?string => self::normalizarCaminhoFotografia(
-                $atributos['photo'] ?? null,
+            get: static fn (mixed $valor): ?string => self::normalizarCaminhoFotografia(
+                $valor,
             ),
 
-            set: static fn (mixed $valor): array => [
-                'photo' => self::normalizarCaminhoFotografia(
-                    $valor,
-                ),
-            ],
+            set: static fn (mixed $valor): ?string => self::normalizarCaminhoFotografia(
+                $valor,
+            ),
         );
     }
 
     /**
      * Obtém a ligação pública da fotografia.
      *
-     * @return Attribute<string|null, never> - Ligação da fotografia.
+     * @return Attribute<string|null, never> Ligação pública da fotografia.
      *
      * @since 1.0.0
      *
@@ -257,18 +248,22 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
                 mixed $valor,
                 array $atributos,
             ): ?string {
-                $caminho = self::normalizarCaminhoFotografia(
-                    $atributos['photo'] ?? null,
-                );
+                $caminho =
+                    self::normalizarCaminhoFotografia(
+                        $atributos['fotografia'] ?? null,
+                    );
 
                 if ($caminho === null) {
                     return null;
                 }
 
                 /** @var FilesystemAdapter $discoPublico */
-                $discoPublico = Storage::disk('public');
+                $discoPublico =
+                    Storage::disk('public');
 
-                return $discoPublico->url($caminho);
+                return $discoPublico->url(
+                    $caminho,
+                );
             },
         );
     }
@@ -276,7 +271,7 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
     /**
      * Obtém as iniciais do nome do utilizador.
      *
-     * @return Attribute<string, never> - Iniciais do nome.
+     * @return Attribute<string, never> Iniciais do nome.
      *
      * @since 1.0.0
      *
@@ -291,7 +286,10 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
             ): string {
                 try {
                     return NomeUtilizador::deTexto(
-                        (string) ($atributos['name'] ?? ''),
+                        (string) (
+                            $atributos['nome']
+                            ?? ''
+                        ),
                     )->iniciais();
                 } catch (InvalidArgumentException) {
                     return '?';
@@ -303,7 +301,7 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
     /**
      * Obtém o primeiro nome do utilizador.
      *
-     * @return Attribute<string, never> - Primeiro nome.
+     * @return Attribute<string, never> Primeiro nome.
      *
      * @since 1.0.0
      *
@@ -318,7 +316,10 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
             ): string {
                 try {
                     return NomeUtilizador::deTexto(
-                        (string) ($atributos['name'] ?? ''),
+                        (string) (
+                            $atributos['nome']
+                            ?? ''
+                        ),
                     )->primeiroNome();
                 } catch (InvalidArgumentException) {
                     return 'Utilizador';
@@ -330,9 +331,8 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
     /**
      * Envia a notificação de verificação do endereço de e-mail.
      *
-     * O nome deste método permanece em inglês porque substitui um ponto de
-     * extensão definido pelo Laravel.
-     *
+     * O nome permanece em inglês por substituir um ponto de extensão
+     * definido pelo Laravel.
      *
      * @since 1.0.0
      *
@@ -348,10 +348,10 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
     /**
      * Envia a notificação de reposição da palavra-passe.
      *
-     * O nome deste método permanece em inglês porque substitui um ponto de
-     * extensão definido pelo Laravel.
+     * O nome permanece em inglês por substituir um ponto de extensão
+     * definido pelo Laravel.
      *
-     * @param  string  $token  - Token de reposição da palavra-passe.
+     * @param  mixed  $token  Token de reposição da palavra-passe.
      *
      * @since 1.0.0
      *
@@ -359,7 +359,7 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
      */
     public function sendPasswordResetNotification(
         #[SensitiveParameter]
-        $token,
+        mixed $token,
     ): void {
         $this->notify(
             new CustomResetPasswordNotification(
@@ -371,8 +371,7 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
     /**
      * Obtém as permissões de e-mail do utilizador.
      *
-     * @return BelongsToMany<EmailPermission, Utilizador> - Relação com as
-     *                                                    permissões de e-mail.
+     * @return BelongsToMany<PermissaoEmail, $this> Permissões de e-mail.
      *
      * @since 1.0.0
      *
@@ -381,46 +380,60 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
     public function permissoesEmail(): BelongsToMany
     {
         return $this->belongsToMany(
-            EmailPermission::class,
-            'email_permission_user',
-            'user_id',
-            'email_permission_id',
+            PermissaoEmail::class,
+            'permissao_email_utilizador',
+            'utilizador_id',
+            'permissao_email_id',
         );
     }
 
     /**
      * Determina se o utilizador possui uma permissão de e-mail.
      *
-     * Quando a relação já está carregada, a verificação é realizada em
-     * memória. Caso contrário, é executada uma consulta `exists`, evitando
-     * carregar todas as permissões.
-     *
-     * @param  string  $slug  - Identificador textual da permissão.
-     * @return bool - Verdadeiro quando a permissão está atribuída.
+     * @param  string  $identificador  Identificador da permissão.
+     * @return bool Verdadeiro quando a permissão está atribuída.
      *
      * @since 1.0.0
      *
      * @version 2.0.0
      */
-    public function temPermissaoEmail(string $slug): bool
-    {
+    public function temPermissaoEmail(
+        string $identificador,
+    ): bool {
+        $identificadorNormalizado =
+            strtolower(
+                trim(
+                    $identificador,
+                ),
+            );
+
+        if ($identificadorNormalizado === '') {
+            return false;
+        }
+
         if ($this->relationLoaded('permissoesEmail')) {
             return $this
                 ->getRelation('permissoesEmail')
-                ->contains('slug', $slug);
+                ->contains(
+                    'identificador',
+                    $identificadorNormalizado,
+                );
         }
 
         return $this
             ->permissoesEmail()
-            ->where('slug', $slug)
+            ->where(
+                'permissoes_email.identificador',
+                $identificadorNormalizado,
+            )
             ->exists();
     }
 
     /**
      * Determina se o utilizador possui o papel indicado.
      *
-     * @param  PapelUtilizador  $papel  - Papel pretendido.
-     * @return bool - Verdadeiro quando os papéis coincidem.
+     * @param  PapelUtilizador  $papel  Papel pretendido.
+     * @return bool Verdadeiro quando os papéis coincidem.
      *
      * @since 2.0.0
      *
@@ -435,8 +448,7 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
     /**
      * Determina se o utilizador possui privilégios administrativos.
      *
-     * @return bool - Verdadeiro para administradores e
-     *              superadministradores.
+     * @return bool Verdadeiro para administradores e superadministradores.
      *
      * @since 2.0.0
      *
@@ -452,7 +464,7 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
     /**
      * Determina se o utilizador é o superadministrador.
      *
-     * @return bool - Verdadeiro apenas para o superadministrador.
+     * @return bool Verdadeiro apenas para o superadministrador.
      *
      * @since 2.0.0
      *
@@ -460,18 +472,16 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
      */
     public function eSuperAdministrador(): bool
     {
-        return $this->papel->eSuperAdministrador();
+        return $this
+            ->papel
+            ->eSuperAdministrador();
     }
 
     /**
      * Limita a consulta aos utilizadores selecionáveis.
      *
-     * O superadministrador deixa de ser identificado através do valor fixo
-     * `id = 1`.
-     *
-     * @param  Builder<Utilizador>  $consulta  - Consulta dos utilizadores.
-     * @return Builder<Utilizador> - Consulta ordenada dos utilizadores
-     *                             selecionáveis.
+     * @param  Builder<Utilizador>  $consulta  Consulta dos utilizadores.
+     * @return Builder<Utilizador> Consulta dos utilizadores selecionáveis.
      *
      * @since 1.0.0
      *
@@ -486,13 +496,13 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
                 '!=',
                 PapelUtilizador::SuperAdministrador->value,
             )
-            ->orderBy('name');
+            ->orderBy('nome');
     }
 
     /**
      * Obtém os convites criados pelo utilizador.
      *
-     * @return HasMany<Convite, Utilizador> - Convites criados.
+     * @return HasMany<Convite, $this> Convites criados.
      *
      * @since 2.0.0
      *
@@ -502,17 +512,31 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(
             Convite::class,
-            'criado_por',
+            'criado_por_id',
+        );
+    }
+
+    /**
+     * Obtém o convite utilizado para criar o utilizador.
+     *
+     * @return HasOne<Convite, $this> Convite utilizado pelo utilizador.
+     *
+     * @since 2.0.0
+     *
+     * @version 2.0.0
+     */
+    public function conviteUtilizado(): HasOne
+    {
+        return $this->hasOne(
+            Convite::class,
+            'utilizado_por_id',
         );
     }
 
     /**
      * Obtém as edições criadas pelo utilizador.
      *
-     * A chave estrangeira é explicitada porque a tabela `mt_editions` utiliza
-     * `created_by`, e não a convenção `user_id`.
-     *
-     * @return HasMany<MtEdition, Utilizador> - Edições criadas.
+     * @return HasMany<Edicao, $this> Edições criadas.
      *
      * @since 1.0.0
      *
@@ -521,15 +545,15 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
     public function edicoesCriadas(): HasMany
     {
         return $this->hasMany(
-            MtEdition::class,
-            'created_by',
+            Edicao::class,
+            'criado_por_id',
         );
     }
 
     /**
      * Obtém as MetalThursdays em que o utilizador foi autor.
      *
-     * @return HasMany<MetalThursday, Utilizador> - MetalThursdays como autor.
+     * @return HasMany<MetalThursday, $this> MetalThursdays como autor.
      *
      * @since 1.0.0
      *
@@ -539,15 +563,15 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(
             MetalThursday::class,
-            'author_id',
+            'autor_id',
         );
     }
 
     /**
-     * Obtém as MetalThursdays em que o utilizador foi nomeado.
+     * Obtém as MetalThursdays em que o utilizador foi o próximo nomeado.
      *
-     * @return HasMany<MetalThursday, Utilizador> - MetalThursdays como
-     *                                            nomeado.
+     * @return HasMany<MetalThursday, $this> MetalThursdays como próximo
+     *                                       nomeado.
      *
      * @since 1.0.0
      *
@@ -557,14 +581,14 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(
             MetalThursday::class,
-            'next_nominee_id',
+            'proximo_nomeado_id',
         );
     }
 
     /**
      * Obtém as MetalThursdays criadas pelo utilizador.
      *
-     * @return HasMany<MetalThursday, Utilizador> - MetalThursdays criadas.
+     * @return HasMany<MetalThursday, $this> MetalThursdays criadas.
      *
      * @since 1.0.0
      *
@@ -574,14 +598,14 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(
             MetalThursday::class,
-            'created_by',
+            'criado_por_id',
         );
     }
 
     /**
      * Obtém os comentários publicados pelo utilizador.
      *
-     * @return HasMany<Comment, Utilizador> - Comentários do utilizador.
+     * @return HasMany<Comentario, $this> Comentários do utilizador.
      *
      * @since 1.0.0
      *
@@ -590,15 +614,15 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
     public function comentarios(): HasMany
     {
         return $this->hasMany(
-            Comment::class,
-            'user_id',
+            Comentario::class,
+            'utilizador_id',
         );
     }
 
     /**
      * Obtém os gostos registados pelo utilizador.
      *
-     * @return HasMany<Like, Utilizador> - Gostos do utilizador.
+     * @return HasMany<Gosto, $this> Gostos do utilizador.
      *
      * @since 1.0.0
      *
@@ -607,90 +631,94 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
     public function gostos(): HasMany
     {
         return $this->hasMany(
-            Like::class,
-            'user_id',
+            Gosto::class,
+            'utilizador_id',
         );
     }
 
     /**
      * Obtém as audições registadas pelo utilizador.
      *
-     * @return HasMany<Listen, Utilizador> - Audições do utilizador.
+     * @return HasMany<Audicao, $this> Audições do utilizador.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function audicoes(): HasMany
     {
         return $this->hasMany(
-            Listen::class,
-            'user_id',
+            Audicao::class,
+            'utilizador_id',
         );
     }
 
     /**
-     * Obtém as classificações atribuídas pelo utilizador.
+     * Obtém as avaliações atribuídas pelo utilizador.
      *
-     * @return HasMany<Rating, Utilizador> - Classificações do utilizador.
+     * @return HasMany<Avaliacao, $this> Avaliações do utilizador.
+     *
+     * @since 1.0.0
+     *
+     * @version 2.0.0
+     */
+    public function avaliacoes(): HasMany
+    {
+        return $this->hasMany(
+            Avaliacao::class,
+            'utilizador_id',
+        );
+    }
+
+    /**
+     * Obtém as músicas favoritas escolhidas pelo utilizador.
+     *
+     * @return HasMany<MusicaFavoritaEdicao, $this> Músicas favoritas.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    public function classificacoes(): HasMany
+    public function musicasFavoritasEdicao(): HasMany
     {
         return $this->hasMany(
-            Rating::class,
-            'user_id',
+            MusicaFavoritaEdicao::class,
+            'utilizador_id',
         );
     }
 
     /**
-     * Obtém as entradas de classificação associadas ao utilizador.
+     * Obtém as músicas favoritas registadas pelo utilizador.
      *
-     * @return HasMany<EditionRanking, Utilizador> - Entradas associadas ao
-     *                                             utilizador.
+     * @return HasMany<MusicaFavoritaEdicao, $this> Músicas favoritas
+     *                                              registadas.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    public function entradasClassificacaoEdicoes(): HasMany
+    public function musicasFavoritasEdicaoRegistadas(): HasMany
     {
         return $this->hasMany(
-            EditionRanking::class,
-            'user_id',
-        );
-    }
-
-    /**
-     * Obtém as entradas de classificação submetidas pelo utilizador.
-     *
-     * @return HasMany<EditionRanking, Utilizador> - Entradas submetidas pelo
-     *                                             utilizador.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    public function entradasClassificacaoEdicoesSubmetidas(): HasMany
-    {
-        return $this->hasMany(
-            EditionRanking::class,
-            'submitted_by',
+            MusicaFavoritaEdicao::class,
+            'registado_por_id',
         );
     }
 
     /**
      * Normaliza o caminho da fotografia.
      *
-     * @param  mixed  $caminho  - Caminho recebido.
-     * @return string|null - Caminho normalizado ou nulo.
+     * O caminho deve ser relativo ao disco público. Ligações externas,
+     * caminhos absolutos e segmentos de travessia não são aceites.
+     *
+     * @param  mixed  $caminho  Caminho recebido.
+     * @return string|null Caminho normalizado ou nulo.
+     *
+     * @throws InvalidArgumentException Quando o caminho não é seguro.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private static function normalizarCaminhoFotografia(
         mixed $caminho,
@@ -699,10 +727,68 @@ final class Utilizador extends Authenticatable implements MustVerifyEmail
             return null;
         }
 
-        $caminhoNormalizado = trim($caminho);
+        $caminhoNormalizado =
+            str_replace(
+                '\\',
+                '/',
+                trim($caminho),
+            );
 
-        return $caminhoNormalizado !== ''
-            ? $caminhoNormalizado
+        if ($caminhoNormalizado === '') {
+            return null;
+        }
+
+        if (
+            str_contains(
+                $caminhoNormalizado,
+                "\0",
+            )
+            || preg_match(
+                '/^[a-z][a-z0-9+.-]*:/i',
+                $caminhoNormalizado,
+            ) === 1
+        ) {
+            throw new InvalidArgumentException(
+                'O caminho da fotografia deve ser relativo ao disco público.',
+            );
+        }
+
+        $caminhoNormalizado =
+            ltrim(
+                $caminhoNormalizado,
+                '/',
+            );
+
+        $segmentosNormalizados = [];
+
+        foreach (
+            explode(
+                '/',
+                $caminhoNormalizado,
+            ) as $segmento
+        ) {
+            if (
+                $segmento === ''
+                || $segmento === '.'
+            ) {
+                continue;
+            }
+
+            if ($segmento === '..') {
+                throw new InvalidArgumentException(
+                    'O caminho da fotografia não pode conter travessias de diretórios.',
+                );
+            }
+
+            $segmentosNormalizados[] =
+                $segmento;
+        }
+
+        return $segmentosNormalizados !== []
+            ? implode(
+                '/',
+                $segmentosNormalizados,
+            )
             : null;
     }
 }
