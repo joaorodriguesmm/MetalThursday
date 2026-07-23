@@ -7,69 +7,109 @@ namespace App\Http\Controllers\Utilizadores;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Utilizadores\AtualizarPerfilRequest;
 use App\Models\Autenticacao\Utilizador;
-use App\Models\EmailPermission;
+use App\Models\Comunicacao\PermissaoEmail;
 use App\Servicos\Utilizadores\ServicoAtualizacaoPerfil;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use LogicException;
 use Throwable;
 
 /**
- * Gere a apresentação e atualização dos dados gerais do perfil.
+ * Gere a apresentação e a atualização dos dados gerais do perfil.
  *
- * A atualização da palavra-passe e das permissões de e-mail pertence a
- * controladores próprios, evitando concentrar casos de uso independentes
- * nesta classe.
+ * A palavra-passe e as permissões de e-mail são geridas por controladores
+ * próprios.
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 final class ControladorPerfil extends Controller
 {
     /**
+     * Estado utilizado depois de atualizar o perfil.
+     *
+     * @var string
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const ESTADO_PERFIL_ATUALIZADO =
+        'perfil-atualizado';
+
+    /**
+     * Cria o controlador.
+     *
+     * @param  ServicoAtualizacaoPerfil  $servicoPerfil  Serviço responsável pela
+     *                                                   atualização do
+     *                                                   perfil.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function __construct(
+        private readonly ServicoAtualizacaoPerfil $servicoPerfil,
+    ) {}
+
+    /**
      * Apresenta a página de edição do perfil.
      *
-     * @param  Request  $pedido  - Pedido autenticado.
-     * @return View - Página de edição do perfil.
+     * @param  Request  $pedido  Pedido autenticado.
+     * @return View Página de edição do perfil.
+     *
+     * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
-    public function editar(Request $pedido): View
-    {
-        $utilizador = $this->obterUtilizadorAutenticado(
-            $pedido,
-        );
+    public function editar(
+        Request $pedido,
+    ): View {
+        $utilizador =
+            $this->obterUtilizadorAutenticado(
+                $pedido,
+            );
 
-        $permissoesEmail = EmailPermission::query()
+        $permissoesEmail = PermissaoEmail::query()
             ->select([
                 'id',
-                'name',
-                'slug',
-                'description',
+                'identificador',
+                'nome',
+                'descricao',
             ])
-            ->orderBy('name')
+            ->orderBy('nome')
+            ->orderBy('id')
             ->get();
 
-        $identificadoresPermissoesEmail = $utilizador
-            ->permissoesEmail()
-            ->pluck('email_permissions.id')
-            ->map(
-                static fn(mixed $identificador): int => (int) $identificador,
-            )
-            ->all();
+        $identificadoresPermissoesEmail =
+            $utilizador
+                ->permissoesEmail()
+                ->pluck(
+                    'permissoes_email.id',
+                )
+                ->map(
+                    static fn (
+                        mixed $identificador,
+                    ): int => (int) $identificador,
+                )
+                ->sort()
+                ->values()
+                ->all();
 
         return view(
             'utilizadores.perfil.editar',
             [
                 'utilizador' => $utilizador,
+
                 'permissoesEmail' => $permissoesEmail,
+
                 'identificadoresPermissoesEmail' => $identificadoresPermissoesEmail,
             ],
         );
@@ -78,101 +118,147 @@ final class ControladorPerfil extends Controller
     /**
      * Atualiza os dados gerais do perfil.
      *
-     * Quando o endereço de e-mail muda, a sessão é terminada e é enviada uma
-     * nova notificação de verificação.
+     * Quando o endereço de e-mail é alterado, a verificação anterior deixa de
+     * ser válida, é enviada uma nova notificação e a sessão é terminada.
      *
-     * @param  AtualizarPerfilRequest  $pedido  - Pedido validado.
-     * @param  ServicoAtualizacaoPerfil  $servicoPerfil  - Serviço da atualização.
-     * @return RedirectResponse - Redirecionamento após a atualização.
+     * @param  AtualizarPerfilRequest  $pedido  Pedido validado.
+     * @return RedirectResponse Redirecionamento após a atualização.
      *
-     * @throws Throwable Quando a atualização falha.
+     * @throws AuthenticationException Quando não existe autenticação válida.
+     * @throws Throwable Quando a atualização do perfil falha.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function atualizar(
         AtualizarPerfilRequest $pedido,
-        ServicoAtualizacaoPerfil $servicoPerfil,
     ): RedirectResponse {
-        $utilizador = $this->obterUtilizadorAutenticado(
-            $pedido,
-        );
+        $utilizador =
+            $this->obterUtilizadorAutenticado(
+                $pedido,
+            );
 
         $dados = $pedido->validated();
-        $fotografia = $this->obterFotografia($pedido);
 
-        $resultado = $servicoPerfil->atualizar(
-            utilizador: $utilizador,
-            nome: $dados['nome'],
-            email: $dados['email'],
-            fotografia: $fotografia,
-        );
+        /** @var string $nome */
+        $nome = $dados['nome'];
+
+        /** @var string $email */
+        $email = $dados['email'];
+
+        $resultado =
+            $this->servicoPerfil->atualizar(
+                $utilizador,
+                $nome,
+                $email,
+                $this->obterFotografia(
+                    $pedido,
+                ),
+            );
 
         if (! $resultado->emailFoiAlterado()) {
-            return redirect()
-                ->route('perfil.editar')
-                ->with(
-                    'estado',
-                    'perfil-atualizado',
-                );
+            return to_route(
+                'perfil.editar',
+            )->with(
+                'estado',
+                self::ESTADO_PERFIL_ATUALIZADO,
+            );
         }
 
         $utilizadorAtualizado =
             $resultado->obterUtilizador();
 
-        $notificacaoEnviada = true;
-
-        try {
-            $utilizadorAtualizado
-                ->sendEmailVerificationNotification();
-        } catch (Throwable $excecao) {
-            $notificacaoEnviada = false;
-
-            Log::error(
-                'Não foi possível enviar a verificação do novo endereço de e-mail.',
-                [
-                    'utilizador_id' => $utilizadorAtualizado->getKey(),
-
-                    'excecao' => $excecao::class,
-                    'mensagem' => $excecao->getMessage(),
-                ],
+        $notificacaoEnviada =
+            $this->enviarNotificacaoVerificacao(
+                $utilizadorAtualizado,
             );
-        }
 
-        Auth::guard('web')->logout();
-
-        $pedido->session()->invalidate();
-        $pedido->session()->regenerateToken();
+        $this->terminarSessao(
+            $pedido,
+        );
 
         if (! $notificacaoEnviada) {
-            return redirect()
-                ->route('login')
-                ->with(
-                    'erro',
-                    'O perfil foi atualizado, mas não foi possível enviar a mensagem de verificação. Solicita uma nova mensagem antes de iniciares sessão.',
-                );
+            return to_route(
+                'login',
+            )->with(
+                'erro',
+                'O perfil foi atualizado, mas não foi possível enviar a mensagem de verificação do novo endereço de e-mail.',
+            );
         }
 
-        return redirect()
-            ->route('login')
-            ->with(
-                'estado',
-                'O perfil foi atualizado. Verifica o novo endereço de e-mail antes de iniciares sessão novamente.',
-            );
+        return to_route(
+            'login',
+        )->with(
+            'estado',
+            'O perfil foi atualizado. Verifica o novo endereço de e-mail antes de iniciares sessão novamente.',
+        );
     }
 
     /**
-     * Obtém o utilizador autenticado com o tipo esperado.
+     * Envia a notificação de verificação do novo endereço de e-mail.
      *
-     * @param  Request  $pedido  - Pedido autenticado.
-     * @return Utilizador - Utilizador autenticado.
+     * A atualização do perfil já foi concluída quando este método é chamado.
+     * Uma falha no envio é reportada, mas não tenta reverter os dados.
      *
-     * @throws LogicException Quando não existe um utilizador válido.
+     * @param  Utilizador  $utilizador  Utilizador atualizado.
+     * @return bool Verdadeiro quando a notificação foi enviada.
+     *
+     * @since 2.1.0
+     *
+     * @version 1.0.0
+     */
+    private function enviarNotificacaoVerificacao(
+        Utilizador $utilizador,
+    ): bool {
+        try {
+            $utilizador
+                ->sendEmailVerificationNotification();
+
+            return true;
+        } catch (Throwable $excecao) {
+            report(
+                $excecao,
+            );
+
+            return false;
+        }
+    }
+
+    /**
+     * Termina a sessão autenticada e renova o token CSRF.
+     *
+     * @param  Request  $pedido  Pedido HTTP.
+     *
+     * @since 2.1.0
+     *
+     * @version 1.0.0
+     */
+    private function terminarSessao(
+        Request $pedido,
+    ): void {
+        Auth::guard('web')->logout();
+
+        $pedido
+            ->session()
+            ->invalidate();
+
+        $pedido
+            ->session()
+            ->regenerateToken();
+    }
+
+    /**
+     * Obtém o utilizador autenticado.
+     *
+     * @param  Request  $pedido  Pedido autenticado.
+     * @return Utilizador Utilizador autenticado.
+     *
+     * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function obterUtilizadorAutenticado(
         Request $pedido,
@@ -180,8 +266,8 @@ final class ControladorPerfil extends Controller
         $utilizador = $pedido->user();
 
         if (! $utilizador instanceof Utilizador) {
-            throw new LogicException(
-                'Não existe um utilizador autenticado válido.',
+            throw new AuthenticationException(
+                'É necessário iniciar sessão para atualizar o perfil.',
             );
         }
 
@@ -191,8 +277,8 @@ final class ControladorPerfil extends Controller
     /**
      * Obtém a fotografia validada do pedido.
      *
-     * @param  AtualizarPerfilRequest  $pedido  - Pedido validado.
-     * @return UploadedFile|null - Fotografia ou nulo.
+     * @param  AtualizarPerfilRequest  $pedido  Pedido validado.
+     * @return UploadedFile|null Fotografia ou nulo.
      *
      * @throws LogicException Quando o campo não contém um único ficheiro.
      *
@@ -207,7 +293,9 @@ final class ControladorPerfil extends Controller
             return null;
         }
 
-        $fotografia = $pedido->file('fotografia');
+        $fotografia = $pedido->file(
+            'fotografia',
+        );
 
         if (! $fotografia instanceof UploadedFile) {
             throw new LogicException(

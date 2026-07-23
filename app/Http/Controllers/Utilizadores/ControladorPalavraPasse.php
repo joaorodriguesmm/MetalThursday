@@ -18,15 +18,40 @@ use Illuminate\Http\RedirectResponse;
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 1.1.0
  */
 final class ControladorPalavraPasse extends Controller
 {
     /**
+     * Nome do saco de erros utilizado pelo formulário.
+     *
+     * @var string
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const SACO_ERROS = 'palavraPasse';
+
+    /**
+     * Estado enviado depois de uma atualização bem-sucedida.
+     *
+     * @var string
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const ESTADO_ATUALIZADA =
+        'palavra-passe-atualizada';
+
+    /**
      * Cria o controlador.
      *
      * @param  ServicoAtualizacaoPalavraPasse  $servicoPalavraPasse  Serviço
-     *                                                               responsável pela atualização segura da palavra-passe.
+     *                                                               responsável
+     *                                                               pela
+     *                                                               atualização.
      *
      * @since 2.0.0
      *
@@ -47,34 +72,27 @@ final class ControladorPalavraPasse extends Controller
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function atualizar(
         AtualizarPalavraPasseRequest $pedido,
     ): RedirectResponse {
-        $utilizador = $pedido->user();
-
-        if (! $utilizador instanceof Utilizador) {
-            throw new AuthenticationException(
-                'É necessário iniciar sessão para alterar a palavra-passe.',
+        $utilizador =
+            $this->obterUtilizadorAutenticado(
+                $pedido,
             );
-        }
 
-        $dadosValidados = $pedido->validated();
+        $dados = $pedido->validated();
 
         /** @var string $palavraPasseAtual */
         $palavraPasseAtual =
-            $dadosValidados['palavra_passe_atual'];
+            $dados['palavra_passe_atual'];
 
         /** @var string $novaPalavraPasse */
         $novaPalavraPasse =
-            $dadosValidados['nova_palavra_passe'];
+            $dados['nova_palavra_passe'];
 
         try {
-            /*
-             * A chamada é posicional para não depender dos nomes internos
-             * dos parâmetros do serviço.
-             */
             $this->servicoPalavraPasse->atualizar(
                 $utilizador,
                 $palavraPasseAtual,
@@ -89,7 +107,7 @@ final class ControladorPalavraPasse extends Controller
                 [
                     'palavra_passe_atual' => $excecao->getMessage(),
                 ],
-                'palavraPasse',
+                self::SACO_ERROS,
             );
         } catch (
             NovaPalavraPasseIgualAAtual $excecao
@@ -100,7 +118,7 @@ final class ControladorPalavraPasse extends Controller
                 [
                     'nova_palavra_passe' => $excecao->getMessage(),
                 ],
-                'palavraPasse',
+                self::SACO_ERROS,
             );
         }
 
@@ -108,7 +126,33 @@ final class ControladorPalavraPasse extends Controller
             'perfil.editar',
         )->with(
             'estado',
-            'palavra-passe-atualizada',
+            self::ESTADO_ATUALIZADA,
         );
+    }
+
+    /**
+     * Obtém o utilizador autenticado associado ao pedido.
+     *
+     * @param  AtualizarPalavraPasseRequest  $pedido  Pedido HTTP.
+     * @return Utilizador Utilizador autenticado.
+     *
+     * @throws AuthenticationException Quando não existe autenticação válida.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function obterUtilizadorAutenticado(
+        AtualizarPalavraPasseRequest $pedido,
+    ): Utilizador {
+        $utilizador = $pedido->user();
+
+        if (! $utilizador instanceof Utilizador) {
+            throw new AuthenticationException(
+                'É necessário iniciar sessão para alterar a palavra-passe.',
+            );
+        }
+
+        return $utilizador;
     }
 }

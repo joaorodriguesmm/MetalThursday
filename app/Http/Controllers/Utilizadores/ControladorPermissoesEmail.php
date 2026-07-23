@@ -10,21 +10,36 @@ use App\Models\Autenticacao\Utilizador;
 use App\Servicos\Comunicacoes\ServicoPermissoesEmail;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\RedirectResponse;
+use LogicException;
 
 /**
- * Gere a atualização das permissões de e-mail do utilizador.
+ * Gere a atualização das permissões de e-mail do utilizador autenticado.
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 1.1.0
  */
 final class ControladorPermissoesEmail extends Controller
 {
     /**
+     * Estado enviado após a atualização das permissões.
+     *
+     * @var string
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const ESTADO_PERMISSOES_ATUALIZADAS =
+        'permissoes-email-atualizadas';
+
+    /**
      * Cria o controlador.
      *
      * @param  ServicoPermissoesEmail  $servicoPermissoesEmail  Serviço
-     *                                                          responsável pela sincronização das permissões.
+     *                                                          responsável
+     *                                                          pela
+     *                                                          sincronização.
      *
      * @since 2.0.0
      *
@@ -40,38 +55,33 @@ final class ControladorPermissoesEmail extends Controller
      * @param  AtualizarPermissoesEmailRequest  $pedido  Pedido validado.
      * @return RedirectResponse Redirecionamento para o perfil.
      *
-     * @throws AuthenticationException Quando não existe um utilizador
-     *                                 autenticado válido.
+     * @throws AuthenticationException Quando não existe autenticação válida.
+     * @throws LogicException Quando os dados validados não contêm uma lista.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function atualizar(
         AtualizarPermissoesEmailRequest $pedido,
     ): RedirectResponse {
-        $utilizador = $pedido->user();
+        $utilizador =
+            $this->obterUtilizadorAutenticado(
+                $pedido,
+            );
 
-        if (! $utilizador instanceof Utilizador) {
-            throw new AuthenticationException(
-                'É necessário iniciar sessão para atualizar as permissões de e-mail.',
+        $dados = $pedido->validated();
+
+        $identificadoresPermissoes =
+            $dados['permissoes_email']
+            ?? [];
+
+        if (! is_array($identificadoresPermissoes)) {
+            throw new LogicException(
+                'As permissões de e-mail validadas não formam uma lista.',
             );
         }
 
-        /**
-         * A validação garante que este valor é sempre uma lista.
-         *
-         * @var array<int, int|string> $identificadoresPermissoes
-         */
-        $identificadoresPermissoes = $pedido->validated(
-            'permissoes_email',
-            [],
-        );
-
-        /*
-         * A chamada é propositadamente posicional. Assim, o controlador não
-         * fica dependente dos nomes internos dos parâmetros do serviço.
-         */
         $this->servicoPermissoesEmail->sincronizar(
             $utilizador,
             $identificadoresPermissoes,
@@ -81,7 +91,33 @@ final class ControladorPermissoesEmail extends Controller
             'perfil.editar',
         )->with(
             'estado',
-            'permissoes-email-atualizadas',
+            self::ESTADO_PERMISSOES_ATUALIZADAS,
         );
+    }
+
+    /**
+     * Obtém o utilizador autenticado.
+     *
+     * @param  AtualizarPermissoesEmailRequest  $pedido  Pedido autenticado.
+     * @return Utilizador Utilizador autenticado.
+     *
+     * @throws AuthenticationException Quando não existe autenticação válida.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function obterUtilizadorAutenticado(
+        AtualizarPermissoesEmailRequest $pedido,
+    ): Utilizador {
+        $utilizador = $pedido->user();
+
+        if (! $utilizador instanceof Utilizador) {
+            throw new AuthenticationException(
+                'É necessário iniciar sessão para atualizar as permissões de e-mail.',
+            );
+        }
+
+        return $utilizador;
     }
 }

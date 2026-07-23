@@ -2,40 +2,41 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Autenticacao\ControladorLigacaoRedefinicaoPalavraPasse;
+use App\Http\Controllers\Autenticacao\ControladorRedefinicaoPalavraPasse;
 use App\Http\Controllers\Autenticacao\ControladorRegistoConvite;
-use App\Http\Controllers\Auth\AuthenticatedSessionController;
-use App\Http\Controllers\Auth\HandleEmailVerificationController;
-use App\Http\Controllers\Auth\NewPasswordController;
-use App\Http\Controllers\Auth\PasswordResetLinkController;
+use App\Http\Controllers\Autenticacao\ControladorSessaoAutenticada;
+use App\Http\Controllers\Autenticacao\ControladorVerificacaoEmail;
 use App\Http\Controllers\Utilizadores\ControladorPalavraPasse;
 use App\Http\Controllers\Utilizadores\ControladorPerfil;
 use App\Http\Controllers\Utilizadores\ControladorPermissoesEmail;
 use Illuminate\Support\Facades\Route;
 
 /**
- * Define as rotas de autenticação e gestão do perfil.
+ * Define as rotas de autenticação e de gestão do perfil.
  *
- * Os nomes exigidos pelos contratos técnicos do Laravel permanecem com a
- * nomenclatura original. As rotas específicas da aplicação utilizam
- * nomenclatura portuguesa.
+ * Os nomes de rotas exigidos pelos contratos técnicos do Laravel mantêm a
+ * nomenclatura original.
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 
 /*
 |--------------------------------------------------------------------------
-| Rotas de aceitação de convites
+| Rotas exclusivas para visitantes
 |--------------------------------------------------------------------------
-|
-| Apenas visitantes sem uma sessão autenticada podem consultar ou aceitar
-| convites.
-|
 */
 
 Route::middleware('guest')->group(
     static function (): void {
+        /*
+        |--------------------------------------------------------------------------
+        | Aceitação de convites
+        |--------------------------------------------------------------------------
+        */
+
         Route::get(
             'convites/{codigoConvite}',
             [
@@ -58,34 +59,26 @@ Route::middleware('guest')->group(
         )
             ->middleware('throttle:6,1')
             ->name('convites.registar');
-    },
-);
 
-/*
-|--------------------------------------------------------------------------
-| Rotas de recuperação da palavra-passe
-|--------------------------------------------------------------------------
-|
-| Os nomes `password.*` são mantidos por constituírem contratos técnicos do
-| sistema de reposição de palavras-passe do Laravel.
-|
-*/
+        /*
+        |--------------------------------------------------------------------------
+        | Recuperação da palavra-passe
+        |--------------------------------------------------------------------------
+        */
 
-Route::middleware('guest')->group(
-    static function (): void {
         Route::get(
             'palavra-passe/esquecida',
             [
-                PasswordResetLinkController::class,
-                'create',
+                ControladorLigacaoRedefinicaoPalavraPasse::class,
+                'apresentar',
             ],
         )->name('password.request');
 
         Route::post(
             'palavra-passe/esquecida',
             [
-                PasswordResetLinkController::class,
-                'store',
+                ControladorLigacaoRedefinicaoPalavraPasse::class,
+                'enviar',
             ],
         )
             ->middleware('throttle:6,1')
@@ -94,61 +87,73 @@ Route::middleware('guest')->group(
         Route::get(
             'palavra-passe/redefinir/{token}',
             [
-                NewPasswordController::class,
-                'create',
+                ControladorRedefinicaoPalavraPasse::class,
+                'apresentar',
             ],
         )->name('password.reset');
 
         Route::post(
             'palavra-passe/redefinir',
             [
-                NewPasswordController::class,
-                'store',
+                ControladorRedefinicaoPalavraPasse::class,
+                'redefinir',
             ],
         )
             ->middleware('throttle:6,1')
             ->name('password.store');
-    },
-);
 
-/*
-|--------------------------------------------------------------------------
-| Rotas de início de sessão
-|--------------------------------------------------------------------------
-|
-| O nome `login` é mantido por ser utilizado pelo middleware de autenticação
-| do Laravel como destino dos visitantes não autenticados.
-|
-*/
+        /*
+        |--------------------------------------------------------------------------
+        | Início de sessão
+        |--------------------------------------------------------------------------
+        */
 
-Route::middleware('guest')->group(
-    static function (): void {
         Route::get(
             'entrar',
             [
-                AuthenticatedSessionController::class,
-                'create',
+                ControladorSessaoAutenticada::class,
+                'apresentar',
             ],
         )->name('login');
 
         Route::post(
             'entrar',
             [
-                AuthenticatedSessionController::class,
-                'store',
+                ControladorSessaoAutenticada::class,
+                'autenticar',
             ],
-        )->name('autenticacao.iniciar');
+        )
+            ->middleware('throttle:6,1')
+            ->name('autenticacao.iniciar');
     },
 );
 
 /*
 |--------------------------------------------------------------------------
-| Rotas autenticadas
+| Verificação do endereço de e-mail
 |--------------------------------------------------------------------------
 |
-| `auth.session` permite detetar alterações da hash da palavra-passe e
-| terminar sessões invalidadas noutros dispositivos.
+| Esta rota permanece acessível sem autenticação porque o utilizador pode
+| confirmar o endereço antes de iniciar sessão.
 |
+*/
+
+Route::get(
+    'verificar-email/{id}/{hash}',
+    ControladorVerificacaoEmail::class,
+)
+    ->whereNumber('id')
+    ->where(
+        'hash',
+        '[a-fA-F0-9]{40}',
+    )
+    ->middleware('throttle:6,1')
+    ->name('verification.verify');
+
+/*
+|--------------------------------------------------------------------------
+| Rotas exclusivas para utilizadores autenticados
+|--------------------------------------------------------------------------
 */
 
 Route::middleware([
@@ -156,17 +161,23 @@ Route::middleware([
     'auth.session',
 ])->group(
     static function (): void {
+        /*
+        |--------------------------------------------------------------------------
+        | Encerramento da sessão
+        |--------------------------------------------------------------------------
+        */
+
         Route::post(
             'sair',
             [
-                AuthenticatedSessionController::class,
-                'destroy',
+                ControladorSessaoAutenticada::class,
+                'terminar',
             ],
-        )->name('autenticacao.sair');
+        )->name('logout');
 
         /*
         |--------------------------------------------------------------------------
-        | Perfil
+        | Gestão do perfil
         |--------------------------------------------------------------------------
         */
 
@@ -211,26 +222,5 @@ Route::middleware([
                     );
                 },
             );
-
-        /*
-        |--------------------------------------------------------------------------
-        | Verificação do endereço de e-mail
-        |--------------------------------------------------------------------------
-        |
-        | O nome `verification.verify` é exigido pelo sistema de verificação
-        | do Laravel e, por isso, permanece inalterado.
-        |
-        */
-
-        Route::get(
-            'verificar-email/{id}/{hash}',
-            HandleEmailVerificationController::class,
-        )
-            ->middleware([
-                'signed',
-                'throttle:6,1',
-            ])
-            ->whereNumber('id')
-            ->name('verification.verify');
     },
 );
