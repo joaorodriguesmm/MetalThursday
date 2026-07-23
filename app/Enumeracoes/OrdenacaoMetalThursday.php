@@ -9,7 +9,7 @@ namespace App\Enumeracoes;
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 1.1.0
  */
 enum OrdenacaoMetalThursday: string
 {
@@ -43,25 +43,30 @@ enum OrdenacaoMetalThursday: string
     /**
      * Tenta criar uma ordenação a partir de um valor recebido.
      *
-     * Os valores ingleses e os valores portugueses anteriormente utilizados
-     * são temporariamente aceites para garantir compatibilidade com a versão
-     * 1.0.0.
+     * São também aceites aliases utilizados anteriormente pela aplicação.
+     * A comparação ignora espaços adicionais e diferenças entre letras
+     * maiúsculas e minúsculas.
      *
-     * @param  mixed  $valor  - Valor a converter.
-     * @return self|null - Ordenação correspondente ou null quando o valor não
-     *                   é reconhecido.
+     * @param  mixed  $valor  Valor a converter.
+     * @return self|null Ordenação correspondente ou nula quando o valor não é
+     *                   reconhecido.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
-    public static function tentarCriar(mixed $valor): ?self
-    {
+    public static function tentarCriar(
+        mixed $valor,
+    ): ?self {
         if (! is_string($valor)) {
             return null;
         }
 
-        return match ($valor) {
+        $valorNormalizado = strtolower(
+            trim($valor),
+        );
+
+        return match ($valorNormalizado) {
             self::Data->value,
             'date' => self::Data,
 

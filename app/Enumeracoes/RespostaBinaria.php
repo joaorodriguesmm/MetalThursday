@@ -12,7 +12,7 @@ namespace App\Enumeracoes;
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 1.1.0
  */
 enum RespostaBinaria: string
 {
@@ -37,38 +37,83 @@ enum RespostaBinaria: string
     /**
      * Tenta criar uma resposta binária a partir de um valor recebido.
      *
-     * Os valores `yes` e `no` são temporariamente aceites para garantir
-     * compatibilidade com a interface da versão 1.0.0.
+     * São aceites valores booleanos, inteiros binários e representações
+     * textuais utilizadas habitualmente em formulários e filtros.
      *
-     * @param  mixed  $valor  - Valor a converter.
-     * @return self|null - Resposta correspondente ou null quando o valor não
-     *                   é reconhecido.
+     * A comparação textual ignora espaços adicionais e diferenças entre
+     * letras maiúsculas e minúsculas.
+     *
+     * @param  mixed  $valor  Valor a converter.
+     * @return self|null Resposta correspondente ou nula quando o valor não é
+     *                   reconhecido.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
-    public static function tentarCriar(mixed $valor): ?self
-    {
+    public static function tentarCriar(
+        mixed $valor,
+    ): ?self {
+        if (is_bool($valor)) {
+            return self::deBooleano(
+                $valor,
+            );
+        }
+
+        if (is_int($valor)) {
+            return match ($valor) {
+                1 => self::Sim,
+                0 => self::Nao,
+                default => null,
+            };
+        }
+
         if (! is_string($valor)) {
             return null;
         }
 
-        return match ($valor) {
+        $valorNormalizado = mb_strtolower(
+            trim($valor),
+        );
+
+        return match ($valorNormalizado) {
             self::Sim->value,
-            'yes' => self::Sim,
+            'yes',
+            'true',
+            '1' => self::Sim,
 
             self::Nao->value,
-            'no' => self::Nao,
+            'não',
+            'no',
+            'false',
+            '0' => self::Nao,
 
             default => null,
         };
     }
 
     /**
+     * Cria uma resposta binária a partir de um valor booleano.
+     *
+     * @param  bool  $valor  Valor booleano.
+     * @return self Resposta binária correspondente.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public static function deBooleano(
+        bool $valor,
+    ): self {
+        return $valor
+            ? self::Sim
+            : self::Nao;
+    }
+
+    /**
      * Converte a resposta num valor booleano.
      *
-     * @return bool - Verdadeiro para sim e falso para não.
+     * @return bool Verdadeiro para sim e falso para não.
      *
      * @since 2.0.0
      *

@@ -9,7 +9,7 @@ namespace App\Enumeracoes;
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 1.1.0
  */
 enum DirecaoOrdenacao: string
 {
@@ -34,24 +34,32 @@ enum DirecaoOrdenacao: string
     /**
      * Tenta criar uma direção de ordenação a partir de um valor recebido.
      *
-     * Os valores `asc` e `desc` são temporariamente aceites para garantir
-     * compatibilidade com os parâmetros utilizados na versão 1.0.0.
+     * Os valores técnicos `asc` e `desc` são também aceites para manter
+     * compatibilidade com parâmetros já utilizados pela aplicação.
      *
-     * @param  mixed  $valor  - Valor a converter.
-     * @return self|null - Direção correspondente ou null quando o valor não
-     *                   é reconhecido.
+     * A comparação ignora espaços adicionais e diferenças entre letras
+     * maiúsculas e minúsculas.
+     *
+     * @param  mixed  $valor  Valor a converter.
+     * @return self|null Direção correspondente ou nula quando o valor não é
+     *                   reconhecido.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
-    public static function tentarCriar(mixed $valor): ?self
-    {
+    public static function tentarCriar(
+        mixed $valor,
+    ): ?self {
         if (! is_string($valor)) {
             return null;
         }
 
-        return match ($valor) {
+        $valorNormalizado = mb_strtolower(
+            trim($valor),
+        );
+
+        return match ($valorNormalizado) {
             self::Ascendente->value,
             'asc' => self::Ascendente,
 
@@ -65,7 +73,7 @@ enum DirecaoOrdenacao: string
     /**
      * Obtém a direção reconhecida pelo construtor de consultas.
      *
-     * @return string - Direção SQL equivalente.
+     * @return string Direção de ordenação equivalente.
      *
      * @since 2.0.0
      *
