@@ -1,22 +1,29 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Http\Request;
 
 /**
- * Arranca a Aplicação.
+ * Inicia a aplicação Laravel.
  *
- * @since 1.0
+ * A constante `LARAVEL_START` permanece em inglês por ser utilizada
+ * internamente pelo Laravel.
  *
- * @version 1.0
+ * @since 1.0.0
+ *
+ * @version 1.1.0
  */
 define('LARAVEL_START', microtime(true));
 
-if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php')) {
-    require $maintenance;
+$ficheiroManutencao = __DIR__.'/../storage/framework/maintenance.php';
+
+if (file_exists($ficheiroManutencao)) {
+    require $ficheiroManutencao;
 }
 
 require __DIR__.'/../vendor/autoload.php';
 
-$app = require_once __DIR__.'/../bootstrap/app.php';
+$aplicacao = require_once __DIR__.'/../bootstrap/app.php';
 
-$app->handleRequest(Request::capture());
+$aplicacao->handleRequest(Request::capture());
