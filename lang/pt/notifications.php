@@ -1,15 +1,23 @@
 <?php
 
+declare(strict_types=1);
+
 /**
- * Retorna os textos de notificação em português.
+ * Retorna as mensagens das notificações em português.
  *
- * @since 1.0
+ * As chaves permanecem em inglês por corresponderem às convenções utilizadas
+ * pelos templates de notificações do Laravel.
  *
- * @version 1.0
+ * @since 1.0.0
+ *
+ * @version 1.1.0
  */
 return [
     'salutation' => 'Com os melhores cumprimentos,',
+
     'greeting' => 'Olá!',
-    'action' => 'Se estiveres a ter problemas em clicar no botão ":actionText", copia e cola o URL abaixo no teu navegador web:',
-    'subcopy' => 'Se estiveres a ter problemas em clicar no botão ":actionText", copia e cola o URL abaixo no teu navegador web: [:actionUrl](:actionUrl)',
+
+    'action' => 'Se tiveres problemas em clicar no botão ":actionText", copia e cola o endereço abaixo no teu navegador:',
+
+    'subcopy' => 'Se tiveres problemas em clicar no botão ":actionText", copia e cola o endereço abaixo no teu navegador: [:actionUrl](:actionUrl)',
 ];
