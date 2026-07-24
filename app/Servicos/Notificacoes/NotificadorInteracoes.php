@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Servicos\Notificacoes;
 
 use App\Models\Autenticacao\Utilizador;
-use App\Notifications\UserInteractionOccurred;
+use App\Notifications\NotificacaoInteracaoUtilizador;
 use Illuminate\Contracts\Auth\Factory as FabricaAutenticacao;
 use Illuminate\Contracts\Notifications\Dispatcher as DespachanteNotificacoes;
 use Illuminate\Database\Eloquent\Collection;
@@ -20,6 +20,7 @@ use InvalidArgumentException;
  * simultaneamente em memória.
  *
  * @since 2.0.0
+ *
  * @version 1.0.0
  */
 final class NotificadorInteracoes
@@ -30,6 +31,7 @@ final class NotificadorInteracoes
      * @var int
      *
      * @since 2.0.0
+     *
      * @version 1.0.0
      */
     private const TAMANHO_LOTE = 200;
@@ -37,10 +39,11 @@ final class NotificadorInteracoes
     /**
      * Cria o serviço de notificações de interações.
      *
-     * @param FabricaAutenticacao $autenticacao Serviço de autenticação.
-     * @param DespachanteNotificacoes $notificacoes Serviço de notificações.
+     * @param  FabricaAutenticacao  $autenticacao  Serviço de autenticação.
+     * @param  DespachanteNotificacoes  $notificacoes  Serviço de notificações.
      *
      * @since 2.0.0
+     *
      * @version 1.0.0
      */
     public function __construct(
@@ -55,12 +58,13 @@ final class NotificadorInteracoes
      * Quando não existe um utilizador autenticado, nenhuma notificação é
      * enviada.
      *
-     * @param Model $entidade Entidade que recebeu a interação.
-     * @param string $descricaoAcao Descrição textual da ação realizada.
+     * @param  Model  $entidade  Entidade que recebeu a interação.
+     * @param  string  $descricaoAcao  Descrição textual da ação realizada.
      *
      * @throws InvalidArgumentException Quando a descrição está vazia.
      *
      * @since 2.0.0
+     *
      * @version 1.0.0
      */
     public function notificarOutrosUtilizadores(
@@ -108,7 +112,7 @@ final class NotificadorInteracoes
 
                     $this->notificacoes->send(
                         $destinatarios,
-                        new UserInteractionOccurred(
+                        new NotificacaoInteracaoUtilizador(
                             $entidade,
                             $utilizadorAutenticado,
                             $descricaoNormalizada,

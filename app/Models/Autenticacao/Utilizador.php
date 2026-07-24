@@ -13,8 +13,8 @@ use App\Models\Interacoes\Gosto;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\MusicaFavoritaEdicao;
-use App\Notifications\CustomResetPasswordNotification;
-use App\Notifications\CustomVerifyEmailNotification;
+use App\Notifications\NotificacaoRedefinicaoPalavraPasse;
+use App\Notifications\NotificacaoVerificacaoEmail;
 use App\ObjetosValor\Utilizadores\EnderecoEmail;
 use App\ObjetosValor\Utilizadores\NomeUtilizador;
 use Carbon\CarbonImmutable;
@@ -33,7 +33,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
-use SensitiveParameter;
+use LogicException;
 
 /**
  * Representa um utilizador autenticável da aplicação.
@@ -71,7 +71,7 @@ use SensitiveParameter;
  *
  * @since 1.0.0
  *
- * @version 2.1.0
+ * @version 2.2.0
  */
 class Utilizador extends Authenticatable implements MustVerifyEmail
 {
@@ -150,7 +150,9 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'immutable_datetime',
+
             'password' => 'hashed',
+
             'papel' => PapelUtilizador::class,
         ];
     }
@@ -184,7 +186,9 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
     protected function nome(): Attribute
     {
         return Attribute::make(
-            set: static fn (mixed $valor): string => NomeUtilizador::deTexto(
+            set: static fn (
+                mixed $valor,
+            ): string => NomeUtilizador::deTexto(
                 (string) $valor,
             )->valor(),
         );
@@ -204,7 +208,9 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
     protected function email(): Attribute
     {
         return Attribute::make(
-            set: static fn (mixed $valor): string => EnderecoEmail::deTexto(
+            set: static fn (
+                mixed $valor,
+            ): string => EnderecoEmail::deTexto(
                 (string) $valor,
             )->valor(),
         );
@@ -222,11 +228,15 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
     protected function fotografia(): Attribute
     {
         return Attribute::make(
-            get: static fn (mixed $valor): ?string => self::normalizarCaminhoFotografia(
+            get: static fn (
+                mixed $valor,
+            ): ?string => self::normalizarCaminhoFotografia(
                 $valor,
             ),
 
-            set: static fn (mixed $valor): ?string => self::normalizarCaminhoFotografia(
+            set: static fn (
+                mixed $valor,
+            ): ?string => self::normalizarCaminhoFotografia(
                 $valor,
             ),
         );
@@ -250,7 +260,8 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
             ): ?string {
                 $caminho =
                     self::normalizarCaminhoFotografia(
-                        $atributos['fotografia'] ?? null,
+                        $atributos['fotografia']
+                            ?? null,
                     );
 
                 if ($caminho === null) {
@@ -259,7 +270,9 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
 
                 /** @var FilesystemAdapter $discoPublico */
                 $discoPublico =
-                    Storage::disk('public');
+                    Storage::disk(
+                        'public',
+                    );
 
                 return $discoPublico->url(
                     $caminho,
@@ -331,38 +344,48 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
     /**
      * Envia a notificação de verificação do endereço de e-mail.
      *
-     * O nome permanece em inglês por substituir um ponto de extensão
-     * definido pelo Laravel.
+     * O nome permanece em inglês porque substitui um ponto de extensão definido
+     * pelo Laravel.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function sendEmailVerificationNotification(): void
     {
         $this->notify(
-            new CustomVerifyEmailNotification,
+            new NotificacaoVerificacaoEmail,
         );
     }
 
     /**
-     * Envia a notificação de reposição da palavra-passe.
+     * Envia a notificação de redefinição da palavra-passe.
      *
-     * O nome permanece em inglês por substituir um ponto de extensão
-     * definido pelo Laravel.
+     * Este nome permanece em inglês porque corresponde ao contrato de
+     * autenticação do Laravel.
      *
-     * @param  mixed  $token  Token de reposição da palavra-passe.
+     * @param  mixed  $token  Token gerado pelo gestor de palavras-passe.
+     *
+     * @throws LogicException Quando o token recebido não é válido.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function sendPasswordResetNotification(
-        #[SensitiveParameter]
         mixed $token,
     ): void {
+        if (
+            ! is_string($token)
+            || trim($token) === ''
+        ) {
+            throw new LogicException(
+                'Não foi recebido um token válido para redefinir a palavra-passe.',
+            );
+        }
+
         $this->notify(
-            new CustomResetPasswordNotification(
+            new NotificacaoRedefinicaoPalavraPasse(
                 $token,
             ),
         );
@@ -411,9 +434,15 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
             return false;
         }
 
-        if ($this->relationLoaded('permissoesEmail')) {
+        if (
+            $this->relationLoaded(
+                'permissoesEmail',
+            )
+        ) {
             return $this
-                ->getRelation('permissoesEmail')
+                ->getRelation(
+                    'permissoesEmail',
+                )
                 ->contains(
                     'identificador',
                     $identificadorNormalizado,
@@ -496,7 +525,9 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
                 '!=',
                 PapelUtilizador::SuperAdministrador->value,
             )
-            ->orderBy('nome');
+            ->orderBy(
+                'nome',
+            );
     }
 
     /**

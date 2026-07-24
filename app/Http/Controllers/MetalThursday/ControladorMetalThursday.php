@@ -17,8 +17,8 @@ use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
 use App\Models\Musica\Banda;
 use App\Models\Musica\Genero;
-use App\Notifications\NewMetalThursdayCreated;
-use App\Notifications\UserNominated;
+use App\Notifications\NotificacaoMetalThursdayCriada;
+use App\Notifications\NotificacaoUtilizadorNomeado;
 use App\Servicos\MetalThursday\ServicoPersistenciaMetalThursday;
 use Carbon\CarbonInterface;
 use Illuminate\Auth\AuthenticationException;
@@ -1073,7 +1073,7 @@ final class ControladorMetalThursday extends Controller
         if ($nomeado instanceof Utilizador) {
             try {
                 $nomeado->notify(
-                    new UserNominated(
+                    new NotificacaoUtilizadorNomeado(
                         $metalThursday,
                     ),
                 );
@@ -1114,7 +1114,7 @@ final class ControladorMetalThursday extends Controller
                     ): void {
                         Notification::send(
                             $destinatarios,
-                            new NewMetalThursdayCreated(
+                            new NotificacaoMetalThursdayCriada(
                                 $metalThursday,
                             ),
                         );
