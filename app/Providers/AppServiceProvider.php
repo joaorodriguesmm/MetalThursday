@@ -7,7 +7,7 @@ namespace App\Providers;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Regras\Autenticacao\RequisitosPalavraPasse;
-use App\View\Composers\NavigationComposer;
+use App\View\Compositores\CompositorNavegacao;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Pagination\Paginator;
@@ -23,7 +23,7 @@ use Illuminate\Validation\Rules\Password;
  *
  * @since 1.0.0
  *
- * @version 2.1.0
+ * @version 2.2.0
  */
 final class AppServiceProvider extends ServiceProvider
 {
@@ -56,7 +56,7 @@ final class AppServiceProvider extends ServiceProvider
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 2.2.0
      */
     public function boot(): void
     {
@@ -112,18 +112,18 @@ final class AppServiceProvider extends ServiceProvider
     /**
      * Regista os compositores das vistas da aplicação.
      *
-     * O nome `NavigationComposer` será tratado durante a revisão dos
-     * compositores das vistas.
+     * O caminho da vista permanece temporariamente como
+     * `layouts.navigation` até à revisão desse ficheiro Blade.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function registarCompositoresVistas(): void
     {
         View::composer(
             'layouts.navigation',
-            NavigationComposer::class,
+            CompositorNavegacao::class,
         );
     }
 }

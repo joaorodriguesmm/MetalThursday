@@ -1,4 +1,4 @@
-<x-guest-layout>
+<x-layout-convidado>
     <x-slot name="title">
         Recuperar Palavra-passe
     </x-slot>
@@ -28,4 +28,4 @@
     @push('page-scripts')
         @vite(['resources/js/paginas/recuperarPalavraPasse.js'])
     @endpush
-</x-guest-layout>
+</x-layout-convidado>

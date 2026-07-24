@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-layout-aplicacao>
     <x-slot name="title">Gerir Edições</x-slot>
     <x-slot name="header">
         <div class="d-flex justify-content-between align-items-center">
@@ -63,4 +63,4 @@
     @push('page-scripts')
         @vite('resources/js/pages/entities.js')
     @endpush
-</x-app-layout>
+</x-layout-aplicacao>

@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-layout-aplicacao>
     <x-slot name="title">
         {{ $genre->name }}
     </x-slot>
@@ -54,4 +54,4 @@
             </div>
         @endif
     </div>
-</x-app-layout>
+</x-layout-aplicacao>

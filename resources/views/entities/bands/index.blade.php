@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-layout-aplicacao>
     <x-slot name="title">
         Bandas
     </x-slot>
@@ -81,4 +81,4 @@
     @push('page-scripts')
         @vite('resources/js/pages/entities.js')
     @endpush
-</x-app-layout>
+</x-layout-aplicacao>

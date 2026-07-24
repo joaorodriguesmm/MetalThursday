@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-layout-aplicacao>
     <x-slot name="title">
         Editar perfil
     </x-slot>
@@ -94,4 +94,4 @@
             'resources/js/paginas/perfil.js',
         ])
     @endpush
-</x-app-layout>
+</x-layout-aplicacao>

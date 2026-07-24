@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-layout-aplicacao>
     <x-slot name="title">Criar Edição</x-slot>
     <x-slot name="header">
         <h2 class="h4 font-weight-bold">Criar Nova Edição</h2>
@@ -11,4 +11,4 @@
     @push('page-scripts')
         @vite('resources/js/pages/entities.js')
     @endpush
-</x-app-layout>
+</x-layout-aplicacao>

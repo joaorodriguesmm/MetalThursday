@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-layout-aplicacao>
     <x-slot name="title">
         Editar MetalThursday
     </x-slot>
@@ -62,4 +62,4 @@
         </script>
         @vite(['resources/js/pages/editMetalThursday.js'])
     @endpush
-</x-app-layout>
+</x-layout-aplicacao>

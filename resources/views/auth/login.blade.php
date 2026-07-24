@@ -1,4 +1,4 @@
-<x-guest-layout>
+<x-layout-convidado>
     <x-slot name="title">
         Iniciar Sessão
     </x-slot>
@@ -43,4 +43,4 @@
     @push('page-scripts')
         @vite(['resources/js/paginas/iniciarSessao.js'])
     @endpush
-</x-guest-layout>
+</x-layout-convidado>

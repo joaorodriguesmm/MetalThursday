@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-layout-aplicacao>
     <x-slot name="title">{{ $edition->name }}</x-slot>
     <x-slot name="header">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -87,4 +87,4 @@
             </div>
         </div>
     @endif
-</x-app-layout>
+</x-layout-aplicacao>

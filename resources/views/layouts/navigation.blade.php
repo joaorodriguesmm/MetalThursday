@@ -6,7 +6,7 @@
 
         <ul class="navbar-nav flex-row d-md-none ms-auto align-items-center">
             <li class="nav-item me-3">
-                <x-notification-icon :count="$unreadNotificationsCount" />
+                <x-notification-icon :count="$numeroNotificacoesNaoLidas" />
             </li>
         </ul>
 
@@ -31,7 +31,7 @@
 
             <ul class="navbar-nav ms-auto d-none d-md-flex align-items-center">
                 <li class="nav-item me-3">
-                    <x-notification-icon :count="$unreadNotificationsCount" />
+                    <x-notification-icon :count="$numeroNotificacoesNaoLidas" />
                 </li>
 
                 <li class="nav-item dropdown">

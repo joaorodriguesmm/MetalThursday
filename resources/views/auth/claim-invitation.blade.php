@@ -1,4 +1,4 @@
-<x-guest-layout>
+<x-layout-convidado>
     <x-slot name="title">
         Concluir Registo
     </x-slot>
@@ -103,4 +103,4 @@
     @push('page-scripts')
         @vite('resources/js/paginas/registoConvite.js')
     @endpush
-</x-guest-layout>
+</x-layout-convidado>

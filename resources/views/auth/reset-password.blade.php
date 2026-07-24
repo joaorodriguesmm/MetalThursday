@@ -1,4 +1,4 @@
-<x-guest-layout>
+<x-layout-convidado>
     <x-slot name="title">
         Redefinir Palavra-passe
     </x-slot>
@@ -48,4 +48,4 @@
     @push('page-scripts')
         @vite(['resources/js/paginas/redefinirPalavraPasse.js'])
     @endpush
-</x-guest-layout>
+</x-layout-convidado>

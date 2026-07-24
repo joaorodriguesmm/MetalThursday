@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-layout-aplicacao>
     <x-slot name="title">{{ $band->name }}</x-slot>
     <x-slot name="header">
         <h2 class="h4 font-weight-bold">
@@ -27,4 +27,4 @@
     @empty
         <div class="alert alert-info">Esta banda ainda não apareceu em nenhuma secção.</div>
     @endforelse
-</x-app-layout>
+</x-layout-aplicacao>

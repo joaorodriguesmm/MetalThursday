@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-layout-aplicacao>
     <x-slot name="title">
         Notificações
     </x-slot>
@@ -63,4 +63,4 @@
             </div>
         </div>
     </div>
-</x-app-layout>
+</x-layout-aplicacao>

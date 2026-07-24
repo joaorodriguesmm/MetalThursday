@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-layout-aplicacao>
     <x-slot name="title">
         {{ $mt->edition?->name }} - Semana {{ $mt->week_number_in_edition ?? 'N/A' }}
     </x-slot>
@@ -17,4 +17,4 @@
     @push('page-scripts')
         @vite(['resources/js/pages/showMetalThursday.js'])
     @endpush
-</x-app-layout>
+</x-layout-aplicacao>
