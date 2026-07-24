@@ -21,18 +21,18 @@ use Illuminate\Support\Facades\Auth;
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 trait RegistaAutoria
 {
     /**
      * Regista um callback executado durante a criação do modelo.
      *
-     * Este contrato é fornecido pelo modelo Eloquent através dos respetivos
-     * mecanismos internos de eventos.
+     * Este método é fornecido pelo sistema de eventos do Eloquent. A
+     * declaração abstrata permite que a IDE e os analisadores estáticos
+     * reconheçam o contrato utilizado pelo trait.
      *
      * @param  mixed  $callback  Callback do evento.
-     * @return void
      *
      * @since 2.0.0
      *
@@ -43,11 +43,11 @@ trait RegistaAutoria
     /**
      * Regista um callback executado durante a atualização do modelo.
      *
-     * Este contrato é fornecido pelo modelo Eloquent através dos respetivos
-     * mecanismos internos de eventos.
+     * Este método é fornecido pelo sistema de eventos do Eloquent. A
+     * declaração abstrata permite que a IDE e os analisadores estáticos
+     * reconheçam o contrato utilizado pelo trait.
      *
      * @param  mixed  $callback  Callback do evento.
-     * @return void
      *
      * @since 2.0.0
      *
@@ -63,7 +63,7 @@ trait RegistaAutoria
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public static function bootRegistaAutoria(): void
     {
@@ -71,9 +71,10 @@ trait RegistaAutoria
             static function (
                 Model $modelo,
             ): void {
-                $utilizadorId = Auth::id();
+                $identificadorUtilizador =
+                    self::obterIdentificadorUtilizadorAutenticado();
 
-                if ($utilizadorId === null) {
+                if ($identificadorUtilizador === null) {
                     return;
                 }
 
@@ -84,7 +85,7 @@ trait RegistaAutoria
                 ) {
                     $modelo->setAttribute(
                         'criado_por_id',
-                        (int) $utilizadorId,
+                        $identificadorUtilizador,
                     );
                 }
 
@@ -95,7 +96,7 @@ trait RegistaAutoria
                 ) {
                     $modelo->setAttribute(
                         'atualizado_por_id',
-                        (int) $utilizadorId,
+                        $identificadorUtilizador,
                     );
                 }
             },
@@ -105,15 +106,16 @@ trait RegistaAutoria
             static function (
                 Model $modelo,
             ): void {
-                $utilizadorId = Auth::id();
+                $identificadorUtilizador =
+                    self::obterIdentificadorUtilizadorAutenticado();
 
-                if ($utilizadorId === null) {
+                if ($identificadorUtilizador === null) {
                     return;
                 }
 
                 $modelo->setAttribute(
                     'atualizado_por_id',
-                    (int) $utilizadorId,
+                    $identificadorUtilizador,
                 );
             },
         );
@@ -158,5 +160,49 @@ trait RegistaAutoria
             Utilizador::class,
             'atualizado_por_id',
         );
+    }
+
+    /**
+     * Obtém o identificador inteiro do utilizador autenticado.
+     *
+     * Um identificador ausente, inválido ou não positivo é tratado como
+     * inexistência de autenticação aplicável ao registo de autoria.
+     *
+     * @return int|null Identificador do utilizador ou nulo.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private static function obterIdentificadorUtilizadorAutenticado(): ?int
+    {
+        $identificador =
+            Auth::id();
+
+        if (
+            is_int($identificador)
+            && $identificador > 0
+        ) {
+            return $identificador;
+        }
+
+        if (is_string($identificador)) {
+            $identificadorNormalizado =
+                trim(
+                    $identificador,
+                );
+
+            if (
+                $identificadorNormalizado !== ''
+                && ctype_digit(
+                    $identificadorNormalizado,
+                )
+                && (int) $identificadorNormalizado > 0
+            ) {
+                return (int) $identificadorNormalizado;
+            }
+        }
+
+        return null;
     }
 }

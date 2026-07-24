@@ -11,11 +11,15 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 /**
  * Adiciona suporte a comentários polimórficos a um modelo Eloquent.
  *
+ * A relação inclui todos os comentários associados à entidade. A hierarquia
+ * entre comentários principais e respostas é determinada através do campo
+ * `comentario_pai_id` do modelo Comentario.
+ *
  * @mixin Model
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 1.1.0
  */
 trait TemComentarios
 {
