@@ -6,7 +6,7 @@ namespace App\Providers;
 
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
-use App\Regras\Autenticacao\PoliticaPalavraPasse;
+use App\Regras\Autenticacao\RequisitosPalavraPasse;
 use App\View\Composers\NavigationComposer;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -61,7 +61,7 @@ final class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configurarMapaPolimorfico();
-        $this->configurarPoliticaPalavraPasse();
+        $this->configurarRequisitosPalavraPasse();
         $this->configurarPaginacao();
         $this->registarCompositoresVistas();
     }
@@ -84,16 +84,16 @@ final class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Configura a regra predefinida das palavras-passe.
+     * Configura os requisitos predefinidos das palavras-passe.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    private function configurarPoliticaPalavraPasse(): void
+    private function configurarRequisitosPalavraPasse(): void
     {
         Password::defaults(
-            static fn (): Password => PoliticaPalavraPasse::regra(),
+            static fn (): Password => RequisitosPalavraPasse::regra(),
         );
     }
 
@@ -112,7 +112,7 @@ final class AppServiceProvider extends ServiceProvider
     /**
      * Regista os compositores das vistas da aplicação.
      *
-     * O nome `NavigationComposer` será tratado quando forem revistos os
+     * O nome `NavigationComposer` será tratado durante a revisão dos
      * compositores das vistas.
      *
      * @since 2.0.0
