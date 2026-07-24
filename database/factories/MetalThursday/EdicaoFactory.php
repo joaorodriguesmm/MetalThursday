@@ -13,14 +13,29 @@ use InvalidArgumentException;
 /**
  * Cria dados de teste para edições do MetalThursday.
  *
+ * O nome `Factory` permanece em inglês por corresponder à convenção de
+ * descoberta automática das factories do Laravel.
+ *
  * @extends Factory<Edicao>
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 1.1.0
  */
-class EdicaoFactory extends Factory
+final class EdicaoFactory extends Factory
 {
+    /**
+     * Comprimento máximo da ligação da compilação.
+     *
+     * Este valor corresponde ao limite definido na base de dados.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const COMPRIMENTO_MAXIMO_LIGACAO =
+        2048;
+
     /**
      * Modelo associado à factory.
      *
@@ -30,60 +45,79 @@ class EdicaoFactory extends Factory
      *
      * @version 1.0.0
      */
-    protected $model = Edicao::class;
+    protected $model =
+        Edicao::class;
 
     /**
-     * Define os atributos por omissão de uma edição.
+     * Define os atributos predefinidos de uma edição.
+     *
+     * O nome `definition` permanece em inglês por corresponder ao método
+     * convencional das factories do Laravel.
      *
      * @return array<string, mixed> Atributos da edição.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function definition(): array
     {
-        $dataInicio = CarbonImmutable::instance(
-            $this->faker->dateTimeBetween(
-                '-5 years',
-                '-3 months',
-            ),
-        )->startOfDay();
+        $dataInicio =
+            CarbonImmutable::instance(
+                $this->faker->dateTimeBetween(
+                    '-5 years',
+                    '-3 months',
+                ),
+            )->startOfDay();
 
-        $dataFim = $dataInicio->addMonths(
-            $this->faker->numberBetween(
-                1,
-                12,
-            ),
-        );
+        $dataFim =
+            $dataInicio->addMonths(
+                $this->faker->numberBetween(
+                    1,
+                    12,
+                ),
+            );
 
         return [
             'nome' => sprintf(
                 'Edição %d',
-                $this->faker->unique()->numberBetween(
-                    1,
-                    100000,
-                ),
+                $this
+                    ->faker
+                    ->unique()
+                    ->numberBetween(
+                        1,
+                        100000,
+                    ),
             ),
+
             'data_inicio' => $dataInicio,
+
             'data_fim' => $dataFim,
+
             'ligacao_compilacao' => null,
         ];
     }
 
     /**
-     * Cria uma edição ainda em curso.
+     * Cria uma edição atualmente em curso.
+     *
+     * A edição começa numa data anterior ao momento atual e não possui uma
+     * data de fim definida.
      *
      * @return static Factory configurada.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function emCurso(): static
     {
         return $this->state(
-            fn (): array => [
+            static fn (): array => [
+                'data_inicio' => CarbonImmutable::now()
+                    ->subMonth()
+                    ->startOfDay(),
+
                 'data_fim' => null,
             ],
         );
@@ -91,6 +125,9 @@ class EdicaoFactory extends Factory
 
     /**
      * Define o período temporal da edição.
+     *
+     * As datas são convertidas para objetos imutáveis, impedindo que a
+     * factory altere acidentalmente os objetos recebidos.
      *
      * @param  CarbonInterface  $dataInicio  Data inicial da edição.
      * @param  CarbonInterface|null  $dataFim  Data final da edição.
@@ -101,16 +138,28 @@ class EdicaoFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function comPeriodo(
         CarbonInterface $dataInicio,
         ?CarbonInterface $dataFim = null,
     ): static {
-        if (
-            $dataFim !== null
-            && $dataFim->lessThan(
+        $dataInicioNormalizada =
+            CarbonImmutable::instance(
                 $dataInicio,
+            )->startOfDay();
+
+        $dataFimNormalizada =
+            $dataFim !== null
+            ? CarbonImmutable::instance(
+                $dataFim,
+            )->startOfDay()
+            : null;
+
+        if (
+            $dataFimNormalizada !== null
+            && $dataFimNormalizada->lessThan(
+                $dataInicioNormalizada,
             )
         ) {
             throw new InvalidArgumentException(
@@ -119,9 +168,10 @@ class EdicaoFactory extends Factory
         }
 
         return $this->state(
-            fn (): array => [
-                'data_inicio' => $dataInicio,
-                'data_fim' => $dataFim,
+            static fn (): array => [
+                'data_inicio' => $dataInicioNormalizada,
+
+                'data_fim' => $dataFimNormalizada,
             ],
         );
     }
@@ -129,19 +179,83 @@ class EdicaoFactory extends Factory
     /**
      * Define a ligação da compilação da edição.
      *
-     * @param  string  $ligacao  Ligação da compilação.
+     * @param  string  $ligacao  Ligação absoluta da compilação.
      * @return static Factory configurada.
+     *
+     * @throws InvalidArgumentException Quando a ligação está vazia, não é
+     *                                  válida ou ultrapassa o limite da coluna.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function comLigacaoCompilacao(
         string $ligacao,
     ): static {
+        $ligacaoNormalizada =
+            trim(
+                $ligacao,
+            );
+
+        if ($ligacaoNormalizada === '') {
+            throw new InvalidArgumentException(
+                'A ligação da compilação não pode estar vazia.',
+            );
+        }
+
+        if (
+            mb_strlen(
+                $ligacaoNormalizada,
+            ) > self::COMPRIMENTO_MAXIMO_LIGACAO
+        ) {
+            throw new InvalidArgumentException(
+                sprintf(
+                    'A ligação da compilação não pode exceder %d caracteres.',
+                    self::COMPRIMENTO_MAXIMO_LIGACAO,
+                ),
+            );
+        }
+
+        if (
+            filter_var(
+                $ligacaoNormalizada,
+                FILTER_VALIDATE_URL,
+            ) === false
+        ) {
+            throw new InvalidArgumentException(
+                'A ligação da compilação deve ser um URL absoluto válido.',
+            );
+        }
+
+        $esquema =
+            parse_url(
+                $ligacaoNormalizada,
+                PHP_URL_SCHEME,
+            );
+
+        if (
+            ! is_string(
+                $esquema,
+            )
+            || ! in_array(
+                strtolower(
+                    $esquema,
+                ),
+                [
+                    'http',
+                    'https',
+                ],
+                true,
+            )
+        ) {
+            throw new InvalidArgumentException(
+                'A ligação da compilação deve utilizar HTTP ou HTTPS.',
+            );
+        }
+
         return $this->state(
-            fn (): array => [
-                'ligacao_compilacao' => $ligacao,
+            static fn (): array => [
+                'ligacao_compilacao' => $ligacaoNormalizada,
             ],
         );
     }

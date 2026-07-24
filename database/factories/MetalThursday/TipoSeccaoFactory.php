@@ -6,18 +6,33 @@ namespace Database\Factories\MetalThursday;
 
 use App\Models\MetalThursday\TipoSeccao;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
+use InvalidArgumentException;
 
 /**
  * Cria dados de teste para tipos de secção.
+ *
+ * O nome `Factory` permanece em inglês por corresponder à convenção de
+ * descoberta automática das factories do Laravel.
  *
  * @extends Factory<TipoSeccao>
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 1.1.0
  */
-class TipoSeccaoFactory extends Factory
+final class TipoSeccaoFactory extends Factory
 {
+    /**
+     * Comprimento máximo do nome do tipo de secção.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const COMPRIMENTO_MAXIMO_NOME =
+        255;
+
     /**
      * Modelo associado à factory.
      *
@@ -27,28 +42,35 @@ class TipoSeccaoFactory extends Factory
      *
      * @version 1.0.0
      */
-    protected $model = TipoSeccao::class;
+    protected $model =
+        TipoSeccao::class;
 
     /**
-     * Define os atributos por omissão de um tipo de secção.
+     * Define os atributos predefinidos de um tipo de secção.
+     *
+     * O nome `definition` permanece em inglês por corresponder ao método
+     * convencional das factories do Laravel.
      *
      * @return array<string, mixed> Atributos do tipo de secção.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function definition(): array
     {
+        $nome =
+            $this
+                ->faker
+                ->unique()
+                ->words(
+                    2,
+                    true,
+                );
+
         return [
-            'nome' => ucfirst(
-                $this
-                    ->faker
-                    ->unique()
-                    ->words(
-                        2,
-                        true,
-                    ),
+            'nome' => Str::ucfirst(
+                $nome,
             ),
 
             'descricao' => $this
@@ -73,14 +95,14 @@ class TipoSeccaoFactory extends Factory
     public function comDetalhes(): static
     {
         return $this->state(
-            fn (): array => [
+            static fn (): array => [
                 'tem_detalhes' => true,
             ],
         );
     }
 
     /**
-     * Cria um tipo de secção sem detalhes adicionais.
+     * Cria um tipo de secção que não necessita de detalhes adicionais.
      *
      * @return static Factory configurada.
      *
@@ -91,7 +113,7 @@ class TipoSeccaoFactory extends Factory
     public function semDetalhes(): static
     {
         return $this->state(
-            fn (): array => [
+            static fn (): array => [
                 'tem_detalhes' => false,
             ],
         );
@@ -104,18 +126,58 @@ class TipoSeccaoFactory extends Factory
      * @param  string  $descricao  Descrição do tipo de secção.
      * @return static Factory configurada.
      *
+     * @throws InvalidArgumentException Quando o nome ou a descrição estão
+     *                                  vazios, ou quando o nome ultrapassa o
+     *                                  comprimento máximo permitido.
+     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function comDados(
         string $nome,
         string $descricao,
     ): static {
+        $nomeNormalizado =
+            Str::squish(
+                $nome,
+            );
+
+        $descricaoNormalizada =
+            Str::squish(
+                $descricao,
+            );
+
+        if ($nomeNormalizado === '') {
+            throw new InvalidArgumentException(
+                'O nome do tipo de secção não pode estar vazio.',
+            );
+        }
+
+        if (
+            mb_strlen(
+                $nomeNormalizado,
+            ) > self::COMPRIMENTO_MAXIMO_NOME
+        ) {
+            throw new InvalidArgumentException(
+                sprintf(
+                    'O nome do tipo de secção não pode exceder %d caracteres.',
+                    self::COMPRIMENTO_MAXIMO_NOME,
+                ),
+            );
+        }
+
+        if ($descricaoNormalizada === '') {
+            throw new InvalidArgumentException(
+                'A descrição do tipo de secção não pode estar vazia.',
+            );
+        }
+
         return $this->state(
-            fn (): array => [
-                'nome' => $nome,
-                'descricao' => $descricao,
+            static fn (): array => [
+                'nome' => $nomeNormalizado,
+
+                'descricao' => $descricaoNormalizada,
             ],
         );
     }

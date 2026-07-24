@@ -8,19 +8,56 @@ use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MusicaFavoritaEdicao;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 /**
  * Cria dados de teste para músicas favoritas de uma edição.
  *
+ * O nome `Factory` permanece em inglês por corresponder à convenção de
+ * descoberta automática das factories do Laravel.
+ *
  * @extends Factory<MusicaFavoritaEdicao>
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 1.1.0
  */
-class MusicaFavoritaEdicaoFactory extends Factory
+final class MusicaFavoritaEdicaoFactory extends Factory
 {
+    /**
+     * Posição mínima permitida.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const POSICAO_MINIMA =
+        1;
+
+    /**
+     * Posição máxima permitida.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const POSICAO_MAXIMA =
+        3;
+
+    /**
+     * Comprimento máximo da identificação da música.
+     *
+     * Corresponde ao comprimento predefinido de uma coluna `string`.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const COMPRIMENTO_MAXIMO_MUSICA =
+        255;
+
     /**
      * Modelo associado à factory.
      *
@@ -30,29 +67,32 @@ class MusicaFavoritaEdicaoFactory extends Factory
      *
      * @version 1.0.0
      */
-    protected $model = MusicaFavoritaEdicao::class;
+    protected $model =
+        MusicaFavoritaEdicao::class;
 
     /**
-     * Define os atributos por omissão de uma música favorita.
+     * Define os atributos predefinidos de uma música favorita.
+     *
+     * O nome `definition` permanece em inglês por corresponder ao método
+     * convencional das factories do Laravel.
      *
      * @return array<string, mixed> Atributos da música favorita.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function definition(): array
     {
         return [
             'edicao_id' => Edicao::factory(),
+
             'utilizador_id' => Utilizador::factory(),
 
-            'posicao' => $this
-                ->faker
-                ->numberBetween(
-                    1,
-                    3,
-                ),
+            'posicao' => $this->faker->numberBetween(
+                self::POSICAO_MINIMA,
+                self::POSICAO_MAXIMA,
+            ),
 
             'musica' => sprintf(
                 '%s - %s',
@@ -80,13 +120,20 @@ class MusicaFavoritaEdicaoFactory extends Factory
      * @param  Edicao  $edicao  Edição pretendida.
      * @return static Factory configurada.
      *
+     * @throws InvalidArgumentException Quando a edição não está persistida.
+     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function paraEdicao(
         Edicao $edicao,
     ): static {
+        $this->validarModeloPersistido(
+            $edicao,
+            'A edição associada à música favorita deve estar persistida.',
+        );
+
         return $this->for(
             $edicao,
             'edicao',
@@ -99,13 +146,21 @@ class MusicaFavoritaEdicaoFactory extends Factory
      * @param  Utilizador  $utilizador  Proprietário da escolha.
      * @return static Factory configurada.
      *
+     * @throws InvalidArgumentException Quando o utilizador não está
+     *                                  persistido.
+     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function pertencenteA(
         Utilizador $utilizador,
     ): static {
+        $this->validarModeloPersistido(
+            $utilizador,
+            'O proprietário da música favorita deve estar persistido.',
+        );
+
         return $this->for(
             $utilizador,
             'utilizador',
@@ -118,13 +173,21 @@ class MusicaFavoritaEdicaoFactory extends Factory
      * @param  Utilizador  $utilizador  Utilizador responsável pelo registo.
      * @return static Factory configurada.
      *
+     * @throws InvalidArgumentException Quando o utilizador não está
+     *                                  persistido.
+     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function registadaPor(
         Utilizador $utilizador,
     ): static {
+        $this->validarModeloPersistido(
+            $utilizador,
+            'O utilizador responsável pelo registo deve estar persistido.',
+        );
+
         return $this->for(
             $utilizador,
             'registadoPor',
@@ -134,27 +197,82 @@ class MusicaFavoritaEdicaoFactory extends Factory
     /**
      * Define a posição da música favorita.
      *
-     * @param  int  $posicao  Posição entre um e três.
+     * @param  int  $posicao  Posição pretendida.
      * @return static Factory configurada.
      *
-     * @throws InvalidArgumentException Quando a posição não é válida.
+     * @throws InvalidArgumentException Quando a posição não está compreendida
+     *                                  entre um e três.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.1.0
+     */
+    public function comPosicao(
+        int $posicao,
+    ): static {
+        if (
+            $posicao < self::POSICAO_MINIMA
+            || $posicao > self::POSICAO_MAXIMA
+        ) {
+            throw new InvalidArgumentException(
+                sprintf(
+                    'A posição da música favorita deve estar compreendida entre %d e %d.',
+                    self::POSICAO_MINIMA,
+                    self::POSICAO_MAXIMA,
+                ),
+            );
+        }
+
+        return $this->state(
+            static fn (): array => [
+                'posicao' => $posicao,
+            ],
+        );
+    }
+
+    /**
+     * Define a identificação da música favorita.
+     *
+     * @param  string  $musica  Identificação da música.
+     * @return static Factory configurada.
+     *
+     * @throws InvalidArgumentException Quando a identificação está vazia ou
+     *                                  ultrapassa o comprimento máximo.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    public function comPosicao(
-        int $posicao,
+    public function comMusica(
+        string $musica,
     ): static {
-        if ($posicao < 1 || $posicao > 3) {
+        $musicaNormalizada =
+            Str::squish(
+                $musica,
+            );
+
+        if ($musicaNormalizada === '') {
             throw new InvalidArgumentException(
-                'A posição da música favorita deve estar compreendida entre um e três.',
+                'A identificação da música favorita não pode estar vazia.',
+            );
+        }
+
+        if (
+            mb_strlen(
+                $musicaNormalizada,
+            ) > self::COMPRIMENTO_MAXIMO_MUSICA
+        ) {
+            throw new InvalidArgumentException(
+                sprintf(
+                    'A identificação da música favorita não pode exceder %d caracteres.',
+                    self::COMPRIMENTO_MAXIMO_MUSICA,
+                ),
             );
         }
 
         return $this->state(
-            fn (): array => [
-                'posicao' => $posicao,
+            static fn (): array => [
+                'musica' => $musicaNormalizada,
             ],
         );
     }
@@ -171,9 +289,56 @@ class MusicaFavoritaEdicaoFactory extends Factory
     public function semUtilizador(): static
     {
         return $this->state(
-            fn (): array => [
+            static fn (): array => [
                 'utilizador_id' => null,
             ],
         );
+    }
+
+    /**
+     * Cria uma escolha sem o utilizador responsável pelo registo identificado.
+     *
+     * Este estado é útil para representar a eliminação posterior do
+     * utilizador que registou a escolha.
+     *
+     * @return static Factory configurada.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function semRegistador(): static
+    {
+        return $this->state(
+            static fn (): array => [
+                'registado_por_id' => null,
+            ],
+        );
+    }
+
+    /**
+     * Valida que um modelo relacionado já se encontra persistido.
+     *
+     * @param  Model  $modelo  Modelo a validar.
+     * @param  string  $mensagem  Mensagem utilizada em caso de erro.
+     *
+     * @throws InvalidArgumentException Quando o modelo não está persistido.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function validarModeloPersistido(
+        Model $modelo,
+        string $mensagem,
+    ): void {
+        if (
+            ! $modelo->exists
+            || $modelo->getKey() === null
+        ) {
+            throw new InvalidArgumentException(
+                $mensagem,
+            );
+        }
     }
 }

@@ -9,22 +9,27 @@ use App\Models\Autenticacao\Utilizador;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 
 /**
  * Cria dados de teste para utilizadores.
+ *
+ * O nome `Factory` permanece em inglês por corresponder à convenção de
+ * descoberta automática das factories do Laravel.
  *
  * @extends Factory<Utilizador>
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 1.1.0
  */
-class UtilizadorFactory extends Factory
+final class UtilizadorFactory extends Factory
 {
     /**
-     * Palavra-passe utilizada por omissão nos utilizadores de teste.
+     * Palavra-passe utilizada por predefinição nos utilizadores de teste.
      *
-     * @var string
+     * A constante é pública para permitir que os testes autentiquem os
+     * utilizadores criados por esta factory.
      *
      * @since 2.0.0
      *
@@ -42,34 +47,40 @@ class UtilizadorFactory extends Factory
      *
      * @version 1.0.0
      */
-    protected $model = Utilizador::class;
+    protected $model =
+        Utilizador::class;
 
     /**
-     * Hash reutilizado da palavra-passe por omissão.
+     * Hash reutilizado da palavra-passe predefinida.
      *
-     * Evita calcular repetidamente o mesmo hash durante a execução dos
-     * testes.
+     * Evita calcular repetidamente o mesmo hash durante a execução do
+     * processo de testes.
      *
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    private static ?string $hashPalavraPasse = null;
+    private static ?string $hashPalavraPasse =
+        null;
 
     /**
-     * Define os atributos por omissão de um utilizador.
+     * Define os atributos predefinidos de um utilizador.
+     *
+     * O nome `definition` permanece em inglês por corresponder ao método
+     * convencional das factories do Laravel.
      *
      * @return array<string, mixed> Atributos do utilizador.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function definition(): array
     {
         return [
             'nome' => $this->faker->name(),
+
             'email' => $this
                 ->faker
                 ->unique()
@@ -83,13 +94,18 @@ class UtilizadorFactory extends Factory
                 ),
 
             'fotografia' => null,
+
             'papel' => PapelUtilizador::Utilizador,
-            'remember_token' => Str::random(10),
+
+            'remember_token' => Str::random(
+                10,
+            ),
         ];
     }
 
     /**
-     * Cria um utilizador cujo endereço de e-mail ainda não foi verificado.
+     * Cria um utilizador cujo endereço de correio eletrónico ainda não foi
+     * verificado.
      *
      * @return static Factory configurada.
      *
@@ -100,7 +116,7 @@ class UtilizadorFactory extends Factory
     public function naoVerificado(): static
     {
         return $this->state(
-            fn (): array => [
+            static fn (): array => [
                 'email_verified_at' => null,
             ],
         );
@@ -120,7 +136,7 @@ class UtilizadorFactory extends Factory
         PapelUtilizador $papel,
     ): static {
         return $this->state(
-            fn (): array => [
+            static fn (): array => [
                 'papel' => $papel,
             ],
         );
@@ -132,16 +148,29 @@ class UtilizadorFactory extends Factory
      * @param  string  $caminho  Caminho relativo da fotografia.
      * @return static Factory configurada.
      *
+     * @throws InvalidArgumentException Quando o caminho está vazio.
+     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function comFotografia(
         string $caminho,
     ): static {
+        $caminhoNormalizado =
+            trim(
+                $caminho,
+            );
+
+        if ($caminhoNormalizado === '') {
+            throw new InvalidArgumentException(
+                'O caminho da fotografia não pode estar vazio.',
+            );
+        }
+
         return $this->state(
-            fn (): array => [
-                'fotografia' => $caminho,
+            static fn (): array => [
+                'fotografia' => $caminhoNormalizado,
             ],
         );
     }
