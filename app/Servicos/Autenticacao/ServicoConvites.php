@@ -6,14 +6,18 @@ namespace App\Servicos\Autenticacao;
 
 use App\Models\Autenticacao\Convite;
 use App\Models\Autenticacao\Utilizador;
+use App\ObjetosValor\Utilizadores\EnderecoEmail;
 use App\Resultados\Autenticacao\ConviteCriado;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
+use DomainException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use RuntimeException;
 use SensitiveParameter;
+use Throwable;
 
 /**
  * Gere a criação, localização e revogação dos convites.
@@ -24,7 +28,7 @@ use SensitiveParameter;
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 1.1.0
  */
 final class ServicoConvites
 {
@@ -56,8 +60,17 @@ final class ServicoConvites
     /**
      * Número máximo de tentativas perante uma colisão do hash.
      *
-     * Uma colisão é extremamente improvável, mas a restrição única da base de
-     * dados continua a ser tratada explicitamente.
+     * @var int
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const MAXIMO_TENTATIVAS_GERACAO = 3;
+
+    /**
+     * Número máximo de tentativas perante conflitos transitórios numa
+     * transação.
      *
      * @var int
      *
@@ -65,7 +78,7 @@ final class ServicoConvites
      *
      * @version 1.0.0
      */
-    private const MAXIMO_TENTATIVAS = 3;
+    private const TENTATIVAS_TRANSACAO = 3;
 
     /**
      * Comprimento máximo do nome do convidado.
@@ -79,7 +92,7 @@ final class ServicoConvites
     private const COMPRIMENTO_MAXIMO_NOME = 255;
 
     /**
-     * Comprimento máximo do endereço de e-mail.
+     * Comprimento máximo aceite para um código recebido.
      *
      * @var int
      *
@@ -87,7 +100,7 @@ final class ServicoConvites
      *
      * @version 1.0.0
      */
-    private const COMPRIMENTO_MAXIMO_EMAIL = 255;
+    private const COMPRIMENTO_MAXIMO_CODIGO = 255;
 
     /**
      * Cria um novo convite.
@@ -96,20 +109,21 @@ final class ServicoConvites
      * temporariamente o código necessário para construir a ligação que será
      * apresentada ou enviada ao destinatário.
      *
-     * @param  string  $nomeConvidado  - Nome da pessoa convidada.
-     * @param  string|null  $emailDestino  - E-mail ao qual o convite fica
+     * @param  string  $nomeConvidado  Nome da pessoa convidada.
+     * @param  string|null  $emailDestino  Endereço ao qual o convite fica
      *                                     limitado.
-     * @param  Utilizador|null  $criador  - Utilizador responsável pela criação.
-     * @param  CarbonInterface|null  $expiraEm  - Momento de expiração.
-     * @return ConviteCriado - Convite persistido e respetivo código original.
+     * @param  Utilizador|null  $criador  Utilizador responsável pela criação.
+     * @param  CarbonInterface|null  $expiraEm  Momento de expiração.
+     * @return ConviteCriado Convite persistido e código original.
      *
-     * @throws InvalidArgumentException Quando os dados recebidos são
-     *                                  inválidos.
+     * @throws InvalidArgumentException Quando os dados recebidos não são
+     *                                  válidos.
      * @throws RuntimeException Quando não é possível gerar um código único.
+     * @throws Throwable Quando ocorre outro erro durante a persistência.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function criar(
         string $nomeConvidado,
@@ -117,41 +131,79 @@ final class ServicoConvites
         ?Utilizador $criador = null,
         ?CarbonInterface $expiraEm = null,
     ): ConviteCriado {
-        $nomeNormalizado = $this->normalizarNome($nomeConvidado);
-        $emailNormalizado = $this->normalizarEmail($emailDestino);
+        $nomeNormalizado =
+            $this->normalizarNome(
+                $nomeConvidado,
+            );
 
-        $this->validarCriador($criador);
-        $this->validarExpiracao($expiraEm);
+        $emailNormalizado =
+            $this->normalizarEmail(
+                $emailDestino,
+            );
+
+        $identificadorCriador =
+            $this->obterIdentificadorCriador(
+                $criador,
+            );
+
+        $expiracaoNormalizada =
+            $this->normalizarExpiracao(
+                $expiraEm,
+            );
 
         for (
             $tentativa = 1;
-            $tentativa <= self::MAXIMO_TENTATIVAS;
+            $tentativa <= self::MAXIMO_TENTATIVAS_GERACAO;
             $tentativa++
         ) {
-            $codigo = $this->gerarCodigo();
+            $codigo =
+                $this->gerarCodigo();
 
             try {
-                $convite = new Convite;
+                $convite =
+                    new Convite;
 
-                $convite->nome_convidado = $nomeNormalizado;
-                $convite->email_destino = $emailNormalizado;
-                $convite->criado_por = $criador?->getKey();
-                $convite->expira_em = $expiraEm;
-                $convite->definirCodigo($codigo);
+                $convite->nome_convidado =
+                    $nomeNormalizado;
+
+                $convite->email_destino =
+                    $emailNormalizado;
+
+                $convite->criado_por_id =
+                    $identificadorCriador;
+
+                $convite->expira_em =
+                    $expiracaoNormalizada;
+
+                $convite->definirCodigo(
+                    $codigo,
+                );
 
                 $convite->saveOrFail();
+
+                if ($criador instanceof Utilizador) {
+                    $convite->setRelation(
+                        'criador',
+                        $criador,
+                    );
+                }
 
                 return new ConviteCriado(
                     $convite,
                     $codigo,
                 );
             } catch (UniqueConstraintViolationException $excecao) {
-                if ($tentativa === self::MAXIMO_TENTATIVAS) {
-                    throw new RuntimeException(
-                        'Não foi possível gerar um código de convite único.',
-                        previous: $excecao,
-                    );
+                if (
+                    $tentativa
+                    < self::MAXIMO_TENTATIVAS_GERACAO
+                ) {
+                    continue;
                 }
+
+                throw new RuntimeException(
+                    'Não foi possível gerar um código de convite único.',
+                    previous: $excecao,
+                );
             }
         }
 
@@ -165,58 +217,89 @@ final class ServicoConvites
      *
      * Convites utilizados, revogados ou expirados não são devolvidos.
      *
-     * @param  string  $codigo  - Código original do convite.
-     * @return Convite|null - Convite disponível ou nulo quando não existe.
+     * @param  string  $codigo  Código original do convite.
+     * @return Convite|null Convite disponível ou nulo.
      *
-     * @throws InvalidArgumentException Quando o código está vazio.
+     * @throws InvalidArgumentException Quando o código não é válido.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function encontrarDisponivelPorCodigo(
         #[SensitiveParameter]
         string $codigo,
     ): ?Convite {
+        $codigoNormalizado =
+            $this->normalizarCodigoRecebido(
+                $codigo,
+            );
+
         return Convite::query()
             ->disponiveis()
-            ->comCodigo($codigo)
+            ->comCodigo(
+                $codigoNormalizado,
+            )
             ->first();
     }
 
     /**
      * Revoga um convite de forma concorrencialmente segura.
      *
-     * O registo é bloqueado durante a transação para impedir que o mesmo
-     * convite seja utilizado ou revogado simultaneamente por outro processo.
+     * O registo é bloqueado durante a transação para impedir que seja
+     * utilizado ou revogado simultaneamente por outro processo.
      *
-     * @param  Convite  $convite  - Convite que deverá ser revogado.
-     * @param  CarbonInterface|null  $momento  - Momento da revogação.
-     * @return Convite - Convite revogado e atualizado.
+     * @param  Convite  $convite  Convite a revogar.
+     * @param  CarbonInterface|null  $momento  Momento da revogação.
+     * @return Convite Convite revogado.
      *
-     * @throws ModelNotFoundException Quando o convite já não existe.
-     * @throws \DomainException Quando o convite já foi utilizado.
+     * @throws InvalidArgumentException Quando o convite não está persistido.
+     * @throws ModelNotFoundException Quando o convite deixou de existir.
+     * @throws DomainException Quando o convite já foi utilizado.
+     * @throws Throwable Quando ocorre outro erro durante a transação.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function revogar(
         Convite $convite,
         ?CarbonInterface $momento = null,
     ): Convite {
-        return DB::transaction(
-            function () use ($convite, $momento): Convite {
-                /** @var Convite $conviteBloqueado */
-                $conviteBloqueado = Convite::query()
-                    ->lockForUpdate()
-                    ->findOrFail($convite->getKey());
+        $identificadorConvite =
+            $this->obterIdentificadorConvite(
+                $convite,
+            );
 
-                $conviteBloqueado->revogar($momento);
+        $momentoNormalizado =
+            $momento !== null
+            ? CarbonImmutable::instance(
+                $momento,
+            )
+            : null;
+
+        return DB::transaction(
+            static function () use (
+                $identificadorConvite,
+                $momentoNormalizado,
+            ): Convite {
+                $conviteBloqueado =
+                    Convite::query()
+                        ->whereKey(
+                            $identificadorConvite,
+                        )
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                $conviteBloqueado->revogar(
+                    $momentoNormalizado,
+                );
+
                 $conviteBloqueado->saveOrFail();
 
                 return $conviteBloqueado;
             },
+            self::TENTATIVAS_TRANSACAO,
         );
     }
 
@@ -226,7 +309,9 @@ final class ServicoConvites
      * A codificação Base64 URL-safe evita caracteres que precisariam de ser
      * escapados nos caminhos das rotas.
      *
-     * @return string - Código original do convite.
+     * @return string Código original do convite.
+     *
+     * @throws Throwable Quando não é possível obter bytes aleatórios.
      *
      * @since 2.0.0
      *
@@ -234,46 +319,67 @@ final class ServicoConvites
      */
     private function gerarCodigo(): string
     {
-        $codigoAleatorio = rtrim(
-            strtr(
-                base64_encode(
-                    random_bytes(self::BYTES_ALEATORIOS),
-                ),
-                '+/',
-                '-_',
-            ),
-            '=',
-        );
+        $bytes =
+            random_bytes(
+                self::BYTES_ALEATORIOS,
+            );
 
-        return self::PREFIXO_CODIGO.$codigoAleatorio;
+        $codigoCodificado =
+            rtrim(
+                strtr(
+                    base64_encode(
+                        $bytes,
+                    ),
+                    '+/',
+                    '-_',
+                ),
+                '=',
+            );
+
+        return self::PREFIXO_CODIGO
+            .$codigoCodificado;
     }
 
     /**
      * Normaliza e valida o nome do convidado.
      *
-     * Espaços consecutivos e quebras de linha são convertidos num único
-     * espaço.
+     * Espaços consecutivos, tabulações e quebras de linha são convertidos num
+     * único espaço.
      *
-     * @param  string  $nome  - Nome recebido.
-     * @return string - Nome normalizado.
+     * @param  string  $nome  Nome recebido.
+     * @return string Nome normalizado.
      *
-     * @throws InvalidArgumentException Quando o nome é vazio ou demasiado
-     *                                  longo.
+     * @throws InvalidArgumentException Quando o nome não é válido.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
-    private function normalizarNome(string $nome): string
-    {
-        $nomeNormalizado = preg_replace(
-            '/\s+/u',
-            ' ',
-            trim($nome),
-        );
+    private function normalizarNome(
+        string $nome,
+    ): string {
+        if (
+            preg_match(
+                '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/',
+                $nome,
+            ) === 1
+        ) {
+            throw new InvalidArgumentException(
+                'O nome do convidado contém caracteres inválidos.',
+            );
+        }
+
+        $nomeNormalizado =
+            preg_replace(
+                '/\s+/u',
+                ' ',
+                trim(
+                    $nome,
+                ),
+            );
 
         if (
-            $nomeNormalizado === null
+            ! is_string($nomeNormalizado)
             || $nomeNormalizado === ''
         ) {
             throw new InvalidArgumentException(
@@ -282,11 +388,15 @@ final class ServicoConvites
         }
 
         if (
-            mb_strlen($nomeNormalizado)
-            > self::COMPRIMENTO_MAXIMO_NOME
+            mb_strlen(
+                $nomeNormalizado,
+            ) > self::COMPRIMENTO_MAXIMO_NOME
         ) {
             throw new InvalidArgumentException(
-                'O nome do convidado é demasiado longo.',
+                sprintf(
+                    'O nome do convidado não pode ter mais de %d caracteres.',
+                    self::COMPRIMENTO_MAXIMO_NOME,
+                ),
             );
         }
 
@@ -296,103 +406,187 @@ final class ServicoConvites
     /**
      * Normaliza e valida o endereço de e-mail.
      *
-     * Uma string vazia é interpretada como ausência de e-mail.
+     * Uma string vazia é interpretada como ausência de endereço.
      *
-     * @param  string|null  $email  - Endereço recebido.
-     * @return string|null - Endereço normalizado ou nulo.
+     * @param  string|null  $email  Endereço recebido.
+     * @return string|null Endereço normalizado ou nulo.
      *
-     * @throws InvalidArgumentException Quando o endereço não é válido ou é
-     *                                  demasiado longo.
+     * @throws InvalidArgumentException Quando o endereço não é válido.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function normalizarEmail(
         ?string $email,
     ): ?string {
-        if ($email === null || trim($email) === '') {
+        if (
+            $email === null
+            || trim($email) === ''
+        ) {
             return null;
         }
 
-        $emailNormalizado = mb_strtolower(
-            trim($email),
-        );
-
-        if (
-            mb_strlen($emailNormalizado)
-            > self::COMPRIMENTO_MAXIMO_EMAIL
-        ) {
-            throw new InvalidArgumentException(
-                'O endereço de e-mail é demasiado longo.',
-            );
-        }
-
-        if (
-            filter_var(
-                $emailNormalizado,
-                FILTER_VALIDATE_EMAIL,
-            ) === false
-        ) {
-            throw new InvalidArgumentException(
-                'O endereço de e-mail não é válido.',
-            );
-        }
-
-        return $emailNormalizado;
+        return EnderecoEmail::deTexto(
+            $email,
+        )->valor();
     }
 
     /**
-     * Valida o utilizador responsável pela criação.
+     * Obtém o identificador do utilizador responsável pela criação.
      *
-     * @param  Utilizador|null  $criador  - Utilizador recebido.
+     * @param  Utilizador|null  $criador  Utilizador recebido.
+     * @return int|null Identificador do criador ou nulo.
      *
-     * @throws InvalidArgumentException Quando o utilizador ainda não foi
+     * @throws InvalidArgumentException Quando o utilizador não está
      *                                  persistido.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    private function validarCriador(
+    private function obterIdentificadorCriador(
         ?Utilizador $criador,
-    ): void {
+    ): ?int {
         if ($criador === null) {
-            return;
+            return null;
         }
+
+        $identificador =
+            $criador->getKey();
 
         if (
             ! $criador->exists
-            || $criador->getKey() === null
+            || ! is_numeric($identificador)
+            || (int) $identificador < 1
         ) {
             throw new InvalidArgumentException(
                 'O criador do convite deve estar persistido.',
             );
         }
+
+        return (int) $identificador;
     }
 
     /**
-     * Valida a data de expiração.
+     * Obtém o identificador de um convite persistido.
      *
-     * @param  CarbonInterface|null  $expiraEm  - Momento de expiração.
+     * @param  Convite  $convite  Convite recebido.
+     * @return int Identificador do convite.
      *
-     * @throws InvalidArgumentException Quando a data não está no futuro.
+     * @throws InvalidArgumentException Quando o convite não está persistido.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    private function validarExpiracao(
-        ?CarbonInterface $expiraEm,
-    ): void {
-        if ($expiraEm === null) {
-            return;
+    private function obterIdentificadorConvite(
+        Convite $convite,
+    ): int {
+        $identificador =
+            $convite->getKey();
+
+        if (
+            ! $convite->exists
+            || ! is_numeric($identificador)
+            || (int) $identificador < 1
+        ) {
+            throw new InvalidArgumentException(
+                'O convite deve estar persistido antes de ser revogado.',
+            );
         }
 
-        if ($expiraEm->lessThanOrEqualTo(now())) {
+        return (int) $identificador;
+    }
+
+    /**
+     * Normaliza e valida a data de expiração.
+     *
+     * @param  CarbonInterface|null  $expiraEm  Momento recebido.
+     * @return CarbonImmutable|null Momento normalizado ou nulo.
+     *
+     * @throws InvalidArgumentException Quando a data não está no futuro.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.1.0
+     */
+    private function normalizarExpiracao(
+        ?CarbonInterface $expiraEm,
+    ): ?CarbonImmutable {
+        if ($expiraEm === null) {
+            return null;
+        }
+
+        $expiracao =
+            CarbonImmutable::instance(
+                $expiraEm,
+            );
+
+        if (
+            $expiracao->lessThanOrEqualTo(
+                CarbonImmutable::now(),
+            )
+        ) {
             throw new InvalidArgumentException(
                 'A expiração do convite deve estar no futuro.',
             );
         }
+
+        return $expiracao;
+    }
+
+    /**
+     * Normaliza um código recebido para pesquisa.
+     *
+     * O código continua sensível a maiúsculas e minúsculas. Apenas os espaços
+     * exteriores são removidos.
+     *
+     * @param  string  $codigo  Código recebido.
+     * @return string Código normalizado.
+     *
+     * @throws InvalidArgumentException Quando o código não é válido.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function normalizarCodigoRecebido(
+        #[SensitiveParameter]
+        string $codigo,
+    ): string {
+        $codigoNormalizado =
+            trim(
+                $codigo,
+            );
+
+        if ($codigoNormalizado === '') {
+            throw new InvalidArgumentException(
+                'O código do convite não pode estar vazio.',
+            );
+        }
+
+        if (
+            mb_strlen(
+                $codigoNormalizado,
+            ) > self::COMPRIMENTO_MAXIMO_CODIGO
+        ) {
+            throw new InvalidArgumentException(
+                'O código do convite é demasiado longo.',
+            );
+        }
+
+        if (
+            preg_match(
+                '/[\x00-\x1F\x7F]/',
+                $codigoNormalizado,
+            ) === 1
+        ) {
+            throw new InvalidArgumentException(
+                'O código do convite contém caracteres inválidos.',
+            );
+        }
+
+        return $codigoNormalizado;
     }
 }

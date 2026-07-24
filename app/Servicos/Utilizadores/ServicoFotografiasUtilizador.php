@@ -12,16 +12,13 @@ use RuntimeException;
 /**
  * Gere o armazenamento das fotografias dos utilizadores.
  *
- * O serviço apenas elimina ficheiros pertencentes aos diretórios controlados
- * pela aplicação, evitando que um caminho arbitrário provoque a eliminação de
- * outros ficheiros do disco público.
- *
- * O diretório histórico `photos` permanece temporariamente autorizado para
- * permitir a remoção segura de fotografias criadas pelo fluxo antigo.
+ * O serviço apenas elimina ficheiros pertencentes ao diretório controlado
+ * pela aplicação, impedindo que caminhos arbitrários provoquem a eliminação
+ * de outros ficheiros do disco público.
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 1.1.0
  */
 final class ServicoFotografiasUtilizador
 {
@@ -37,7 +34,7 @@ final class ServicoFotografiasUtilizador
     private const DISCO = 'public';
 
     /**
-     * Diretório atual das fotografias.
+     * Diretório das fotografias dos utilizadores.
      *
      * @var string
      *
@@ -48,120 +45,66 @@ final class ServicoFotografiasUtilizador
     private const DIRETORIO = 'fotografias/utilizadores';
 
     /**
-     * Diretórios cujos ficheiros podem ser eliminados pelo serviço.
+     * Comprimento máximo aceite para um caminho relativo.
      *
-     * @var array<int, string>
+     * @var int
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    private const DIRETORIOS_PERMITIDOS = [
-        'fotografias/utilizadores/',
-        'photos/',
-    ];
+    private const COMPRIMENTO_MAXIMO_CAMINHO = 1024;
 
     /**
      * Guarda uma fotografia no disco público.
      *
-     * O Laravel cria um nome aleatório para o ficheiro, evitando confiar no
+     * O Laravel gera um nome aleatório para o ficheiro, evitando utilizar o
      * nome original enviado pelo utilizador.
      *
-     * @param  UploadedFile  $fotografia  - Fotografia validada.
-     * @return string - Caminho relativo do ficheiro guardado.
+     * @param  UploadedFile  $fotografia  Fotografia validada.
+     * @return string Caminho relativo do ficheiro guardado.
      *
-     * @throws RuntimeException Quando o armazenamento falha.
+     * @throws InvalidArgumentException Quando o carregamento não é válido.
+     * @throws RuntimeException Quando o armazenamento falha ou devolve um
+     *                          caminho inesperado.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function guardar(
         UploadedFile $fotografia,
     ): string {
+        $this->validarFotografia(
+            $fotografia,
+        );
+
         $caminho = $fotografia->store(
             self::DIRETORIO,
             self::DISCO,
         );
 
-        if (! is_string($caminho) || $caminho === '') {
+        if (
+            ! is_string($caminho)
+            || $caminho === ''
+        ) {
             throw new RuntimeException(
                 'Não foi possível guardar a fotografia do utilizador.',
             );
         }
 
-        return $caminho;
-    }
-
-    /**
-     * Elimina uma fotografia gerida pela aplicação.
-     *
-     * Um caminho nulo representa a inexistência de fotografia e não constitui
-     * um erro.
-     *
-     * @param  string|null  $caminho  - Caminho relativo da fotografia.
-     * @return bool - Verdadeiro quando não existe ficheiro ou a eliminação foi
-     *              concluída.
-     *
-     * @throws InvalidArgumentException Quando o caminho não pertence a um
-     *                                  diretório autorizado.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    public function eliminar(?string $caminho): bool
-    {
-        if ($caminho === null || trim($caminho) === '') {
-            return true;
-        }
-
-        $caminhoNormalizado = $this->normalizarCaminho(
-            $caminho,
-        );
-
-        if (! $this->eCaminhoPermitido($caminhoNormalizado)) {
-            throw new InvalidArgumentException(
-                'O caminho da fotografia não pertence a um diretório autorizado.',
+        $caminhoNormalizado =
+            $this->normalizarCaminho(
+                $caminho,
             );
-        }
-
-        $disco = Storage::disk(self::DISCO);
-
-        if (! $disco->exists($caminhoNormalizado)) {
-            return true;
-        }
-
-        return $disco->delete($caminhoNormalizado);
-    }
-
-    /**
-     * Normaliza um caminho relativo.
-     *
-     * @param  string  $caminho  - Caminho recebido.
-     * @return string - Caminho normalizado.
-     *
-     * @throws InvalidArgumentException Quando o caminho é inseguro.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private function normalizarCaminho(
-        string $caminho,
-    ): string {
-        $caminhoNormalizado = ltrim(
-            str_replace('\\', '/', trim($caminho)),
-            '/',
-        );
 
         if (
-            $caminhoNormalizado === ''
-            || str_contains($caminhoNormalizado, '../')
-            || str_contains($caminhoNormalizado, "\0")
+            ! $this->eCaminhoPermitido(
+                $caminhoNormalizado,
+            )
         ) {
-            throw new InvalidArgumentException(
-                'O caminho da fotografia não é válido.',
+            throw new RuntimeException(
+                'O armazenamento devolveu um caminho de fotografia inesperado.',
             );
         }
 
@@ -169,26 +112,227 @@ final class ServicoFotografiasUtilizador
     }
 
     /**
-     * Determina se o caminho pertence a um diretório autorizado.
+     * Elimina uma fotografia gerida pela aplicação.
      *
-     * @param  string  $caminho  - Caminho normalizado.
-     * @return bool - Verdadeiro quando o caminho é gerido pela aplicação.
+     * Um caminho nulo ou vazio representa a inexistência de fotografia e não
+     * constitui um erro. A operação é idempotente: um ficheiro inexistente é
+     * considerado eliminado.
+     *
+     * @param  string|null  $caminho  Caminho relativo da fotografia.
+     * @return bool Verdadeiro quando o ficheiro não existe ou foi eliminado.
+     *
+     * @throws InvalidArgumentException Quando o caminho não é válido ou não
+     *                                  pertence ao diretório autorizado.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.1.0
+     */
+    public function eliminar(
+        ?string $caminho,
+    ): bool {
+        if (
+            $caminho === null
+            || trim($caminho) === ''
+        ) {
+            return true;
+        }
+
+        $caminhoNormalizado =
+            $this->normalizarCaminho(
+                $caminho,
+            );
+
+        if (
+            ! $this->eCaminhoPermitido(
+                $caminhoNormalizado,
+            )
+        ) {
+            throw new InvalidArgumentException(
+                'O caminho da fotografia não pertence ao diretório autorizado.',
+            );
+        }
+
+        $disco =
+            Storage::disk(
+                self::DISCO,
+            );
+
+        if (
+            ! $disco->exists(
+                $caminhoNormalizado,
+            )
+        ) {
+            return true;
+        }
+
+        return $disco->delete(
+            $caminhoNormalizado,
+        );
+    }
+
+    /**
+     * Valida o carregamento recebido.
+     *
+     * A validação de formato, dimensões e tamanho máximo deve continuar a ser
+     * efetuada pelo pedido HTTP. Este método confirma defensivamente que o
+     * carregamento não terminou com um erro.
+     *
+     * @param  UploadedFile  $fotografia  Fotografia recebida.
+     *
+     * @throws InvalidArgumentException Quando o carregamento falhou.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    private function eCaminhoPermitido(
+    private function validarFotografia(
+        UploadedFile $fotografia,
+    ): void {
+        if ($fotografia->isValid()) {
+            return;
+        }
+
+        throw new InvalidArgumentException(
+            'O carregamento da fotografia não é válido.',
+        );
+    }
+
+    /**
+     * Normaliza e valida um caminho relativo.
+     *
+     * Apenas são aceites caminhos relativos constituídos por segmentos
+     * explícitos. Caminhos absolutos, barras invertidas, segmentos `.` ou
+     * `..`, caracteres de controlo e separadores repetidos são rejeitados.
+     *
+     * @param  string  $caminho  Caminho recebido.
+     * @return string Caminho validado.
+     *
+     * @throws InvalidArgumentException Quando o caminho é inseguro.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.1.0
+     */
+    private function normalizarCaminho(
         string $caminho,
-    ): bool {
-        foreach (
-            self::DIRETORIOS_PERMITIDOS as $diretorioPermitido
+    ): string {
+        $caminhoNormalizado =
+            trim(
+                $caminho,
+            );
+
+        if (
+            $caminhoNormalizado === ''
+            || $caminhoNormalizado !== $caminho
         ) {
-            if (str_starts_with($caminho, $diretorioPermitido)) {
-                return true;
+            throw new InvalidArgumentException(
+                'O caminho da fotografia não é válido.',
+            );
+        }
+
+        if (
+            mb_strlen(
+                $caminhoNormalizado,
+            ) > self::COMPRIMENTO_MAXIMO_CAMINHO
+        ) {
+            throw new InvalidArgumentException(
+                'O caminho da fotografia é demasiado longo.',
+            );
+        }
+
+        if (
+            str_starts_with(
+                $caminhoNormalizado,
+                '/',
+            )
+            || str_contains(
+                $caminhoNormalizado,
+                '\\',
+            )
+            || str_contains(
+                $caminhoNormalizado,
+                '//',
+            )
+            || preg_match(
+                '/^[A-Za-z]:/',
+                $caminhoNormalizado,
+            ) === 1
+            || preg_match(
+                '/[\x00-\x1F\x7F]/',
+                $caminhoNormalizado,
+            ) === 1
+        ) {
+            throw new InvalidArgumentException(
+                'O caminho da fotografia não é seguro.',
+            );
+        }
+
+        $segmentos =
+            explode(
+                '/',
+                $caminhoNormalizado,
+            );
+
+        foreach ($segmentos as $segmento) {
+            if (
+                $segmento === ''
+                || $segmento === '.'
+                || $segmento === '..'
+            ) {
+                throw new InvalidArgumentException(
+                    'O caminho da fotografia contém segmentos inválidos.',
+                );
             }
         }
 
-        return false;
+        return implode(
+            '/',
+            $segmentos,
+        );
+    }
+
+    /**
+     * Determina se o caminho pertence ao diretório autorizado.
+     *
+     * As fotografias são guardadas diretamente no diretório dos utilizadores.
+     * Não são aceites subdiretórios adicionais nem nomes de ficheiro vazios.
+     *
+     * @param  string  $caminho  Caminho validado.
+     * @return bool Verdadeiro quando o ficheiro é gerido pela aplicação.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.1.0
+     */
+    private function eCaminhoPermitido(
+        string $caminho,
+    ): bool {
+        $prefixo =
+            self::DIRETORIO
+            .'/';
+
+        if (
+            ! str_starts_with(
+                $caminho,
+                $prefixo,
+            )
+        ) {
+            return false;
+        }
+
+        $nomeFicheiro =
+            substr(
+                $caminho,
+                strlen(
+                    $prefixo,
+                ),
+            );
+
+        return $nomeFicheiro !== ''
+            && ! str_contains(
+                $nomeFicheiro,
+                '/',
+            );
     }
 }

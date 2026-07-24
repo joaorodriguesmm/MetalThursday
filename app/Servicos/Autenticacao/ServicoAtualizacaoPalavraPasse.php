@@ -7,10 +7,11 @@ namespace App\Servicos\Autenticacao;
 use App\Excecoes\Autenticacao\NovaPalavraPasseIgualAAtual;
 use App\Excecoes\Autenticacao\PalavraPasseAtualIncorreta;
 use App\Models\Autenticacao\Utilizador;
-use App\Regras\Autenticacao\PoliticaPalavraPasse;
+use App\Regras\Autenticacao\RequisitosPalavraPasse;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 use SensitiveParameter;
 use Throwable;
@@ -23,14 +24,17 @@ use Throwable;
  * protegendo chamadas provenientes de outros pontos de entrada e alterações
  * ocorridas entre a validação HTTP e a persistência.
  *
+ * Depois da alteração, o token de autenticação persistente é renovado para
+ * invalidar sessões baseadas na funcionalidade «lembrar-me».
+ *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 1.1.0
  */
 final class ServicoAtualizacaoPalavraPasse
 {
     /**
-     * Número máximo de tentativas perante conflitos transitórios.
+     * Número máximo de tentativas perante conflitos transitórios da transação.
      *
      * @var int
      *
@@ -41,13 +45,23 @@ final class ServicoAtualizacaoPalavraPasse
     private const TENTATIVAS_TRANSACAO = 3;
 
     /**
+     * Comprimento do novo token de autenticação persistente.
+     *
+     * @var int
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const COMPRIMENTO_TOKEN_PERSISTENTE = 60;
+
+    /**
      * Atualiza a palavra-passe do utilizador.
      *
-     * @param  Utilizador  $utilizador  - Utilizador autenticado.
-     * @param  string  $palavraPasseAtual  - Palavra-passe atual em texto simples.
-     * @param  string  $novaPalavraPasse  - Nova palavra-passe em texto simples.
-     * @return Utilizador - Utilizador atualizado e bloqueado durante a
-     *                    operação.
+     * @param  Utilizador  $utilizador  Utilizador autenticado.
+     * @param  string  $palavraPasseAtual  Palavra-passe atual em texto simples.
+     * @param  string  $novaPalavraPasse  Nova palavra-passe em texto simples.
+     * @return Utilizador Utilizador atualizado.
      *
      * @throws InvalidArgumentException Quando o utilizador ou a nova
      *                                  palavra-passe não são válidos.
@@ -60,7 +74,7 @@ final class ServicoAtualizacaoPalavraPasse
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function atualizar(
         Utilizador $utilizador,
@@ -69,70 +83,161 @@ final class ServicoAtualizacaoPalavraPasse
         #[SensitiveParameter]
         string $novaPalavraPasse,
     ): Utilizador {
-        if (
-            ! $utilizador->exists
-            || $utilizador->getKey() === null
-        ) {
-            throw new InvalidArgumentException(
-                'O utilizador deve estar persistido para alterar a palavra-passe.',
+        $identificadorUtilizador =
+            $this->obterIdentificadorUtilizador(
+                $utilizador,
             );
-        }
 
-        PoliticaPalavraPasse::validar(
+        RequisitosPalavraPasse::validar(
             $novaPalavraPasse,
         );
 
         return DB::transaction(
             function () use (
-                $utilizador,
+                $identificadorUtilizador,
                 $palavraPasseAtual,
                 $novaPalavraPasse,
             ): Utilizador {
-                $utilizadorBloqueado = Utilizador::query()
-                    ->whereKey($utilizador->getKey())
-                    ->lockForUpdate()
-                    ->firstOrFail();
+                $utilizadorBloqueado =
+                    Utilizador::query()
+                        ->whereKey(
+                            $identificadorUtilizador,
+                        )
+                        ->lockForUpdate()
+                        ->firstOrFail();
 
-                $hashAtual = $utilizadorBloqueado
-                    ->getAuthPassword();
+                $hashAtual =
+                    $utilizadorBloqueado
+                        ->getAuthPassword();
 
-                if (
-                    ! is_string($hashAtual)
-                    || $hashAtual === ''
-                    || ! Hash::check(
-                        $palavraPasseAtual,
-                        $hashAtual,
-                    )
-                ) {
-                    throw new PalavraPasseAtualIncorreta(
-                        'A palavra-passe atual não está correta.',
-                    );
-                }
+                $this->validarPalavraPasseAtual(
+                    $palavraPasseAtual,
+                    $hashAtual,
+                );
 
-                if (
-                    Hash::check(
-                        $novaPalavraPasse,
-                        $hashAtual,
-                    )
-                ) {
-                    throw new NovaPalavraPasseIgualAAtual(
-                        'A nova palavra-passe deve ser diferente da atual.',
-                    );
-                }
+                $this->validarNovaPalavraPasseDiferente(
+                    $novaPalavraPasse,
+                    $hashAtual,
+                );
 
                 /*
                  * O cast `hashed` do modelo Utilizador aplica a hash antes da
                  * persistência. A palavra-passe em texto simples nunca é
-                 * guardada na base de dados.
+                 * guardada diretamente na base de dados.
                  */
                 $utilizadorBloqueado->password =
                     $novaPalavraPasse;
+
+                $utilizadorBloqueado->setRememberToken(
+                    Str::random(
+                        self::COMPRIMENTO_TOKEN_PERSISTENTE,
+                    ),
+                );
 
                 $utilizadorBloqueado->saveOrFail();
 
                 return $utilizadorBloqueado;
             },
             self::TENTATIVAS_TRANSACAO,
+        );
+    }
+
+    /**
+     * Obtém o identificador de um utilizador persistido.
+     *
+     * @param  Utilizador  $utilizador  Utilizador recebido.
+     * @return int Identificador do utilizador.
+     *
+     * @throws InvalidArgumentException Quando o utilizador não está
+     *                                  persistido.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function obterIdentificadorUtilizador(
+        Utilizador $utilizador,
+    ): int {
+        $identificador =
+            $utilizador->getKey();
+
+        if (
+            ! $utilizador->exists
+            || ! is_numeric($identificador)
+            || (int) $identificador < 1
+        ) {
+            throw new InvalidArgumentException(
+                'O utilizador deve estar persistido para alterar a palavra-passe.',
+            );
+        }
+
+        return (int) $identificador;
+    }
+
+    /**
+     * Confirma que a palavra-passe atual corresponde ao valor persistido.
+     *
+     * @param  string  $palavraPasseAtual  Palavra-passe atual em texto simples.
+     * @param  mixed  $hashAtual  Hash persistida.
+     *
+     * @throws PalavraPasseAtualIncorreta Quando a palavra-passe não
+     *                                    corresponde.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function validarPalavraPasseAtual(
+        #[SensitiveParameter]
+        string $palavraPasseAtual,
+        #[SensitiveParameter]
+        mixed $hashAtual,
+    ): void {
+        if (
+            is_string($hashAtual)
+            && $hashAtual !== ''
+            && Hash::check(
+                $palavraPasseAtual,
+                $hashAtual,
+            )
+        ) {
+            return;
+        }
+
+        throw new PalavraPasseAtualIncorreta(
+            'A palavra-passe atual não está correta.',
+        );
+    }
+
+    /**
+     * Confirma que a nova palavra-passe é diferente da atual.
+     *
+     * @param  string  $novaPalavraPasse  Nova palavra-passe em texto simples.
+     * @param  string  $hashAtual  Hash da palavra-passe atual.
+     *
+     * @throws NovaPalavraPasseIgualAAtual Quando as palavras-passe coincidem.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function validarNovaPalavraPasseDiferente(
+        #[SensitiveParameter]
+        string $novaPalavraPasse,
+        #[SensitiveParameter]
+        string $hashAtual,
+    ): void {
+        if (
+            ! Hash::check(
+                $novaPalavraPasse,
+                $hashAtual,
+            )
+        ) {
+            return;
+        }
+
+        throw new NovaPalavraPasseIgualAAtual(
+            'A nova palavra-passe deve ser diferente da atual.',
         );
     }
 }

@@ -12,19 +12,30 @@ use Illuminate\Support\HtmlString;
  * Valida e renderiza incorporações associadas às secções.
  *
  * As incorporações do YouTube utilizam o domínio sem cookies e o carregamento
- * tardio nativo do navegador. Não são efetuados pedidos HTTP no servidor
+ * tardio nativo do navegador. Não são efetuados pedidos HTTP pelo servidor
  * durante a apresentação da página.
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 1.1.0
  */
 final class RenderizadorIncorporacoes
 {
     /**
+     * Comprimento máximo de uma ligação persistida.
+     *
+     * @var int
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const COMPRIMENTO_MAXIMO_LIGACAO = 2048;
+
+    /**
      * Hosts reconhecidos como pertencentes ao YouTube.
      *
-     * @var array<int, string>
+     * @var list<string>
      *
      * @since 2.0.0
      *
@@ -42,29 +53,46 @@ final class RenderizadorIncorporacoes
     ];
 
     /**
-     * Renderiza a incorporação e a ligação externa de uma secção.
+     * Segmentos utilizados pelo YouTube antes do identificador do vídeo.
      *
-     * @param  SeccaoMetalThursday  $seccao  Secção a apresentar.
-     * @return HtmlString Conteúdo HTML validado.
+     * @var list<string>
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
+    private const SEGMENTOS_VIDEO_YOUTUBE = [
+        'embed',
+        'shorts',
+        'live',
+    ];
+
+    /**
+     * Renderiza a incorporação e a ligação externa de uma secção.
+     *
+     * @param  SeccaoMetalThursday  $seccao  Secção apresentada.
+     * @return HtmlString Conteúdo HTML validado.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.1.0
+     */
     public function renderizar(
         SeccaoMetalThursday $seccao,
     ): HtmlString {
-        $ligacao = $this->normalizarLigacao(
-            $seccao->ligacao,
-        );
+        $ligacao =
+            $this->normalizarLigacao(
+                $seccao->ligacao,
+            );
 
         if ($ligacao === null) {
             return new HtmlString('');
         }
 
-        $tipo = TipoIncorporacao::tentarCriar(
-            $seccao->tipo_incorporacao,
-        ) ?? TipoIncorporacao::Ligacao;
+        $tipo =
+            $this->obterTipoIncorporacao(
+                $seccao->tipo_incorporacao,
+            );
 
         $incorporacao = match ($tipo) {
             TipoIncorporacao::VideoYouTube => $this->renderizarVideoYouTube(
@@ -78,26 +106,29 @@ final class RenderizadorIncorporacoes
             TipoIncorporacao::Ligacao => '',
         };
 
+        $ligacaoExterna =
+            $this->renderizarLigacaoExterna(
+                $ligacao,
+            );
+
         return new HtmlString(
             $incorporacao
-                .$this->renderizarLigacaoExterna(
-                    $ligacao,
-                ),
+                .$ligacaoExterna,
         );
     }
 
     /**
      * Obtém as definições utilizadas pela interface para reconhecer ligações.
      *
-     * @return array<int, array{
+     * @return list<array{
      *     tipo: string,
      *     etiqueta: string,
      *     expressao_regular: string
-     * }>
+     * }> Definições das incorporações reconhecidas.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function definicoesParaJavaScript(): array
     {
@@ -112,18 +143,47 @@ final class RenderizadorIncorporacoes
             $expressaoRegular =
                 $tipo->expressaoRegularJavaScript();
 
-            if ($expressaoRegular === null) {
+            if (
+                ! is_string($expressaoRegular)
+                || $expressaoRegular === ''
+            ) {
                 continue;
             }
 
             $definicoes[] = [
                 'tipo' => $tipo->value,
+
                 'etiqueta' => $tipo->etiqueta(),
+
                 'expressao_regular' => $expressaoRegular,
             ];
         }
 
         return $definicoes;
+    }
+
+    /**
+     * Obtém o tipo de incorporação associado à secção.
+     *
+     * Quando o valor não é reconhecido, é utilizada apenas a ligação externa.
+     *
+     * @param  mixed  $valor  Valor persistido ou enum já convertido.
+     * @return TipoIncorporacao Tipo reconhecido.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function obterTipoIncorporacao(
+        mixed $valor,
+    ): TipoIncorporacao {
+        if ($valor instanceof TipoIncorporacao) {
+            return $valor;
+        }
+
+        return TipoIncorporacao::tentarCriar(
+            $valor,
+        ) ?? TipoIncorporacao::Ligacao;
     }
 
     /**
@@ -151,7 +211,9 @@ final class RenderizadorIncorporacoes
         return $this->renderizarIframe(
             sprintf(
                 'https://www.youtube-nocookie.com/embed/%s?rel=0',
-                rawurlencode($identificador),
+                rawurlencode(
+                    $identificador,
+                ),
             ),
             'Vídeo do YouTube',
         );
@@ -182,7 +244,9 @@ final class RenderizadorIncorporacoes
         return $this->renderizarIframe(
             sprintf(
                 'https://www.youtube-nocookie.com/embed/videoseries?list=%s&rel=0',
-                rawurlencode($identificador),
+                rawurlencode(
+                    $identificador,
+                ),
             ),
             'Lista de reprodução do YouTube',
         );
@@ -197,17 +261,21 @@ final class RenderizadorIncorporacoes
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function renderizarIframe(
         string $origem,
         string $titulo,
     ): string {
         $origemEscapada =
-            $this->escaparAtributo($origem);
+            $this->escaparAtributo(
+                $origem,
+            );
 
         $tituloEscapado =
-            $this->escaparAtributo($titulo);
+            $this->escaparAtributo(
+                $titulo,
+            );
 
         return <<<HTML
 <div class="ratio ratio-16x9">
@@ -238,7 +306,9 @@ HTML;
         string $ligacao,
     ): string {
         $ligacaoEscapada =
-            $this->escaparAtributo($ligacao);
+            $this->escaparAtributo(
+                $ligacao,
+            );
 
         return <<<HTML
 <div class="mt-2">
@@ -255,14 +325,14 @@ HTML;
     }
 
     /**
-     * Valida e normaliza uma ligação HTTP.
+     * Valida e normaliza uma ligação HTTP ou HTTPS.
      *
      * @param  mixed  $valor  Valor recebido.
      * @return string|null Ligação válida ou nulo.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function normalizarLigacao(
         mixed $valor,
@@ -271,10 +341,23 @@ HTML;
             return null;
         }
 
-        $ligacao = trim($valor);
+        $ligacao =
+            trim(
+                $valor,
+            );
 
         if (
             $ligacao === ''
+            || mb_strlen($ligacao)
+            > self::COMPRIMENTO_MAXIMO_LIGACAO
+            || str_contains(
+                $ligacao,
+                '\\',
+            )
+            || preg_match(
+                '/[\x00-\x1F\x7F]/',
+                $ligacao,
+            ) === 1
             || filter_var(
                 $ligacao,
                 FILTER_VALIDATE_URL,
@@ -283,7 +366,10 @@ HTML;
             return null;
         }
 
-        $componentes = parse_url($ligacao);
+        $componentes =
+            parse_url(
+                $ligacao,
+            );
 
         if (
             ! is_array($componentes)
@@ -299,13 +385,26 @@ HTML;
             return null;
         }
 
-        $esquema = mb_strtolower(
-            (string) $componentes['scheme'],
-        );
+        $esquema =
+            mb_strtolower(
+                (string) $componentes['scheme'],
+            );
+
+        $host =
+            trim(
+                (string) $componentes['host'],
+            );
 
         if (
-            $esquema !== 'http'
-            && $esquema !== 'https'
+            ! in_array(
+                $esquema,
+                [
+                    'http',
+                    'https',
+                ],
+                true,
+            )
+            || $host === ''
         ) {
             return null;
         }
@@ -321,7 +420,7 @@ HTML;
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function extrairIdentificadorVideoYouTube(
         string $ligacao,
@@ -336,29 +435,29 @@ HTML;
         }
 
         if (
-            $componentes['host'] === 'youtu.be'
-            || $componentes['host'] === 'www.youtu.be'
+            in_array(
+                $componentes['host'],
+                [
+                    'youtu.be',
+                    'www.youtu.be',
+                ],
+                true,
+            )
         ) {
-            $identificador =
-                $componentes['segmentos'][0]
-                ?? null;
-
             return $this->validarIdentificadorVideo(
-                $identificador,
+                $componentes['segmentos'][0]
+                    ?? null,
             );
         }
 
         $identificadorConsulta =
-            $componentes['consulta']['v']
-            ?? null;
-
-        $identificadorValidado =
             $this->validarIdentificadorVideo(
-                $identificadorConsulta,
+                $componentes['consulta']['v']
+                    ?? null,
             );
 
-        if ($identificadorValidado !== null) {
-            return $identificadorValidado;
+        if ($identificadorConsulta !== null) {
+            return $identificadorConsulta;
         }
 
         $primeiroSegmento =
@@ -366,13 +465,12 @@ HTML;
             ?? null;
 
         if (
-            ! in_array(
-                $primeiroSegmento,
-                [
-                    'embed',
-                    'shorts',
-                    'live',
-                ],
+            ! is_string($primeiroSegmento)
+            || ! in_array(
+                mb_strtolower(
+                    $primeiroSegmento,
+                ),
+                self::SEGMENTOS_VIDEO_YOUTUBE,
                 true,
             )
         ) {
@@ -430,18 +528,21 @@ HTML;
      * @param  string  $ligacao  Ligação validada.
      * @return array{
      *     host: string,
-     *     segmentos: array<int, string>,
+     *     segmentos: list<string>,
      *     consulta: array<string, mixed>
      * }|null Componentes reconhecidos ou nulo.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function decomporLigacaoYouTube(
         string $ligacao,
     ): ?array {
-        $componentes = parse_url($ligacao);
+        $componentes =
+            parse_url(
+                $ligacao,
+            );
 
         if (
             ! is_array($componentes)
@@ -450,12 +551,13 @@ HTML;
             return null;
         }
 
-        $host = mb_strtolower(
-            rtrim(
-                (string) $componentes['host'],
-                '.',
-            ),
-        );
+        $host =
+            mb_strtolower(
+                rtrim(
+                    (string) $componentes['host'],
+                    '.',
+                ),
+            );
 
         if (
             ! in_array(
@@ -467,23 +569,29 @@ HTML;
             return null;
         }
 
-        $segmentos = array_values(
-            array_filter(
-                explode(
-                    '/',
-                    trim(
-                        (string) (
-                            $componentes['path']
-                            ?? ''
-                        ),
-                        '/',
-                    ),
+        $caminho =
+            trim(
+                (string) (
+                    $componentes['path']
+                    ?? ''
                 ),
-                static fn (
-                    string $segmento,
-                ): bool => $segmento !== '',
-            ),
-        );
+                '/',
+            );
+
+        $segmentos =
+            $caminho === ''
+            ? []
+            : array_values(
+                array_filter(
+                    explode(
+                        '/',
+                        $caminho,
+                    ),
+                    static fn (
+                        string $segmento,
+                    ): bool => $segmento !== '',
+                ),
+            );
 
         $consulta = [];
 
@@ -497,7 +605,9 @@ HTML;
 
         return [
             'host' => $host,
+
             'segmentos' => $segmentos,
+
             'consulta' => $consulta,
         ];
     }
