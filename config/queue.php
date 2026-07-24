@@ -1,60 +1,211 @@
 <?php
 
+declare(strict_types=1);
+
 /**
- * Retorna as configurações de filas.
+ * Define as configurações das filas da aplicação.
  *
- * @since 1.0
+ * Os nomes das chaves, ligações e drivers permanecem em inglês por
+ * corresponderem aos contratos de configuração utilizados pelo Laravel.
  *
- * @version 1.0
+ * @since 1.0.0
+ *
+ * @version 2.0.0
  */
 return [
-    'default' => env('QUEUE_CONNECTION', 'database'),
+    /*
+    |--------------------------------------------------------------------------
+    | Ligação predefinida
+    |--------------------------------------------------------------------------
+    */
+
+    'default' => env(
+        'QUEUE_CONNECTION',
+        'database',
+    ),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ligações de filas
+    |--------------------------------------------------------------------------
+    */
+
     'connections' => [
+        /*
+         * Executa o trabalho imediatamente no processo atual.
+         */
         'sync' => [
             'driver' => 'sync',
         ],
+
+        /*
+         * Armazena os trabalhos na base de dados.
+         */
         'database' => [
             'driver' => 'database',
-            'connection' => env('DB_QUEUE_CONNECTION'),
-            'table' => env('DB_QUEUE_TABLE', 'jobs'),
-            'queue' => env('DB_QUEUE', 'default'),
-            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 90),
+
+            'connection' => env(
+                'DB_QUEUE_CONNECTION',
+            ),
+
+            'table' => env(
+                'DB_QUEUE_TABLE',
+                'jobs',
+            ),
+
+            'queue' => env(
+                'DB_QUEUE',
+                'default',
+            ),
+
+            'retry_after' => (int) env(
+                'DB_QUEUE_RETRY_AFTER',
+                90,
+            ),
+
             'after_commit' => false,
         ],
+
+        /*
+         * Armazena os trabalhos num servidor Beanstalkd.
+         */
         'beanstalkd' => [
             'driver' => 'beanstalkd',
-            'host' => env('BEANSTALKD_QUEUE_HOST', 'localhost'),
-            'queue' => env('BEANSTALKD_QUEUE', 'default'),
-            'retry_after' => (int) env('BEANSTALKD_QUEUE_RETRY_AFTER', 90),
+
+            'host' => env(
+                'BEANSTALKD_QUEUE_HOST',
+                'localhost',
+            ),
+
+            'queue' => env(
+                'BEANSTALKD_QUEUE',
+                'default',
+            ),
+
+            'retry_after' => (int) env(
+                'BEANSTALKD_QUEUE_RETRY_AFTER',
+                90,
+            ),
+
             'block_for' => 0,
             'after_commit' => false,
         ],
+
+        /*
+         * Armazena os trabalhos no Amazon SQS.
+         */
         'sqs' => [
             'driver' => 'sqs',
-            'key' => env('AWS_ACCESS_KEY_ID'),
-            'secret' => env('AWS_SECRET_ACCESS_KEY'),
-            'prefix' => env('SQS_PREFIX', 'https://sqs.us-east-1.amazonaws.com/your-account-id'),
-            'queue' => env('SQS_QUEUE', 'default'),
-            'suffix' => env('SQS_SUFFIX'),
-            'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+
+            'key' => env(
+                'AWS_ACCESS_KEY_ID',
+            ),
+
+            'secret' => env(
+                'AWS_SECRET_ACCESS_KEY',
+            ),
+
+            'prefix' => env(
+                'SQS_PREFIX',
+                'https://sqs.us-east-1.amazonaws.com/your-account-id',
+            ),
+
+            'queue' => env(
+                'SQS_QUEUE',
+                'default',
+            ),
+
+            'suffix' => env(
+                'SQS_SUFFIX',
+            ),
+
+            'region' => env(
+                'AWS_DEFAULT_REGION',
+                'us-east-1',
+            ),
+
             'after_commit' => false,
         ],
+
+        /*
+         * Armazena os trabalhos no Redis.
+         */
         'redis' => [
             'driver' => 'redis',
-            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
-            'queue' => env('REDIS_QUEUE', 'default'),
-            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 90),
+
+            'connection' => env(
+                'REDIS_QUEUE_CONNECTION',
+                'default',
+            ),
+
+            'queue' => env(
+                'REDIS_QUEUE',
+                'default',
+            ),
+
+            'retry_after' => (int) env(
+                'REDIS_QUEUE_RETRY_AFTER',
+                90,
+            ),
+
             'block_for' => null,
             'after_commit' => false,
         ],
+
+        /*
+         * Executa o trabalho no processo atual depois de a resposta HTTP
+         * ter sido enviada.
+         */
+        'deferred' => [
+            'driver' => 'deferred',
+        ],
+
+        /*
+         * Tenta guardar o trabalho na base de dados e, se essa operação
+         * falhar, executa-o através da ligação diferida.
+         */
+        'failover' => [
+            'driver' => 'failover',
+
+            'connections' => [
+                'database',
+                'deferred',
+            ],
+        ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Processamento em lotes
+    |--------------------------------------------------------------------------
+    */
+
     'batching' => [
-        'database' => env('DB_CONNECTION', 'sqlite'),
+        'database' => env(
+            'DB_CONNECTION',
+            'sqlite',
+        ),
+
         'table' => 'job_batches',
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Trabalhos falhados
+    |--------------------------------------------------------------------------
+    */
+
     'failed' => [
-        'driver' => env('QUEUE_FAILED_DRIVER', 'database-uuids'),
-        'database' => env('DB_CONNECTION', 'sqlite'),
+        'driver' => env(
+            'QUEUE_FAILED_DRIVER',
+            'database-uuids',
+        ),
+
+        'database' => env(
+            'DB_CONNECTION',
+            'sqlite',
+        ),
+
         'table' => 'failed_jobs',
     ],
 ];

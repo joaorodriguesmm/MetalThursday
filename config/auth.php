@@ -1,39 +1,112 @@
 <?php
 
+declare(strict_types=1);
+
+use App\Models\Autenticacao\Utilizador;
+
 /**
- * Retorna as configurações de autenticação.
+ * Define as configurações de autenticação da aplicação.
  *
- * @since 1.0
+ * Os nomes das chaves e os identificadores `web` e `users` permanecem em
+ * inglês por corresponderem às convenções utilizadas pelo Laravel e pelo
+ * respetivo ecossistema de autenticação.
  *
- * @version 1.0
+ * @since 1.0.0
+ *
+ * @version 2.0.0
  */
 return [
+    /*
+    |--------------------------------------------------------------------------
+    | Configurações predefinidas
+    |--------------------------------------------------------------------------
+    */
+
     'defaults' => [
-        'guard' => env('AUTH_GUARD', 'web'),
-        'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
+        'guard' => env(
+            'AUTH_GUARD',
+            'web',
+        ),
+
+        'passwords' => env(
+            'AUTH_PASSWORD_BROKER',
+            'users',
+        ),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Guards de autenticação
+    |--------------------------------------------------------------------------
+    */
+
     'guards' => [
         'web' => [
             'driver' => 'session',
+
             'provider' => 'users',
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Providers de utilizadores
+    |--------------------------------------------------------------------------
+    */
+
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
+
             'model' => env(
                 'AUTH_MODEL',
-                App\Models\Autenticacao\Utilizador::class,
+                Utilizador::class,
             ),
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Redefinição de palavras-passe
+    |--------------------------------------------------------------------------
+    */
+
     'passwords' => [
         'users' => [
             'provider' => 'users',
-            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
-            'expire' => 60,
-            'throttle' => 60,
+
+            'table' => env(
+                'AUTH_PASSWORD_RESET_TOKEN_TABLE',
+                'password_reset_tokens',
+            ),
+
+            /*
+             * Número de minutos durante os quais o token é válido.
+             */
+            'expire' => (int) env(
+                'AUTH_PASSWORD_RESET_TOKEN_EXPIRATION',
+                60,
+            ),
+
+            /*
+             * Número de segundos que devem decorrer antes de poder ser
+             * solicitado um novo token.
+             */
+            'throttle' => (int) env(
+                'AUTH_PASSWORD_RESET_TOKEN_THROTTLE',
+                60,
+            ),
         ],
     ],
-    'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Confirmação da palavra-passe
+    |--------------------------------------------------------------------------
+    */
+
+    'password_timeout' => (int) env(
+        'AUTH_PASSWORD_TIMEOUT',
+        10800,
+    ),
 ];

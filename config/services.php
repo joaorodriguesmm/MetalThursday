@@ -1,31 +1,92 @@
 <?php
 
+declare(strict_types=1);
+
 /**
- * Retorna as configurações de serviços.
+ * Define as configurações dos serviços externos utilizados pela aplicação.
  *
- * @since 1.0
+ * As chaves exigidas pelos serviços e pelos transports do Laravel permanecem
+ * em inglês. As chaves específicas do MetalThursday utilizam português.
  *
- * @version 1.0
+ * @return array<string, mixed>
+ *
+ * @since 1.0.0
+ *
+ * @version 2.0.0
  */
 return [
+    /*
+    |--------------------------------------------------------------------------
+    | Postmark
+    |--------------------------------------------------------------------------
+    */
+
     'postmark' => [
-        'token' => env('POSTMARK_TOKEN'),
+        'key' => env(
+            'POSTMARK_API_KEY',
+        ),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Resend
+    |--------------------------------------------------------------------------
+    */
+
     'resend' => [
-        'key' => env('RESEND_KEY'),
+        'key' => env(
+            'RESEND_API_KEY',
+        ),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Amazon SES
+    |--------------------------------------------------------------------------
+    */
+
     'ses' => [
-        'key' => env('AWS_ACCESS_KEY_ID'),
-        'secret' => env('AWS_SECRET_ACCESS_KEY'),
-        'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+        'key' => env(
+            'AWS_ACCESS_KEY_ID',
+        ),
+
+        'secret' => env(
+            'AWS_SECRET_ACCESS_KEY',
+        ),
+
+        'region' => env(
+            'AWS_DEFAULT_REGION',
+            'us-east-1',
+        ),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Slack
+    |--------------------------------------------------------------------------
+    */
+
     'slack' => [
         'notifications' => [
-            'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
-            'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
+            'bot_user_oauth_token' => env(
+                'SLACK_BOT_USER_OAUTH_TOKEN',
+            ),
+
+            'channel' => env(
+                'SLACK_BOT_USER_DEFAULT_CHANNEL',
+            ),
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | YouTube
+    |--------------------------------------------------------------------------
+    */
+
     'youtube' => [
-        'api_key' => env('YOUTUBE_API_KEY'),
+        'chave_api' => env(
+            'YOUTUBE_API_KEY',
+        ),
     ],
 ];
