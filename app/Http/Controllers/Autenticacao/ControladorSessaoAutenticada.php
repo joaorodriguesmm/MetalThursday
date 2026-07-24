@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Autenticacao;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Autenticacao\AutenticarUtilizadorRequest;
+use App\Models\Autenticacao\Utilizador;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,11 +15,11 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 /**
- * Gere o início e o encerramento das sessões autenticadas.
+ * Gere a criação e o encerramento da sessão autenticada.
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 final class ControladorSessaoAutenticada extends Controller
 {
@@ -38,62 +40,71 @@ final class ControladorSessaoAutenticada extends Controller
     }
 
     /**
-     * Autentica o utilizador e inicia uma nova sessão.
+     * Autentica o utilizador e regenera a sessão.
      *
-     * A sessão é terminada imediatamente quando a conta necessita de
-     * verificação de e-mail e ainda não foi confirmada.
+     * Utilizadores com endereço de e-mail por verificar não podem manter uma
+     * sessão autenticada.
      *
-     * @param  LoginRequest  $pedido  Pedido de autenticação validado.
+     * @param  AutenticarUtilizadorRequest  $pedido  Pedido validado.
      * @return RedirectResponse Redirecionamento após a autenticação.
+     *
+     * @throws AuthenticationException Quando a autenticação não produz um
+     *                                 utilizador válido.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function autenticar(
-        LoginRequest $pedido,
+        AutenticarUtilizadorRequest $pedido,
     ): RedirectResponse {
-        $pedido->authenticate();
-
-        $utilizador = $pedido->user();
-
-        if (
-            $utilizador instanceof MustVerifyEmail
-            && ! $utilizador->hasVerifiedEmail()
-        ) {
-            $this->terminarSessao(
-                $pedido,
-            );
-
-            return back()
-                ->withInput(
-                    $pedido->only('email'),
-                )
-                ->withErrors([
-                    'email' => 'A tua conta ainda não foi ativada. '
-                        .'Confirma o endereço através da ligação enviada '
-                        .'para o teu e-mail.',
-                ]);
-        }
+        $pedido->autenticar();
 
         $pedido
             ->session()
             ->regenerate();
 
+        $utilizador = $pedido->user();
+
+        if (! $utilizador instanceof Utilizador) {
+            $this->terminarSessao(
+                $pedido,
+            );
+
+            throw new AuthenticationException(
+                'Não foi possível concluir a autenticação.',
+            );
+        }
+
+        if (
+            $utilizador instanceof MustVerifyEmail
+            && ! $utilizador->hasVerifiedEmail()
+        ) {
+            $email = $utilizador->email;
+
+            $this->terminarSessao(
+                $pedido,
+            );
+
+            return back()
+                ->withInput([
+                    'email' => $email,
+                ])
+                ->withErrors([
+                    'email' => 'Verifica o teu endereço de e-mail antes de iniciares sessão.',
+                ]);
+        }
+
         return redirect()->intended(
-            route(
-                'home',
-                [],
-                false,
-            ),
+            route('home'),
         );
     }
 
     /**
-     * Termina a sessão do utilizador autenticado.
+     * Encerra a sessão do utilizador autenticado.
      *
      * @param  Request  $pedido  Pedido HTTP.
-     * @return RedirectResponse Redirecionamento para a autenticação.
+     * @return RedirectResponse Redirecionamento para o formulário de entrada.
      *
      * @since 1.0.0
      *
@@ -106,13 +117,13 @@ final class ControladorSessaoAutenticada extends Controller
             $pedido,
         );
 
-        return redirect()->route(
+        return to_route(
             'login',
         );
     }
 
     /**
-     * Encerra a autenticação e invalida os dados da sessão.
+     * Termina a sessão e renova o token CSRF.
      *
      * @param  Request  $pedido  Pedido HTTP.
      *

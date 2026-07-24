@@ -8,7 +8,7 @@ use App\Enumeracoes\DirecaoOrdenacao;
 use App\Enumeracoes\OrdenacaoMetalThursday;
 use App\Filtros\FiltrosMetalThursday;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\MetalThursday\StoreMetalThursdayRequest;
+use App\Http\Requests\MetalThursday\GuardarMetalThursdayRequest;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\Geografia\Pais;
 use App\Models\MetalThursday\Edicao;
@@ -20,6 +20,8 @@ use App\Models\Musica\Genero;
 use App\Notifications\NewMetalThursdayCreated;
 use App\Notifications\UserNominated;
 use App\Servicos\MetalThursday\ServicoPersistenciaMetalThursday;
+use Carbon\CarbonInterface;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Query\JoinClause;
@@ -29,6 +31,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
 /**
@@ -36,11 +39,33 @@ use Throwable;
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 2.2.0
  */
 final class ControladorMetalThursday extends Controller
 {
     use AuthorizesRequests;
+
+    /**
+     * Identificador da vista completa.
+     *
+     * @var string
+     *
+     * @since 2.1.0
+     *
+     * @version 1.0.0
+     */
+    private const VISTA_COMPLETA = 'completa';
+
+    /**
+     * Identificador da vista simplificada.
+     *
+     * @var string
+     *
+     * @since 2.1.0
+     *
+     * @version 1.0.0
+     */
+    private const VISTA_SIMPLIFICADA = 'simplificada';
 
     /**
      * Opções permitidas para o número de registos por página.
@@ -70,6 +95,17 @@ final class ControladorMetalThursday extends Controller
     private const POR_PAGINA_PREDEFINIDO = 10;
 
     /**
+     * Número de utilizadores processados por bloco nas notificações.
+     *
+     * @var int
+     *
+     * @since 2.2.0
+     *
+     * @version 1.0.0
+     */
+    private const UTILIZADORES_POR_BLOCO = 100;
+
+    /**
      * Cria o controlador.
      *
      * @param  ServicoPersistenciaMetalThursday  $servicoPersistencia  Serviço de
@@ -88,11 +124,11 @@ final class ControladorMetalThursday extends Controller
      *
      * @param  Request  $pedido  Pedido HTTP.
      * @param  FiltrosMetalThursday  $filtros  Serviço de filtros.
-     * @return View Página inicial.
+     * @return View Página principal.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function index(
         Request $pedido,
@@ -101,10 +137,6 @@ final class ControladorMetalThursday extends Controller
         $this->authorize(
             'viewAny',
             MetalThursday::class,
-        );
-
-        $this->normalizarParametrosLegados(
-            $pedido,
         );
 
         $porPagina =
@@ -117,87 +149,56 @@ final class ControladorMetalThursday extends Controller
                 $pedido,
             );
 
-        $metalThursdays = null;
+        $registosMetalThursday = null;
         $seccoesSimplificadas = null;
 
-        if ($tipoVista === 'simplified') {
-            $consulta =
-                $this->criarConsultaSimplificada();
-
-            $seccoesSimplificadas =
-                $filtros
-                    ->aplicar($consulta)
-                    ->paginate($porPagina)
-                    ->withQueryString();
+        if ($tipoVista === self::VISTA_SIMPLIFICADA) {
+            $seccoesSimplificadas = $filtros
+                ->aplicar(
+                    $this->criarConsultaSimplificada(),
+                )
+                ->paginate(
+                    $porPagina,
+                )
+                ->withQueryString();
         } else {
-            $consulta =
-                $this->criarConsultaCompleta();
-
-            $metalThursdays =
-                $filtros
-                    ->aplicar($consulta)
-                    ->paginate($porPagina)
-                    ->withQueryString();
+            $registosMetalThursday = $filtros
+                ->aplicar(
+                    $this->criarConsultaCompleta(),
+                )
+                ->paginate(
+                    $porPagina,
+                )
+                ->withQueryString();
         }
 
         return view(
             'metalthursday.index',
             [
-                /*
-                 * As chaves permanecem temporariamente em inglês até à
-                 * revisão das vistas.
-                 */
-                'metalThursdays' => $metalThursdays,
+                'registosMetalThursday' => $registosMetalThursday,
 
-                'simplifiedSections' => $seccoesSimplificadas,
+                'seccoesSimplificadas' => $seccoesSimplificadas,
 
-                'editions' => Edicao::query()
-                    ->select([
-                        'id',
-                        'nome',
-                        'data_inicio',
-                        'data_fim',
-                    ])
-                    ->orderBy('nome')
-                    ->get(),
+                'edicoes' => $this->obterEdicoesParaSelecao(),
 
-                'users' => Utilizador::query()
-                    ->selecionaveis()
-                    ->select([
-                        'id',
-                        'nome',
-                    ])
-                    ->get(),
+                'utilizadores' => $this->obterUtilizadoresParaSelecao(),
 
-                'bands' => Banda::query()
-                    ->select([
-                        'id',
-                        'nome',
-                        'pais_id',
-                    ])
-                    ->orderBy('nome')
-                    ->get(),
+                'bandas' => $this->obterBandasParaSelecao(),
 
-                'genres' => Genero::query()
-                    ->select([
-                        'id',
-                        'nome',
-                    ])
-                    ->orderBy('nome')
-                    ->get(),
+                'generos' => $this->obterGenerosParaSelecao(),
 
-                'perPageOptions' => self::OPCOES_POR_PAGINA,
+                'opcoesPorPagina' => self::OPCOES_POR_PAGINA,
 
-                'perPage' => $porPagina,
+                'porPagina' => $porPagina,
 
-                'viewType' => $tipoVista,
+                'tipoVista' => $tipoVista,
 
-                'availableFilters' => config(
+                'filtrosDisponiveis' => config(
                     'filters.metalthursday',
                     [],
                 ),
 
-                'viewParams' => $this->obterParametrosVista(
+                'parametrosVista' => $this->obterParametrosVista(
                     $pedido,
                 ),
             ],
@@ -211,7 +212,7 @@ final class ControladorMetalThursday extends Controller
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function create(): View
     {
@@ -229,39 +230,56 @@ final class ControladorMetalThursday extends Controller
     /**
      * Guarda uma nova MetalThursday.
      *
-     * @param  StoreMetalThursdayRequest  $pedido  Pedido validado.
-     * @return RedirectResponse Redirecionamento para a listagem.
+     * @param  GuardarMetalThursdayRequest  $pedido  Pedido validado.
+     * @return JsonResponse|RedirectResponse Resposta da operação.
+     *
+     * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.2.0
      */
     public function store(
-        StoreMetalThursdayRequest $pedido,
-    ): RedirectResponse {
+        GuardarMetalThursdayRequest $pedido,
+    ): JsonResponse|RedirectResponse {
         $this->authorize(
             'create',
             MetalThursday::class,
         );
 
-        $metalThursday =
-            $this->servicoPersistencia->criar(
-                $pedido->validated(),
+        $identificadorCriador =
+            $this->obterIdentificadorUtilizador(
+                $pedido,
             );
 
-        $identificadorCriador = $pedido
-            ->user()
-            ?->getAuthIdentifier();
+        $metalThursday =
+            $this->servicoPersistencia
+                ->criar(
+                    $pedido->validated(),
+                );
 
         $this->notificarCriacao(
             $metalThursday,
-            is_numeric($identificadorCriador)
-                ? (int) $identificadorCriador
-                : null,
+            $identificadorCriador,
         );
 
+        if ($pedido->expectsJson()) {
+            return response()->json(
+                [
+                    'mensagem' => 'MetalThursday criada com sucesso.',
+
+                    'metal_thursday' => $this->serializarMetalThursday(
+                        $metalThursday,
+                    ),
+                ],
+                Response::HTTP_CREATED,
+            );
+        }
+
         return redirect()
-            ->route('home')
+            ->route(
+                'home',
+            )
             ->with(
                 'estado',
                 'MetalThursday criada com sucesso.',
@@ -276,7 +294,7 @@ final class ControladorMetalThursday extends Controller
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function show(
         MetalThursday $metalThursday,
@@ -286,55 +304,14 @@ final class ControladorMetalThursday extends Controller
             $metalThursday,
         );
 
-        $metalThursday
-            ->loadCount([
-                'comentarios',
-                'avaliacoes',
-                'audicoes',
-            ])
-            ->loadAvg(
-                'avaliacoes',
-                'pontuacao',
-            )
-            ->load([
-                'edicao',
-                'autor',
-                'proximoNomeado',
-                'criadoPor',
-                'avaliacoes.utilizador',
-                'audicoes.utilizador',
-                'avaliacaoUtilizadorAutenticado',
-                'audicaoUtilizadorAutenticado',
-
-                'seccoes' => static function (
-                    Builder $consulta,
-                ): void {
-                    $consulta
-                        ->withCount([
-                            'comentarios',
-                            'avaliacoes',
-                            'audicoes',
-                        ])
-                        ->withAvg(
-                            'avaliacoes',
-                            'pontuacao',
-                        )
-                        ->with([
-                            'tipoSeccao',
-                            'banda.pais',
-                            'banda.generos',
-                            'avaliacoes.utilizador',
-                            'audicoes.utilizador',
-                            'avaliacaoUtilizadorAutenticado',
-                            'audicaoUtilizadorAutenticado',
-                        ]);
-                },
-            ]);
+        $this->carregarDetalhes(
+            $metalThursday,
+        );
 
         return view(
             'metalthursday.show',
             [
-                'mt' => $metalThursday,
+                'metalThursday' => $metalThursday,
             ],
         );
     }
@@ -347,7 +324,7 @@ final class ControladorMetalThursday extends Controller
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function edit(
         MetalThursday $metalThursday,
@@ -375,30 +352,45 @@ final class ControladorMetalThursday extends Controller
     /**
      * Atualiza uma MetalThursday.
      *
-     * @param  StoreMetalThursdayRequest  $pedido  Pedido validado.
+     * @param  GuardarMetalThursdayRequest  $pedido  Pedido validado.
      * @param  MetalThursday  $metalThursday  MetalThursday atualizada.
-     * @return RedirectResponse Redirecionamento para a listagem.
+     * @return JsonResponse|RedirectResponse Resposta da operação.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.2.0
      */
     public function update(
-        StoreMetalThursdayRequest $pedido,
+        GuardarMetalThursdayRequest $pedido,
         MetalThursday $metalThursday,
-    ): RedirectResponse {
+    ): JsonResponse|RedirectResponse {
         $this->authorize(
             'update',
             $metalThursday,
         );
 
-        $this->servicoPersistencia->atualizar(
-            $metalThursday,
-            $pedido->validated(),
-        );
+        $this->servicoPersistencia
+            ->atualizar(
+                $metalThursday,
+                $pedido->validated(),
+            );
+
+        $metalThursday->refresh();
+
+        if ($pedido->expectsJson()) {
+            return response()->json([
+                'mensagem' => 'MetalThursday atualizada com sucesso.',
+
+                'metal_thursday' => $this->serializarMetalThursday(
+                    $metalThursday,
+                ),
+            ]);
+        }
 
         return redirect()
-            ->route('home')
+            ->route(
+                'home',
+            )
             ->with(
                 'estado',
                 'MetalThursday atualizada com sucesso.',
@@ -408,16 +400,18 @@ final class ControladorMetalThursday extends Controller
     /**
      * Elimina uma MetalThursday.
      *
+     * @param  Request  $pedido  Pedido HTTP.
      * @param  MetalThursday  $metalThursday  MetalThursday eliminada.
-     * @return JsonResponse Resultado da operação.
+     * @return JsonResponse|RedirectResponse Resposta da operação.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function destroy(
+        Request $pedido,
         MetalThursday $metalThursday,
-    ): JsonResponse {
+    ): JsonResponse|RedirectResponse {
         $this->authorize(
             'delete',
             $metalThursday,
@@ -425,23 +419,34 @@ final class ControladorMetalThursday extends Controller
 
         $metalThursday->deleteOrFail();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'MetalThursday eliminada com sucesso.',
-        ]);
+        if ($pedido->expectsJson()) {
+            return response()->json(
+                null,
+                Response::HTTP_NO_CONTENT,
+            );
+        }
+
+        return redirect()
+            ->route(
+                'home',
+            )
+            ->with(
+                'estado',
+                'MetalThursday eliminada com sucesso.',
+            );
     }
 
     /**
      * Obtém o utilizador há mais tempo sem ser nomeado.
      *
-     * Os utilizadores nunca nomeados são apresentados primeiro. Em caso de
-     * empate, é utilizado o nome e depois o identificador.
+     * Utilizadores nunca nomeados aparecem primeiro. Em caso de empate, é
+     * utilizado o nome e depois o identificador.
      *
      * @return JsonResponse Identificador do utilizador encontrado.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function obterUtilizadorHaMaisTempoSemNomeacao(): JsonResponse
     {
@@ -497,7 +502,11 @@ final class ControladorMetalThursday extends Controller
             ->first();
 
         return response()->json([
-            'id' => $utilizador?->getKey(),
+            'identificador' => is_numeric(
+                $utilizador?->getKey(),
+            )
+                ? (int) $utilizador->getKey()
+                : null,
         ]);
     }
 
@@ -508,7 +517,7 @@ final class ControladorMetalThursday extends Controller
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function criarConsultaCompleta(): Builder
     {
@@ -564,7 +573,7 @@ final class ControladorMetalThursday extends Controller
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function criarConsultaSimplificada(): Builder
     {
@@ -599,76 +608,216 @@ final class ControladorMetalThursday extends Controller
     }
 
     /**
-     * Obtém os dados comuns aos formulários.
+     * Carrega as relações necessárias para a página de detalhes.
      *
-     * As chaves permanecem temporariamente em inglês até à revisão das vistas.
+     * @param  MetalThursday  $metalThursday  MetalThursday carregada.
+     *
+     * @since 2.1.0
+     *
+     * @version 1.0.0
+     */
+    private function carregarDetalhes(
+        MetalThursday $metalThursday,
+    ): void {
+        $metalThursday
+            ->loadCount([
+                'comentarios',
+                'avaliacoes',
+                'audicoes',
+            ])
+            ->loadAvg(
+                'avaliacoes',
+                'pontuacao',
+            )
+            ->load([
+                'edicao',
+                'autor',
+                'proximoNomeado',
+                'criadoPor',
+                'avaliacoes.utilizador',
+                'audicoes.utilizador',
+                'avaliacaoUtilizadorAutenticado',
+                'audicaoUtilizadorAutenticado',
+
+                'seccoes' => static function (
+                    Builder $consulta,
+                ): void {
+                    $consulta
+                        ->withCount([
+                            'comentarios',
+                            'avaliacoes',
+                            'audicoes',
+                        ])
+                        ->withAvg(
+                            'avaliacoes',
+                            'pontuacao',
+                        )
+                        ->with([
+                            'tipoSeccao',
+                            'banda.pais',
+                            'banda.generos',
+                            'avaliacoes.utilizador',
+                            'audicoes.utilizador',
+                            'avaliacaoUtilizadorAutenticado',
+                            'audicaoUtilizadorAutenticado',
+                        ]);
+                },
+            ]);
+    }
+
+    /**
+     * Obtém os dados comuns aos formulários.
      *
      * @return array<string, mixed> Dados dos formulários.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function obterDadosFormulario(): array
     {
         return [
-            'editions' => Edicao::query()
-                ->select([
-                    'id',
-                    'nome',
-                    'data_inicio',
-                    'data_fim',
-                ])
-                ->orderByDesc(
-                    'data_inicio',
-                )
-                ->orderByDesc('id')
-                ->get(),
+            'edicoes' => $this->obterEdicoesParaSelecao(),
 
-            'users' => Utilizador::query()
-                ->selecionaveis()
-                ->select([
-                    'id',
-                    'nome',
-                ])
-                ->get(),
+            'utilizadores' => $this->obterUtilizadoresParaSelecao(),
 
-            'sectionTypes' => TipoSeccao::query()
+            'tiposSeccao' => TipoSeccao::query()
                 ->select([
                     'id',
                     'nome',
                     'descricao',
                     'tem_detalhes',
                 ])
-                ->orderBy('nome')
-                ->get(),
-
-            'bands' => Banda::query()
-                ->select([
-                    'id',
+                ->orderBy(
                     'nome',
-                    'pais_id',
-                ])
-                ->orderBy('nome')
+                )
+                ->orderBy(
+                    'id',
+                )
                 ->get(),
 
-            'countries' => Pais::query()
+            'bandas' => $this->obterBandasParaSelecao(),
+
+            'paises' => Pais::query()
                 ->select([
                     'id',
                     'nome',
                     'codigo_iso',
                 ])
-                ->orderBy('nome')
+                ->orderBy(
+                    'nome',
+                )
+                ->orderBy(
+                    'id',
+                )
                 ->get(),
 
-            'genres' => Genero::query()
-                ->select([
-                    'id',
-                    'nome',
-                ])
-                ->orderBy('nome')
-                ->get(),
+            'generos' => $this->obterGenerosParaSelecao(),
         ];
+    }
+
+    /**
+     * Obtém as edições disponíveis para seleção.
+     *
+     * @return Collection<int, Edicao> Edições.
+     *
+     * @since 2.1.0
+     *
+     * @version 1.0.0
+     */
+    private function obterEdicoesParaSelecao(): Collection
+    {
+        return Edicao::query()
+            ->select([
+                'id',
+                'nome',
+                'data_inicio',
+                'data_fim',
+            ])
+            ->orderByDesc(
+                'data_inicio',
+            )
+            ->orderByDesc(
+                'id',
+            )
+            ->get();
+    }
+
+    /**
+     * Obtém os utilizadores disponíveis para seleção.
+     *
+     * @return Collection<int, Utilizador> Utilizadores.
+     *
+     * @since 2.1.0
+     *
+     * @version 1.0.0
+     */
+    private function obterUtilizadoresParaSelecao(): Collection
+    {
+        return Utilizador::query()
+            ->selecionaveis()
+            ->select([
+                'id',
+                'nome',
+            ])
+            ->reorder(
+                'nome',
+            )
+            ->orderBy(
+                'id',
+            )
+            ->get();
+    }
+
+    /**
+     * Obtém as bandas disponíveis para seleção.
+     *
+     * @return Collection<int, Banda> Bandas.
+     *
+     * @since 2.1.0
+     *
+     * @version 1.0.0
+     */
+    private function obterBandasParaSelecao(): Collection
+    {
+        return Banda::query()
+            ->select([
+                'id',
+                'nome',
+                'pais_id',
+            ])
+            ->orderBy(
+                'nome',
+            )
+            ->orderBy(
+                'id',
+            )
+            ->get();
+    }
+
+    /**
+     * Obtém os géneros disponíveis para seleção.
+     *
+     * @return Collection<int, Genero> Géneros.
+     *
+     * @since 2.1.0
+     *
+     * @version 1.0.0
+     */
+    private function obterGenerosParaSelecao(): Collection
+    {
+        return Genero::query()
+            ->select([
+                'id',
+                'nome',
+            ])
+            ->orderBy(
+                'nome',
+            )
+            ->orderBy(
+                'id',
+            )
+            ->get();
     }
 
     /**
@@ -679,21 +828,16 @@ final class ControladorMetalThursday extends Controller
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function obterNumeroPorPagina(
         Request $pedido,
     ): int {
-        $valor = $pedido->query(
-            'por_pagina',
+        $numero = filter_var(
             $pedido->query(
-                'per_page',
+                'por_pagina',
                 self::POR_PAGINA_PREDEFINIDO,
             ),
-        );
-
-        $numero = filter_var(
-            $valor,
             FILTER_VALIDATE_INT,
         );
 
@@ -712,47 +856,45 @@ final class ControladorMetalThursday extends Controller
     }
 
     /**
-     * Obtém o tipo de vista pedido.
+     * Obtém o tipo da vista pedida.
      *
      * @param  Request  $pedido  Pedido HTTP.
-     * @return string Tipo utilizado pelas vistas atuais.
+     * @return string Tipo da vista.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function obterTipoVista(
         Request $pedido,
     ): string {
         $valor = $pedido->query(
             'vista',
-            $pedido->query(
-                'view',
-                'full',
-            ),
+            self::VISTA_COMPLETA,
         );
 
         if (! is_string($valor)) {
-            return 'full';
+            return self::VISTA_COMPLETA;
         }
 
-        return match (mb_strtolower(trim($valor))) {
-            'simplified',
-            'simplificada' => 'simplified',
+        return match (mb_strtolower(
+            trim($valor),
+        )) {
+            self::VISTA_SIMPLIFICADA => self::VISTA_SIMPLIFICADA,
 
-            default => 'full',
+            default => self::VISTA_COMPLETA,
         };
     }
 
     /**
-     * Obtém os parâmetros utilizados pela vista atual.
+     * Obtém os parâmetros utilizados pela vista.
      *
      * @param  Request  $pedido  Pedido HTTP.
      * @return array<string, mixed> Parâmetros da vista.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function obterParametrosVista(
         Request $pedido,
@@ -774,139 +916,161 @@ final class ControladorMetalThursday extends Controller
             ?? DirecaoOrdenacao::Descendente;
 
         return [
-            'view' => [
-                'name' => 'view',
-                'simplified' => 'simplified',
-                'full' => 'full',
+            'vista' => [
+                'nome' => 'vista',
+
+                'simplificada' => self::VISTA_SIMPLIFICADA,
+
+                'completa' => self::VISTA_COMPLETA,
             ],
 
-            'per_page' => [
-                'name' => 'per_page',
+            'por_pagina' => [
+                'nome' => 'por_pagina',
             ],
 
-            'sort_by' => [
-                'name' => 'ordenar_por',
+            'ordenacao' => [
+                'nome' => 'ordenar_por',
 
-                'options' => collect([
+                'opcoes' => [
                     [
-                        'key' => 'data',
-                        'value' => 'Data',
-                    ],
-                    [
-                        'key' => 'classificacao',
-                        'value' => 'Classificação média',
-                    ],
-                    [
-                        'key' => 'minha_classificacao',
-                        'value' => 'Minha classificação',
-                    ],
-                ]),
+                        'chave' => 'data',
 
-                'current' => $ordenacao->value,
+                        'valor' => 'Data',
+                    ],
+                    [
+                        'chave' => 'classificacao',
+
+                        'valor' => 'Classificação média',
+                    ],
+                    [
+                        'chave' => 'minha_classificacao',
+
+                        'valor' => 'A minha classificação',
+                    ],
+                ],
+
+                'atual' => $ordenacao->value,
             ],
 
-            'sort_direction' => [
-                'name' => 'direcao_ordenacao',
+            'direcao_ordenacao' => [
+                'nome' => 'direcao_ordenacao',
 
-                'options' => collect([
+                'opcoes' => [
                     [
-                        'key' => 'ascendente',
-                        'value' => 'Ascendente',
+                        'chave' => 'ascendente',
+
+                        'valor' => 'Ascendente',
                     ],
                     [
-                        'key' => 'descendente',
-                        'value' => 'Descendente',
-                    ],
-                ]),
+                        'chave' => 'descendente',
 
-                'current' => $direcao->value,
+                        'valor' => 'Descendente',
+                    ],
+                ],
+
+                'atual' => $direcao->value,
             ],
         ];
     }
 
     /**
-     * Converte parâmetros antigos para os parâmetros atuais.
+     * Obtém o identificador do utilizador autenticado.
      *
      * @param  Request  $pedido  Pedido HTTP.
+     * @return int Identificador do utilizador.
      *
-     * @since 2.0.0
+     * @throws AuthenticationException Quando não existe autenticação válida.
+     *
+     * @since 2.1.0
+     *
+     * @version 1.1.0
+     */
+    private function obterIdentificadorUtilizador(
+        Request $pedido,
+    ): int {
+        $utilizador =
+            $pedido->user();
+
+        if (! $utilizador instanceof Utilizador) {
+            throw new AuthenticationException(
+                'É necessário iniciar sessão para criar uma MetalThursday.',
+            );
+        }
+
+        $identificador =
+            $utilizador->getKey();
+
+        if (
+            ! is_numeric($identificador)
+            || (int) $identificador < 1
+        ) {
+            throw new AuthenticationException(
+                'Não foi possível identificar o utilizador autenticado.',
+            );
+        }
+
+        return (int) $identificador;
+    }
+
+    /**
+     * Converte uma MetalThursday para o formato de resposta HTTP.
+     *
+     * @param  MetalThursday  $metalThursday  MetalThursday convertida.
+     * @return array{
+     *     id: int,
+     *     nome: string|null,
+     *     data: string|null
+     * } Dados da MetalThursday.
+     *
+     * @since 2.2.0
      *
      * @version 1.0.0
      */
-    private function normalizarParametrosLegados(
-        Request $pedido,
-    ): void {
-        $mapa = [
-            'filter_author' => 'filtro_autor',
+    private function serializarMetalThursday(
+        MetalThursday $metalThursday,
+    ): array {
+        $data =
+            $metalThursday->data;
 
-            'filter_band' => 'filtro_banda',
+        return [
+            'id' => (int) $metalThursday->getKey(),
 
-            'filter_authored_by_me' => 'filtro_autoria_utilizador',
+            'nome' => is_string($metalThursday->nome)
+                ? $metalThursday->nome
+                : null,
 
-            'filter_date_to' => 'filtro_data_ate',
-
-            'filter_date_from' => 'filtro_data_desde',
-
-            'filter_date' => 'filtro_data',
-
-            'filter_edition' => 'filtro_edicao',
-
-            'filter_nominated' => 'filtro_nomeacao',
-
-            'filter_genre' => 'filtro_genero',
-
-            'filter_rated' => 'filtro_avaliacao',
-
-            'filter_listened' => 'filtro_audicao',
-
-            'sort_by' => 'ordenar_por',
-
-            'sort_direction' => 'direcao_ordenacao',
+            'data' => $data instanceof CarbonInterface
+                ? $data->format('Y-m-d')
+                : null,
         ];
-
-        foreach ($mapa as $antigo => $atual) {
-            if (
-                ! $pedido->query->has($atual)
-                && $pedido->query->has($antigo)
-            ) {
-                $pedido->query->set(
-                    $atual,
-                    $pedido->query($antigo),
-                );
-            }
-
-            $pedido->query->remove(
-                $antigo,
-            );
-        }
     }
 
     /**
      * Envia as notificações relativas à criação.
      *
-     * Falhas nas notificações são reportadas sem transformar uma criação já
-     * persistida numa resposta de erro.
+     * Uma falha no envio não transforma uma criação já persistida numa
+     * resposta de erro.
      *
      * @param  MetalThursday  $metalThursday  MetalThursday criada.
-     * @param  int|null  $identificadorCriador  Criador autenticado.
+     * @param  int  $identificadorCriador  Criador autenticado.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function notificarCriacao(
         MetalThursday $metalThursday,
-        ?int $identificadorCriador,
+        int $identificadorCriador,
     ): void {
         $metalThursday->loadMissing([
             'autor',
             'proximoNomeado',
         ]);
 
-        $nomeado = $metalThursday
-            ->proximoNomeado;
+        $nomeado =
+            $metalThursday->proximoNomeado;
 
-        if ($nomeado !== null) {
+        if ($nomeado instanceof Utilizador) {
             try {
                 $nomeado->notify(
                     new UserNominated(
@@ -914,23 +1078,22 @@ final class ControladorMetalThursday extends Controller
                     ),
                 );
             } catch (Throwable $excecao) {
-                report($excecao);
+                report(
+                    $excecao,
+                );
             }
         }
 
         try {
             $consulta = Utilizador::query()
-                ->selecionaveis();
-
-            if ($identificadorCriador !== null) {
-                $consulta->where(
+                ->selecionaveis()
+                ->where(
                     'utilizadores.id',
                     '!=',
                     $identificadorCriador,
                 );
-            }
 
-            if ($nomeado !== null) {
+            if ($nomeado instanceof Utilizador) {
                 $consulta->where(
                     'utilizadores.id',
                     '!=',
@@ -939,9 +1102,11 @@ final class ControladorMetalThursday extends Controller
             }
 
             $consulta
-                ->reorder('utilizadores.id')
+                ->reorder(
+                    'utilizadores.id',
+                )
                 ->chunkById(
-                    100,
+                    self::UTILIZADORES_POR_BLOCO,
                     static function (
                         Collection $destinatarios,
                     ) use (
@@ -958,7 +1123,9 @@ final class ControladorMetalThursday extends Controller
                     'id',
                 );
         } catch (Throwable $excecao) {
-            report($excecao);
+            report(
+                $excecao,
+            );
         }
     }
 }

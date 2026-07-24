@@ -4,43 +4,100 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Utilizadores;
 
+use App\Models\Autenticacao\Utilizador;
+use App\Models\Comunicacao\PermissaoEmail;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use LogicException;
 
 /**
- * Valida a atualização das permissões de e-mail do utilizador.
+ * Valida a atualização das permissões de e-mail do utilizador autenticado.
+ *
+ * Uma lista vazia representa a remoção de todas as permissões de e-mail.
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 final class AtualizarPermissoesEmailRequest extends FormRequest
 {
     /**
      * Saco de erros utilizado pelo formulário das permissões de e-mail.
      *
+     * Esta propriedade não deve ser tipada, porque é herdada do FormRequest.
+     *
      * @var string
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     protected $errorBag = 'permissoesEmail';
 
     /**
-     * Determina se o utilizador pode executar o pedido.
+     * Determina se o pedido pode ser processado.
      *
-     * A autenticação é assegurada pelo middleware da rota.
+     * Apenas o modelo principal de utilizador autenticado pode atualizar as
+     * respetivas permissões de e-mail.
      *
-     * @return bool - Verdadeiro quando o pedido está autorizado.
+     * @return bool Verdadeiro quando existe um utilizador autenticado.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function authorize(): bool
     {
-        return true;
+        return $this->user() instanceof Utilizador;
+    }
+
+    /**
+     * Prepara os dados antes da validação.
+     *
+     * Os navegadores não enviam campos de seleção múltipla quando nenhum
+     * valor está selecionado. Nesse caso, é criada uma lista vazia.
+     *
+     * Os identificadores numéricos recebidos como strings são convertidos
+     * para inteiros.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.1.0
+     */
+    protected function prepareForValidation(): void
+    {
+        $permissoes = $this->input(
+            'permissoes_email',
+            [],
+        );
+
+        if (! is_array($permissoes)) {
+            $this->merge([
+                'permissoes_email' => $permissoes,
+            ]);
+
+            return;
+        }
+
+        $this->merge([
+            'permissoes_email' => array_values(
+                array_map(
+                    static function (
+                        mixed $identificador,
+                    ): mixed {
+                        if (
+                            is_string($identificador)
+                            && ctype_digit($identificador)
+                        ) {
+                            return (int) $identificador;
+                        }
+
+                        return $identificador;
+                    },
+                    $permissoes,
+                ),
+            ),
+        ]);
     }
 
     /**
@@ -48,11 +105,11 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
      *
      * Uma lista vazia é válida e representa a remoção de todas as permissões.
      *
-     * @return array<string, array<int, mixed>> - Regras de validação.
+     * @return array<string, array<int, mixed>> Regras de validação.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function rules(): array
     {
@@ -60,14 +117,16 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
             'permissoes_email' => [
                 'present',
                 'array',
+                'list',
             ],
 
             'permissoes_email.*' => [
                 'bail',
                 'integer',
-                'distinct',
+                'distinct:strict',
+
                 Rule::exists(
-                    'email_permissions',
+                    PermissaoEmail::class,
                     'id',
                 ),
             ],
@@ -75,13 +134,13 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
     }
 
     /**
-     * Obtém as mensagens de validação personalizadas.
+     * Obtém as mensagens de validação.
      *
-     * @return array<string, string> - Mensagens de validação.
+     * @return array<string, string> Mensagens de validação.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function messages(): array
     {
@@ -89,6 +148,8 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
             'permissoes_email.present' => 'A lista de permissões de e-mail deve ser enviada.',
 
             'permissoes_email.array' => 'As permissões de e-mail devem ser apresentadas numa lista.',
+
+            'permissoes_email.list' => 'A lista de permissões de e-mail não tem um formato válido.',
 
             'permissoes_email.*.integer' => 'Cada permissão de e-mail deve possuir um identificador válido.',
 
@@ -99,9 +160,9 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
     }
 
     /**
-     * Obtém os nomes legíveis dos atributos.
+     * Obtém os nomes apresentados para os atributos.
      *
-     * @return array<string, string> - Nomes dos atributos.
+     * @return array<string, string> Nomes legíveis dos atributos.
      *
      * @since 1.0.0
      *
@@ -117,20 +178,28 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
     }
 
     /**
-     * Obtém os identificadores validados das permissões.
+     * Obtém os identificadores validados das permissões de e-mail.
      *
-     * @return array<int, int> - Identificadores normalizados.
+     * @return array<int, int> Identificadores das permissões.
+     *
+     * @throws LogicException Quando o pedido validado não contém uma lista
+     *                        válida.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function identificadoresPermissoes(): array
     {
-        $dadosValidados = $this->validated();
+        $identificadores = $this->validated(
+            'permissoes_email',
+        );
 
-        $identificadores =
-            $dadosValidados['permissoes_email'] ?? [];
+        if (! is_array($identificadores)) {
+            throw new LogicException(
+                'O pedido validado não contém uma lista de permissões de e-mail.',
+            );
+        }
 
         return array_values(
             array_map(
@@ -140,27 +209,5 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
                 $identificadores,
             ),
         );
-    }
-
-    /**
-     * Prepara os dados antes da validação.
-     *
-     * Os navegadores não enviam campos checkbox quando nenhum está
-     * selecionado. Nesse caso, é criada explicitamente uma lista vazia.
-     *
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    protected function prepareForValidation(): void
-    {
-        if ($this->exists('permissoes_email')) {
-            return;
-        }
-
-        $this->merge([
-            'permissoes_email' => [],
-        ]);
     }
 }

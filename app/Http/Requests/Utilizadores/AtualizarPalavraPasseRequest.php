@@ -7,34 +7,34 @@ namespace App\Http\Requests\Utilizadores;
 use App\Models\Autenticacao\Utilizador;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Password;
+use LogicException;
 
 /**
- * Valida os pedidos de alteração da palavra-passe.
+ * Valida os dados necessários para alterar a palavra-passe.
  *
- * As palavras-passe não são normalizadas, uma vez que espaços e restantes
- * caracteres podem fazer parte do segredo definido pelo utilizador.
+ * As palavras-passe não são normalizadas, porque espaços e outros caracteres
+ * podem fazer parte do segredo definido pelo utilizador.
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 final class AtualizarPalavraPasseRequest extends FormRequest
 {
     /**
      * Saco utilizado para os erros da alteração da palavra-passe.
      *
-     * @var string
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
-    protected $errorBag = 'palavraPasse';
+    protected string $errorBag = 'palavraPasse';
 
     /**
-     * Determina se o pedido pode ser executado.
+     * Determina se o pedido pode ser processado.
      *
-     * @return bool - Verdadeiro quando existe um utilizador autenticado.
+     * @return bool Verdadeiro quando existe um utilizador autenticado.
      *
      * @since 1.0.0
      *
@@ -46,17 +46,17 @@ final class AtualizarPalavraPasseRequest extends FormRequest
     }
 
     /**
-     * Obtém as regras de validação aplicáveis ao pedido.
+     * Obtém as regras de validação.
      *
-     * A palavra-passe atual é confirmada através do guard de sessão `web`.
-     * A nova palavra-passe utiliza a política global da aplicação e não pode
-     * coincidir com o valor introduzido como palavra-passe atual.
+     * A palavra-passe atual é confirmada através do guard `web`. A nova
+     * palavra-passe utiliza a política global da aplicação, deve ser diferente
+     * da atual e coincidir com o campo de confirmação.
      *
-     * @return array<string, array<int, mixed>> - Regras de validação.
+     * @return array<string, array<int, mixed>> Regras de validação.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function rules(): array
     {
@@ -78,21 +78,21 @@ final class AtualizarPalavraPasseRequest extends FormRequest
             ],
 
             'confirmacao_nova_palavra_passe' => [
+                'bail',
                 'required',
                 'string',
-                'same:nova_palavra_passe',
             ],
         ];
     }
 
     /**
-     * Obtém as mensagens de erro específicas do pedido.
+     * Obtém as mensagens de validação.
      *
-     * @return array<string, string> - Mensagens de validação.
+     * @return array<string, string> Mensagens de validação.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function messages(): array
     {
@@ -109,20 +109,18 @@ final class AtualizarPalavraPasseRequest extends FormRequest
 
             'nova_palavra_passe.different' => 'A nova palavra-passe deve ser diferente da palavra-passe atual.',
 
-            'nova_palavra_passe.confirmed' => 'A confirmação da nova palavra-passe não coincide.',
+            'nova_palavra_passe.confirmed' => 'A nova palavra-passe e a confirmação não coincidem.',
 
             'confirmacao_nova_palavra_passe.required' => 'Por favor, confirma a nova palavra-passe.',
 
             'confirmacao_nova_palavra_passe.string' => 'A confirmação da nova palavra-passe não é válida.',
-
-            'confirmacao_nova_palavra_passe.same' => 'A confirmação da nova palavra-passe não corresponde à nova palavra-passe.',
         ];
     }
 
     /**
-     * Obtém os nomes legíveis dos atributos validados.
+     * Obtém os nomes apresentados para os atributos.
      *
-     * @return array<string, string> - Nomes dos atributos.
+     * @return array<string, string> Nomes legíveis dos atributos.
      *
      * @since 2.0.0
      *
@@ -137,5 +135,32 @@ final class AtualizarPalavraPasseRequest extends FormRequest
 
             'confirmacao_nova_palavra_passe' => 'confirmação da nova palavra-passe',
         ];
+    }
+
+    /**
+     * Obtém a nova palavra-passe validada.
+     *
+     * @return string Nova palavra-passe.
+     *
+     * @throws LogicException Quando o pedido validado não contém a nova
+     *                        palavra-passe.
+     *
+     * @since 2.1.0
+     *
+     * @version 1.0.0
+     */
+    public function obterNovaPalavraPasse(): string
+    {
+        $palavraPasse = $this->validated(
+            'nova_palavra_passe',
+        );
+
+        if (! is_string($palavraPasse)) {
+            throw new LogicException(
+                'O pedido validado não contém a nova palavra-passe.',
+            );
+        }
+
+        return $palavraPasse;
     }
 }

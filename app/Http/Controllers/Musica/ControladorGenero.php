@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Musica;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Entities\StoreGenreRequest;
-use App\Http\Requests\Entities\UpdateGenreRequest;
+use App\Http\Requests\Musica\AtualizarGeneroRequest;
+use App\Http\Requests\Musica\CriarGeneroRequest;
 use App\Models\Musica\Genero;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -15,19 +15,15 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Gere a consulta, criação, atualização e eliminação de géneros musicais.
  *
- * Os métodos públicos mantêm os nomes definidos pelo contrato dos
- * controladores de recursos do Laravel.
- *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 final class ControladorGenero extends Controller
 {
@@ -56,14 +52,14 @@ final class ControladorGenero extends Controller
     private const LIMITE_PESQUISA = 100;
 
     /**
-     * Apresenta uma lista paginada de géneros.
+     * Apresenta a lista paginada de géneros.
      *
      * @param  Request  $pedido  Pedido HTTP.
      * @return View Listagem de géneros.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function index(
         Request $pedido,
@@ -74,7 +70,7 @@ final class ControladorGenero extends Controller
         );
 
         $pesquisa = $this->normalizarPesquisa(
-            $pedido->query('search'),
+            $pedido->query('pesquisa'),
         );
 
         $generos = Genero::query()
@@ -113,19 +109,19 @@ final class ControladorGenero extends Controller
         return view(
             'entities.genres.index',
             [
-                'genres' => $generos,
+                'generos' => $generos,
             ],
         );
     }
 
     /**
-     * Apresenta o formulário de criação de um género.
+     * Apresenta o formulário de criação.
      *
      * @return View Formulário de criação.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function create(): View
     {
@@ -137,28 +133,23 @@ final class ControladorGenero extends Controller
         return view(
             'entities.genres.create',
             [
-                'genres' => $this->obterGenerosOrdenados(),
+                'generos' => $this->obterGenerosOrdenados(),
             ],
         );
     }
 
     /**
-     * Guarda um novo género e os respetivos géneros pais.
+     * Guarda um novo género e sincroniza os respetivos géneros pais.
      *
-     * Os nomes dos campos validados permanecem temporariamente iguais aos
-     * utilizados pelos formulários atuais.
-     *
-     * @param  StoreGenreRequest  $pedido  Pedido validado.
+     * @param  CriarGeneroRequest  $pedido  Pedido validado.
      * @return JsonResponse|RedirectResponse Resposta da operação.
-     *
-     * @throws ValidationException Quando um género pai não é válido.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function store(
-        StoreGenreRequest $pedido,
+        CriarGeneroRequest $pedido,
     ): JsonResponse|RedirectResponse {
         $this->authorize(
             'create',
@@ -167,26 +158,16 @@ final class ControladorGenero extends Controller
 
         $dados = $pedido->validated();
 
-        $identificadoresPais =
-            $this->normalizarIdentificadoresPais(
-                $dados['parent_genres'] ?? [],
-            );
-
-        $this->garantirGenerosPaisExistentes(
-            $identificadoresPais,
-        );
-
         $genero = DB::transaction(
             static function () use (
                 $dados,
-                $identificadoresPais,
             ): Genero {
                 $genero = Genero::query()->create([
-                    'nome' => $dados['name'],
+                    'nome' => $dados['nome'],
                 ]);
 
                 $genero->pais()->sync(
-                    $identificadoresPais,
+                    $dados['generos_pai'],
                 );
 
                 return $genero;
@@ -217,14 +198,14 @@ final class ControladorGenero extends Controller
     }
 
     /**
-     * Apresenta um género e as bandas associadas.
+     * Apresenta os detalhes de um género.
      *
      * @param  Genero  $genero  Género apresentado.
      * @return View Página do género.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function show(
         Genero $genero,
@@ -275,24 +256,25 @@ final class ControladorGenero extends Controller
         return view(
             'entities.genres.show',
             [
-                'genre' => $genero,
-                'bands' => $bandas,
+                'genero' => $genero,
+
+                'bandas' => $bandas,
             ],
         );
     }
 
     /**
-     * Apresenta o formulário de edição de um género.
+     * Apresenta o formulário de edição.
      *
-     * O próprio género e os seus descendentes são excluídos da lista de
-     * possíveis pais, impedindo a criação de ciclos hierárquicos.
+     * O próprio género e os seus descendentes são excluídos dos possíveis
+     * géneros pais.
      *
      * @param  Genero  $genero  Género editado.
      * @return View Formulário de edição.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function edit(
         Genero $genero,
@@ -326,27 +308,26 @@ final class ControladorGenero extends Controller
         return view(
             'entities.genres.edit',
             [
-                'genre' => $genero,
-                'genres' => $generosDisponiveis,
+                'genero' => $genero,
+
+                'generos' => $generosDisponiveis,
             ],
         );
     }
 
     /**
-     * Atualiza um género e os respetivos géneros pais.
+     * Atualiza um género e sincroniza os respetivos géneros pais.
      *
-     * @param  UpdateGenreRequest  $pedido  Pedido validado.
+     * @param  AtualizarGeneroRequest  $pedido  Pedido validado.
      * @param  Genero  $genero  Género atualizado.
      * @return JsonResponse|RedirectResponse Resposta da operação.
      *
-     * @throws ValidationException Quando a hierarquia não é válida.
-     *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function update(
-        UpdateGenreRequest $pedido,
+        AtualizarGeneroRequest $pedido,
         Genero $genero,
     ): JsonResponse|RedirectResponse {
         $this->authorize(
@@ -356,32 +337,17 @@ final class ControladorGenero extends Controller
 
         $dados = $pedido->validated();
 
-        $identificadoresPais =
-            $this->normalizarIdentificadoresPais(
-                $dados['parent_genres'] ?? [],
-            );
-
-        $this->garantirGenerosPaisExistentes(
-            $identificadoresPais,
-        );
-
-        $this->garantirHierarquiaSemCiclos(
-            $genero,
-            $identificadoresPais,
-        );
-
         DB::transaction(
             static function () use (
                 $dados,
                 $genero,
-                $identificadoresPais,
             ): void {
                 $genero->updateOrFail([
-                    'nome' => $dados['name'],
+                    'nome' => $dados['nome'],
                 ]);
 
                 $genero->pais()->sync(
-                    $identificadoresPais,
+                    $dados['generos_pai'],
                 );
             },
         );
@@ -418,7 +384,7 @@ final class ControladorGenero extends Controller
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function destroy(
         Request $pedido,
@@ -465,137 +431,6 @@ final class ControladorGenero extends Controller
             ->orderBy('nome')
             ->orderBy('id')
             ->get();
-    }
-
-    /**
-     * Normaliza os identificadores dos géneros pais.
-     *
-     * @param  mixed  $valor  Valor recebido do pedido.
-     * @return array<int, int> Identificadores únicos.
-     *
-     * @throws ValidationException Quando o valor não é uma lista de
-     *                             identificadores positivos.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private function normalizarIdentificadoresPais(
-        mixed $valor,
-    ): array {
-        if ($valor === null) {
-            return [];
-        }
-
-        if (! is_array($valor)) {
-            throw ValidationException::withMessages([
-                'parent_genres' => 'Os géneros pais devem ser enviados numa lista.',
-            ]);
-        }
-
-        $identificadores = [];
-
-        foreach ($valor as $identificadorRecebido) {
-            $identificador = filter_var(
-                $identificadorRecebido,
-                FILTER_VALIDATE_INT,
-                [
-                    'options' => [
-                        'min_range' => 1,
-                    ],
-                ],
-            );
-
-            if ($identificador === false) {
-                throw ValidationException::withMessages([
-                    'parent_genres' => 'Foi selecionado um género pai inválido.',
-                ]);
-            }
-
-            $identificadorNormalizado =
-                (int) $identificador;
-
-            $identificadores[$identificadorNormalizado] = $identificadorNormalizado;
-        }
-
-        return array_values(
-            $identificadores,
-        );
-    }
-
-    /**
-     * Confirma que todos os géneros pais existem.
-     *
-     * @param  array<int, int>  $identificadores  Identificadores recebidos.
-     *
-     * @throws ValidationException Quando algum género não existe.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private function garantirGenerosPaisExistentes(
-        array $identificadores,
-    ): void {
-        if ($identificadores === []) {
-            return;
-        }
-
-        $numeroGenerosExistentes = Genero::query()
-            ->whereKey(
-                $identificadores,
-            )
-            ->count();
-
-        if (
-            $numeroGenerosExistentes
-            === count($identificadores)
-        ) {
-            return;
-        }
-
-        throw ValidationException::withMessages([
-            'parent_genres' => 'Foi selecionado um género pai inexistente.',
-        ]);
-    }
-
-    /**
-     * Impede que um género seja colocado abaixo de si próprio ou de um dos
-     * seus descendentes.
-     *
-     * @param  Genero  $genero  Género atualizado.
-     * @param  array<int, int>  $identificadoresPais  Pais selecionados.
-     *
-     * @throws ValidationException Quando a alteração criaria um ciclo.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private function garantirHierarquiaSemCiclos(
-        Genero $genero,
-        array $identificadoresPais,
-    ): void {
-        if ($identificadoresPais === []) {
-            return;
-        }
-
-        $identificadoresProibidos =
-            $genero
-                ->obterIdentificadoresComDescendentes();
-
-        $intersecao = array_intersect(
-            $identificadoresPais,
-            $identificadoresProibidos,
-        );
-
-        if ($intersecao === []) {
-            return;
-        }
-
-        throw ValidationException::withMessages([
-            'parent_genres' => 'Um género não pode ter como pai o próprio género nem um dos seus descendentes.',
-        ]);
     }
 
     /**

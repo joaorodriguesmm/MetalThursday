@@ -5,28 +5,25 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Autenticacao;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Auth\ForgotPasswordRequest;
+use App\Http\Requests\Autenticacao\SolicitarRedefinicaoPalavraPasseRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Password;
 use Illuminate\View\View;
 
 /**
- * Gere os pedidos de ligação para redefinição da palavra-passe.
- *
- * A resposta não revela se existe uma conta associada ao endereço de e-mail
- * recebido.
+ * Gere o pedido de envio da ligação de redefinição da palavra-passe.
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 final class ControladorLigacaoRedefinicaoPalavraPasse extends Controller
 {
     /**
-     * Mensagem apresentada depois de um pedido válido.
+     * Mensagem genérica apresentada depois do pedido.
      *
-     * A mesma mensagem é utilizada quando o endereço não pertence a qualquer
-     * utilizador, impedindo a enumeração de contas.
+     * A mesma mensagem é utilizada para endereços existentes e inexistentes,
+     * impedindo a enumeração de contas.
      *
      * @var string
      *
@@ -54,31 +51,37 @@ final class ControladorLigacaoRedefinicaoPalavraPasse extends Controller
     }
 
     /**
-     * Envia uma ligação de redefinição da palavra-passe.
+     * Solicita o envio da ligação de redefinição da palavra-passe.
      *
-     * @param  ForgotPasswordRequest  $pedido  Pedido validado.
+     * Apenas um bloqueio temporário por excesso de pedidos é apresentado como
+     * erro. Os restantes estados recebem a mesma resposta genérica.
+     *
+     * @param  SolicitarRedefinicaoPalavraPasseRequest  $pedido  Pedido validado.
      * @return RedirectResponse Redirecionamento para o formulário.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function enviar(
-        ForgotPasswordRequest $pedido,
+        SolicitarRedefinicaoPalavraPasseRequest $pedido,
     ): RedirectResponse {
         $dados = $pedido->validated();
 
+        /** @var string $email */
+        $email = $dados['email'];
+
         $estado = Password::sendResetLink([
-            'email' => $dados['email'],
+            'email' => $email,
         ]);
 
         if ($estado === Password::RESET_THROTTLED) {
             return back()
-                ->withInput(
-                    $pedido->only('email'),
-                )
+                ->withInput([
+                    'email' => $email,
+                ])
                 ->withErrors([
-                    'email' => 'Aguarda antes de efetuares outro pedido de redefinição.',
+                    'email' => __($estado),
                 ]);
         }
 

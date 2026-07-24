@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Interacoes;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Interactions\StoreCommentRequest;
-use App\Http\Requests\Interactions\UpdateCommentRequest;
+use App\Http\Requests\Interacoes\AtualizarComentarioRequest;
+use App\Http\Requests\Interacoes\GuardarComentarioRequest;
+use App\Models\Autenticacao\Utilizador;
 use App\Models\Interacoes\Comentario;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
@@ -16,15 +17,18 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use LogicException;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Gere a criação, resposta, atualização e eliminação de comentários.
+ * Gere a publicação, resposta, atualização e eliminação de comentários.
+ *
+ * Os comentários podem estar associados a uma MetalThursday ou a uma das
+ * respetivas secções através de uma relação polimórfica.
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 final class ControladorComentario extends Controller
 {
@@ -45,53 +49,54 @@ final class ControladorComentario extends Controller
     ) {}
 
     /**
-     * Guarda um comentário numa MetalThursday ou numa secção.
+     * Publica um comentário numa MetalThursday ou numa secção.
      *
-     * Os tipos antigos `metal_thursday` e `section` continuam a ser
-     * reconhecidos até à revisão das rotas e do JavaScript.
+     * @param  GuardarComentarioRequest  $pedido  Pedido validado.
+     * @param  string  $tipoComentavel  Tipo da entidade comentada.
+     * @param  int  $identificadorComentavel  Identificador da entidade comentada.
+     * @return JsonResponse Comentário criado.
      *
-     * @param  StoreCommentRequest  $pedido  Pedido validado.
-     * @param  string  $tipoComentavel  Tipo do recurso comentado.
-     * @param  int  $identificadorComentavel  Identificador do recurso.
-     * @return string HTML do comentário criado.
-     *
-     * @throws AuthenticationException Quando não existe utilizador autenticado.
+     * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function guardar(
-        StoreCommentRequest $pedido,
+        GuardarComentarioRequest $pedido,
         string $tipoComentavel,
         int $identificadorComentavel,
-    ): string {
-        $comentavel = $this->resolverComentavel(
-            $tipoComentavel,
-            $identificadorComentavel,
-        );
-
-        $identificadorUtilizador =
-            $this->obterIdentificadorUtilizador(
+    ): JsonResponse {
+        $utilizador =
+            $this->obterUtilizadorAutenticado(
                 $pedido,
             );
 
-        $conteudo = $this->obterConteudoValidado(
-            $pedido->validated(),
+        $comentavel =
+            $this->resolverComentavel(
+                $tipoComentavel,
+                $identificadorComentavel,
+            );
+
+        $this->authorize(
+            'create',
+            Comentario::class,
         );
 
         $comentario = DB::transaction(
             static fn (): Comentario => $comentavel
                 ->comentarios()
                 ->create([
-                    'utilizador_id' => $identificadorUtilizador,
+                    'utilizador_id' => $utilizador->getKey(),
 
-                    'conteudo' => $conteudo,
+                    'conteudo' => $pedido->obterConteudo(),
+
+                    'comentario_pai_id' => null,
                 ]),
         );
 
-        $comentario->loadMissing(
-            'utilizador',
+        $this->carregarComentario(
+            $comentario,
         );
 
         $this->notificadorInteracoes
@@ -100,90 +105,132 @@ final class ControladorComentario extends Controller
                 'comentou',
             );
 
-        return view(
-            'components.comment',
+        return response()->json(
             [
-                'comment' => $comentario,
+                'mensagem' => 'Comentário publicado com sucesso.',
+
+                'comentario' => $this->serializarComentario(
+                    $comentario,
+                ),
             ],
-        )->render();
+            Response::HTTP_CREATED,
+        );
     }
 
     /**
-     * Guarda uma resposta a um comentário.
+     * Publica uma resposta a um comentário.
      *
-     * A resposta é criada através da relação do recurso comentado, garantindo
-     * que os campos polimórficos correspondem ao comentário original.
+     * As respostas a outras respostas são associadas ao comentário principal,
+     * mantendo apenas dois níveis de apresentação.
      *
-     * @param  StoreCommentRequest  $pedido  Pedido validado.
+     * @param  GuardarComentarioRequest  $pedido  Pedido validado.
      * @param  Comentario  $comentario  Comentário respondido.
-     * @return string HTML da resposta criada.
+     * @return JsonResponse Resposta criada.
      *
-     * @throws AuthenticationException Quando não existe utilizador autenticado.
+     * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function responder(
-        StoreCommentRequest $pedido,
+        GuardarComentarioRequest $pedido,
         Comentario $comentario,
-    ): string {
-        $identificadorUtilizador =
-            $this->obterIdentificadorUtilizador(
+    ): JsonResponse {
+        $utilizador =
+            $this->obterUtilizadorAutenticado(
                 $pedido,
             );
 
-        $conteudo = $this->obterConteudoValidado(
-            $pedido->validated(),
+        $this->authorize(
+            'create',
+            Comentario::class,
         );
 
-        $comentavel = $comentario
-            ->comentavel()
-            ->firstOrFail();
+        $resultado = DB::transaction(
+            function () use (
+                $comentario,
+                $pedido,
+                $utilizador,
+            ): array {
+                $comentarioBloqueado = Comentario::query()
+                    ->whereKey(
+                        $comentario->getKey(),
+                    )
+                    ->lockForUpdate()
+                    ->firstOrFail();
 
-        $resposta = DB::transaction(
-            static fn (): Comentario => $comentavel
-                ->comentarios()
-                ->create([
-                    'utilizador_id' => $identificadorUtilizador,
+                $comentarioPai =
+                    $this->obterComentarioPrincipal(
+                        $comentarioBloqueado,
+                    );
 
-                    'conteudo' => $conteudo,
+                $comentavel =
+                    $this->obterComentavelDoComentario(
+                        $comentarioPai,
+                    );
 
-                    'comentario_pai_id' => $comentario->getKey(),
-                ]),
+                $resposta = $comentavel
+                    ->comentarios()
+                    ->create([
+                        'utilizador_id' => $utilizador->getKey(),
+
+                        'conteudo' => $pedido->obterConteudo(),
+
+                        'comentario_pai_id' => $comentarioPai->getKey(),
+                    ]);
+
+                return [
+                    'comentario' => $resposta,
+
+                    'comentavel' => $comentavel,
+                ];
+            },
         );
 
-        $resposta->loadMissing(
-            'utilizador',
+        /** @var Comentario $resposta */
+        $resposta =
+            $resultado['comentario'];
+
+        /** @var MetalThursday|SeccaoMetalThursday $comentavel */
+        $comentavel =
+            $resultado['comentavel'];
+
+        $this->carregarComentario(
+            $resposta,
         );
 
         $this->notificadorInteracoes
             ->notificarOutrosUtilizadores(
-                $comentario,
-                'respondeu a',
+                $comentavel,
+                'comentou',
             );
 
-        return view(
-            'components.comment',
+        return response()->json(
             [
-                'comment' => $resposta,
+                'mensagem' => 'Resposta publicada com sucesso.',
+
+                'comentario' => $this->serializarComentario(
+                    $resposta,
+                ),
             ],
-        )->render();
+            Response::HTTP_CREATED,
+        );
     }
 
     /**
      * Atualiza o conteúdo de um comentário.
      *
-     * @param  UpdateCommentRequest  $pedido  Pedido validado.
+     * @param  AtualizarComentarioRequest  $pedido  Pedido validado.
      * @param  Comentario  $comentario  Comentário atualizado.
-     * @return JsonResponse Conteúdo atualizado.
+     * @return JsonResponse Comentário atualizado.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function atualizar(
-        UpdateCommentRequest $pedido,
+        AtualizarComentarioRequest $pedido,
         Comentario $comentario,
     ): JsonResponse {
         $this->authorize(
@@ -191,41 +238,47 @@ final class ControladorComentario extends Controller
             $comentario,
         );
 
-        $conteudo = $this->obterConteudoValidado(
-            $pedido->validated(),
-        );
-
         $comentario->updateOrFail([
-            'conteudo' => $conteudo,
+            'conteudo' => $pedido->obterConteudo(),
         ]);
 
+        $comentario->refresh();
+
+        $this->carregarComentario(
+            $comentario,
+        );
+
         return response()->json([
-            /*
-             * Estas chaves permanecem temporariamente em inglês porque são
-             * utilizadas pelo JavaScript atual.
-             */
-            'success' => true,
-            'content' => $comentario->conteudo,
-            'content_html' => nl2br(
-                e($comentario->conteudo),
-                false,
+            'mensagem' => 'Comentário atualizado com sucesso.',
+
+            'comentario' => $this->serializarComentario(
+                $comentario,
             ),
         ]);
     }
 
     /**
-     * Elimina um comentário.
+     * Elimina logicamente um comentário.
      *
+     * A eliminação lógica preserva a estrutura da conversa quando existem
+     * respostas associadas.
+     *
+     * @param  Request  $pedido  Pedido HTTP.
      * @param  Comentario  $comentario  Comentário eliminado.
-     * @return JsonResponse Resultado da operação.
+     * @return JsonResponse Resposta sem conteúdo.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function eliminar(
+        Request $pedido,
         Comentario $comentario,
     ): JsonResponse {
+        $this->obterUtilizadorAutenticado(
+            $pedido,
+        );
+
         $this->authorize(
             'delete',
             $comentario,
@@ -233,23 +286,27 @@ final class ControladorComentario extends Controller
 
         $comentario->deleteOrFail();
 
-        return response()->json([
-            'message' => 'Comentário eliminado com sucesso.',
-        ]);
+        return response()->json(
+            null,
+            Response::HTTP_NO_CONTENT,
+        );
     }
 
     /**
-     * Resolve o recurso que recebe o comentário.
+     * Resolve a entidade que recebe o comentário.
      *
-     * @param  string  $tipo  Tipo recebido pela rota.
-     * @param  int  $identificador  Identificador recebido pela rota.
-     * @return MetalThursday|SeccaoMetalThursday Recurso encontrado.
+     * Apenas são aceites os identificadores canónicos da aplicação.
      *
-     * @throws NotFoundHttpException Quando o tipo não é reconhecido.
+     * @param  string  $tipo  Tipo recebido através da rota.
+     * @param  int  $identificador  Identificador da entidade.
+     * @return MetalThursday|SeccaoMetalThursday Entidade encontrada.
+     *
+     * @throws NotFoundHttpException Quando o tipo ou identificador não são
+     *                               válidos.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function resolverComentavel(
         string $tipo,
@@ -259,17 +316,14 @@ final class ControladorComentario extends Controller
             throw new NotFoundHttpException;
         }
 
-        $tipoNormalizado = mb_strtolower(
-            trim($tipo),
-        );
+        $tipoNormalizado =
+            mb_strtolower(
+                trim($tipo),
+            );
 
         $classeModelo = match ($tipoNormalizado) {
-            'metal_thursday',
-            'metal-thursday',
-            'metalthursday' => MetalThursday::class,
+            'metal_thursday' => MetalThursday::class,
 
-            'section',
-            'seccao',
             'seccao_metal_thursday' => SeccaoMetalThursday::class,
 
             default => throw new NotFoundHttpException,
@@ -282,75 +336,202 @@ final class ControladorComentario extends Controller
     }
 
     /**
-     * Obtém o conteúdo validado pelo pedido.
+     * Obtém o comentário principal de uma conversa.
      *
-     * O campo `content` permanece temporariamente suportado até à revisão dos
-     * pedidos, formulários e JavaScript.
+     * @param  Comentario  $comentario  Comentário recebido.
+     * @return Comentario Comentário principal.
      *
-     * @param  array<string, mixed>  $dados  Dados validados.
-     * @return string Conteúdo normalizado.
-     *
-     * @throws LogicException Quando o pedido validado não contém o campo.
-     *
-     * @since 2.0.0
+     * @since 2.1.0
      *
      * @version 1.0.0
      */
-    private function obterConteudoValidado(
-        array $dados,
-    ): string {
-        $conteudo =
-            $dados['conteudo']
-            ?? $dados['content']
-            ?? null;
+    private function obterComentarioPrincipal(
+        Comentario $comentario,
+    ): Comentario {
+        $identificadorPai =
+            $comentario->comentario_pai_id;
 
-        if (! is_string($conteudo)) {
-            throw new LogicException(
-                'O pedido validado não contém o conteúdo do comentário.',
-            );
+        if (
+            ! is_numeric($identificadorPai)
+            || (int) $identificadorPai < 1
+        ) {
+            return $comentario;
         }
 
-        $conteudoNormalizado = trim(
-            $conteudo,
-        );
-
-        if ($conteudoNormalizado === '') {
-            throw new LogicException(
-                'O conteúdo validado do comentário está vazio.',
-            );
-        }
-
-        return $conteudoNormalizado;
+        return Comentario::query()
+            ->whereKey(
+                (int) $identificadorPai,
+            )
+            ->where(
+                'tipo_comentavel',
+                $comentario->tipo_comentavel,
+            )
+            ->where(
+                'comentavel_id',
+                $comentario->comentavel_id,
+            )
+            ->lockForUpdate()
+            ->firstOrFail();
     }
 
     /**
-     * Obtém o identificador do utilizador autenticado.
+     * Obtém a entidade associada a um comentário.
+     *
+     * @param  Comentario  $comentario  Comentário consultado.
+     * @return MetalThursday|SeccaoMetalThursday Entidade comentada.
+     *
+     * @throws NotFoundHttpException Quando a entidade não é suportada.
+     *
+     * @since 2.1.0
+     *
+     * @version 1.0.0
+     */
+    private function obterComentavelDoComentario(
+        Comentario $comentario,
+    ): MetalThursday|SeccaoMetalThursday {
+        $comentavel =
+            $comentario
+                ->comentavel()
+                ->first();
+
+        if (
+            ! $comentavel instanceof MetalThursday
+            && ! $comentavel instanceof SeccaoMetalThursday
+        ) {
+            throw new NotFoundHttpException;
+        }
+
+        return $comentavel;
+    }
+
+    /**
+     * Carrega as relações necessárias para a resposta.
+     *
+     * @param  Comentario  $comentario  Comentário carregado.
+     *
+     * @since 2.1.0
+     *
+     * @version 1.0.0
+     */
+    private function carregarComentario(
+        Comentario $comentario,
+    ): void {
+        $comentario->load([
+            'utilizador:id,nome,fotografia',
+        ]);
+
+        $comentario->loadCount([
+            'gostos',
+            'respostas',
+        ]);
+    }
+
+    /**
+     * Converte um comentário para o formato da resposta HTTP.
+     *
+     * @param  Comentario  $comentario  Comentário convertido.
+     * @return array{
+     *     id: int,
+     *     conteudo: string,
+     *     comentario_pai_id: int|null,
+     *     numero_gostos: int,
+     *     numero_respostas: int,
+     *     criado_em: string|null,
+     *     atualizado_em: string|null,
+     *     utilizador: array{
+     *         id: int,
+     *         nome: string,
+     *         fotografia: string|null
+     *     }|null
+     * } Dados do comentário.
+     *
+     * @since 2.1.0
+     *
+     * @version 1.0.0
+     */
+    private function serializarComentario(
+        Comentario $comentario,
+    ): array {
+        $utilizador =
+            $comentario->utilizador;
+
+        return [
+            'id' => (int) $comentario->getKey(),
+
+            'conteudo' => (string) $comentario->conteudo,
+
+            'comentario_pai_id' => is_numeric(
+                $comentario->comentario_pai_id,
+            )
+                ? (int) $comentario->comentario_pai_id
+                : null,
+
+            'numero_gostos' => (int) (
+                $comentario->gostos_count
+                ?? 0
+            ),
+
+            'numero_respostas' => (int) (
+                $comentario->respostas_count
+                ?? 0
+            ),
+
+            'criado_em' => $comentario
+                ->created_at
+                ?->toIso8601String(),
+
+            'atualizado_em' => $comentario
+                ->updated_at
+                ?->toIso8601String(),
+
+            'utilizador' => $utilizador instanceof Utilizador
+                ? [
+                    'id' => (int) $utilizador->getKey(),
+
+                    'nome' => $utilizador->nome,
+
+                    'fotografia' => $utilizador->url_fotografia,
+                ]
+                : null,
+        ];
+    }
+
+    /**
+     * Obtém o utilizador autenticado.
      *
      * @param  Request  $pedido  Pedido HTTP.
-     * @return int Identificador do utilizador.
+     * @return Utilizador Utilizador autenticado.
      *
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
-    private function obterIdentificadorUtilizador(
+    private function obterUtilizadorAutenticado(
         Request $pedido,
-    ): int {
-        $identificador = $pedido
-            ->user()
-            ?->getAuthIdentifier();
+    ): Utilizador {
+        $utilizador =
+            $pedido->user();
+
+        if (! $utilizador instanceof Utilizador) {
+            throw new AuthenticationException(
+                'É necessário iniciar sessão para interagir com comentários.',
+            );
+        }
+
+        $identificador =
+            $utilizador->getKey();
 
         if (
             ! is_numeric($identificador)
             || (int) $identificador < 1
         ) {
             throw new AuthenticationException(
-                'É necessário iniciar sessão para comentar.',
+                'Não foi possível identificar o utilizador autenticado.',
             );
         }
 
-        return (int) $identificador;
+        return $utilizador;
     }
 }

@@ -5,16 +5,15 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Interacoes;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Entities\StoreRatingRequest;
+use App\Http\Requests\Interacoes\GuardarAvaliacaoRequest;
+use App\Models\Autenticacao\Utilizador;
 use App\Models\Interacoes\Avaliacao;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Servicos\Notificacoes\NotificadorInteracoes;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use LogicException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -22,7 +21,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 final class ControladorAvaliacao extends Controller
 {
@@ -43,10 +42,10 @@ final class ControladorAvaliacao extends Controller
     /**
      * Cria ou atualiza a avaliação do utilizador autenticado.
      *
-     * A entidade avaliada é bloqueada durante a transação, impedindo que
+     * A entidade avaliada é bloqueada durante a transação para impedir que
      * pedidos simultâneos criem avaliações duplicadas.
      *
-     * @param  StoreRatingRequest  $pedido  Pedido validado.
+     * @param  GuardarAvaliacaoRequest  $pedido  Pedido validado.
      * @param  string  $tipoAvaliavel  Tipo da entidade avaliada.
      * @param  int  $identificadorAvaliavel  Identificador da entidade.
      * @return JsonResponse Estado atualizado das avaliações.
@@ -55,10 +54,10 @@ final class ControladorAvaliacao extends Controller
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function guardar(
-        StoreRatingRequest $pedido,
+        GuardarAvaliacaoRequest $pedido,
         string $tipoAvaliavel,
         int $identificadorAvaliavel,
     ): JsonResponse {
@@ -68,14 +67,13 @@ final class ControladorAvaliacao extends Controller
             );
 
         $pontuacao =
-            $this->obterPontuacaoValidada(
-                $pedido->validated(),
-            );
+            $pedido->obterPontuacao();
 
-        $avaliavel = $this->resolverAvaliavel(
-            $tipoAvaliavel,
-            $identificadorAvaliavel,
-        );
+        $avaliavel =
+            $this->resolverAvaliavel(
+                $tipoAvaliavel,
+                $identificadorAvaliavel,
+            );
 
         $resultado = DB::transaction(
             function () use (
@@ -99,12 +97,12 @@ final class ControladorAvaliacao extends Controller
                 $avaliacaoAlterada = false;
 
                 if ($avaliacao instanceof Avaliacao) {
-                    if (
-                        round(
-                            (float) $avaliacao->pontuacao,
-                            1,
-                        ) !== $pontuacao
-                    ) {
+                    $pontuacaoAtual = round(
+                        (float) $avaliacao->pontuacao,
+                        1,
+                    );
+
+                    if ($pontuacaoAtual !== $pontuacao) {
                         $avaliacao->updateOrFail([
                             'pontuacao' => $pontuacao,
                         ]);
@@ -135,7 +133,7 @@ final class ControladorAvaliacao extends Controller
         $avaliavelAtualizado =
             $resultado['avaliavel'];
 
-        if ($resultado['avaliacao_alterada']) {
+        if ($resultado['avaliacao_alterada'] === true) {
             $this->notificadorInteracoes
                 ->notificarOutrosUtilizadores(
                     $avaliavelAtualizado,
@@ -149,22 +147,16 @@ final class ControladorAvaliacao extends Controller
             );
 
         return response()->json([
-            /*
-             * Estas chaves permanecem temporariamente em inglês porque são
-             * utilizadas pelo JavaScript atual.
-             */
-            'average_rating' => number_format(
+            'media_avaliacoes' => round(
                 $estatisticas['media'],
                 1,
-                '.',
-                '',
             ),
 
-            'ratings_count' => $estatisticas['numero'],
+            'numero_avaliacoes' => $estatisticas['numero'],
 
-            'user_rating' => $pontuacao,
+            'pontuacao_utilizador' => $pontuacao,
 
-            'tooltip_html' => $this->obterConteudoIndicador(
+            'conteudo_indicador' => $this->obterConteudoIndicador(
                 $avaliavelAtualizado,
             ),
         ]);
@@ -173,18 +165,19 @@ final class ControladorAvaliacao extends Controller
     /**
      * Resolve a entidade que recebe a avaliação.
      *
-     * Os valores antigos continuam temporariamente disponíveis até à revisão
-     * das rotas e do JavaScript.
+     * Apenas são aceites os identificadores canónicos definidos pela
+     * aplicação.
      *
      * @param  string  $tipo  Tipo recebido através da rota.
      * @param  int  $identificador  Identificador recebido através da rota.
      * @return MetalThursday|SeccaoMetalThursday Entidade encontrada.
      *
-     * @throws NotFoundHttpException Quando o tipo não é reconhecido.
+     * @throws NotFoundHttpException Quando o tipo não é reconhecido ou o
+     *                               identificador não é válido.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function resolverAvaliavel(
         string $tipo,
@@ -199,12 +192,8 @@ final class ControladorAvaliacao extends Controller
         );
 
         $classeModelo = match ($tipoNormalizado) {
-            'metal_thursday',
-            'metal-thursday',
-            'metalthursday' => MetalThursday::class,
+            'metal_thursday' => MetalThursday::class,
 
-            'section',
-            'seccao',
             'seccao_metal_thursday' => SeccaoMetalThursday::class,
 
             default => throw new NotFoundHttpException,
@@ -229,7 +218,8 @@ final class ControladorAvaliacao extends Controller
     private function bloquearAvaliavel(
         MetalThursday|SeccaoMetalThursday $avaliavel,
     ): MetalThursday|SeccaoMetalThursday {
-        $classeModelo = $avaliavel::class;
+        $classeModelo =
+            $avaliavel::class;
 
         /** @var MetalThursday|SeccaoMetalThursday $avaliavelBloqueado */
         $avaliavelBloqueado = $classeModelo::query()
@@ -243,49 +233,6 @@ final class ControladorAvaliacao extends Controller
     }
 
     /**
-     * Obtém a pontuação validada pelo pedido.
-     *
-     * O campo `rating` permanece temporariamente suportado até à revisão dos
-     * pedidos e do JavaScript.
-     *
-     * @param  array<string, mixed>  $dados  Dados validados.
-     * @return float Pontuação normalizada com uma casa decimal.
-     *
-     * @throws LogicException Quando o pedido não contém uma pontuação válida.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private function obterPontuacaoValidada(
-        array $dados,
-    ): float {
-        $valor =
-            $dados['pontuacao']
-            ?? $dados['rating']
-            ?? null;
-
-        if (! is_numeric($valor)) {
-            throw new LogicException(
-                'O pedido validado não contém uma pontuação válida.',
-            );
-        }
-
-        $pontuacao = round(
-            (float) $valor,
-            1,
-        );
-
-        if (! is_finite($pontuacao)) {
-            throw new LogicException(
-                'A pontuação validada não é finita.',
-            );
-        }
-
-        return $pontuacao;
-    }
-
-    /**
      * Obtém a média e o número total de avaliações.
      *
      * @param  MetalThursday|SeccaoMetalThursday  $avaliavel  Entidade consultada.
@@ -296,12 +243,17 @@ final class ControladorAvaliacao extends Controller
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function obterEstatisticas(
         MetalThursday|SeccaoMetalThursday $avaliavel,
     ): array {
-        $estatisticas = DB::table('avaliacoes')
+        $modeloAvaliacao =
+            new Avaliacao;
+
+        $estatisticas = DB::table(
+            $modeloAvaliacao->getTable(),
+        )
             ->where(
                 'avaliavel_id',
                 $avaliavel->getKey(),
@@ -332,12 +284,14 @@ final class ControladorAvaliacao extends Controller
     /**
      * Obtém o conteúdo apresentado no indicador das avaliações.
      *
+     * Os nomes são escapados antes de serem incluídos no conteúdo HTML.
+     *
      * @param  MetalThursday|SeccaoMetalThursday  $avaliavel  Entidade consultada.
-     * @return string Conteúdo HTML escapado.
+     * @return string Conteúdo HTML seguro.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function obterConteudoIndicador(
         MetalThursday|SeccaoMetalThursday $avaliavel,
@@ -347,20 +301,25 @@ final class ControladorAvaliacao extends Controller
             ->with([
                 'utilizador:id,nome',
             ])
-            ->orderByDesc('pontuacao')
-            ->orderBy('id')
+            ->orderByDesc(
+                'pontuacao',
+            )
+            ->orderBy(
+                'id',
+            )
             ->get()
             ->map(
                 static function (
                     Avaliacao $avaliacao,
                 ): ?string {
-                    $nome = $avaliacao
-                        ->utilizador
-                        ?->nome;
+                    $nome =
+                        $avaliacao
+                            ->utilizador
+                            ?->nome;
 
                     if (
                         ! is_string($nome)
-                        || $nome === ''
+                        || trim($nome) === ''
                     ) {
                         return null;
                     }
@@ -377,41 +336,55 @@ final class ControladorAvaliacao extends Controller
                     );
                 },
             )
-            ->filter()
+            ->filter(
+                static fn (
+                    mixed $linha,
+                ): bool => is_string($linha),
+            )
             ->values();
 
         if ($linhas->isEmpty()) {
             return 'Ainda sem avaliações.';
         }
 
-        return $linhas->implode('<br>');
+        return $linhas->implode(
+            '<br>',
+        );
     }
 
     /**
      * Obtém o identificador do utilizador autenticado.
      *
-     * @param  Request  $pedido  Pedido HTTP.
+     * @param  GuardarAvaliacaoRequest  $pedido  Pedido HTTP.
      * @return int Identificador do utilizador.
      *
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function obterIdentificadorUtilizador(
-        Request $pedido,
+        GuardarAvaliacaoRequest $pedido,
     ): int {
-        $identificador = $pedido
-            ->user()
-            ?->getAuthIdentifier();
+        $utilizador =
+            $pedido->user();
+
+        if (! $utilizador instanceof Utilizador) {
+            throw new AuthenticationException(
+                'É necessário iniciar sessão para avaliar.',
+            );
+        }
+
+        $identificador =
+            $utilizador->getKey();
 
         if (
             ! is_numeric($identificador)
             || (int) $identificador < 1
         ) {
             throw new AuthenticationException(
-                'É necessário iniciar sessão para avaliar.',
+                'Não foi possível identificar o utilizador autenticado.',
             );
         }
 
