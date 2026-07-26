@@ -1,433 +1,782 @@
 /**
- * Define os estilos globais do site.
+ * Define os estilos globais da aplicação.
  *
- * @since 1.0
- * @version 1.0
+ * Personaliza as dependências externas e centraliza os estilos
+ * partilhados pelas diferentes páginas.
+ *
+ * Os seletores internos permanecem temporariamente inalterados até à
+ * revisão das respetivas vistas Blade.
+ *
+ * @since 1.0.0
+ * @version 2.0.0
  */
+
 @use "sass:color";
 
-// Define as variáveis globais.
-$accent-red: #6d3f40;
-$background-dark: #282424;
-$gray-border: #444;
-$white: #fff;
+/**
+ * Cores principais da aplicação.
+ */
+$vermelho-destaque: #6d3f40;
+$fundo-escuro: #282424;
+$cinzento-borda: #444;
+$branco: #fff;
 
-// Usa o Bootstrap com as variáveis globais
+/**
+ * Cores derivadas reutilizadas pelos diferentes componentes.
+ */
+$fundo-campo:
+    color.adjust(
+        $fundo-escuro,
+        $lightness: 3%,
+    );
+
+$fundo-paginacao:
+    color.adjust(
+        $fundo-escuro,
+        $lightness: 5%,
+    );
+
+$fundo-controlo:
+    color.adjust(
+        $fundo-escuro,
+        $lightness: 10%,
+    );
+
+$fundo-controlo-hover:
+    color.adjust(
+        $fundo-escuro,
+        $lightness: 15%,
+    );
+
+$fundo-elevado:
+    color.adjust(
+        $fundo-escuro,
+        $lightness: -5%,
+    );
+
+$cinzento-borda-claro:
+    color.adjust(
+        $cinzento-borda,
+        $lightness: 10%,
+    );
+
+/**
+ * Configuração visual do Bootstrap.
+ */
 @use "bootstrap/scss/bootstrap" with (
-    $primary: $accent-red,
-    $secondary: $gray-border,
-    $body-bg: $background-dark,
-    $body-color: $white,
-    $link-color: color.adjust($accent-red, $lightness: 10%),
-    $link-hover-color: color.adjust($accent-red, $lightness: 25%),
-    $border-color: $gray-border,
-    $input-bg: color.adjust($background-dark, $lightness: 3%),
-    $input-border-color: $gray-border,
-    $input-color: $white,
-    $input-placeholder-color: color.adjust($gray-border, $lightness: 15%),
-    $form-check-input-border: $gray-border,
-    $card-bg: color.adjust($background-dark, $lightness: 3%),
-    $card-border-color: $gray-border
+    $primary:
+        $vermelho-destaque,
+
+    $secondary:
+        $cinzento-borda,
+
+    $body-bg:
+        $fundo-escuro,
+
+    $body-color:
+        $branco,
+
+    $link-color:
+        color.adjust(
+            $vermelho-destaque,
+            $lightness: 10%,
+        ),
+
+    $link-hover-color:
+        color.adjust(
+            $vermelho-destaque,
+            $lightness: 25%,
+        ),
+
+    $border-color:
+        $cinzento-borda,
+
+    $input-bg:
+        $fundo-campo,
+
+    $input-border-color:
+        $cinzento-borda,
+
+    $input-color:
+        $branco,
+
+    $input-placeholder-color:
+        color.adjust(
+            $cinzento-borda,
+            $lightness: 15%,
+        ),
+
+    $form-check-input-border:
+        $cinzento-borda,
+
+    $card-bg:
+        $fundo-campo,
+
+    $card-border-color:
+        $cinzento-borda,
 );
 
-// Importa a fonte Metal Mania
-@import url("https://fonts.googleapis.com/css2?family=Metal+Mania&display=swap");
+/**
+ * Estilos das dependências externas.
+ */
+@use "bootstrap-icons/font/bootstrap-icons.css"
+    as icones-bootstrap;
 
-// Importa os Ícones do Bootstrap
-@import "bootstrap-icons/font/bootstrap-icons.css";
+@use "tom-select/dist/css/tom-select.bootstrap5.min.css"
+    as estilos-tom-select;
 
-// Importa os estilos do Tom-Select para Bootstrap 5
-@import "tom-select/dist/css/tom-select.bootstrap5.min.css";
+@use "sweetalert2/src/sweetalert2.scss"
+    as estilos-sweetalert;
 
-// Importa os estilos do SweetAlert 2
-@import "sweetalert2/src/sweetalert2.scss";
+/**
+ * Fonte utilizada nos títulos.
+ *
+ * Este é um import CSS remoto e não um import de módulos Sass.
+ */
+@import url(
+    "https://fonts.googleapis.com/css2?family=Metal+Mania&display=swap"
+);
 
-// Cabeçalhos
-h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
-    font-family: 'Metal Mania', cursive;
-    color: $accent-red;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+/**
+ * Cabeçalhos.
+ */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.h1,
+.h2,
+.h3,
+.h4,
+.h5,
+.h6 {
+    color: $vermelho-destaque;
+    font-family:
+        "Metal Mania",
+        cursive;
+
+    text-shadow:
+        1px 1px 2px
+        rgb(0 0 0 / 50%);
 }
 
 .accent-red {
-    color: $accent-red;
+    color: $vermelho-destaque;
 }
 
-// Avatar e Pré-visualização da Foto
-.avatar-circle, .avatar-preview {
+/**
+ * Avatar e pré-visualização da fotografia.
+ */
+.avatar-circle,
+.avatar-preview {
     width: 80px;
     height: 80px;
     border-radius: 50%;
     object-fit: cover;
 }
+
 .avatar-circle {
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: $gray-border;
-    color: $white;
+    background-color: $cinzento-borda;
+    color: $branco;
+    font-family: sans-serif;
     font-size: 2rem;
     font-weight: bold;
-    font-family: sans-serif;
 }
 
-// Validação de formulários
-.form-control.is-invalid, .was-validated select:valid + .ts-wrapper .ts-control,
-.ts-wrapper.is-valid.single, .was-validated .valid.single, .was-validated :valid+.ts-wrapper.single,
-.ts-wrapper.is-invalid.single, .was-validated .invalid.single, .was-validated :invalid+.ts-wrapper.single,
+/**
+ * Validação dos formulários.
+ */
+.form-control.is-invalid,
+.was-validated select:valid
+    + .ts-wrapper
+    .ts-control,
+.ts-wrapper.is-valid.single,
+.was-validated .valid.single,
+.was-validated :valid
+    + .ts-wrapper.single,
+.ts-wrapper.is-invalid.single,
+.was-validated .invalid.single,
+.was-validated :invalid
+    + .ts-wrapper.single,
 .was-validated .form-control:invalid {
     background-image: none !important;
 }
+
 .was-validated .form-control:valid {
-    border-color: $gray-border !important;
-    box-shadow: none !important;
     background-image: none !important;
-}
-.was-validated .input-group:has(.form-control:valid) .input-group-text,
-.was-validated .input-group:has(.form-control:valid) .form-control {
-    border-color: $gray-border !important;
-}
-.ts-wrapper.is-valid, .was-validated .valid, .was-validated :valid+.ts-wrapper {
-    border-color: $gray-border !important;
+    border-color: $cinzento-borda !important;
     box-shadow: none !important;
 }
-.was-validated .form-check-input:valid {
-    border-color: $gray-border !important;
+
+.was-validated
+    .input-group:has(.form-control:valid)
+    .input-group-text,
+.was-validated
+    .input-group:has(.form-control:valid)
+    .form-control {
+    border-color: $cinzento-borda !important;
 }
-.was-validated .form-check-input:valid ~ .form-check-label {
+
+.ts-wrapper.is-valid,
+.was-validated .valid,
+.was-validated :valid + .ts-wrapper {
+    border-color: $cinzento-borda !important;
+    box-shadow: none !important;
+}
+
+.was-validated
+    .form-check-input:valid {
+    border-color: $cinzento-borda !important;
+}
+
+.was-validated
+    .form-check-input:valid
+    ~ .form-check-label {
     color: inherit !important;
 }
-.was-validated .form-check-input:valid:checked {
-    background-color: $accent-red !important;
-    border-color: $accent-red !important;
+
+.was-validated
+    .form-check-input:valid:checked {
+    background-color:
+        $vermelho-destaque !important;
+
+    border-color:
+        $vermelho-destaque !important;
 }
 
-// Grupo de inputs
+/**
+ * Grupos de campos.
+ */
 .input-group-text {
-    background-color: color.adjust($background-dark, $lightness: 3%);
-    border-color: $gray-border;
-}
-.input-group:has(.form-control.is-invalid) .input-group-text,
-.input-group:has(.form-control.is-invalid) .form-control {
-    border-color: var(--bs-form-invalid-border-color);
+    background-color: $fundo-campo;
+    border-color: $cinzento-borda;
 }
 
-// Inputs de Ficheiros Personalizados
+.input-group:has(.form-control.is-invalid)
+    .input-group-text,
+.input-group:has(.form-control.is-invalid)
+    .form-control {
+    border-color:
+        var(
+            --bs-form-invalid-border-color
+        );
+}
+
+/**
+ * Campos personalizados de seleção de ficheiros.
+ */
 .custom-file-input-wrapper {
     display: flex;
     align-items: center;
 }
+
 .custom-file-input {
-    width: 0.1px;
-    height: 0.1px;
-    opacity: 0;
-    overflow: hidden;
     position: absolute;
-    z-index: -1;
-}
-.custom-file-label {
-    background-color: color.adjust($background-dark, $lightness: 10%);
-    color: $white;
-    padding: 0.5rem 1rem;
-    border-radius: 0.3rem;
-    cursor: pointer;
-    transition: background-color 0.2s ease-in-out;
-    border: 1px solid $gray-border;
-    white-space: nowrap;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
     overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: nowrap;
+    border: 0;
+    clip: rect(0, 0, 0, 0);
+}
+
+.custom-file-label {
     max-width: 150px;
+    padding: 0.5rem 1rem;
+    overflow: hidden;
+    color: $branco;
     text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+    background-color: $fundo-controlo;
+    border: 1px solid $cinzento-borda;
+    border-radius: 0.3rem;
+    transition:
+        background-color
+        0.2s
+        ease-in-out;
+
     &:hover {
-        background-color: color.adjust($background-dark, $lightness: 15%);
+        background-color:
+            $fundo-controlo-hover;
     }
+
     .is-invalid + & {
-        border-color: var(--bs-form-invalid-border-color);
+        border-color:
+            var(
+                --bs-form-invalid-border-color
+            );
     }
 }
 
-// Botões
+.custom-file-input:focus-visible
+    + .custom-file-label {
+    box-shadow:
+        0 0 0 0.25rem
+        color.change(
+            $vermelho-destaque,
+            $alpha: 0.25,
+        );
+}
+
+/**
+ * Botões.
+ */
 .password-toggle-icon {
     cursor: pointer;
 }
+
 .btn-primary {
-    color: $white !important;
+    color: $branco !important;
 }
 
-// Checkboxes
+/**
+ * Caixas de seleção.
+ */
 .form-check-input {
-    background-color: color.adjust($background-dark, $lightness: 3%);
-    border: 1px solid $gray-border;
+    background-color: $fundo-campo;
+    border: 1px solid $cinzento-borda;
+
     &:checked {
-        background-color: $accent-red;
-        border-color: $accent-red;
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m6 10 3 3 6-6'/%3e%3c/svg%3e");
+        background-color:
+            $vermelho-destaque;
+
+        border-color:
+            $vermelho-destaque;
+
+        background-image:
+            url(
+                "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m6 10 3 3 6-6'/%3e%3c/svg%3e"
+            );
     }
+
     &:focus {
-        border-color: lighten($accent-red, 20%);
-        box-shadow: 0 0 0 0.25rem rgba($accent-red, 0.25);
+        border-color:
+            color.adjust(
+                $vermelho-destaque,
+                $lightness: 20%,
+            );
+
+        box-shadow:
+            0 0 0 0.25rem
+            color.change(
+                $vermelho-destaque,
+                $alpha: 0.25,
+            );
     }
 }
 
-// Tooltips
+/**
+ * Tooltips.
+ */
 .custom-tooltip {
-    color: $accent-red;
+    color: $vermelho-destaque;
     font-size: 0.9em;
     cursor: pointer;
 }
+
 .tooltip-inner {
-    background-color: $background-dark;
-    color: $white;
-    opacity: 1!important;
+    color: $branco;
+    background-color: $fundo-escuro;
+    opacity: 1 !important;
 }
-.tooltip.bs-tooltip-auto .tooltip-arrow::before,
-.tooltip.bs-tooltip-top .tooltip-arrow::before,
-.tooltip.bs-tooltip-bottom .tooltip-arrow::before,
-.tooltip.bs-tooltip-start .tooltip-arrow::before,
-.tooltip.bs-tooltip-end .tooltip-arrow::before {
+
+.tooltip.bs-tooltip-auto
+    .tooltip-arrow::before,
+.tooltip.bs-tooltip-top
+    .tooltip-arrow::before,
+.tooltip.bs-tooltip-bottom
+    .tooltip-arrow::before,
+.tooltip.bs-tooltip-start
+    .tooltip-arrow::before,
+.tooltip.bs-tooltip-end
+    .tooltip-arrow::before {
     opacity: 0;
 }
 
-// Links
+/**
+ * Ligações.
+ */
 a {
-    transition: all 0.2s ease-in-out;
+    transition:
+        color
+        0.2s
+        ease-in-out;
+
     &:hover {
         text-decoration: underline;
     }
 }
 
-// Barra de navegação
+/**
+ * Barra de navegação.
+ */
 .dropdown-toggle::after {
     display: none;
 }
+
 .profile-pic-nav {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
+
 .profile-initials {
     width: 40px;
     height: 40px;
     font-size: 1.1rem;
     font-weight: bold;
-    text-align: center;
     line-height: 1;
+    text-align: center;
     text-decoration: none !important;
 }
+
 .profile-pic-wrapper {
-    overflow: visible;
     position: relative;
     width: 40px;
     height: 40px;
+    overflow: visible;
 }
+
 .dropdown-indicator {
+    right: 0;
+    bottom: 0;
     z-index: 10;
     width: 16px;
     height: 16px;
     font-size: 0.6em;
     line-height: 1;
-    border: 1px solid var(--bs-secondary);
-    transform: translate(25%, 25%);
-    bottom: 0;
-    right: 0;
+    border:
+        1px solid
+        var(--bs-secondary);
+
+    transform:
+        translate(
+            25%,
+            25%
+        );
 }
-.navbar-nav .nav-item .nav-link.p-0 {
+
+.navbar-nav
+    .nav-item
+    .nav-link.p-0 {
     padding: 0 !important;
 }
-.navbar-nav .nav-item .nav-link {
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
-    padding-left: 0.75rem;
-    padding-right: 0.75rem;
+
+.navbar-nav
+    .nav-item
+    .nav-link {
+    padding:
+        0.5rem
+        0.75rem;
 }
+
 .notification-icon-wrapper {
-    background-color: $accent-red;
     width: 40px;
     height: 40px;
+    background-color:
+        $vermelho-destaque;
+
     border-radius: 50%;
 }
+
 .notification-badge {
     z-index: 10;
-    font-size: 0.75em;
-    min-width: 1.5em;
-    height: 1.5em;
     display: flex;
     align-items: center;
     justify-content: center;
+    min-width: 1.5em;
+    height: 1.5em;
     padding: 0;
+    font-size: 0.75em;
 }
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background-color:
+        $vermelho-destaque !important;
+}
+
 @media (max-width: 767.98px) {
     .navbar-nav .nav-item {
         margin-right: 0 !important;
         margin-left: 0 !important;
     }
 }
-.dropdown-item:hover, .dropdown-item:focus {
-    background-color: $accent-red !important;
-}
 
-// Tom-Select
+/**
+ * Tom Select.
+ */
 .ts-control {
-    background-color: color.adjust($background-dark, $lightness: 3%) !important;
-    border-color: $gray-border !important;
-    color: $white;
+    color: $branco;
+    background-color:
+        $fundo-campo !important;
+
+    border-color:
+        $cinzento-borda !important;
 }
+
 .ts-dropdown {
-    background: darken($background-dark, 5%);
-    border-color: lighten($gray-border, 10%);
-    color: $white;
-}
-.ts-dropdown .option:hover, .ts-dropdown .active {
-    background-color: $accent-red !important;
+    color: $branco;
+    background-color: $fundo-elevado;
+    border-color: $cinzento-borda-claro;
 }
 
-// Sweetalert
+.ts-dropdown .option:hover,
+.ts-dropdown .active {
+    background-color:
+        $vermelho-destaque !important;
+}
+
+/**
+ * SweetAlert2.
+ */
 .swal2-popup {
-    background-color: darken($background-dark, 5%) !important;
-    color: $white !important;
-}
-.swal2-title {
-    color: $white !important;
-}
-.swal2-confirm {
-    background-color: $accent-red !important;
+    color: $branco !important;
+    background-color:
+        $fundo-elevado !important;
 }
 
-// Secções
+.swal2-title {
+    color: $branco !important;
+}
+
+.swal2-confirm {
+    background-color:
+        $vermelho-destaque !important;
+}
+
+/**
+ * Secções da MetalThursday.
+ */
 .section-item {
     position: relative;
     padding-bottom: 40px !important;
 }
+
 .remove-section-btn {
     position: absolute;
-    bottom: 10px;
     right: 10px;
+    bottom: 10px;
     z-index: 10;
 }
+
 .section-item .float-end {
     float: none !important;
 }
 
-// Ocultar spinners do input
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
+/**
+ * Campos numéricos.
+ */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
     margin: 0;
+    appearance: none;
 }
-input[type=number] {
-    -moz-appearance: textfield;
+
+input[type="number"] {
     appearance: textfield;
 }
 
-// Paginação
+/**
+ * Paginação.
+ */
 .pagination {
-    --bs-pagination-color: #{$accent-red};
-    --bs-pagination-bg: #{color.adjust($background-dark, $lightness: 5%)};
-    --bs-pagination-border-color: #{$gray-border};
-    --bs-pagination-hover-color: $white;
-    --bs-pagination-hover-bg: #{$accent-red};
-    --bs-pagination-hover-border-color: #{$accent-red};
-    --bs-pagination-focus-color: $white;
-    --bs-pagination-focus-bg: #{lighten($accent-red, 5%)};
-    --bs-pagination-focus-box-shadow: 0 0 0 0.25rem rgba($accent-red, 0.5);
-    --bs-pagination-active-color: $white;
-    --bs-pagination-active-bg: #{$accent-red};
-    --bs-pagination-active-border-color: #{$accent-red};
-    --bs-pagination-disabled-color: #6c757d;
-    --bs-pagination-disabled-bg: #{color.adjust($background-dark, $lightness: 3%)};
-    --bs-pagination-disabled-border-color: #{$gray-border};
+    --bs-pagination-color:
+        #{$vermelho-destaque};
+
+    --bs-pagination-bg:
+        #{$fundo-paginacao};
+
+    --bs-pagination-border-color:
+        #{$cinzento-borda};
+
+    --bs-pagination-hover-color:
+        #{$branco};
+
+    --bs-pagination-hover-bg:
+        #{$vermelho-destaque};
+
+    --bs-pagination-hover-border-color:
+        #{$vermelho-destaque};
+
+    --bs-pagination-focus-color:
+        #{$branco};
+
+    --bs-pagination-focus-bg:
+        #{color.adjust(
+            $vermelho-destaque,
+            $lightness: 5%,
+        )};
+
+    --bs-pagination-focus-box-shadow:
+        0 0 0 0.25rem
+        #{color.change(
+            $vermelho-destaque,
+            $alpha: 0.5,
+        )};
+
+    --bs-pagination-active-color:
+        #{$branco};
+
+    --bs-pagination-active-bg:
+        #{$vermelho-destaque};
+
+    --bs-pagination-active-border-color:
+        #{$vermelho-destaque};
+
+    --bs-pagination-disabled-color:
+        #6c757d;
+
+    --bs-pagination-disabled-bg:
+        #{$fundo-campo};
+
+    --bs-pagination-disabled-border-color:
+        #{$cinzento-borda};
 }
+
 .pagination-custom-layout {
     flex-direction: column;
     align-items: center;
     padding-top: 10px;
+
     .pagination-desktop-section {
         flex-direction: column;
         align-items: center;
         width: 100%;
     }
+
     .pagination-count-text {
         order: 1;
-        margin-bottom: 10px;
-        font-size: 0.9em;
-        color: var(--bs-body-color);
-        text-align: center;
         width: 100%;
+        margin-bottom: 10px;
+        color: var(--bs-body-color);
+        font-size: 0.9em;
+        text-align: center;
     }
+
     .pagination {
         order: 2;
         margin-top: 0;
     }
 }
+
 .dark-mode-text-adjust {
     .pagination-count-text p {
         color: var(--bs-white);
     }
 }
+
 .pagination-count-text p {
-    color: var(--bs-secondary-color, #6c757d);
+    color:
+        var(
+            --bs-secondary-color,
+            #6c757d
+        );
 }
 
-// Filtros
+/**
+ * Filtros.
+ */
 #active-filters-area .ts-control {
-    background: rgba(var(--bs-dark-rgb), var(--bs-bg-opacity)) !important;
+    background:
+        rgba(
+            var(--bs-dark-rgb),
+            var(--bs-bg-opacity)
+        ) !important;
 }
 
-// Avaliações
+/**
+ * Avaliações.
+ */
 .rating-stars-10-interactive {
     display: inline-flex;
     justify-content: center;
+
     i {
-        font-size: 1.8rem;
-        color: #444;
-        cursor: pointer;
         padding: 0 0.1em;
-        transition: color 0.1s ease-in-out;
-    }
-    i.star-filled {
-        color: $accent-red;
+        color: $cinzento-borda;
+        font-size: 1.8rem;
+        cursor: pointer;
+        transition:
+            color
+            0.1s
+            ease-in-out;
+
+        &.star-filled {
+            color: $vermelho-destaque;
+        }
     }
 }
 
-// Lazy Loading de Vídeos
+/**
+ * Carregamento diferido de vídeos.
+ */
 .video-lazy-load {
-    cursor: pointer;
     position: relative;
+    cursor: pointer;
+
     .video-thumbnail {
-        width: 100%;
-        height: 100%;
-        background-size: cover;
-        background-position: center;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: transform 0.2s ease-in-out;
+        width: 100%;
+        height: 100%;
+        background-position: center;
+        background-size: cover;
+        transition:
+            transform
+            0.2s
+            ease-in-out;
     }
+
     &:hover .video-thumbnail {
         transform: scale(1.02);
     }
+
     .play-button {
-        width: 60px;
-        height: 60px;
-        background-color: rgba(0, 0, 0, 0.6);
-        border-radius: 50%;
         position: relative;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: background-color 0.2s;
+        width: 60px;
+        height: 60px;
+        background-color:
+            rgb(0 0 0 / 60%);
+
+        border-radius: 50%;
+        transition:
+            background-color
+            0.2s
+            ease-in-out;
+
         &::before {
-            content: '';
             display: block;
             width: 0;
             height: 0;
-            border-top: 10px solid transparent;
-            border-bottom: 10px solid transparent;
-            border-left: 20px solid $white;
             margin-left: 5px;
+            content: "";
+            border-top:
+                10px solid transparent;
+
+            border-bottom:
+                10px solid transparent;
+
+            border-left:
+                20px solid $branco;
         }
     }
+
     &:hover .play-button {
-        background-color: $accent-red;
+        background-color:
+            $vermelho-destaque;
     }
 }
