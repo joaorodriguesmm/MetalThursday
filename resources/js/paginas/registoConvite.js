@@ -17,6 +17,20 @@ import ValidadorFormulario
     from '../modulos/ValidadorFormulario';
 
 /**
+ * Script específico da página de registo por convite.
+ *
+ * Coordena a validação do formulário, a fotografia do perfil, os
+ * alternadores de visibilidade das palavras-passe, a seleção das
+ * permissões de e-mail e a inicialização dos tooltips.
+ *
+ * Os seletores e os nomes dos campos permanecem inalterados até à
+ * revisão da respetiva vista Blade.
+ *
+ * @since 1.0.0
+ * @version 2.0.0
+ */
+
+/**
  * Tipos MIME permitidos para a fotografia do utilizador.
  *
  * @type {ReadonlyArray<string>}
@@ -46,7 +60,7 @@ const TAMANHO_MAXIMO_FOTOGRAFIA =
 /**
  * Seletores utilizados na página de registo por convite.
  *
- * @type {Readonly<Object>}
+ * @type {Readonly<Record<string, string>>}
  *
  * @since 2.0.0
  * @version 1.0.0
@@ -111,7 +125,7 @@ function iniciarGestorFotografia() {
  * Inicia a validação e a pré-visualização da fotografia.
  *
  * @param {GestorFotografiaPerfil|null}
- * gestorFotografia - Gestor da fotografia.
+ * gestorFotografia - Gestor da fotografia do utilizador.
  *
  * @return {void}
  *
@@ -121,10 +135,7 @@ function iniciarGestorFotografia() {
 function iniciarValidacaoFotografia(
     gestorFotografia,
 ) {
-    if (
-        !(gestorFotografia
-            instanceof GestorFotografiaPerfil)
-    ) {
+    if (gestorFotografia === null) {
         return;
     }
 
@@ -320,11 +331,17 @@ function iniciarAlternadoresPalavraPasse() {
  * @version 2.0.0
  */
 function iniciarPermissoesEmail() {
-    const campoTodas = document.querySelector(
-        SELETORES.permissaoTodas,
-    );
+    const campoTodasPermissoes =
+        document.querySelector(
+            SELETORES.permissaoTodas,
+        );
 
-    if (!(campoTodas instanceof HTMLInputElement)) {
+    if (
+        !(
+            campoTodasPermissoes
+                instanceof HTMLInputElement
+        )
+    ) {
         return;
     }
 
@@ -338,7 +355,7 @@ function iniciarPermissoesEmail() {
     }
 
     new SeletorPermissoes(
-        campoTodas,
+        campoTodasPermissoes,
         itensPermissoes,
     );
 }
