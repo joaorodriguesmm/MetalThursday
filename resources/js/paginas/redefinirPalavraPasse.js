@@ -1,56 +1,83 @@
-import AlternadorPalavraPasse
-    from '../modulos/AlternadorPalavraPasse';
-
-import ValidadorFormulario
-    from '../modulos/ValidadorFormulario';
+import AlternadorPalavraPasse from '../modulos/AlternadorPalavraPasse';
+import ValidadorFormulario from '../modulos/ValidadorFormulario';
 
 /**
  * Script específico da página de redefinição da palavra-passe.
  *
- * Os seletores e nomes dos campos permanecem temporariamente inalterados
- * até à revisão da respetiva vista Blade.
+ * Os nomes dos campos `password` e `password_confirmation` permanecem
+ * inalterados por corresponderem ao contrato convencional de autenticação.
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 2.1.0
  */
+
+/**
+ * Seletores utilizados na página.
+ *
+ * @type {Readonly<{
+ *     formulario: string,
+ *     alternadorPalavraPasse: string
+ * }>}
+ *
+ * @since 2.1.0
+ * @version 1.0.0
+ */
+const SELETORES = Object.freeze({
+    formulario:
+        'reset-password-form',
+
+    alternadorPalavraPasse:
+        '[data-alvo-palavra-passe]',
+});
 
 /**
  * Inicia a validação do formulário de redefinição da palavra-passe.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 2.1.0
  */
 function iniciarValidacaoFormulario() {
+    const formulario = document.getElementById(
+        SELETORES.formulario,
+    );
+
+    if (!(formulario instanceof HTMLFormElement)) {
+        return;
+    }
+
     new ValidadorFormulario(
-        '#reset-password-form',
+        formulario,
         {
-            password: [
-                'required',
-                'min:8',
-            ],
+            regras: {
+                password: [
+                    'obrigatorio',
+                    'minimo:8',
+                ],
 
-            password_confirmation: [
-                'required',
-                'confirmed:password',
-            ],
-        },
-        {
-            password: {
-                required:
-                    'Por favor, insere a palavra-passe.',
-
-                min:
-                    'A palavra-passe deve ter, no mínimo, 8 caracteres.',
+                password_confirmation: [
+                    'obrigatorio',
+                    'confirmado:password',
+                ],
             },
 
-            password_confirmation: {
-                required:
-                    'Por favor, insere a confirmação da palavra-passe.',
+            mensagens: {
+                password: {
+                    obrigatorio:
+                        'Por favor, insere a palavra-passe.',
 
-                confirmed:
-                    'As palavras-passe não coincidem.',
+                    minimo:
+                        'A palavra-passe deve ter, pelo menos, 8 caracteres.',
+                },
+
+                password_confirmation: {
+                    obrigatorio:
+                        'Por favor, confirma a palavra-passe.',
+
+                    confirmado:
+                        'As palavras-passe não coincidem.',
+                },
             },
         },
     );
@@ -59,24 +86,35 @@ function iniciarValidacaoFormulario() {
 /**
  * Inicia os alternadores de visibilidade das palavras-passe.
  *
- * @return {void}
+ * Cada alternador deve ser um botão com o atributo
+ * `data-alvo-palavra-passe` a indicar o identificador do respetivo campo.
+ *
+ * @returns {void}
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 2.1.0
  */
 function iniciarAlternadoresPalavraPasse() {
+    const alternadores = document.querySelectorAll(
+        SELETORES.alternadorPalavraPasse,
+    );
+
+    if (alternadores.length === 0) {
+        return;
+    }
+
     new AlternadorPalavraPasse(
-        '.password-toggle-icon',
+        alternadores,
     );
 }
 
 /**
  * Inicia os comportamentos da página de redefinição da palavra-passe.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 2.1.0
  */
 function iniciarPaginaRedefinicaoPalavraPasse() {
     iniciarValidacaoFormulario();

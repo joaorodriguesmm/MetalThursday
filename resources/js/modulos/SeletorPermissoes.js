@@ -7,144 +7,70 @@
  * restauradas.
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 2.1.0
  */
 class SeletorPermissoes {
     /**
      * Cria o seletor de permissões.
      *
-     * @param {string|HTMLInputElement} campoTodasOuSeletor - Campo que
-     * representa todas as permissões ou respetivo seletor.
-     * @param {string|Iterable<HTMLElement>} itensOuSeletor - Itens das
-     * permissões ou respetivo seletor.
+     * @param {string|HTMLInputElement} campoTodasOuSeletor
+     *     Campo que representa todas as permissões ou respetivo seletor.
+     * @param {string|Iterable<HTMLElement>} itensOuSeletor
+     *     Itens das permissões ou respetivo seletor.
      *
      * @throws {TypeError} Quando os elementos recebidos não são válidos.
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 2.1.0
      */
     constructor(
         campoTodasOuSeletor,
         itensOuSeletor,
     ) {
-        /**
-         * Campo que representa todas as permissões.
-         *
-         * @type {HTMLInputElement}
-         *
-         * @since 1.0.0
-         * @version 2.0.0
-         */
         this.campoTodas = this.obterCampoTodas(
             campoTodasOuSeletor,
         );
 
-        /**
-         * Elementos que contêm as permissões individuais.
-         *
-         * O item da própria permissão global é excluído automaticamente.
-         *
-         * @type {Array<HTMLElement>}
-         *
-         * @since 1.0.0
-         * @version 2.0.0
-         */
         this.itensIndividuais = this.obterItensIndividuais(
             itensOuSeletor,
         );
 
-        /**
-         * Campos das permissões individuais.
-         *
-         * @type {Array<HTMLInputElement>}
-         *
-         * @since 2.0.0
-         * @version 1.0.0
-         */
         this.camposIndividuais = this.itensIndividuais.map(
             (item) => this.obterCampoDoItem(item),
         );
 
-        /**
-         * Valores selecionados antes da ativação da opção global.
-         *
-         * @type {Set<string>}
-         *
-         * @since 2.0.0
-         * @version 1.0.0
-         */
         this.selecoesAnteriores = new Set();
-
-        /**
-         * Formulário ao qual pertence o seletor.
-         *
-         * @type {HTMLFormElement|null}
-         *
-         * @since 2.0.0
-         * @version 1.0.0
-         */
         this.formulario = this.campoTodas.form;
+        this.iniciado = false;
+        this.identificadorReposicao = null;
 
-        /**
-         * Referência estável do manipulador de alteração.
-         *
-         * @type {(evento: Event) => void}
-         *
-         * @since 2.0.0
-         * @version 1.0.0
-         */
         this.manipularAlteracao =
             this.manipularAlteracao.bind(this);
 
-        /**
-         * Referência estável do manipulador de reposição.
-         *
-         * @type {() => void}
-         *
-         * @since 2.0.0
-         * @version 1.0.0
-         */
         this.manipularReposicao =
             this.manipularReposicao.bind(this);
 
         this.registarEstadoInicial();
         this.configurarEventos();
+
         this.atualizarEstado({
             restaurarSelecoes: false,
         });
     }
 
     /**
-     * Remove os eventos configurados pelo módulo.
-     *
-     * @return {void}
-     *
-     * @since 2.0.0
-     * @version 1.0.0
-     */
-    destruir() {
-        this.campoTodas.removeEventListener(
-            'change',
-            this.manipularAlteracao,
-        );
-
-        if (this.formulario instanceof HTMLFormElement) {
-            this.formulario.removeEventListener(
-                'reset',
-                this.manipularReposicao,
-            );
-        }
-    }
-
-    /**
      * Configura os eventos necessários.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 2.1.0
      */
     configurarEventos() {
+        if (this.iniciado) {
+            return;
+        }
+
         this.campoTodas.addEventListener(
             'change',
             this.manipularAlteracao,
@@ -156,6 +82,8 @@ class SeletorPermissoes {
                 this.manipularReposicao,
             );
         }
+
+        this.iniciado = true;
     }
 
     /**
@@ -164,7 +92,7 @@ class SeletorPermissoes {
      * Quando a opção global já está selecionada, não existem escolhas
      * individuais para preservar.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 2.0.0
      * @version 1.0.0
@@ -180,15 +108,15 @@ class SeletorPermissoes {
     /**
      * Processa a alteração da opção global.
      *
-     * @param {Event} evento - Evento de alteração.
+     * @param {Event} evento Evento de alteração.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 1.0.0
      * @version 2.0.0
      */
     manipularAlteracao(evento) {
-        if (evento.target !== this.campoTodas) {
+        if (evento.currentTarget !== this.campoTodas) {
             return;
         }
 
@@ -213,14 +141,21 @@ class SeletorPermissoes {
      * O navegador repõe os valores dos campos depois do evento `reset`.
      * A atualização é, por isso, adiada para o ciclo seguinte.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 1.1.0
      */
     manipularReposicao() {
-        window.setTimeout(
+        if (this.identificadorReposicao !== null) {
+            window.clearTimeout(
+                this.identificadorReposicao,
+            );
+        }
+
+        this.identificadorReposicao = window.setTimeout(
             () => {
+                this.identificadorReposicao = null;
                 this.selecoesAnteriores.clear();
 
                 if (!this.campoTodas.checked) {
@@ -238,11 +173,11 @@ class SeletorPermissoes {
     /**
      * Atualiza a apresentação e o estado dos campos individuais.
      *
-     * @param {Object} opcoes - Opções da atualização.
-     * @param {boolean} opcoes.restaurarSelecoes - Indica se as escolhas
-     * anteriores devem ser restauradas.
+     * @param {object} opcoes Opções da atualização.
+     * @param {boolean} opcoes.restaurarSelecoes
+     *     Indica se as escolhas anteriores devem ser restauradas.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 1.0.0
      * @version 2.0.0
@@ -255,9 +190,8 @@ class SeletorPermissoes {
 
         this.itensIndividuais.forEach(
             (item, indice) => {
-                const campo = this.camposIndividuais[
-                    indice
-                ];
+                const campo =
+                    this.camposIndividuais[indice];
 
                 this.atualizarItem(
                     item,
@@ -276,10 +210,10 @@ class SeletorPermissoes {
     /**
      * Atualiza a apresentação de um item individual.
      *
-     * @param {HTMLElement} item - Elemento da permissão.
-     * @param {boolean} ocultar - Indicação de ocultação.
+     * @param {HTMLElement} item Elemento da permissão.
+     * @param {boolean} ocultar Indicação de ocultação.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 2.0.0
      * @version 1.0.0
@@ -297,7 +231,9 @@ class SeletorPermissoes {
 
         item.setAttribute(
             'aria-hidden',
-            ocultar ? 'true' : 'false',
+            ocultar
+                ? 'true'
+                : 'false',
         );
     }
 
@@ -305,13 +241,13 @@ class SeletorPermissoes {
      * Atualiza um campo de permissão individual.
      *
      * Os campos ocultos são também desativados, impedindo a sua submissão e
-     * remoção através do teclado.
+     * utilização através do teclado.
      *
-     * @param {HTMLInputElement} campo - Campo atualizado.
-     * @param {boolean} ocultar - Indicação de ocultação.
-     * @param {boolean} restaurarSelecao - Indicação de restauro.
+     * @param {HTMLInputElement} campo Campo atualizado.
+     * @param {boolean} ocultar Indicação de ocultação.
+     * @param {boolean} restaurarSelecao Indicação de restauro.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 2.0.0
      * @version 1.0.0
@@ -340,7 +276,7 @@ class SeletorPermissoes {
     /**
      * Memoriza as permissões individuais selecionadas.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 2.0.0
      * @version 1.0.0
@@ -360,19 +296,39 @@ class SeletorPermissoes {
     /**
      * Obtém o campo que representa todas as permissões.
      *
-     * @param {string|HTMLInputElement} campoOuSeletor - Campo ou seletor.
+     * @param {string|HTMLInputElement} campoOuSeletor
+     *     Campo ou seletor.
      *
-     * @return {HTMLInputElement} Campo encontrado.
+     * @returns {HTMLInputElement} Campo encontrado.
      *
-     * @throws {TypeError} Quando o campo não é uma checkbox.
+     * @throws {TypeError} Quando o seletor ou o campo não são válidos.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 1.1.0
      */
     obterCampoTodas(campoOuSeletor) {
-        const campo = typeof campoOuSeletor === 'string'
-            ? document.querySelector(campoOuSeletor)
-            : campoOuSeletor;
+        let campo = campoOuSeletor;
+
+        if (typeof campoOuSeletor === 'string') {
+            const seletor =
+                campoOuSeletor.trim();
+
+            if (seletor === '') {
+                throw new TypeError(
+                    'O seletor da permissão global não pode estar vazio.',
+                );
+            }
+
+            try {
+                campo = document.querySelector(
+                    seletor,
+                );
+            } catch {
+                throw new TypeError(
+                    `O seletor CSS "${seletor}" é inválido.`,
+                );
+            }
+        }
 
         if (
             !(campo instanceof HTMLInputElement)
@@ -389,26 +345,45 @@ class SeletorPermissoes {
     /**
      * Obtém os itens das permissões individuais.
      *
-     * @param {string|Iterable<HTMLElement>} itensOuSeletor - Itens ou seletor.
+     * O item da própria permissão global é excluído automaticamente.
      *
-     * @return {Array<HTMLElement>} Itens individuais.
+     * @param {string|Iterable<HTMLElement>} itensOuSeletor
+     *     Itens ou seletor.
      *
-     * @throws {TypeError} Quando os itens não são válidos.
+     * @returns {Array<HTMLElement>} Itens individuais únicos.
+     *
+     * @throws {TypeError} Quando o seletor ou os itens não são válidos.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 1.1.0
      */
     obterItensIndividuais(itensOuSeletor) {
         let elementos;
 
         if (typeof itensOuSeletor === 'string') {
-            elementos = Array.from(
-                document.querySelectorAll(
-                    itensOuSeletor,
-                ),
-            );
+            const seletor =
+                itensOuSeletor.trim();
+
+            if (seletor === '') {
+                throw new TypeError(
+                    'O seletor das permissões individuais não pode estar vazio.',
+                );
+            }
+
+            try {
+                elementos = Array.from(
+                    document.querySelectorAll(
+                        seletor,
+                    ),
+                );
+            } catch {
+                throw new TypeError(
+                    `O seletor CSS "${seletor}" é inválido.`,
+                );
+            }
         } else if (
             itensOuSeletor !== null
+            && itensOuSeletor !== undefined
             && typeof itensOuSeletor[
                 Symbol.iterator
             ] === 'function'
@@ -422,42 +397,33 @@ class SeletorPermissoes {
             );
         }
 
-        const itens = elementos.filter(
-            (elemento) => (
-                elemento instanceof HTMLElement
-                && !elemento.contains(this.campoTodas)
-            ),
-        );
-
         if (
-            itens.length !== elementos.length
-                - (
-                    elementos.some(
-                        (elemento) => (
-                            elemento instanceof HTMLElement
-                            && elemento.contains(
-                                this.campoTodas,
-                            )
-                        ),
-                    )
-                        ? 1
-                        : 0
-                )
+            elementos.some(
+                (elemento) =>
+                    !(elemento instanceof HTMLElement),
+            )
         ) {
             throw new TypeError(
-                'Foi recebido um item de permissão inválido.',
+                'Todos os itens das permissões devem ser elementos HTML válidos.',
             );
         }
 
-        return itens;
+        return Array.from(
+            new Set(elementos),
+        ).filter(
+            (elemento) =>
+                !elemento.contains(
+                    this.campoTodas,
+                ),
+        );
     }
 
     /**
      * Obtém a checkbox contida num item individual.
      *
-     * @param {HTMLElement} item - Item da permissão.
+     * @param {HTMLElement} item Item da permissão.
      *
-     * @return {HTMLInputElement} Campo encontrado.
+     * @returns {HTMLInputElement} Campo encontrado.
      *
      * @throws {TypeError} Quando o item não possui uma checkbox válida.
      *
@@ -479,6 +445,42 @@ class SeletorPermissoes {
         }
 
         return campo;
+    }
+
+    /**
+     * Remove os eventos configurados pelo módulo.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     * @version 1.1.0
+     */
+    destruir() {
+        if (!this.iniciado) {
+            return;
+        }
+
+        this.campoTodas.removeEventListener(
+            'change',
+            this.manipularAlteracao,
+        );
+
+        if (this.formulario instanceof HTMLFormElement) {
+            this.formulario.removeEventListener(
+                'reset',
+                this.manipularReposicao,
+            );
+        }
+
+        if (this.identificadorReposicao !== null) {
+            window.clearTimeout(
+                this.identificadorReposicao,
+            );
+
+            this.identificadorReposicao = null;
+        }
+
+        this.iniciado = false;
     }
 }
 

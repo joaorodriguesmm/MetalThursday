@@ -3,25 +3,29 @@
  *
  * O gestor preserva o estado inicial apresentado pela página. Quando uma
  * fotografia selecionada é inválida ou removida antes da submissão, a
- * fotografia atual do utilizador é restaurada em vez de ser substituída
- * incorretamente pelas iniciais.
+ * fotografia atual do utilizador é restaurada.
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 2.1.0
  */
 class GestorFotografiaPerfil {
     /**
-     * Cria o gestor da fotografia.
+     * Cria o gestor da fotografia do perfil.
      *
-     * @param {string} seletorCampoFicheiro - Seletor do campo de ficheiro.
-     * @param {string} seletorPrevisualizacao - Seletor da imagem de
-     * pré-visualização.
-     * @param {string} seletorIniciais - Seletor das iniciais do utilizador.
-     * @param {string|null} seletorBotaoLimpar - Seletor opcional do botão que
-     * limpa apenas a nova seleção.
+     * @param {string} seletorCampoFicheiro
+     *     Seletor CSS do campo de ficheiro.
+     * @param {string} seletorPrevisualizacao
+     *     Seletor CSS da imagem de pré-visualização.
+     * @param {string} seletorIniciais
+     *     Seletor CSS das iniciais do utilizador.
+     * @param {string|null} seletorBotaoLimpar
+     *     Seletor opcional do botão que limpa apenas a nova seleção.
+     *
+     * @throws { @param {string|null} seletorBotaoLimpar
+     *     Seletor opcional do botãoTypeError} Quando algum seletor CSS é inválido.
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 2.1.0
      */
     constructor(
         seletorCampoFicheiro,
@@ -29,130 +33,95 @@ class GestorFotografiaPerfil {
         seletorIniciais,
         seletorBotaoLimpar = null,
     ) {
-        /**
-         * Campo utilizado para selecionar a fotografia.
-         *
-         * @type {HTMLInputElement|null}
-         *
-         * @since 1.0.0
-         * @version 2.0.0
-         */
-        this.campoFicheiro = document.querySelector(
+        this.campoFicheiro = this.obterElemento(
             seletorCampoFicheiro,
         );
 
-        /**
-         * Elemento utilizado para apresentar a fotografia.
-         *
-         * @type {HTMLImageElement|null}
-         *
-         * @since 1.0.0
-         * @version 2.0.0
-         */
-        this.elementoPrevisualizacao = document.querySelector(
+        this.elementoPrevisualizacao = this.obterElemento(
             seletorPrevisualizacao,
         );
 
-        /**
-         * Elemento que contém as iniciais.
-         *
-         * @type {HTMLElement|null}
-         *
-         * @since 1.0.0
-         * @version 2.0.0
-         */
-        this.elementoIniciais = document.querySelector(
+        this.elementoIniciais = this.obterElemento(
             seletorIniciais,
         );
 
-        /**
-         * Botão opcional que limpa a seleção atual.
-         *
-         * Este botão não elimina a fotografia persistida. Limita-se a remover
-         * o ficheiro selecionado antes da submissão.
-         *
-         * @type {HTMLElement|null}
-         *
-         * @since 1.0.0
-         * @version 2.0.0
-         */
-        this.botaoLimpar = seletorBotaoLimpar
-            ? document.querySelector(seletorBotaoLimpar)
-            : null;
+        this.botaoLimpar = seletorBotaoLimpar === null
+            ? null
+            : this.obterElemento(seletorBotaoLimpar);
 
-        /**
-         * Elemento que apresenta o avatar com as iniciais.
-         *
-         * @type {HTMLElement|null}
-         *
-         * @since 1.0.0
-         * @version 2.0.0
-         */
-        this.circuloAvatar = this.elementoIniciais instanceof HTMLElement
-            ? this.elementoIniciais.closest('.avatar-circle')
-            : null;
+        this.circuloAvatar =
+            this.elementoIniciais instanceof HTMLElement
+                ? this.elementoIniciais.closest('.avatar-circle')
+                : null;
 
-        /**
-         * Origem da fotografia apresentada no carregamento inicial.
-         *
-         * @type {string|null}
-         *
-         * @since 2.0.0
-         * @version 1.0.0
-         */
         this.origemFotografiaInicial = null;
-
-        /**
-         * URL temporário criado para a fotografia selecionada.
-         *
-         * @type {string|null}
-         *
-         * @since 2.0.0
-         * @version 1.0.0
-         */
         this.urlPrevisualizacaoTemporaria = null;
+        this.iniciado = false;
 
-        /**
-         * Referência estável do manipulador do botão.
-         *
-         * @type {(evento: Event) => void}
-         *
-         * @since 2.0.0
-         * @version 1.0.0
-         */
-        this.manipularCliqueBotaoLimpar =
-            this.manipularCliqueBotaoLimpar.bind(this);
+        this.aoAlterarCampoFicheiro = (evento) => {
+            this.manipularAlteracaoCampoFicheiro(evento);
+        };
+
+        this.aoClicarBotaoLimpar = (evento) => {
+            this.manipularCliqueBotaoLimpar(evento);
+        };
 
         if (!this.estaDisponivel()) {
             return;
         }
 
         this.registarEstadoInicial();
-        this.configurarEventos();
+        this.iniciar();
         this.restaurarPrevisualizacao();
     }
 
     /**
      * Determina se os elementos obrigatórios estão disponíveis.
      *
-     * @return {boolean} Verdadeiro quando o gestor pode ser utilizado.
+     * @returns {boolean}
      *
      * @since 2.0.0
      * @version 1.0.0
      */
     estaDisponivel() {
-        return (
-            this.campoFicheiro instanceof HTMLInputElement
+        return this.campoFicheiro instanceof HTMLInputElement
             && this.campoFicheiro.type === 'file'
             && this.elementoPrevisualizacao instanceof HTMLImageElement
-            && this.elementoIniciais instanceof HTMLElement
+            && this.elementoIniciais instanceof HTMLElement;
+    }
+
+    /**
+     * Configura os eventos do gestor.
+     *
+     * @returns {void}
+     *
+     * @since 2.1.0
+     * @version 1.0.0
+     */
+    iniciar() {
+        if (!this.estaDisponivel() || this.iniciado) {
+            return;
+        }
+
+        this.campoFicheiro.addEventListener(
+            'change',
+            this.aoAlterarCampoFicheiro,
         );
+
+        if (this.botaoLimpar instanceof HTMLElement) {
+            this.botaoLimpar.addEventListener(
+                'click',
+                this.aoClicarBotaoLimpar,
+            );
+        }
+
+        this.iniciado = true;
     }
 
     /**
      * Obtém o campo de ficheiro gerido.
      *
-     * @return {HTMLInputElement|null} Campo de ficheiro ou nulo.
+     * @returns {HTMLInputElement|null}
      *
      * @since 2.0.0
      * @version 1.0.0
@@ -164,24 +133,85 @@ class GestorFotografiaPerfil {
     }
 
     /**
+     * Trata a alteração do campo de ficheiro.
+     *
+     * @param {Event} evento Evento de alteração.
+     *
+     * @returns {void}
+     *
+     * @since 2.1.0
+     * @version 1.0.0
+     */
+    manipularAlteracaoCampoFicheiro(evento) {
+        const campo = evento.currentTarget;
+
+        if (!(campo instanceof HTMLInputElement)) {
+            return;
+        }
+
+        campo.setCustomValidity('');
+
+        const ficheiro = campo.files?.item(0) ?? null;
+
+        if (ficheiro === null) {
+            this.restaurarPrevisualizacao();
+
+            return;
+        }
+
+        if (!this.eImagemValida(ficheiro)) {
+            campo.value = '';
+
+            campo.setCustomValidity(
+                'Seleciona um ficheiro de imagem válido.',
+            );
+
+            campo.reportValidity();
+
+            this.restaurarPrevisualizacao();
+
+            return;
+        }
+
+        this.previsualizarImagem(ficheiro);
+    }
+
+    /**
+     * Verifica se o ficheiro selecionado representa uma imagem.
+     *
+     * @param {File} ficheiro Ficheiro selecionado.
+     *
+     * @returns {boolean}
+     *
+     * @since 2.1.0
+     * @version 1.0.0
+     */
+    eImagemValida(ficheiro) {
+        return ficheiro.type.startsWith('image/');
+    }
+
+    /**
      * Pré-visualiza uma fotografia selecionada.
      *
      * É utilizado um URL de objeto temporário, evitando converter todo o
-     * ficheiro para Base64 e mantendo menor utilização de memória.
+     * ficheiro para Base64 e reduzindo a utilização de memória.
      *
-     * @param {File|null} ficheiro - Fotografia selecionada.
+     * @param {File|null} ficheiro Fotografia selecionada.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 2.1.0
      */
     previsualizarImagem(ficheiro) {
         if (!this.estaDisponivel()) {
             return;
         }
 
-        if (!(ficheiro instanceof File)) {
+        if (
+            !(ficheiro instanceof File)
+            || !this.eImagemValida(ficheiro)
+        ) {
             this.restaurarPrevisualizacao();
 
             return;
@@ -205,7 +235,7 @@ class GestorFotografiaPerfil {
      * Quando o utilizador ainda não possui fotografia, volta a apresentar as
      * iniciais.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 1.0.0
      * @version 2.0.0
@@ -234,37 +264,23 @@ class GestorFotografiaPerfil {
     }
 
     /**
-     * Liberta recursos e remove os eventos configurados.
-     *
-     * @return {void}
-     *
-     * @since 2.0.0
-     * @version 1.0.0
-     */
-    destruir() {
-        if (this.botaoLimpar instanceof HTMLElement) {
-            this.botaoLimpar.removeEventListener(
-                'click',
-                this.manipularCliqueBotaoLimpar,
-            );
-        }
-
-        this.revogarUrlTemporario();
-    }
-
-    /**
      * Regista a fotografia apresentada no carregamento inicial.
      *
-     * A origem é lida através de `getAttribute`, evitando que um atributo
-     * vazio seja convertido pelo navegador na ligação da própria página.
+     * A origem é lida através de `getAttribute()`, evitando que um atributo
+     * vazio seja convertido pelo navegador no endereço da própria página.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 2.0.0
      * @version 1.0.0
      */
     registarEstadoInicial() {
-        if (!(this.elementoPrevisualizacao instanceof HTMLImageElement)) {
+        if (
+            !(
+                this.elementoPrevisualizacao
+                instanceof HTMLImageElement
+            )
+        ) {
             return;
         }
 
@@ -272,44 +288,25 @@ class GestorFotografiaPerfil {
             .getAttribute('src')
             ?.trim();
 
-        const fotografiaVisivel = (
+        const fotografiaVisivel =
             typeof origem === 'string'
             && origem !== ''
             && !this.elementoPrevisualizacao.classList.contains(
                 'd-none',
-            )
-        );
+            );
 
-        this.origemFotografiaInicial = fotografiaVisivel
-            ? origem
-            : null;
-    }
-
-    /**
-     * Configura os eventos opcionais do gestor.
-     *
-     * @return {void}
-     *
-     * @since 1.0.0
-     * @version 2.0.0
-     */
-    configurarEventos() {
-        if (!(this.botaoLimpar instanceof HTMLElement)) {
-            return;
-        }
-
-        this.botaoLimpar.addEventListener(
-            'click',
-            this.manipularCliqueBotaoLimpar,
-        );
+        this.origemFotografiaInicial =
+            fotografiaVisivel
+                ? origem
+                : null;
     }
 
     /**
      * Limpa a nova seleção e restaura o estado inicial.
      *
-     * @param {Event} evento - Evento de clique.
+     * @param {Event} evento Evento de clique.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 1.0.0
      * @version 2.0.0
@@ -317,8 +314,12 @@ class GestorFotografiaPerfil {
     manipularCliqueBotaoLimpar(evento) {
         evento.preventDefault();
 
-        if (this.campoFicheiro instanceof HTMLInputElement) {
+        if (
+            this.campoFicheiro
+            instanceof HTMLInputElement
+        ) {
             this.campoFicheiro.value = '';
+            this.campoFicheiro.setCustomValidity('');
         }
 
         this.restaurarPrevisualizacao();
@@ -327,15 +328,20 @@ class GestorFotografiaPerfil {
     /**
      * Alterna entre a fotografia e o avatar com iniciais.
      *
-     * @param {boolean} mostrarFotografia - Indicação de apresentação.
+     * @param {boolean} mostrarFotografia Indicação de apresentação.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 2.0.0
      * @version 1.0.0
      */
     alternarApresentacao(mostrarFotografia) {
-        if (!(this.elementoPrevisualizacao instanceof HTMLImageElement)) {
+        if (
+            !(
+                this.elementoPrevisualizacao
+                instanceof HTMLImageElement
+            )
+        ) {
             return;
         }
 
@@ -346,7 +352,9 @@ class GestorFotografiaPerfil {
 
         this.elementoPrevisualizacao.setAttribute(
             'aria-hidden',
-            mostrarFotografia ? 'false' : 'true',
+            mostrarFotografia
+                ? 'false'
+                : 'true',
         );
 
         if (this.circuloAvatar instanceof HTMLElement) {
@@ -357,7 +365,9 @@ class GestorFotografiaPerfil {
 
             this.circuloAvatar.setAttribute(
                 'aria-hidden',
-                mostrarFotografia ? 'true' : 'false',
+                mostrarFotografia
+                    ? 'true'
+                    : 'false',
             );
         }
     }
@@ -365,9 +375,9 @@ class GestorFotografiaPerfil {
     /**
      * Atualiza a visibilidade do botão de limpeza.
      *
-     * @param {boolean} mostrar - Indicação de apresentação.
+     * @param {boolean} mostrar Indicação de apresentação.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 2.0.0
      * @version 1.0.0
@@ -384,20 +394,33 @@ class GestorFotografiaPerfil {
 
         this.botaoLimpar.setAttribute(
             'aria-hidden',
-            mostrar ? 'false' : 'true',
+            mostrar
+                ? 'false'
+                : 'true',
         );
+
+        if (
+            this.botaoLimpar
+            instanceof HTMLButtonElement
+        ) {
+            this.botaoLimpar.disabled =
+                !mostrar;
+        }
     }
 
     /**
      * Revoga o URL temporário da pré-visualização.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 2.0.0
      * @version 1.0.0
      */
     revogarUrlTemporario() {
-        if (this.urlPrevisualizacaoTemporaria === null) {
+        if (
+            this.urlPrevisualizacaoTemporaria
+            === null
+        ) {
             return;
         }
 
@@ -406,6 +429,71 @@ class GestorFotografiaPerfil {
         );
 
         this.urlPrevisualizacaoTemporaria = null;
+    }
+
+    /**
+     * Obtém um elemento através de um seletor CSS.
+     *
+     * @param {unknown} seletor Seletor CSS.
+     *
+     * @returns {Element|null}
+     *
+     * @throws {TypeError} Quando o seletor é inválido.
+     *
+     * @since 2.1.0
+     * @version 1.0.0
+     */
+    obterElemento(seletor) {
+        if (
+            typeof seletor !== 'string'
+            || seletor.trim() === ''
+        ) {
+            throw new TypeError(
+                'O seletor indicado é obrigatório.',
+            );
+        }
+
+        try {
+            return document.querySelector(
+                seletor,
+            );
+        } catch {
+            throw new TypeError(
+                `O seletor CSS "${seletor}" é inválido.`,
+            );
+        }
+    }
+
+    /**
+     * Liberta recursos e remove os eventos configurados.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     * @version 1.1.0
+     */
+    destruir() {
+        if (this.iniciado) {
+            if (
+                this.campoFicheiro
+                instanceof HTMLInputElement
+            ) {
+                this.campoFicheiro.removeEventListener(
+                    'change',
+                    this.aoAlterarCampoFicheiro,
+                );
+            }
+
+            if (this.botaoLimpar instanceof HTMLElement) {
+                this.botaoLimpar.removeEventListener(
+                    'click',
+                    this.aoClicarBotaoLimpar,
+                );
+            }
+        }
+
+        this.revogarUrlTemporario();
+        this.iniciado = false;
     }
 }
 

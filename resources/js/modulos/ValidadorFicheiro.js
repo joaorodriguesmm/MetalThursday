@@ -6,37 +6,40 @@
  * servidor.
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 2.1.0
  */
 class ValidadorFicheiro {
     /**
      * Cria o validador.
      *
-     * @param {HTMLInputElement} campoFicheiro - Campo de ficheiro.
-     * @param {Object} opcoes - Configuração do validador.
-     * @param {Array<string>} [opcoes.tiposPermitidos=[]] - Tipos MIME
-     * permitidos.
-     * @param {number} [opcoes.tamanhoMaximo=0] - Tamanho máximo em bytes. O
-     * valor zero desativa esta validação.
-     * @param {string|null} [opcoes.seletorMensagemErro=null] - Seletor do
-     * elemento que apresenta os erros.
-     * @param {string|null} [opcoes.seletorTextoFicheiro=null] - Seletor do
-     * elemento que apresenta o texto da seleção.
-     * @param {string} [opcoes.textoPadrao='Selecionar ficheiro'] - Texto
-     * apresentado quando não existe seleção.
-     * @param {string} [opcoes.textoSelecionado='Alterar ficheiro'] - Texto
-     * apresentado quando existe um ficheiro válido.
-     * @param {Function|null} [opcoes.aoFicheiroInvalido=null] - Callback
-     * executado quando o ficheiro é inválido.
-     * @param {Function|null} [opcoes.aoFicheiroValido=null] - Callback
-     * executado quando o ficheiro é válido.
-     * @param {Function|null} [opcoes.aoLimparSelecao=null] - Callback executado
-     * quando a seleção é removida.
+     * @param {HTMLInputElement} campoFicheiro Campo de ficheiro.
+     * @param {object} opcoes Configuração do validador.
+     * @param {Array<string>} [opcoes.tiposPermitidos=[]]
+     *     Tipos MIME permitidos. São aceites tipos exatos e padrões como
+     *     `image/*`.
+     * @param {number} [opcoes.tamanhoMaximo=0]
+     *     Tamanho máximo em bytes. O valor zero desativa esta validação.
+     * @param {string|null} [opcoes.seletorMensagemErro=null]
+     *     Seletor do elemento que apresenta os erros.
+     * @param {string|null} [opcoes.seletorTextoFicheiro=null]
+     *     Seletor do elemento que apresenta o texto da seleção.
+     * @param {string} [opcoes.textoPadrao='Selecionar ficheiro']
+     *     Texto apresentado quando não existe seleção.
+     * @param {string} [opcoes.textoSelecionado='Alterar ficheiro']
+     *     Texto apresentado quando existe um ficheiro válido.
+     * @param {((ficheiro: File, resultado: object) => void)|null}
+     *     [opcoes.aoFicheiroInvalido=null]
+     *     Função executada quando o ficheiro é inválido.
+     * @param {((ficheiro: File) => void)|null}
+     *     [opcoes.aoFicheiroValido=null]
+     *     Função executada quando o ficheiro é válido.
+     * @param {(() => void)|null} [opcoes.aoLimparSelecao=null]
+     *     Função executada quando a seleção é removida.
      *
      * @throws {TypeError} Quando o campo ou alguma opção são inválidos.
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 2.1.0
      */
     constructor(
         campoFicheiro,
@@ -51,58 +54,22 @@ class ValidadorFicheiro {
             );
         }
 
-        /**
-         * Campo de ficheiro gerido.
-         *
-         * @type {HTMLInputElement}
-         *
-         * @since 1.0.0
-         * @version 2.0.0
-         */
         this.campoFicheiro = campoFicheiro;
 
-        /**
-         * Opções normalizadas do validador.
-         *
-         * @type {Readonly<Object>}
-         *
-         * @since 1.0.0
-         * @version 2.0.0
-         */
-        this.opcoes = this.normalizarOpcoes(opcoes);
+        this.opcoes = this.normalizarOpcoes(
+            opcoes,
+        );
 
-        /**
-         * Elemento utilizado para apresentar mensagens de erro.
-         *
-         * @type {HTMLElement|null}
-         *
-         * @since 1.0.0
-         * @version 2.0.0
-         */
         this.elementoMensagemErro = this.obterElementoOpcional(
             this.opcoes.seletorMensagemErro,
         );
 
-        /**
-         * Elemento utilizado para apresentar o estado da seleção.
-         *
-         * @type {HTMLElement|null}
-         *
-         * @since 1.0.0
-         * @version 2.0.0
-         */
         this.elementoTextoFicheiro = this.obterElementoOpcional(
             this.opcoes.seletorTextoFicheiro,
         );
 
-        /**
-         * Referência estável do manipulador de alteração.
-         *
-         * @type {(evento: Event) => void}
-         *
-         * @since 2.0.0
-         * @version 1.0.0
-         */
+        this.iniciado = false;
+
         this.manipularAlteracao =
             this.manipularAlteracao.bind(this);
 
@@ -114,14 +81,14 @@ class ValidadorFicheiro {
     /**
      * Normaliza e valida as opções recebidas.
      *
-     * @param {Object} opcoes - Opções recebidas.
+     * @param {object} opcoes Opções recebidas.
      *
-     * @return {Readonly<Object>} Opções normalizadas.
+     * @returns {Readonly<object>} Opções normalizadas.
      *
      * @throws {TypeError} Quando alguma opção é inválida.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 1.1.0
      */
     normalizarOpcoes(opcoes) {
         if (
@@ -158,7 +125,7 @@ class ValidadorFicheiro {
             .map((tipo) => {
                 if (typeof tipo !== 'string') {
                     throw new TypeError(
-                        'Cada tipo permitido deve ser uma sequência de caracteres.',
+                        'Cada tipo permitido deve ser uma cadeia de caracteres.',
                     );
                 }
 
@@ -200,33 +167,56 @@ class ValidadorFicheiro {
             'aoLimparSelecao',
         );
 
+        const textoPadrao = String(
+            opcoesNormalizadas.textoPadrao,
+        ).trim();
+
+        const textoSelecionado = String(
+            opcoesNormalizadas.textoSelecionado,
+        ).trim();
+
+        if (
+            textoPadrao === ''
+            || textoSelecionado === ''
+        ) {
+            throw new TypeError(
+                'Os textos do campo de ficheiro não podem estar vazios.',
+            );
+        }
+
         return Object.freeze({
             ...opcoesNormalizadas,
+
             tiposPermitidos: Object.freeze(
-                Array.from(new Set(tiposPermitidos)),
+                Array.from(
+                    new Set(tiposPermitidos),
+                ),
             ),
+
             tamanhoMaximo: Math.floor(
                 opcoesNormalizadas.tamanhoMaximo,
             ),
-            textoPadrao: String(
-                opcoesNormalizadas.textoPadrao,
-            ),
-            textoSelecionado: String(
-                opcoesNormalizadas.textoSelecionado,
-            ),
+
+            textoPadrao,
+            textoSelecionado,
         });
     }
 
     /**
-     * Configura atributos de acessibilidade.
+     * Configura os atributos de acessibilidade.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 1.1.0
      */
     configurarAcessibilidade() {
-        if (!(this.elementoMensagemErro instanceof HTMLElement)) {
+        if (
+            !(
+                this.elementoMensagemErro
+                instanceof HTMLElement
+            )
+        ) {
             return;
         }
 
@@ -239,46 +229,81 @@ class ValidadorFicheiro {
             'role',
             'alert',
         );
+
+        if (this.elementoMensagemErro.id === '') {
+            return;
+        }
+
+        const descricoesAtuais = (
+            this.campoFicheiro.getAttribute(
+                'aria-describedby',
+            )
+            ?? ''
+        )
+            .split(/\s+/)
+            .filter(Boolean);
+
+        const descricoes = Array.from(
+            new Set([
+                ...descricoesAtuais,
+                this.elementoMensagemErro.id,
+            ]),
+        );
+
+        this.campoFicheiro.setAttribute(
+            'aria-describedby',
+            descricoes.join(' '),
+        );
     }
 
     /**
      * Configura os eventos do campo.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 2.1.0
      */
     configurarEventos() {
+        if (this.iniciado) {
+            return;
+        }
+
         this.campoFicheiro.addEventListener(
             'change',
             this.manipularAlteracao,
         );
+
+        this.iniciado = true;
     }
 
     /**
      * Processa uma alteração na seleção.
      *
-     * @param {Event} evento - Evento de alteração.
+     * @param {Event} evento Evento de alteração.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 2.1.0
      */
     manipularAlteracao(evento) {
-        if (evento.target !== this.campoFicheiro) {
+        if (
+            evento.currentTarget
+            !== this.campoFicheiro
+        ) {
             return;
         }
 
         this.limparErro();
 
-        const ficheiro = this.campoFicheiro
-            .files
-            ?.item(0);
+        const ficheiro =
+            this.campoFicheiro.files?.item(0)
+            ?? null;
 
         if (!(ficheiro instanceof File)) {
             this.atualizarTextoSelecao(null);
+
             this.executarCallback(
                 this.opcoes.aoLimparSelecao,
             );
@@ -286,11 +311,16 @@ class ValidadorFicheiro {
             return;
         }
 
-        const resultado = this.validar(ficheiro);
+        const resultado =
+            this.validar(ficheiro);
 
         if (!resultado.valido) {
-            this.apresentarErro(resultado.mensagem);
+            this.apresentarErro(
+                resultado.mensagem,
+            );
+
             this.campoFicheiro.value = '';
+
             this.atualizarTextoSelecao(null);
 
             this.executarCallback(
@@ -315,20 +345,21 @@ class ValidadorFicheiro {
     /**
      * Valida um ficheiro.
      *
-     * @param {File} ficheiro - Ficheiro selecionado.
+     * @param {File} ficheiro Ficheiro selecionado.
      *
-     * @return {{valido: boolean, codigo: string|null, mensagem: string}}
-     * Resultado da validação.
+     * @returns {{valido: boolean, codigo: string|null, mensagem: string}}
+     *     Resultado da validação.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 1.1.0
      */
     validar(ficheiro) {
         if (!(ficheiro instanceof File)) {
             return {
                 valido: false,
                 codigo: 'ficheiro_invalido',
-                mensagem: 'O ficheiro selecionado não é válido.',
+                mensagem:
+                    'O ficheiro selecionado não é válido.',
             };
         }
 
@@ -338,28 +369,32 @@ class ValidadorFicheiro {
 
         if (
             this.opcoes.tiposPermitidos.length > 0
-            && !this.opcoes.tiposPermitidos.includes(
-                tipoFicheiro,
-            )
+            && !this.tipoEPermitido(tipoFicheiro)
         ) {
             return {
                 valido: false,
                 codigo: 'tipo_nao_permitido',
-                mensagem: this.criarMensagemTipoNaoPermitido(
-                    tipoFicheiro,
-                ),
+
+                mensagem:
+                    this.criarMensagemTipoNaoPermitido(
+                        tipoFicheiro,
+                    ),
             };
         }
 
         if (
             this.opcoes.tamanhoMaximo > 0
-            && ficheiro.size > this.opcoes.tamanhoMaximo
+            && ficheiro.size
+                > this.opcoes.tamanhoMaximo
         ) {
             return {
                 valido: false,
                 codigo: 'tamanho_excedido',
+
                 mensagem:
-                    `O ficheiro é demasiado grande. O tamanho máximo permitido é ${this.formatarBytes(this.opcoes.tamanhoMaximo)}.`,
+                    `O ficheiro é demasiado grande. O tamanho máximo permitido é ${this.formatarBytes(
+                        this.opcoes.tamanhoMaximo,
+                    )}.`,
             };
         }
 
@@ -371,14 +406,44 @@ class ValidadorFicheiro {
     }
 
     /**
+     * Verifica se um tipo MIME pertence à lista permitida.
+     *
+     * @param {string} tipoFicheiro Tipo MIME do ficheiro.
+     *
+     * @returns {boolean}
+     *
+     * @since 2.1.0
+     * @version 1.0.0
+     */
+    tipoEPermitido(tipoFicheiro) {
+        return this.opcoes.tiposPermitidos.some(
+            (tipoPermitido) => {
+                if (
+                    tipoPermitido.endsWith('/*')
+                ) {
+                    return tipoFicheiro.startsWith(
+                        tipoPermitido.slice(
+                            0,
+                            -1,
+                        ),
+                    );
+                }
+
+                return tipoFicheiro
+                    === tipoPermitido;
+            },
+        );
+    }
+
+    /**
      * Apresenta uma mensagem de erro.
      *
-     * @param {string} mensagem - Mensagem apresentada.
+     * @param {string} mensagem Mensagem apresentada.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 2.1.0
      */
     apresentarErro(mensagem) {
         this.campoFicheiro.classList.add(
@@ -390,11 +455,17 @@ class ValidadorFicheiro {
             'true',
         );
 
-        if (!(this.elementoMensagemErro instanceof HTMLElement)) {
+        if (
+            !(
+                this.elementoMensagemErro
+                instanceof HTMLElement
+            )
+        ) {
             return;
         }
 
-        this.elementoMensagemErro.textContent = mensagem;
+        this.elementoMensagemErro.textContent =
+            mensagem;
 
         this.elementoMensagemErro.classList.add(
             'd-block',
@@ -408,10 +479,10 @@ class ValidadorFicheiro {
     /**
      * Limpa a mensagem de erro apresentada pelo módulo.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 2.1.0
      */
     limparErro() {
         this.campoFicheiro.classList.remove(
@@ -422,11 +493,17 @@ class ValidadorFicheiro {
             'aria-invalid',
         );
 
-        if (!(this.elementoMensagemErro instanceof HTMLElement)) {
+        if (
+            !(
+                this.elementoMensagemErro
+                instanceof HTMLElement
+            )
+        ) {
             return;
         }
 
-        this.elementoMensagemErro.textContent = '';
+        this.elementoMensagemErro.textContent =
+            '';
 
         this.elementoMensagemErro.classList.remove(
             'd-block',
@@ -441,58 +518,56 @@ class ValidadorFicheiro {
     /**
      * Atualiza o texto associado ao campo.
      *
-     * @param {string|null} texto - Texto apresentado ou nulo para utilizar o
-     * valor padrão.
+     * @param {string|null} texto
+     *     Texto apresentado ou nulo para utilizar o valor padrão.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 1.0.0
      * @version 2.0.0
      */
     atualizarTextoSelecao(texto = null) {
-        if (!(this.elementoTextoFicheiro instanceof HTMLElement)) {
+        if (
+            !(
+                this.elementoTextoFicheiro
+                instanceof HTMLElement
+            )
+        ) {
             return;
         }
 
         this.elementoTextoFicheiro.textContent =
-            texto ?? this.opcoes.textoPadrao;
-    }
-
-    /**
-     * Remove os eventos configurados pelo módulo.
-     *
-     * @return {void}
-     *
-     * @since 2.0.0
-     * @version 1.0.0
-     */
-    destruir() {
-        this.campoFicheiro.removeEventListener(
-            'change',
-            this.manipularAlteracao,
-        );
+            texto
+            ?? this.opcoes.textoPadrao;
     }
 
     /**
      * Cria a mensagem para um tipo não permitido.
      *
-     * @param {string} tipoRecebido - Tipo MIME recebido.
+     * @param {string} tipoRecebido Tipo MIME recebido.
      *
-     * @return {string} Mensagem de erro.
+     * @returns {string} Mensagem de erro.
      *
      * @since 2.0.0
      * @version 1.0.0
      */
-    criarMensagemTipoNaoPermitido(tipoRecebido) {
-        const tipoApresentado = tipoRecebido !== ''
-            ? tipoRecebido
-            : 'desconhecido';
+    criarMensagemTipoNaoPermitido(
+        tipoRecebido,
+    ) {
+        const tipoApresentado =
+            tipoRecebido !== ''
+                ? tipoRecebido
+                : 'desconhecido';
 
-        const formatosPermitidos = this.formatarLista(
-            this.opcoes.tiposPermitidos.map(
-                (tipo) => this.formatarTipoMime(tipo),
-            ),
-        );
+        const formatosPermitidos =
+            this.formatarLista(
+                this.opcoes.tiposPermitidos.map(
+                    (tipo) =>
+                        this.formatarTipoMime(
+                            tipo,
+                        ),
+                ),
+            );
 
         return `O tipo de ficheiro "${tipoApresentado}" não é permitido. Formatos permitidos: ${formatosPermitidos}.`;
     }
@@ -500,15 +575,22 @@ class ValidadorFicheiro {
     /**
      * Converte um tipo MIME numa designação legível.
      *
-     * @param {string} tipoMime - Tipo MIME.
+     * @param {string} tipoMime Tipo MIME.
      *
-     * @return {string} Designação do formato.
+     * @returns {string} Designação do formato.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 1.1.0
      */
     formatarTipoMime(tipoMime) {
-        const partes = tipoMime.split('/');
+        if (tipoMime.endsWith('/*')) {
+            return `${tipoMime
+                .slice(0, -2)
+                .toUpperCase()}/*`;
+        }
+
+        const partes =
+            tipoMime.split('/');
 
         if (partes.length < 2) {
             return tipoMime.toUpperCase();
@@ -528,9 +610,9 @@ class ValidadorFicheiro {
     /**
      * Formata uma lista em português.
      *
-     * @param {Array<string>} elementos - Elementos apresentados.
+     * @param {Array<string>} elementos Elementos apresentados.
      *
-     * @return {string} Lista formatada.
+     * @returns {string} Lista formatada.
      *
      * @since 2.0.0
      * @version 1.0.0
@@ -544,16 +626,19 @@ class ValidadorFicheiro {
             return elementos[0];
         }
 
-        return `${elementos.slice(0, -1).join(', ')} e ${elementos.at(-1)}`;
+        return `${elementos
+            .slice(0, -1)
+            .join(', ')} e ${elementos.at(-1)}`;
     }
 
     /**
      * Formata um tamanho em bytes.
      *
-     * @param {number} bytes - Tamanho em bytes.
-     * @param {number} casasDecimais - Número máximo de casas decimais.
+     * @param {number} bytes Tamanho em bytes.
+     * @param {number} casasDecimais
+     *     Número máximo de casas decimais.
      *
-     * @return {string} Tamanho formatado.
+     * @returns {string} Tamanho formatado.
      *
      * @since 1.0.0
      * @version 2.0.0
@@ -579,87 +664,118 @@ class ValidadorFicheiro {
 
         const indice = Math.min(
             Math.floor(
-                Math.log(bytes) / Math.log(1024),
+                Math.log(bytes)
+                / Math.log(1024),
             ),
             unidades.length - 1,
         );
 
-        const valor = bytes / (1024 ** indice);
+        const valor =
+            bytes / (1024 ** indice);
 
-        const formatador = new Intl.NumberFormat(
-            'pt-PT',
-            {
-                maximumFractionDigits: Math.max(
-                    0,
-                    Math.floor(casasDecimais),
-                ),
-            },
-        );
+        const formatador =
+            new Intl.NumberFormat(
+                'pt-PT',
+                {
+                    maximumFractionDigits:
+                        Math.max(
+                            0,
+                            Math.floor(
+                                casasDecimais,
+                            ),
+                        ),
+                },
+            );
 
-        return `${formatador.format(valor)} ${unidades[indice]}`;
+        return `${formatador.format(
+            valor,
+        )} ${unidades[indice]}`;
     }
 
     /**
      * Obtém um elemento associado a um seletor opcional.
      *
-     * @param {string|null} seletor - Seletor recebido.
+     * @param {string|null} seletor Seletor recebido.
      *
-     * @return {HTMLElement|null} Elemento encontrado ou nulo.
+     * @returns {HTMLElement|null} Elemento encontrado ou nulo.
+     *
+     * @throws {TypeError} Quando o seletor CSS é inválido.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 1.1.0
      */
     obterElementoOpcional(seletor) {
         if (seletor === null) {
             return null;
         }
 
-        const elemento = document.querySelector(seletor);
+        try {
+            const elemento =
+                document.querySelector(
+                    seletor,
+                );
 
-        return elemento instanceof HTMLElement
-            ? elemento
-            : null;
-    }
-
-    /**
-     * Valida um seletor opcional.
-     *
-     * @param {mixed} seletor - Valor recebido.
-     * @param {string} nome - Nome legível da opção.
-     *
-     * @return {void}
-     *
-     * @throws {TypeError} Quando o seletor não é válido.
-     *
-     * @since 2.0.0
-     * @version 1.0.0
-     */
-    validarSeletorOpcional(
-        seletor,
-        nome,
-    ) {
-        if (
-            seletor !== null
-            && (
-                typeof seletor !== 'string'
-                || seletor.trim() === ''
-            )
-        ) {
+            return elemento
+                instanceof HTMLElement
+                ? elemento
+                : null;
+        } catch {
             throw new TypeError(
-                `O seletor de ${nome} não é válido.`,
+                `O seletor CSS "${seletor}" é inválido.`,
             );
         }
     }
 
     /**
-     * Valida um callback opcional.
+     * Valida um seletor opcional.
      *
-     * @param {mixed} callback - Callback recebido.
-     * @param {string} nome - Nome da opção.
+     * @param {unknown} seletor Valor recebido.
+     * @param {string} nome Nome legível da opção.
      *
-     * @return {void}
+     * @returns {void}
      *
-     * @throws {TypeError} Quando o callback não é válido.
+     * @throws {TypeError} Quando o seletor não é válido.
+     *
+     * @since 2.0.0
+     * @version 1.1.0
+     */
+    validarSeletorOpcional(
+        seletor,
+        nome,
+    ) {
+        if (seletor === null) {
+            return;
+        }
+
+        if (
+            typeof seletor !== 'string'
+            || seletor.trim() === ''
+        ) {
+            throw new TypeError(
+                `O seletor de ${nome} não é válido.`,
+            );
+        }
+
+        try {
+            document.querySelector(
+                seletor,
+            );
+        } catch {
+            throw new TypeError(
+                `O seletor CSS de ${nome} não é válido.`,
+            );
+        }
+    }
+
+    /**
+     * Valida uma função opcional.
+     *
+     * @param {unknown} callback Função recebida.
+     * @param {string} nome Nome da opção.
+     *
+     * @returns {void}
+     *
+     * @throws {TypeError} Quando a função não é válida.
      *
      * @since 2.0.0
      * @version 1.0.0
@@ -679,12 +795,12 @@ class ValidadorFicheiro {
     }
 
     /**
-     * Executa um callback quando este está configurado.
+     * Executa uma função quando esta está configurada.
      *
-     * @param {Function|null} callback - Callback configurado.
-     * @param {...mixed} argumentos - Argumentos enviados.
+     * @param {Function|null} callback Função configurada.
+     * @param {...unknown} argumentos Argumentos enviados.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 2.0.0
      * @version 1.0.0
@@ -696,6 +812,27 @@ class ValidadorFicheiro {
         if (typeof callback === 'function') {
             callback(...argumentos);
         }
+    }
+
+    /**
+     * Remove os eventos configurados pelo módulo.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     * @version 1.1.0
+     */
+    destruir() {
+        if (!this.iniciado) {
+            return;
+        }
+
+        this.campoFicheiro.removeEventListener(
+            'change',
+            this.manipularAlteracao,
+        );
+
+        this.iniciado = false;
     }
 }
 

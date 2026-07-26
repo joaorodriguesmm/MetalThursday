@@ -1,44 +1,55 @@
-import ValidadorFormulario
-    from '../modulos/ValidadorFormulario';
+import ValidadorFormulario from '../modulos/ValidadorFormulario';
 
 /**
  * Script específico da página de recuperação da palavra-passe.
  *
- * Os seletores e os nomes dos campos permanecem temporariamente
- * inalterados até à revisão da respetiva vista Blade.
+ * O identificador do formulário e o nome do campo `email` permanecem
+ * inalterados por corresponderem aos contratos atuais da vista e da
+ * autenticação.
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 2.1.0
  */
 
 /**
  * Inicia os comportamentos da página de recuperação da palavra-passe.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 2.1.0
  */
 function iniciarPaginaRecuperacaoPalavraPasse() {
+    const formulario = document.getElementById(
+        'forgot-password-form',
+    );
+
+    if (!(formulario instanceof HTMLFormElement)) {
+        return;
+    }
+
     new ValidadorFormulario(
-        '#forgot-password-form',
+        formulario,
         {
-            email: [
-                'required',
-                'email',
-                'max:255',
-            ],
-        },
-        {
-            email: {
-                required:
-                    'Por favor, insere o teu e-mail.',
+            regras: {
+                email: [
+                    'obrigatorio',
+                    'email',
+                    'maximo:255',
+                ],
+            },
 
-                email:
-                    'Por favor, insere um e-mail válido.',
+            mensagens: {
+                email: {
+                    obrigatorio:
+                        'Por favor, insere o teu endereço de e-mail.',
 
-                max:
-                    'O e-mail deve ter, no máximo, 255 caracteres.',
+                    email:
+                        'Por favor, insere um endereço de e-mail válido.',
+
+                    maximo:
+                        'O endereço de e-mail não pode ter mais de 255 caracteres.',
+                },
             },
         },
     );

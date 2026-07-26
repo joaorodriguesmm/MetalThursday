@@ -1,11 +1,11 @@
-import AlternadorPalavraPasse
-    from '../modulos/AlternadorPalavraPasse';
-
-import ValidadorFormulario
-    from '../modulos/ValidadorFormulario';
+import AlternadorPalavraPasse from '../modulos/AlternadorPalavraPasse';
+import ValidadorFormulario from '../modulos/ValidadorFormulario';
 
 /**
  * Seletores utilizados na página de início de sessão.
+ *
+ * Os nomes dos campos `email` e `password` permanecem inalterados por
+ * corresponderem aos contratos atuais do formulário e da autenticação.
  *
  * @type {Readonly<{
  *     formulario: string,
@@ -17,7 +17,7 @@ import ValidadorFormulario
  */
 const SELETORES = Object.freeze({
     formulario:
-        '#formulario-iniciar-sessao',
+        'formulario-iniciar-sessao',
 
     alternadorPalavraPasse:
         '[data-alvo-palavra-passe]',
@@ -26,13 +26,13 @@ const SELETORES = Object.freeze({
 /**
  * Inicia a validação do formulário.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
  * @version 2.0.0
  */
 function iniciarValidacaoFormulario() {
-    const formulario = document.querySelector(
+    const formulario = document.getElementById(
         SELETORES.formulario,
     );
 
@@ -79,16 +79,15 @@ function iniciarValidacaoFormulario() {
 /**
  * Inicia os alternadores de visibilidade da palavra-passe.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
  * @version 2.0.0
  */
 function iniciarAlternadoresPalavraPasse() {
-    const alternadores =
-        document.querySelectorAll(
-            SELETORES.alternadorPalavraPasse,
-        );
+    const alternadores = document.querySelectorAll(
+        SELETORES.alternadorPalavraPasse,
+    );
 
     if (alternadores.length === 0) {
         return;
@@ -102,7 +101,7 @@ function iniciarAlternadoresPalavraPasse() {
 /**
  * Inicia os comportamentos da página de início de sessão.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
  * @version 2.0.0

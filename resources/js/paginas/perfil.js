@@ -1,3 +1,10 @@
+import AlternadorPalavraPasse from '../modulos/AlternadorPalavraPasse';
+import GestorFotografiaPerfil from '../modulos/GestorFotografiaPerfil';
+import InicializadorTooltips from '../modulos/InicializadorTooltips';
+import SeletorPermissoes from '../modulos/SeletorPermissoes';
+import ValidadorFicheiro from '../modulos/ValidadorFicheiro';
+import ValidadorFormulario from '../modulos/ValidadorFormulario';
+
 /**
  * Configura os comportamentos da página de edição do perfil.
  *
@@ -5,15 +12,8 @@
  * específicos da página. A validação definitiva permanece no servidor.
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 2.1.0
  */
-
-import ValidadorFicheiro from '../modulos/ValidadorFicheiro';
-import ValidadorFormulario from '../modulos/ValidadorFormulario';
-import AlternadorPalavraPasse from '../modulos/AlternadorPalavraPasse';
-import SeletorPermissoes from '../modulos/SeletorPermissoes';
-import GestorFotografiaPerfil from '../modulos/GestorFotografiaPerfil';
-import InicializadorTooltips from '../modulos/InicializadorTooltips';
 
 /**
  * Seletores dos elementos da página.
@@ -24,28 +24,44 @@ import InicializadorTooltips from '../modulos/InicializadorTooltips';
  * @version 1.0.0
  */
 const SELETORES = Object.freeze({
-    formularioPerfil: '#formulario-atualizar-perfil',
-    formularioPalavraPasse: '#formulario-palavra-passe',
+    formularioPerfil:
+        '#formulario-atualizar-perfil',
 
-    fotografia: '#fotografia',
-    previsualizacaoFotografia: '#previsualizacao-fotografia',
-    iniciaisAvatar: '#iniciais-avatar',
-    erroFotografia: '#erro-fotografia',
-    textoFotografia: '#texto-fotografia',
+    formularioPalavraPasse:
+        '#formulario-palavra-passe',
 
-    permissaoTodas: '[data-permissao-todas="true"]',
-    itemPermissaoEmail: '[data-item-permissao-email]',
+    fotografia:
+        '#fotografia',
 
-    alternadorPalavraPasse: '[data-alvo-palavra-passe]',
+    previsualizacaoFotografia:
+        '#previsualizacao-fotografia',
 
-    tooltip: '[data-bs-toggle="tooltip"]',
+    iniciaisAvatar:
+        '#iniciais-avatar',
+
+    erroFotografia:
+        '#erro-fotografia',
+
+    textoFotografia:
+        '#texto-fotografia',
+
+    permissaoTodas:
+        '[data-permissao-todas="true"]',
+
+    itemPermissaoEmail:
+        '[data-item-permissao-email]',
+
+    alternadorPalavraPasse:
+        '[data-alvo-palavra-passe]',
+
+    tooltip:
+        '[data-bs-toggle="tooltip"]',
 });
 
 /**
  * Tipos MIME permitidos para as fotografias.
  *
- * Esta lista deve permanecer alinhada com
- * `AtualizarPerfilRequest`.
+ * Esta lista deve permanecer alinhada com `AtualizarPerfilRequest`.
  *
  * @type {ReadonlyArray<string>}
  *
@@ -66,22 +82,28 @@ const TIPOS_FOTOGRAFIA_PERMITIDOS = Object.freeze([
  * @since 2.0.0
  * @version 1.0.0
  */
-const TAMANHO_MAXIMO_FOTOGRAFIA = 10 * 1024 * 1024;
+const TAMANHO_MAXIMO_FOTOGRAFIA =
+    10 * 1024 * 1024;
 
 /**
- * Inicia a gestão da fotografia do perfil.
+ * Inicia a gestão e a validação da fotografia do perfil.
  *
- * @return {void}
+ * O gestor trata a pré-visualização do ficheiro. O validador restaura o
+ * estado inicial apenas quando a seleção não cumpre o tipo ou o tamanho
+ * permitidos, evitando uma segunda pré-visualização do mesmo ficheiro.
+ *
+ * @returns {void}
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 2.1.0
  */
 function iniciarFotografiaPerfil() {
-    const gestorFotografia = new GestorFotografiaPerfil(
-        SELETORES.fotografia,
-        SELETORES.previsualizacaoFotografia,
-        SELETORES.iniciaisAvatar,
-    );
+    const gestorFotografia =
+        new GestorFotografiaPerfil(
+            SELETORES.fotografia,
+            SELETORES.previsualizacaoFotografia,
+            SELETORES.iniciaisAvatar,
+        );
 
     if (!gestorFotografia.estaDisponivel()) {
         return;
@@ -119,16 +141,6 @@ function iniciarFotografiaPerfil() {
                 gestorFotografia
                     .restaurarPrevisualizacao();
             },
-
-            aoFicheiroValido: (ficheiro) => {
-                gestorFotografia
-                    .previsualizarImagem(ficheiro);
-            },
-
-            aoLimparSelecao: () => {
-                gestorFotografia
-                    .restaurarPrevisualizacao();
-            },
         },
     );
 }
@@ -136,18 +148,22 @@ function iniciarFotografiaPerfil() {
 /**
  * Inicia a validação de apoio do formulário dos dados gerais.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
  * @version 2.0.0
  */
 function iniciarValidacaoPerfil() {
-    if (!document.querySelector(SELETORES.formularioPerfil)) {
+    const formulario = document.querySelector(
+        SELETORES.formularioPerfil,
+    );
+
+    if (!(formulario instanceof HTMLFormElement)) {
         return;
     }
 
     new ValidadorFormulario(
-        SELETORES.formularioPerfil,
+        formulario,
         {
             regras: {
                 nome: [
@@ -193,7 +209,7 @@ function iniciarValidacaoPerfil() {
 /**
  * Inicia o seletor das permissões de e-mail.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
  * @version 2.0.0
@@ -224,22 +240,22 @@ function iniciarPermissoesEmail() {
 /**
  * Inicia a validação de apoio da alteração da palavra-passe.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
  * @version 2.0.0
  */
 function iniciarValidacaoPalavraPasse() {
-    if (
-        !document.querySelector(
-            SELETORES.formularioPalavraPasse,
-        )
-    ) {
+    const formulario = document.querySelector(
+        SELETORES.formularioPalavraPasse,
+    );
+
+    if (!(formulario instanceof HTMLFormElement)) {
         return;
     }
 
     new ValidadorFormulario(
-        SELETORES.formularioPalavraPasse,
+        formulario,
         {
             regras: {
                 palavra_passe_atual: [
@@ -304,9 +320,9 @@ function iniciarValidacaoPalavraPasse() {
 }
 
 /**
- * Inicia a apresentação e ocultação das palavras-passe.
+ * Inicia a apresentação e a ocultação das palavras-passe.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
  * @version 2.0.0
@@ -328,7 +344,7 @@ function iniciarAlternadoresPalavraPasse() {
 /**
  * Inicia os tooltips existentes na página.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
  * @version 2.0.0
@@ -342,7 +358,7 @@ function iniciarTooltips() {
 /**
  * Inicia os comportamentos da página.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 2.0.0
  * @version 1.0.0
@@ -356,13 +372,14 @@ function iniciarPaginaPerfil() {
     iniciarTooltips();
 }
 
-/**
- * Inicia a página depois de a estrutura HTML estar disponível.
- *
- * @since 1.0.0
- * @version 2.0.0
- */
-document.addEventListener(
-    'DOMContentLoaded',
-    iniciarPaginaPerfil,
-);
+if (document.readyState === 'loading') {
+    document.addEventListener(
+        'DOMContentLoaded',
+        iniciarPaginaPerfil,
+        {
+            once: true,
+        },
+    );
+} else {
+    iniciarPaginaPerfil();
+}

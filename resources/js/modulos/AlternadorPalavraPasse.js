@@ -1,23 +1,23 @@
 /**
- * Gere a apresentação e ocultação de campos de palavra-passe.
+ * Gere a apresentação e a ocultação de campos de palavra-passe.
  *
  * Cada botão deve indicar o identificador do respetivo campo através do
  * atributo `data-alvo-palavra-passe`.
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 2.1.0
  */
 class AlternadorPalavraPasse {
     /**
      * Cria o alternador de palavras-passe.
      *
-     * @param {string|Iterable<HTMLElement>} alternadoresOuSeletor - Seletor
-     * CSS ou coleção de botões alternadores.
+     * @param {string|Iterable<HTMLElement>} alternadoresOuSeletor Seletor
+     *     CSS ou coleção de botões alternadores.
      *
      * @throws {TypeError} Quando o seletor ou os elementos não são válidos.
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 2.1.0
      */
     constructor(
         alternadoresOuSeletor = '[data-alvo-palavra-passe]',
@@ -50,18 +50,35 @@ class AlternadorPalavraPasse {
          */
         this.ligacoes = new Map();
 
+        /**
+         * Indica se os eventos já foram configurados.
+         *
+         * @type {boolean}
+         *
+         * @since 2.1.0
+         * @version 1.0.0
+         */
+        this.iniciado = false;
+
         this.iniciar();
     }
 
     /**
      * Configura os alternadores encontrados.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 2.1.0
      */
     iniciar() {
+        if (
+            this.iniciado
+            || this.alternadores.length === 0
+        ) {
+            return;
+        }
+
         this.alternadores.forEach((alternador) => {
             const campo = this.obterCampoAlvo(
                 alternador,
@@ -96,15 +113,17 @@ class AlternadorPalavraPasse {
                 alternador,
             );
         });
+
+        this.iniciado = true;
     }
 
     /**
      * Alterna a apresentação de um campo.
      *
-     * @param {HTMLInputElement} campo - Campo de palavra-passe.
-     * @param {HTMLButtonElement} alternador - Botão acionado.
+     * @param {HTMLInputElement} campo Campo de palavra-passe.
+     * @param {HTMLButtonElement} alternador Botão acionado.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 1.0.0
      * @version 2.0.0
@@ -113,8 +132,11 @@ class AlternadorPalavraPasse {
         campo,
         alternador,
     ) {
-        const inicioSelecao = campo.selectionStart;
-        const fimSelecao = campo.selectionEnd;
+        const inicioSelecao =
+            campo.selectionStart;
+
+        const fimSelecao =
+            campo.selectionEnd;
 
         campo.type = campo.type === 'password'
             ? 'text'
@@ -148,10 +170,10 @@ class AlternadorPalavraPasse {
     /**
      * Atualiza o estado visual e acessível do botão.
      *
-     * @param {HTMLInputElement} campo - Campo associado.
-     * @param {HTMLButtonElement} alternador - Botão associado.
+     * @param {HTMLInputElement} campo Campo associado.
+     * @param {HTMLButtonElement} alternador Botão associado.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 2.0.0
      * @version 1.0.0
@@ -181,16 +203,18 @@ class AlternadorPalavraPasse {
                 : 'false',
         );
 
-        alternador.setAttribute(
-            'aria-label',
+        const descricaoAcao =
             palavraPasseVisivel
                 ? `Ocultar ${descricaoCampo}`
-                : `Mostrar ${descricaoCampo}`,
+                : `Mostrar ${descricaoCampo}`;
+
+        alternador.setAttribute(
+            'aria-label',
+            descricaoAcao,
         );
 
-        alternador.title = palavraPasseVisivel
-            ? `Ocultar ${descricaoCampo}`
-            : `Mostrar ${descricaoCampo}`;
+        alternador.title =
+            descricaoAcao;
 
         this.atualizarIcone(
             alternador,
@@ -204,10 +228,10 @@ class AlternadorPalavraPasse {
      * O ícone representa a ação disponível: um olho quando o campo pode ser
      * mostrado e um olho cortado quando pode ser ocultado.
      *
-     * @param {HTMLButtonElement} alternador - Botão atualizado.
-     * @param {boolean} palavraPasseVisivel - Estado atual do campo.
+     * @param {HTMLButtonElement} alternador Botão atualizado.
+     * @param {boolean} palavraPasseVisivel Estado atual do campo.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 2.0.0
      * @version 1.0.0
@@ -241,12 +265,16 @@ class AlternadorPalavraPasse {
     /**
      * Remove os eventos configurados pelo módulo.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 1.1.0
      */
     destruir() {
+        if (!this.iniciado) {
+            return;
+        }
+
         this.ligacoes.forEach(
             (
                 ligacao,
@@ -260,28 +288,36 @@ class AlternadorPalavraPasse {
         );
 
         this.ligacoes.clear();
+        this.iniciado = false;
     }
 
     /**
      * Obtém os botões alternadores.
      *
-     * @param {string|Iterable<HTMLElement>} alternadoresOuSeletor - Seletor
-     * ou coleção recebida.
+     * A ausência de botões é válida em páginas que não possuam campos de
+     * palavra-passe.
      *
-     * @return {Array<HTMLButtonElement>} Botões encontrados.
+     * @param {string|Iterable<HTMLElement>} alternadoresOuSeletor Seletor
+     *     ou coleção recebida.
+     *
+     * @returns {Array<HTMLButtonElement>} Botões encontrados.
      *
      * @throws {TypeError} Quando os elementos não são botões válidos.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 1.1.0
      */
     obterAlternadores(
         alternadoresOuSeletor,
     ) {
         let elementos;
 
-        if (typeof alternadoresOuSeletor === 'string') {
-            const seletor = alternadoresOuSeletor.trim();
+        if (
+            typeof alternadoresOuSeletor
+            === 'string'
+        ) {
+            const seletor =
+                alternadoresOuSeletor.trim();
 
             if (seletor === '') {
                 throw new TypeError(
@@ -302,6 +338,7 @@ class AlternadorPalavraPasse {
             }
         } else if (
             alternadoresOuSeletor !== null
+            && alternadoresOuSeletor !== undefined
             && typeof alternadoresOuSeletor[
                 Symbol.iterator
             ] === 'function'
@@ -315,20 +352,24 @@ class AlternadorPalavraPasse {
             );
         }
 
-        const alternadores = elementos.filter(
-            (elemento) =>
-                elemento instanceof HTMLButtonElement,
-        );
+        const elementosUnicos = [
+            ...new Set(
+                elementos,
+            ),
+        ];
 
-        if (alternadores.length !== elementos.length) {
+        const alternadores =
+            elementosUnicos.filter(
+                (elemento) =>
+                    elemento instanceof HTMLButtonElement,
+            );
+
+        if (
+            alternadores.length
+            !== elementosUnicos.length
+        ) {
             throw new TypeError(
                 'Todos os alternadores de palavra-passe devem ser botões HTML.',
-            );
-        }
-
-        if (alternadores.length === 0) {
-            throw new TypeError(
-                'Não foi encontrado nenhum alternador de palavra-passe.',
             );
         }
 
@@ -338,16 +379,18 @@ class AlternadorPalavraPasse {
     /**
      * Obtém o campo associado a um botão.
      *
-     * @param {HTMLButtonElement} alternador - Botão configurado.
+     * @param {HTMLButtonElement} alternador Botão configurado.
      *
-     * @return {HTMLInputElement} Campo de palavra-passe.
+     * @returns {HTMLInputElement} Campo de palavra-passe.
      *
      * @throws {TypeError} Quando o atributo ou o campo não são válidos.
      *
      * @since 2.0.0
      * @version 1.0.0
      */
-    obterCampoAlvo(alternador) {
+    obterCampoAlvo(
+        alternador,
+    ) {
         const identificador = alternador
             .dataset
             .alvoPalavraPasse
@@ -365,16 +408,15 @@ class AlternadorPalavraPasse {
 
         if (
             !(campo instanceof HTMLInputElement)
-            || !['password', 'text'].includes(campo.type)
+            || ![
+                'password',
+                'text',
+            ].includes(
+                campo.type,
+            )
         ) {
             throw new TypeError(
                 `O alvo "${identificador}" não é um campo de palavra-passe válido.`,
-            );
-        }
-
-        if (campo.id === '') {
-            throw new TypeError(
-                'O campo de palavra-passe deve possuir um identificador.',
             );
         }
 
@@ -388,10 +430,10 @@ class AlternadorPalavraPasse {
      * `data-descricao-palavra-passe`. Caso contrário, é utilizada a etiqueta
      * associada ao campo.
      *
-     * @param {HTMLInputElement} campo - Campo associado.
-     * @param {HTMLButtonElement} alternador - Botão associado.
+     * @param {HTMLInputElement} campo Campo associado.
+     * @param {HTMLButtonElement} alternador Botão associado.
      *
-     * @return {string} Descrição do campo.
+     * @returns {string} Descrição do campo.
      *
      * @since 2.0.0
      * @version 1.0.0
@@ -409,19 +451,25 @@ class AlternadorPalavraPasse {
             return descricaoExplicita;
         }
 
-        const etiqueta = campo.labels?.item(0);
+        const etiqueta =
+            campo.labels?.item(0);
 
-        if (etiqueta instanceof HTMLLabelElement) {
-            const copiaEtiqueta = etiqueta.cloneNode(
-                true,
-            );
+        if (
+            etiqueta
+            instanceof HTMLLabelElement
+        ) {
+            const copiaEtiqueta =
+                etiqueta.cloneNode(
+                    true,
+                );
 
             copiaEtiqueta
                 .querySelectorAll(
                     '.text-danger, [aria-hidden="true"]',
                 )
                 .forEach(
-                    (elemento) => elemento.remove(),
+                    (elemento) =>
+                        elemento.remove(),
                 );
 
             const texto = copiaEtiqueta
