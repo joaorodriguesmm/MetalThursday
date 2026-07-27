@@ -1,15 +1,22 @@
+{{--
+    Define o conteúdo comum das mensagens de texto do MetalThursday.
+
+    Inclui o nome da aplicação, o conteúdo principal, o texto auxiliar
+    opcional e o rodapé institucional.
+
+    @since 1.0.0
+    @version 2.0.0
+--}}
+
 <x-mail::layout>
-    {{-- Header --}}
     <x-slot:header>
         <x-mail::header :url="config('app.url')">
             {{ config('app.name') }}
         </x-mail::header>
     </x-slot:header>
 
-    {{-- Body --}}
     {{ $slot }}
 
-    {{-- Subcopy --}}
     @isset($subcopy)
         <x-slot:subcopy>
             <x-mail::subcopy>
@@ -18,10 +25,10 @@
         </x-slot:subcopy>
     @endisset
 
-    {{-- Footer --}}
     <x-slot:footer>
         <x-mail::footer>
-            © {{ date('Y') }} {{ config('app.name') }}. @lang('All rights reserved.')
+            © {{ now()->year }} {{ config('app.name') }}.
+            Todos os direitos reservados.
         </x-mail::footer>
     </x-slot:footer>
 </x-mail::layout>

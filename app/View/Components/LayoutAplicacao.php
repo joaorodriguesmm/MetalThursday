@@ -5,24 +5,22 @@ declare(strict_types=1);
 namespace App\View\Components;
 
 use Illuminate\Contracts\View\View;
-use Illuminate\View\Component;
 
 /**
- * Renderiza o layout principal para utilizadores autenticados.
+ * Prepara o layout principal da aplicação autenticada.
+ *
+ * Os dados comuns do documento são fornecidos pela classe LayoutBase.
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 3.1.0
  */
-final class LayoutAplicacao extends Component
+final class LayoutAplicacao extends LayoutBase
 {
     /**
-     * Obtém a vista do layout principal da aplicação.
+     * Obtém a view do layout.
      *
-     * O nome `render` permanece em inglês por corresponder ao contrato
-     * convencional dos componentes Blade do Laravel.
-     *
-     * @return View Vista do layout principal.
+     * @return View View do layout da aplicação.
      *
      * @since 1.0.0
      *

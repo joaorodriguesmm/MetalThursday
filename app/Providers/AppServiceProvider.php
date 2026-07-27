@@ -7,11 +7,9 @@ namespace App\Providers;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Regras\Autenticacao\RequisitosPalavraPasse;
-use App\View\Compositores\CompositorNavegacao;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Pagination\Paginator;
-use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -63,7 +61,6 @@ final class AppServiceProvider extends ServiceProvider
         $this->configurarMapaPolimorfico();
         $this->configurarRequisitosPalavraPasse();
         $this->configurarPaginacao();
-        $this->registarCompositoresVistas();
     }
 
     /**
@@ -107,23 +104,5 @@ final class AppServiceProvider extends ServiceProvider
     private function configurarPaginacao(): void
     {
         Paginator::useBootstrapFive();
-    }
-
-    /**
-     * Regista os compositores das vistas da aplicação.
-     *
-     * O caminho da vista permanece temporariamente como
-     * `layouts.navigation` até à revisão desse ficheiro Blade.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.1.0
-     */
-    private function registarCompositoresVistas(): void
-    {
-        View::composer(
-            'layouts.navigation',
-            CompositorNavegacao::class,
-        );
     }
 }

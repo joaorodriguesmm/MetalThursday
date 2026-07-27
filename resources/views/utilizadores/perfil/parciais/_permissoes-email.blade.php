@@ -1,29 +1,15 @@
-@php
-    $identificadoresSelecionados = old(
-        'permissoes_email',
-        $identificadoresPermissoesEmail
-    );
+{{--
+    Apresenta o formulário de seleção das notificações recebidas por e-mail.
 
-    if (!is_array($identificadoresSelecionados)) {
-        $identificadoresSelecionados = [];
-    }
+    As permissões são ordenadas e os valores selecionados são preparados
+    pelo controlador responsável pelo perfil.
 
-    $identificadoresSelecionados = array_map(
-        static fn (mixed $identificador): int =>
-            (int) $identificador,
-        $identificadoresSelecionados
-    );
+    Os erros de validação são obtidos através do saco de erros
+    "permissoesEmail".
 
-    $permissoesOrdenadas = $permissoesEmail
-        ->sortBy([
-            static fn ($permissao): int =>
-                $permissao->slug === 'all' ? 0 : 1,
-
-            static fn ($permissao): string =>
-                mb_strtolower($permissao->name),
-        ])
-        ->values();
-@endphp
+    @since 1.0.0
+    @version 3.0.0
+--}}
 
 <section
     class="card shadow-sm mb-4"
@@ -37,7 +23,7 @@
             Permissões de e-mail
         </h2>
 
-        <p class="card-subtitle text-muted small mt-1">
+        <p class="card-subtitle text-muted small mt-1 mb-0">
             Escolhe as notificações que pretendes receber por e-mail.
         </p>
     </div>
@@ -45,14 +31,14 @@
     <div class="card-body">
         <form
             id="formulario-permissoes-email"
-            method="post"
+            method="POST"
             action="{{ route('perfil.permissoes-email.atualizar') }}"
             novalidate
         >
             @csrf
-            @method('patch')
+            @method('PATCH')
 
-            @if ($permissoesOrdenadas->isEmpty())
+            @if ($permissoesEmailFormulario === [])
                 <div
                     class="alert alert-info mb-0"
                     role="status"
@@ -60,55 +46,65 @@
                     Não existem permissões de e-mail disponíveis.
                 </div>
             @else
-                <fieldset>
+                <fieldset
+                    aria-describedby="erro-permissoes-email"
+                >
                     <legend class="visually-hidden">
                         Notificações por e-mail
                     </legend>
 
-                    @foreach ($permissoesOrdenadas as $permissao)
-                        @php
-                            $identificador = (int) $permissao->id;
-                            $ePermissaoTodas = $permissao->slug === 'all';
-                        @endphp
-
+                    @foreach (
+                        $permissoesEmailFormulario
+                        as $permissaoEmail
+                    )
                         <div
-                            class="form-check {{ !$loop->first ? 'mt-2' : '' }}"
+                            @class([
+                                'form-check',
+                                'mt-2' => ! $loop->first,
+                            ])
                             data-item-permissao-email
                         >
                             <input
-                                type="checkbox"
-                                id="permissao-email-{{ $identificador }}"
-                                name="permissoes_email[]"
-                                value="{{ $identificador }}"
+                                id="permissao-email-{{
+                                    $permissaoEmail['identificador']
+                                }}"
                                 class="form-check-input"
-                                data-permissao-todas="{{ $ePermissaoTodas ? 'true' : 'false' }}"
+                                type="checkbox"
+                                name="permissoes_email[]"
+                                value="{{
+                                    $permissaoEmail['identificador']
+                                }}"
+                                data-permissao-todas="{{
+                                    $permissaoEmail['ePermissaoTodas']
+                                        ? 'true'
+                                        : 'false'
+                                }}"
                                 @checked(
-                                    in_array(
-                                        $identificador,
-                                        $identificadoresSelecionados,
-                                        true
-                                    )
+                                    $permissaoEmail['selecionada']
                                 )
                             >
 
                             <label
                                 class="form-check-label"
-                                for="permissao-email-{{ $identificador }}"
+                                for="permissao-email-{{
+                                    $permissaoEmail['identificador']
+                                }}"
                             >
-                                {{ $permissao->name }}
+                                {{ $permissaoEmail['nome'] }}
                             </label>
 
-                            @if (
-                                is_string($permissao->description)
-                                && trim($permissao->description) !== ''
-                            )
+                            @if ($permissaoEmail['descricao'] !== null)
                                 <button
+                                    class="btn btn-link btn-sm p-0 ms-1 tooltip-personalizado"
                                     type="button"
-                                    class="btn btn-link btn-sm p-0 ms-1 custom-tooltip"
                                     data-bs-toggle="tooltip"
                                     data-bs-placement="right"
-                                    data-bs-title="{{ $permissao->description }}"
-                                    aria-label="Informação sobre {{ $permissao->name }}"
+                                    data-bs-title="{{
+                                        $permissaoEmail['descricao']
+                                    }}"
+                                    aria-label="Informação sobre {{
+                                        $permissaoEmail['nome']
+                                    }}"
                                 >
                                     <i
                                         class="bi bi-info-circle-fill"
@@ -119,25 +115,43 @@
                         </div>
                     @endforeach
                 </fieldset>
-            @endif
 
-            @error('permissoes_email', 'permissoesEmail')
-                <div class="invalid-feedback d-block mt-2">
-                    {{ $message }}
+                <div
+                    id="erro-permissoes-email"
+                    @class([
+                        'invalid-feedback',
+                        'd-block' =>
+                            $errors->has(
+                                'permissoes_email',
+                                'permissoesEmail',
+                            )
+                            || $errors->has(
+                                'permissoes_email.*',
+                                'permissoesEmail',
+                            ),
+                        'mt-2',
+                    ])
+                    aria-live="polite"
+                >
+                    @error(
+                        'permissoes_email',
+                        'permissoesEmail'
+                    )
+                        {{ $message }}
+                    @else
+                        @error(
+                            'permissoes_email.*',
+                            'permissoesEmail'
+                        )
+                            {{ $message }}
+                        @enderror
+                    @enderror
                 </div>
-            @enderror
 
-            @error('permissoes_email.*', 'permissoesEmail')
-                <div class="invalid-feedback d-block mt-2">
-                    {{ $message }}
-                </div>
-            @enderror
-
-            @if ($permissoesOrdenadas->isNotEmpty())
                 <div class="d-flex justify-content-end mt-4">
                     <button
-                        type="submit"
                         class="btn btn-primary"
+                        type="submit"
                     >
                         Guardar permissões
                     </button>
