@@ -15,12 +15,12 @@ use Illuminate\Support\Facades\Route;
 /**
  * Define as rotas de autenticação e de gestão do perfil.
  *
- * Os nomes de rotas exigidos pelos contratos técnicos do Laravel mantêm a
- * nomenclatura original.
+ * Os nomes de rota exigidos pelos contratos técnicos do Laravel mantêm
+ * a nomenclatura convencional.
  *
  * @since 1.0.0
  *
- * @version 2.1.0
+ * @version 3.0.0
  */
 
 /*
@@ -29,7 +29,9 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-Route::middleware('guest')->group(
+Route::middleware(
+    'guest',
+)->group(
     static function (): void {
         /*
         |--------------------------------------------------------------------------
@@ -48,7 +50,9 @@ Route::middleware('guest')->group(
                 'codigoConvite',
                 '[A-Za-z0-9_-]{10,128}',
             )
-            ->name('convites.aceitar');
+            ->name(
+                'convites.aceitar',
+            );
 
         Route::post(
             'convites/aceitar',
@@ -57,8 +61,12 @@ Route::middleware('guest')->group(
                 'registar',
             ],
         )
-            ->middleware('throttle:6,1')
-            ->name('convites.registar');
+            ->middleware(
+                'throttle:6,1',
+            )
+            ->name(
+                'convites.registar',
+            );
 
         /*
         |--------------------------------------------------------------------------
@@ -72,7 +80,9 @@ Route::middleware('guest')->group(
                 ControladorLigacaoRedefinicaoPalavraPasse::class,
                 'apresentar',
             ],
-        )->name('password.request');
+        )->name(
+            'password.request',
+        );
 
         Route::post(
             'palavra-passe/esquecida',
@@ -81,8 +91,12 @@ Route::middleware('guest')->group(
                 'enviar',
             ],
         )
-            ->middleware('throttle:6,1')
-            ->name('password.email');
+            ->middleware(
+                'throttle:6,1',
+            )
+            ->name(
+                'password.email',
+            );
 
         Route::get(
             'palavra-passe/redefinir/{token}',
@@ -90,7 +104,9 @@ Route::middleware('guest')->group(
                 ControladorRedefinicaoPalavraPasse::class,
                 'apresentar',
             ],
-        )->name('password.reset');
+        )->name(
+            'password.reset',
+        );
 
         Route::post(
             'palavra-passe/redefinir',
@@ -99,8 +115,12 @@ Route::middleware('guest')->group(
                 'redefinir',
             ],
         )
-            ->middleware('throttle:6,1')
-            ->name('password.store');
+            ->middleware(
+                'throttle:6,1',
+            )
+            ->name(
+                'password.store',
+            );
 
         /*
         |--------------------------------------------------------------------------
@@ -114,7 +134,9 @@ Route::middleware('guest')->group(
                 ControladorSessaoAutenticada::class,
                 'apresentar',
             ],
-        )->name('login');
+        )->name(
+            'login',
+        );
 
         Route::post(
             'entrar',
@@ -123,8 +145,12 @@ Route::middleware('guest')->group(
                 'autenticar',
             ],
         )
-            ->middleware('throttle:6,1')
-            ->name('autenticacao.iniciar');
+            ->middleware(
+                'throttle:6,1',
+            )
+            ->name(
+                'autenticacao.iniciar',
+            );
     },
 );
 
@@ -133,8 +159,8 @@ Route::middleware('guest')->group(
 | Verificação do endereço de e-mail
 |--------------------------------------------------------------------------
 |
-| Esta rota permanece acessível sem autenticação porque o utilizador pode
-| confirmar o endereço antes de iniciar sessão.
+| A verificação pode ocorrer antes de o utilizador iniciar sessão, mas exige
+| uma ligação assinada e válida.
 |
 */
 
@@ -142,13 +168,20 @@ Route::get(
     'verificar-email/{id}/{hash}',
     ControladorVerificacaoEmail::class,
 )
-    ->whereNumber('id')
+    ->whereNumber(
+        'id',
+    )
     ->where(
         'hash',
         '[a-fA-F0-9]{40}',
     )
-    ->middleware('throttle:6,1')
-    ->name('verification.verify');
+    ->middleware([
+        'signed',
+        'throttle:6,1',
+    ])
+    ->name(
+        'verification.verify',
+    );
 
 /*
 |--------------------------------------------------------------------------
@@ -173,7 +206,9 @@ Route::middleware([
                 ControladorSessaoAutenticada::class,
                 'terminar',
             ],
-        )->name('logout');
+        )->name(
+            'logout',
+        );
 
         /*
         |--------------------------------------------------------------------------
@@ -181,8 +216,12 @@ Route::middleware([
         |--------------------------------------------------------------------------
         */
 
-        Route::prefix('perfil')
-            ->name('perfil.')
+        Route::prefix(
+            'perfil',
+        )
+            ->name(
+                'perfil.',
+            )
             ->group(
                 static function (): void {
                     Route::get(
@@ -191,7 +230,9 @@ Route::middleware([
                             ControladorPerfil::class,
                             'editar',
                         ],
-                    )->name('editar');
+                    )->name(
+                        'editar',
+                    );
 
                     Route::patch(
                         '/',
@@ -199,7 +240,9 @@ Route::middleware([
                             ControladorPerfil::class,
                             'atualizar',
                         ],
-                    )->name('atualizar');
+                    )->name(
+                        'atualizar',
+                    );
 
                     Route::patch(
                         'permissoes-email',

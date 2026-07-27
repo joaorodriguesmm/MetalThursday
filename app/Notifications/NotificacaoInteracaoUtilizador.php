@@ -18,14 +18,12 @@ use InvalidArgumentException;
  * Notifica os utilizadores quando ocorre uma interação numa MetalThursday,
  * numa secção ou num comentário.
  *
- * A notificação guarda secção ou num comentário.
- *
  * A notificação guarda apenas identificadores e valores escalares, evitando
  * serializar modelos Eloquent completos para a fila.
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 3.0.0
  */
 final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
 {
@@ -38,7 +36,8 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      *
      * @version 1.0.0
      */
-    private const TIPO_METAL_THURSDAY = 'metal_thursday';
+    private const TIPO_METAL_THURSDAY =
+        'metal_thursday';
 
     /**
      * Tipo interno correspondente a uma secção.
@@ -49,7 +48,8 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      *
      * @version 1.0.0
      */
-    private const TIPO_SECCAO = 'seccao_metal_thursday';
+    private const TIPO_SECCAO =
+        'seccao_metal_thursday';
 
     /**
      * Tipo interno correspondente a um comentário.
@@ -60,7 +60,8 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      *
      * @version 1.0.0
      */
-    private const TIPO_COMENTARIO = 'comentario';
+    private const TIPO_COMENTARIO =
+        'comentario';
 
     /**
      * Permissão que autoriza todas as comunicações por e-mail.
@@ -71,7 +72,8 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      *
      * @version 1.0.0
      */
-    private const PERMISSAO_TODAS = 'todas';
+    private const PERMISSAO_TODAS =
+        'todas';
 
     /**
      * Permissão relativa a todas as novas interações.
@@ -82,7 +84,8 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      *
      * @version 1.0.0
      */
-    private const PERMISSAO_NOVAS_INTERACOES = 'novas_interacoes';
+    private const PERMISSAO_NOVAS_INTERACOES =
+        'novas_interacoes';
 
     /**
      * Permissão relativa às interações nas publicações do utilizador.
@@ -170,8 +173,8 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
     /**
      * Cria a notificação.
      *
-     * @param  MetalThursday|SeccaoMetalThursday|Comentario  $sujeito  Sujeito da
-     *                                                                 interação.
+     * @param  MetalThursday|SeccaoMetalThursday|Comentario  $sujeito
+     *                                                                 Sujeito da interação.
      * @param  Utilizador  $causador  Utilizador que realizou a interação.
      * @param  string  $acao  Ação realizada.
      *
@@ -211,11 +214,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
             );
         }
 
-        $acaoNormalizada =
-            $this->normalizarAcao(
-                $acao,
-            );
-
         $this->tipoSujeito = match (true) {
             $sujeito instanceof MetalThursday => self::TIPO_METAL_THURSDAY,
 
@@ -236,16 +234,15 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
             );
 
         $this->acao =
-            $acaoNormalizada;
+            $this->normalizarAcao(
+                $acao,
+            );
 
         $this->afterCommit();
     }
 
     /**
      * Determina se a notificação deve ser enviada por e-mail.
-     *
-     * O autor da MetalThursday pode utilizar uma permissão específica para
-     * receber apenas as interações nas próprias publicações.
      *
      * @param  Utilizador  $utilizador  Utilizador destinatário.
      * @return bool Verdadeiro quando o envio está autorizado.
@@ -292,18 +289,19 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * @return array{
      *     tipo: string,
      *     tipo_sujeito: string,
-     *     sujeito_id: int,
-     *     causador_id: int,
+     *     identificador_sujeito: int,
+     *     identificador_causador: int,
      *     acao: string,
+     *     titulo: string,
      *     mensagem: string,
-     *     url: string,
+     *     ligacao: string,
      *     icone: string,
-     *     classe_cor: string
+     *     cor: string
      * } Dados persistidos.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function toArray(
         Utilizador $utilizador,
@@ -313,23 +311,25 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
 
             'tipo_sujeito' => $this->tipoSujeito,
 
-            'sujeito_id' => $this->identificadorSujeito,
+            'identificador_sujeito' => $this->identificadorSujeito,
 
-            'causador_id' => $this->identificadorCausador,
+            'identificador_causador' => $this->identificadorCausador,
 
             'acao' => $this->acao,
+
+            'titulo' => $this->obterTituloNotificacao(),
 
             'mensagem' => $this->obterMensagem(
                 $utilizador,
             ),
 
-            'url' => $this->obterUrlAcao(
+            'ligacao' => $this->obterUrlAcao(
                 $utilizador,
             ),
 
             'icone' => $this->obterIcone(),
 
-            'classe_cor' => $this->obterClasseCor(),
+            'cor' => $this->obterClasseCor(),
         ];
     }
 
@@ -391,7 +391,7 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     protected function obterUrlAcao(
         Utilizador $utilizador,
@@ -401,16 +401,42 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
 
         if (! $metalThursday instanceof MetalThursday) {
             return route(
-                'home',
+                'inicio',
             );
         }
 
         return route(
-            'metalthursday.show',
+            'metal-thursday.detalhes',
             [
                 'metalThursday' => $metalThursday,
             ],
         );
+    }
+
+    /**
+     * Obtém o título visual da notificação.
+     *
+     * @return string Título da notificação.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    private function obterTituloNotificacao(): string
+    {
+        return match ($this->acao) {
+            'avaliou' => 'Nova avaliação',
+
+            'ouviu' => 'Nova audição',
+
+            'gostou' => 'Novo gosto',
+
+            'respondeu' => 'Nova resposta',
+
+            'comentou' => 'Novo comentário',
+
+            default => 'Nova interação',
+        };
     }
 
     /**
@@ -501,18 +527,18 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
     /**
      * Obtém a MetalThursday associada a uma secção.
      *
-     * @param  SeccaoMetalThursday  $secao  Secção consultada.
+     * @param  SeccaoMetalThursday  $seccao  Secção consultada.
      * @return MetalThursday|null MetalThursday encontrada.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function obterMetalThursdayDaSeccao(
-        SeccaoMetalThursday $secao,
+        SeccaoMetalThursday $seccao,
     ): ?MetalThursday {
         $identificador =
-            $secao->metal_thursday_id;
+            $seccao->metal_thursday_id;
 
         if (
             ! is_numeric($identificador)
@@ -756,7 +782,9 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
         ) {
             return sprintf(
                 'MetalThursday «%s»',
-                trim($nome),
+                trim(
+                    $nome,
+                ),
             );
         }
 
@@ -771,7 +799,9 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
             $edicao instanceof Edicao
             && is_string($edicao->nome)
             && trim($edicao->nome) !== ''
-            ? trim($edicao->nome)
+            ? trim(
+                $edicao->nome,
+            )
             : null;
 
         $data =
@@ -779,7 +809,9 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
 
         $dataFormatada =
             $data instanceof CarbonInterface
-            ? $data->format('d/m/Y')
+            ? $data->format(
+                'd/m/Y',
+            )
             : null;
 
         if (
@@ -816,44 +848,50 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
     /**
      * Obtém a descrição de uma secção.
      *
-     * @param  SeccaoMetalThursday  $secao  Secção descrita.
+     * @param  SeccaoMetalThursday  $seccao  Secção descrita.
      * @return string Descrição construída.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function obterDescricaoSeccao(
-        SeccaoMetalThursday $secao,
+        SeccaoMetalThursday $seccao,
     ): string {
-        $secao->loadMissing([
+        $seccao->loadMissing([
             'tipoSeccao',
             'banda',
         ]);
 
         $titulo =
-            is_string($secao->titulo)
-            ? trim($secao->titulo)
+            is_string($seccao->titulo)
+            ? trim(
+                $seccao->titulo,
+            )
             : '';
 
         $tipo =
-            $secao->tipoSeccao;
+            $seccao->tipoSeccao;
 
         $nomeTipo =
             $tipo instanceof TipoSeccao
             && is_string($tipo->nome)
             && trim($tipo->nome) !== ''
-            ? trim($tipo->nome)
+            ? trim(
+                $tipo->nome,
+            )
             : null;
 
         $banda =
-            $secao->banda;
+            $seccao->banda;
 
         $nomeBanda =
             $banda instanceof Banda
             && is_string($banda->nome)
             && trim($banda->nome) !== ''
-            ? trim($banda->nome)
+            ? trim(
+                $banda->nome,
+            )
             : null;
 
         $descricao =
@@ -971,13 +1009,16 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
     private function normalizarAcao(
         string $acao,
     ): string {
-        $acaoNormalizada = preg_replace(
-            '/\s+/u',
-            ' ',
-            mb_strtolower(
-                trim($acao),
-            ),
-        );
+        $acaoNormalizada =
+            preg_replace(
+                '/\s+/u',
+                ' ',
+                mb_strtolower(
+                    trim(
+                        $acao,
+                    ),
+                ),
+            );
 
         if (
             ! is_string($acaoNormalizada)
@@ -1014,11 +1055,14 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
             return 'Um utilizador';
         }
 
-        $nomeNormalizado = preg_replace(
-            '/\s+/u',
-            ' ',
-            trim($nome),
-        );
+        $nomeNormalizado =
+            preg_replace(
+                '/\s+/u',
+                ' ',
+                trim(
+                    $nome,
+                ),
+            );
 
         return is_string($nomeNormalizado)
             && $nomeNormalizado !== ''

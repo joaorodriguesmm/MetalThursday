@@ -18,7 +18,7 @@ use Carbon\CarbonInterface;
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 3.0.0
  */
 final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
 {
@@ -42,7 +42,8 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
      *
      * @version 1.0.0
      */
-    private const PERMISSAO_ALERTAS_NOMEACAO = 'alertas_nomeacao';
+    private const PERMISSAO_ALERTAS_NOMEACAO =
+        'alertas_nomeacao';
 
     /**
      * Cria a notificação.
@@ -87,16 +88,17 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
      * @param  Utilizador  $utilizador  Utilizador destinatário.
      * @return array{
      *     tipo: string,
-     *     metal_thursday_id: int,
+     *     identificador_metal_thursday: int,
+     *     titulo: string,
      *     mensagem: string,
-     *     url: string,
+     *     ligacao: string,
      *     icone: string,
-     *     classe_cor: string
+     *     cor: string
      * } Dados persistidos.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function toArray(
         Utilizador $utilizador,
@@ -104,17 +106,19 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
         return [
             'tipo' => 'utilizador_nomeado',
 
-            'metal_thursday_id' => (int) $this->metalThursday->getKey(),
+            'identificador_metal_thursday' => (int) $this->metalThursday->getKey(),
+
+            'titulo' => 'Foste nomeado para a próxima MetalThursday',
 
             'mensagem' => $this->obterMensagem(),
 
-            'url' => $this->obterUrlAcao(
+            'ligacao' => $this->obterUrlAcao(
                 $utilizador,
             ),
 
             'icone' => 'bi-trophy-fill',
 
-            'classe_cor' => 'text-warning',
+            'cor' => 'text-warning',
         ];
     }
 
@@ -169,21 +173,18 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
     /**
      * Obtém o endereço da MetalThursday onde ocorreu a nomeação.
      *
-     * O nome da rota permanece temporariamente inalterado até à revisão
-     * integral das rotas.
-     *
      * @param  Utilizador  $utilizador  Utilizador destinatário.
      * @return string Endereço da MetalThursday.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     protected function obterUrlAcao(
         Utilizador $utilizador,
     ): ?string {
         return route(
-            'metalthursday.show',
+            'metal-thursday.detalhes',
             [
                 'metalThursday' => $this->metalThursday,
             ],

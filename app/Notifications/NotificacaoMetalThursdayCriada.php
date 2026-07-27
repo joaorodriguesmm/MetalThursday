@@ -17,7 +17,7 @@ use Carbon\CarbonInterface;
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 3.0.0
  */
 final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
 {
@@ -41,7 +41,8 @@ final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
      *
      * @version 1.0.0
      */
-    private const PERMISSAO_NOVAS_PUBLICACOES = 'novas_publicacoes';
+    private const PERMISSAO_NOVAS_PUBLICACOES =
+        'novas_publicacoes';
 
     /**
      * Cria a notificação.
@@ -85,16 +86,17 @@ final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
      * @param  Utilizador  $utilizador  Utilizador destinatário.
      * @return array{
      *     tipo: string,
-     *     metal_thursday_id: int,
+     *     identificador_metal_thursday: int,
+     *     titulo: string,
      *     mensagem: string,
-     *     url: string,
+     *     ligacao: string,
      *     icone: string,
-     *     classe_cor: string
+     *     cor: string
      * } Dados persistidos.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function toArray(
         Utilizador $utilizador,
@@ -102,17 +104,19 @@ final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
         return [
             'tipo' => 'metal_thursday_criada',
 
-            'metal_thursday_id' => (int) $this->metalThursday->getKey(),
+            'identificador_metal_thursday' => (int) $this->metalThursday->getKey(),
+
+            'titulo' => 'Nova MetalThursday disponível',
 
             'mensagem' => $this->obterMensagem(),
 
-            'url' => $this->obterUrlAcao(
+            'ligacao' => $this->obterUrlAcao(
                 $utilizador,
             ),
 
             'icone' => 'bi-fire',
 
-            'classe_cor' => 'text-danger',
+            'cor' => 'text-danger',
         ];
     }
 
@@ -170,21 +174,18 @@ final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
     /**
      * Obtém o endereço da página da MetalThursday.
      *
-     * O nome da rota permanece temporariamente inalterado até à revisão
-     * integral das rotas.
-     *
      * @param  Utilizador  $utilizador  Utilizador destinatário.
      * @return string Endereço da MetalThursday.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     protected function obterUrlAcao(
         Utilizador $utilizador,
     ): ?string {
         return route(
-            'metalthursday.show',
+            'metal-thursday.detalhes',
             [
                 'metalThursday' => $this->metalThursday,
             ],
@@ -223,7 +224,7 @@ final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function obterNomeMetalThursday(): string
     {
@@ -239,6 +240,10 @@ final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
             );
         }
 
+        $this->metalThursday->loadMissing([
+            'edicao',
+        ]);
+
         $edicao =
             $this->metalThursday->edicao;
 
@@ -246,7 +251,9 @@ final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
             $edicao instanceof Edicao
             && is_string($edicao->nome)
             && trim($edicao->nome) !== ''
-            ? trim($edicao->nome)
+            ? trim(
+                $edicao->nome,
+            )
             : null;
 
         $data =
@@ -254,7 +261,9 @@ final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
 
         $dataFormatada =
             $data instanceof CarbonInterface
-            ? $data->format('d/m/Y')
+            ? $data->format(
+                'd/m/Y',
+            )
             : null;
 
         if (
