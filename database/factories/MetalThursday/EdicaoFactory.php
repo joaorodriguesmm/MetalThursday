@@ -8,6 +8,7 @@ use App\Models\MetalThursday\Edicao;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 /**
@@ -20,14 +21,22 @@ use InvalidArgumentException;
  *
  * @since 2.0.0
  *
- * @version 1.1.0
+ * @version 2.0.0
  */
 final class EdicaoFactory extends Factory
 {
     /**
-     * Comprimento máximo da ligação da compilação.
+     * Comprimento máximo do nome.
      *
-     * Este valor corresponde ao limite definido na base de dados.
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const COMPRIMENTO_MAXIMO_NOME =
+        255;
+
+    /**
+     * Comprimento máximo da ligação da compilação.
      *
      * @since 2.0.0
      *
@@ -58,25 +67,23 @@ final class EdicaoFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function definition(): array
     {
-        $dataInicio =
-            CarbonImmutable::instance(
-                $this->faker->dateTimeBetween(
-                    '-5 years',
-                    '-3 months',
-                ),
-            )->startOfDay();
+        $dataInicio = CarbonImmutable::instance(
+            $this->faker->dateTimeBetween(
+                '-5 years',
+                '-3 months',
+            ),
+        )->startOfDay();
 
-        $dataFim =
-            $dataInicio->addMonths(
-                $this->faker->numberBetween(
-                    1,
-                    12,
-                ),
-            );
+        $dataFim = $dataInicio->addMonths(
+            $this->faker->numberBetween(
+                1,
+                12,
+            ),
+        );
 
         return [
             'nome' => sprintf(
@@ -99,6 +106,52 @@ final class EdicaoFactory extends Factory
     }
 
     /**
+     * Define o nome da edição.
+     *
+     * @param  string  $nome  Nome pretendido.
+     * @return static Factory configurada.
+     *
+     * @throws InvalidArgumentException Quando o nome está vazio ou ultrapassa
+     *                                  o comprimento máximo permitido.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function comNome(
+        string $nome,
+    ): static {
+        $nomeNormalizado = Str::squish(
+            $nome,
+        );
+
+        if ($nomeNormalizado === '') {
+            throw new InvalidArgumentException(
+                'O nome da edição não pode estar vazio.',
+            );
+        }
+
+        if (
+            mb_strlen(
+                $nomeNormalizado,
+            ) > self::COMPRIMENTO_MAXIMO_NOME
+        ) {
+            throw new InvalidArgumentException(
+                sprintf(
+                    'O nome da edição não pode exceder %d caracteres.',
+                    self::COMPRIMENTO_MAXIMO_NOME,
+                ),
+            );
+        }
+
+        return $this->state(
+            static fn (): array => [
+                'nome' => $nomeNormalizado,
+            ],
+        );
+    }
+
+    /**
      * Cria uma edição atualmente em curso.
      *
      * A edição começa numa data anterior ao momento atual e não possui uma
@@ -108,7 +161,7 @@ final class EdicaoFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function emCurso(): static
     {
@@ -126,9 +179,6 @@ final class EdicaoFactory extends Factory
     /**
      * Define o período temporal da edição.
      *
-     * As datas são convertidas para objetos imutáveis, impedindo que a
-     * factory altere acidentalmente os objetos recebidos.
-     *
      * @param  CarbonInterface  $dataInicio  Data inicial da edição.
      * @param  CarbonInterface|null  $dataFim  Data final da edição.
      * @return static Factory configurada.
@@ -138,19 +188,17 @@ final class EdicaoFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function comPeriodo(
         CarbonInterface $dataInicio,
         ?CarbonInterface $dataFim = null,
     ): static {
-        $dataInicioNormalizada =
-            CarbonImmutable::instance(
-                $dataInicio,
-            )->startOfDay();
+        $dataInicioNormalizada = CarbonImmutable::instance(
+            $dataInicio,
+        )->startOfDay();
 
-        $dataFimNormalizada =
-            $dataFim !== null
+        $dataFimNormalizada = $dataFim !== null
             ? CarbonImmutable::instance(
                 $dataFim,
             )->startOfDay()
@@ -187,15 +235,14 @@ final class EdicaoFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function comLigacaoCompilacao(
         string $ligacao,
     ): static {
-        $ligacaoNormalizada =
-            trim(
-                $ligacao,
-            );
+        $ligacaoNormalizada = trim(
+            $ligacao,
+        );
 
         if ($ligacaoNormalizada === '') {
             throw new InvalidArgumentException(
@@ -227,11 +274,10 @@ final class EdicaoFactory extends Factory
             );
         }
 
-        $esquema =
-            parse_url(
-                $ligacaoNormalizada,
-                PHP_URL_SCHEME,
-            );
+        $esquema = parse_url(
+            $ligacaoNormalizada,
+            PHP_URL_SCHEME,
+        );
 
         if (
             ! is_string(

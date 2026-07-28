@@ -19,21 +19,19 @@ use InvalidArgumentException;
  *
  * @since 2.0.0
  *
- * @version 1.1.0
+ * @version 2.0.0
  */
 final class GeneroFactory extends Factory
 {
     /**
      * Comprimento máximo do nome do género.
      *
-     * Corresponde ao limite definido na base de dados.
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private const COMPRIMENTO_MAXIMO_NOME =
-        255;
+        100;
 
     /**
      * Modelo associado à factory.
@@ -57,31 +55,31 @@ final class GeneroFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function definition(): array
     {
-        $nome =
-            $this
-                ->faker
-                ->unique()
-                ->words(
-                    2,
-                    true,
-                );
+        $nome = $this
+            ->faker
+            ->unique()
+            ->words(
+                2,
+                true,
+            );
 
         return [
-            'nome' => Str::ucfirst(
-                $nome,
+            'nome' => Str::limit(
+                Str::ucfirst(
+                    $nome,
+                ),
+                self::COMPRIMENTO_MAXIMO_NOME,
+                '',
             ),
         ];
     }
 
     /**
      * Define um nome específico para o género musical.
-     *
-     * O nome é normalizado, removendo espaços exteriores e espaços
-     * consecutivos.
      *
      * @param  string  $nome  Nome do género.
      * @return static Factory configurada.
@@ -91,15 +89,14 @@ final class GeneroFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function comNome(
         string $nome,
     ): static {
-        $nomeNormalizado =
-            Str::squish(
-                $nome,
-            );
+        $nomeNormalizado = Str::squish(
+            $nome,
+        );
 
         if ($nomeNormalizado === '') {
             throw new InvalidArgumentException(

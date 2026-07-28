@@ -20,7 +20,7 @@ use InvalidArgumentException;
  *
  * @since 2.0.0
  *
- * @version 1.1.0
+ * @version 2.0.0
  */
 final class ConviteFactory extends Factory
 {
@@ -33,7 +33,8 @@ final class ConviteFactory extends Factory
      *
      * @version 1.0.0
      */
-    protected $model = Convite::class;
+    protected $model =
+        Convite::class;
 
     /**
      * Define os atributos predefinidos de um convite.
@@ -45,7 +46,7 @@ final class ConviteFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function definition(): array
     {
@@ -54,7 +55,9 @@ final class ConviteFactory extends Factory
         );
 
         return [
-            'nome_convidado' => $this->faker->name(),
+            'nome_convidado' => $this
+                ->faker
+                ->name(),
 
             'email_destino' => $this
                 ->faker
@@ -82,30 +85,28 @@ final class ConviteFactory extends Factory
     /**
      * Define um código conhecido para o convite.
      *
-     * Este estado é útil em testes que precisam de consultar ou validar um
-     * convite através de um código específico.
+     * O código é validado e normalizado pelo próprio contrato do modelo antes
+     * de o respetivo hash ser colocado no estado da factory.
      *
      * @param  string  $codigo  Código original do convite.
      * @return static Factory configurada.
      *
+     * @throws InvalidArgumentException Quando o código não é válido.
+     *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function comCodigo(
         string $codigo,
     ): static {
-        if ($codigo === '') {
-            throw new InvalidArgumentException(
-                'O código do convite não pode estar vazio.',
-            );
-        }
+        $codigoHash = Convite::calcularHashCodigo(
+            $codigo,
+        );
 
         return $this->state(
             static fn (): array => [
-                'codigo_hash' => Convite::calcularHashCodigo(
-                    $codigo,
-                ),
+                'codigo_hash' => $codigoHash,
             ],
         );
     }
@@ -153,7 +154,7 @@ final class ConviteFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function expirado(): static
     {
@@ -177,7 +178,7 @@ final class ConviteFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function revogado(): static
     {
@@ -198,11 +199,12 @@ final class ConviteFactory extends Factory
      * @param  Utilizador  $utilizador  Criador do convite.
      * @return static Factory configurada.
      *
-     * @throws InvalidArgumentException Quando o utilizador não está persistido.
+     * @throws InvalidArgumentException Quando o utilizador não está
+     *                                  persistido.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function criadoPor(
         Utilizador $utilizador,
@@ -222,14 +224,18 @@ final class ConviteFactory extends Factory
     /**
      * Cria um convite utilizado por um determinado utilizador.
      *
+     * O estado garante que um convite utilizado não permanece simultaneamente
+     * revogado.
+     *
      * @param  Utilizador  $utilizador  Utilizador que utilizou o convite.
      * @return static Factory configurada.
      *
-     * @throws InvalidArgumentException Quando o utilizador não está persistido.
+     * @throws InvalidArgumentException Quando o utilizador não está
+     *                                  persistido.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function utilizadoPor(
         Utilizador $utilizador,
@@ -256,19 +262,22 @@ final class ConviteFactory extends Factory
      * @param  Utilizador  $utilizador  Utilizador a validar.
      * @return int|string Identificador do utilizador.
      *
-     * @throws InvalidArgumentException Quando o utilizador não está persistido.
+     * @throws InvalidArgumentException Quando o utilizador não está
+     *                                  persistido.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterIdentificadorUtilizadorPersistido(
         Utilizador $utilizador,
     ): int|string {
-        $identificador =
-            $utilizador->getKey();
+        $identificador = $utilizador->getKey();
 
-        if ($identificador === null) {
+        if (
+            ! $utilizador->exists
+            || $identificador === null
+        ) {
             throw new InvalidArgumentException(
                 'O utilizador associado ao convite deve estar persistido.',
             );

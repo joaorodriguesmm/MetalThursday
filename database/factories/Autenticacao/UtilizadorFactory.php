@@ -21,7 +21,7 @@ use InvalidArgumentException;
  *
  * @since 2.0.0
  *
- * @version 1.1.0
+ * @version 2.0.0
  */
 final class UtilizadorFactory extends Factory
 {
@@ -35,8 +35,31 @@ final class UtilizadorFactory extends Factory
      *
      * @version 1.0.0
      */
-    public const PALAVRA_PASSE_PADRAO =
+    public const PALAVRA_PASSE_PREDEFINIDA =
         'PalavraPasse#2026';
+
+    /**
+     * Comprimento máximo do caminho da fotografia.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const COMPRIMENTO_MAXIMO_FOTOGRAFIA =
+        255;
+
+    /**
+     * Hash reutilizado da palavra-passe predefinida.
+     *
+     * Evita calcular repetidamente o mesmo hash durante a execução do
+     * processo de testes.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private static ?string $hashPalavraPasse =
+        null;
 
     /**
      * Modelo associado à factory.
@@ -51,20 +74,6 @@ final class UtilizadorFactory extends Factory
         Utilizador::class;
 
     /**
-     * Hash reutilizado da palavra-passe predefinida.
-     *
-     * Evita calcular repetidamente o mesmo hash durante a execução do
-     * processo de testes.
-     *
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private static ?string $hashPalavraPasse =
-        null;
-
-    /**
      * Define os atributos predefinidos de um utilizador.
      *
      * O nome `definition` permanece em inglês por corresponder ao método
@@ -74,12 +83,14 @@ final class UtilizadorFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function definition(): array
     {
         return [
-            'nome' => $this->faker->name(),
+            'nome' => $this
+                ->faker
+                ->name(),
 
             'email' => $this
                 ->faker
@@ -90,7 +101,7 @@ final class UtilizadorFactory extends Factory
 
             'password' => self::$hashPalavraPasse ??=
                 Hash::make(
-                    self::PALAVRA_PASSE_PADRAO,
+                    self::PALAVRA_PASSE_PREDEFINIDA,
                 ),
 
             'fotografia' => null,
@@ -148,23 +159,36 @@ final class UtilizadorFactory extends Factory
      * @param  string  $caminho  Caminho relativo da fotografia.
      * @return static Factory configurada.
      *
-     * @throws InvalidArgumentException Quando o caminho está vazio.
+     * @throws InvalidArgumentException Quando o caminho está vazio ou
+     *                                  ultrapassa o comprimento máximo.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function comFotografia(
         string $caminho,
     ): static {
-        $caminhoNormalizado =
-            trim(
-                $caminho,
-            );
+        $caminhoNormalizado = trim(
+            $caminho,
+        );
 
         if ($caminhoNormalizado === '') {
             throw new InvalidArgumentException(
                 'O caminho da fotografia não pode estar vazio.',
+            );
+        }
+
+        if (
+            mb_strlen(
+                $caminhoNormalizado,
+            ) > self::COMPRIMENTO_MAXIMO_FOTOGRAFIA
+        ) {
+            throw new InvalidArgumentException(
+                sprintf(
+                    'O caminho da fotografia não pode exceder %d caracteres.',
+                    self::COMPRIMENTO_MAXIMO_FOTOGRAFIA,
+                ),
             );
         }
 
