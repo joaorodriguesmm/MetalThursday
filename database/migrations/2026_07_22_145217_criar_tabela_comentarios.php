@@ -4,56 +4,90 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
  * Cria a tabela dos comentários.
  *
  * Os comentários podem pertencer a diferentes entidades da aplicação
- * através de uma relação polimórfica e podem responder a outros
- * comentários.
+ * através de uma relação polimórfica e podem responder a outros comentários.
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 return new class extends Migration
 {
     /**
-     * Cria a tabela dos comentários.
+     * Tipos de entidades que podem receber comentários.
+     *
+     * Estes valores correspondem aos aliases polimórficos persistidos pela
+     * aplicação e não devem depender dos namespaces PHP dos modelos.
+     *
+     * @var list<string>
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
+    private const TIPOS_COMENTAVEL = [
+        'metal_thursday',
+        'seccao_metal_thursday',
+    ];
+
+    /**
+     * Cria a tabela dos comentários.
+     *
+     * @since 2.0.0
+     *
+     * @version 2.0.0
+     */
     public function up(): void
     {
         Schema::create(
             'comentarios',
-            function (Blueprint $tabela): void {
+            static function (Blueprint $tabela): void {
                 $tabela->id();
 
                 $tabela
-                    ->foreignId('utilizador_id')
+                    ->foreignId(
+                        'utilizador_id',
+                    )
                     ->nullable()
-                    ->constrained('utilizadores')
+                    ->constrained(
+                        table: 'utilizadores',
+                    )
+                    ->cascadeOnUpdate()
                     ->nullOnDelete();
 
-                $tabela->text('conteudo');
+                $tabela->text(
+                    'conteudo',
+                );
 
-                /*
-                 * Relação polimórfica em português.
-                 *
-                 * A configuração explícita será feita posteriormente
-                 * no modelo Comentario.
-                 */
-                $tabela->string(
+                $tabela->enum(
                     'tipo_comentavel',
+                    self::TIPOS_COMENTAVEL,
                 );
 
                 $tabela->unsignedBigInteger(
                     'comentavel_id',
                 );
+
+                $tabela
+                    ->foreignId(
+                        'comentario_pai_id',
+                    )
+                    ->nullable()
+                    ->constrained(
+                        table: 'comentarios',
+                    )
+                    ->cascadeOnUpdate()
+                    ->nullOnDelete();
+
+                $tabela->timestamps();
+
+                $tabela->softDeletes();
 
                 $tabela->index(
                     [
@@ -63,15 +97,36 @@ return new class extends Migration
                     'comentarios_comentavel_indice',
                 );
 
-                $tabela
-                    ->foreignId('comentario_pai_id')
-                    ->nullable()
-                    ->constrained('comentarios')
-                    ->nullOnDelete();
-
-                $tabela->timestamps();
-                $tabela->softDeletes();
+                $tabela->index(
+                    [
+                        'comentario_pai_id',
+                        'created_at',
+                    ],
+                    'comentarios_pai_data_indice',
+                );
             },
+        );
+
+        DB::statement(
+            <<<'SQL'
+                ALTER TABLE `comentarios`
+                ADD CONSTRAINT `comentarios_conteudo_valido_verificacao`
+                CHECK (
+                    CHAR_LENGTH(`conteudo`) >= 1
+                    AND CHAR_LENGTH(`conteudo`) <= 2000
+                )
+                SQL,
+        );
+
+        DB::statement(
+            <<<'SQL'
+                ALTER TABLE `comentarios`
+                ADD CONSTRAINT `comentarios_pai_distinto_verificacao`
+                CHECK (
+                    `comentario_pai_id` IS NULL
+                    OR `comentario_pai_id` <> `id`
+                )
+                SQL,
         );
     }
 
@@ -80,10 +135,12 @@ return new class extends Migration
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function down(): void
     {
-        Schema::dropIfExists('comentarios');
+        Schema::dropIfExists(
+            'comentarios',
+        );
     }
 };

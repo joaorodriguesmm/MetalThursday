@@ -9,47 +9,66 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Cria as tabelas técnicas de cache do Laravel.
  *
+ * O nome `cache` é mantido por ser também o termo técnico utilizado em
+ * português. Os nomes das colunas permanecem de acordo com o contrato do
+ * armazenamento de cache do Laravel.
+ *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 return new class extends Migration
 {
     /**
-     * Cria as tabelas de cache e bloqueios de cache.
+     * Cria as tabelas de cache e de bloqueios atómicos.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function up(): void
     {
         Schema::create(
             'cache',
-            function (Blueprint $tabela): void {
+            static function (Blueprint $tabela): void {
                 $tabela
-                    ->string('key')
+                    ->string(
+                        'key',
+                        255,
+                    )
                     ->primary();
 
-                $tabela->mediumText('value');
+                $tabela->mediumText(
+                    'value',
+                );
 
                 $tabela
-                    ->integer('expiration')
+                    ->integer(
+                        'expiration',
+                    )
                     ->index();
             },
         );
 
         Schema::create(
-            'cache_locks',
-            function (Blueprint $tabela): void {
+            'bloqueios_cache',
+            static function (Blueprint $tabela): void {
                 $tabela
-                    ->string('key')
+                    ->string(
+                        'key',
+                        255,
+                    )
                     ->primary();
 
-                $tabela->string('owner');
+                $tabela->string(
+                    'owner',
+                    255,
+                );
 
                 $tabela
-                    ->integer('expiration')
+                    ->integer(
+                        'expiration',
+                    )
                     ->index();
             },
         );
@@ -60,11 +79,16 @@ return new class extends Migration
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function down(): void
     {
-        Schema::dropIfExists('cache_locks');
-        Schema::dropIfExists('cache');
+        Schema::dropIfExists(
+            'bloqueios_cache',
+        );
+
+        Schema::dropIfExists(
+            'cache',
+        );
     }
 };

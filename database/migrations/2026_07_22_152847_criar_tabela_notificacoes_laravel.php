@@ -7,45 +7,54 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Cria a tabela técnica das notificações do Laravel.
+ * Cria a tabela técnica das notificações persistidas pelo Laravel.
  *
- * Os nomes físicos da tabela e das colunas permanecem de acordo com o
- * contrato do canal de notificações em base de dados do Laravel.
+ * O nome da tabela é definido pelo MetalThursday e utiliza português. Os
+ * nomes das colunas permanecem de acordo com o contrato do canal de
+ * notificações em base de dados do Laravel.
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 return new class extends Migration
 {
     /**
-     * Cria a tabela das notificações.
+     * Cria a tabela das notificações persistidas.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function up(): void
     {
         Schema::create(
-            'notifications',
-            function (Blueprint $tabela): void {
+            'notificacoes',
+            static function (Blueprint $tabela): void {
                 $tabela
-                    ->uuid('id')
+                    ->uuid(
+                        'id',
+                    )
                     ->primary();
 
-                $tabela->string('type');
+                $tabela->string(
+                    'type',
+                    255,
+                );
 
-                /*
-                 * Cria notifiable_type e notifiable_id, assim como o
-                 * respetivo índice composto.
-                 */
-                $tabela->morphs('notifiable');
+                $tabela->morphs(
+                    'notifiable',
+                    'notificacoes_notificavel_indice',
+                );
 
-                $tabela->text('data');
+                $tabela->text(
+                    'data',
+                );
 
                 $tabela
-                    ->timestamp('read_at')
+                    ->timestamp(
+                        'read_at',
+                    )
                     ->nullable();
 
                 $tabela->timestamps();
@@ -54,14 +63,16 @@ return new class extends Migration
     }
 
     /**
-     * Elimina a tabela das notificações.
+     * Elimina a tabela das notificações persistidas.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function down(): void
     {
-        Schema::dropIfExists('notifications');
+        Schema::dropIfExists(
+            'notificacoes',
+        );
     }
 };

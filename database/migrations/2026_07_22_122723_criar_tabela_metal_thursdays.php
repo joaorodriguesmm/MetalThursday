@@ -9,11 +9,12 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Cria a tabela das MetalThursdays.
  *
- * Cada registo representa uma publicação do MetalThursday.
+ * Cada registo representa uma publicação pertencente a uma edição e mantém
+ * o autor e o utilizador nomeado para a publicação seguinte.
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 return new class extends Migration
 {
@@ -22,53 +23,86 @@ return new class extends Migration
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function up(): void
     {
         Schema::create(
             'metal_thursdays',
-            function (Blueprint $tabela): void {
+            static function (Blueprint $tabela): void {
                 $tabela->id();
 
                 $tabela
-                    ->string('nome')
+                    ->string(
+                        'nome',
+                        255,
+                    )
                     ->nullable();
 
                 $tabela
-                    ->date('data')
-                    ->unique();
+                    ->date(
+                        'data',
+                    )
+                    ->unique(
+                        'metal_thursdays_data_unica',
+                    );
 
                 $tabela
-                    ->foreignId('edicao_id')
-                    ->constrained('edicoes')
+                    ->foreignId(
+                        'edicao_id',
+                    )
+                    ->constrained(
+                        table: 'edicoes',
+                    )
+                    ->cascadeOnUpdate()
                     ->restrictOnDelete();
 
                 $tabela
-                    ->foreignId('autor_id')
+                    ->foreignId(
+                        'autor_id',
+                    )
                     ->nullable()
-                    ->constrained('utilizadores')
+                    ->constrained(
+                        table: 'utilizadores',
+                    )
+                    ->cascadeOnUpdate()
                     ->nullOnDelete();
 
                 $tabela
-                    ->foreignId('proximo_nomeado_id')
+                    ->foreignId(
+                        'proximo_nomeado_id',
+                    )
                     ->nullable()
-                    ->constrained('utilizadores')
+                    ->constrained(
+                        table: 'utilizadores',
+                    )
+                    ->cascadeOnUpdate()
                     ->nullOnDelete();
 
                 $tabela
-                    ->foreignId('criado_por_id')
+                    ->foreignId(
+                        'criado_por_id',
+                    )
                     ->nullable()
-                    ->constrained('utilizadores')
+                    ->constrained(
+                        table: 'utilizadores',
+                    )
+                    ->cascadeOnUpdate()
                     ->nullOnDelete();
 
                 $tabela
-                    ->foreignId('atualizado_por_id')
+                    ->foreignId(
+                        'atualizado_por_id',
+                    )
                     ->nullable()
-                    ->constrained('utilizadores')
+                    ->constrained(
+                        table: 'utilizadores',
+                    )
+                    ->cascadeOnUpdate()
                     ->nullOnDelete();
 
                 $tabela->timestamps();
+
                 $tabela->softDeletes();
 
                 $tabela->index(
@@ -77,6 +111,22 @@ return new class extends Migration
                         'data',
                     ],
                     'metal_thursdays_edicao_data_indice',
+                );
+
+                $tabela->index(
+                    [
+                        'autor_id',
+                        'data',
+                    ],
+                    'metal_thursdays_autor_data_indice',
+                );
+
+                $tabela->index(
+                    [
+                        'proximo_nomeado_id',
+                        'data',
+                    ],
+                    'metal_thursdays_nomeado_data_indice',
                 );
             },
         );
@@ -87,10 +137,12 @@ return new class extends Migration
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function down(): void
     {
-        Schema::dropIfExists('metal_thursdays');
+        Schema::dropIfExists(
+            'metal_thursdays',
+        );
     }
 };

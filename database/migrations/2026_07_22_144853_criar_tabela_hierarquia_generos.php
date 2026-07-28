@@ -4,17 +4,22 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
  * Cria a tabela intermédia da hierarquia dos géneros musicais.
  *
- * Um género pode possuir vários géneros ascendentes e cada género
- * ascendente pode estar relacionado com vários géneros descendentes.
+ * Um género pode possuir vários géneros pais e cada género pai pode estar
+ * relacionado com vários géneros filhos.
+ *
+ * A base de dados impede relações duplicadas e relações de um género consigo
+ * próprio. A prevenção de ciclos com vários níveis pertence à camada da
+ * aplicação.
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 return new class extends Migration
 {
@@ -23,24 +28,32 @@ return new class extends Migration
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function up(): void
     {
         Schema::create(
             'hierarquia_generos',
-            function (Blueprint $tabela): void {
+            static function (Blueprint $tabela): void {
                 $tabela
-                    ->foreignId('genero_id')
-                    ->constrained('generos')
+                    ->foreignId(
+                        'genero_id',
+                    )
+                    ->constrained(
+                        table: 'generos',
+                    )
+                    ->cascadeOnUpdate()
                     ->cascadeOnDelete();
 
                 $tabela
-                    ->foreignId('genero_pai_id')
+                    ->foreignId(
+                        'genero_pai_id',
+                    )
                     ->constrained(
                         table: 'generos',
-                        indexName: 'hierarquia_generos_genero_pai_id_fk',
+                        indexName: 'hierarquia_generos_genero_pai_fk',
                     )
+                    ->cascadeOnUpdate()
                     ->cascadeOnDelete();
 
                 $tabela->primary(
@@ -48,14 +61,26 @@ return new class extends Migration
                         'genero_id',
                         'genero_pai_id',
                     ],
-                    'hierarquia_generos_pk',
+                    'hierarquia_generos_primaria',
                 );
 
+                /*
+                 * A chave primária começa por genero_id. Este índice adicional
+                 * otimiza a consulta inversa dos filhos de um género pai.
+                 */
                 $tabela->index(
                     'genero_pai_id',
                     'hierarquia_generos_genero_pai_indice',
                 );
             },
+        );
+
+        DB::statement(
+            <<<'SQL'
+                ALTER TABLE `hierarquia_generos`
+                ADD CONSTRAINT `hierarquia_generos_generos_distintos_verificacao`
+                CHECK (`genero_id` <> `genero_pai_id`)
+                SQL,
         );
     }
 
@@ -64,7 +89,7 @@ return new class extends Migration
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function down(): void
     {

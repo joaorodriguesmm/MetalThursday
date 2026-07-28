@@ -9,15 +9,32 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Cria a tabela dos registos de audição.
  *
- * Os registos de audição podem pertencer a diferentes entidades da
- * aplicação através de uma relação polimórfica.
+ * Os registos de audição podem pertencer a diferentes entidades da aplicação
+ * através de uma relação polimórfica.
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 return new class extends Migration
 {
+    /**
+     * Tipos de entidades que podem ser marcadas como ouvidas.
+     *
+     * Estes valores correspondem aos aliases polimórficos persistidos pela
+     * aplicação e não devem depender dos namespaces PHP dos modelos.
+     *
+     * @var list<string>
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const TIPOS_AUDIVEL = [
+        'metal_thursday',
+        'seccao_metal_thursday',
+    ];
+
     /**
      * Cria a tabela dos registos de audição.
      *
@@ -26,28 +43,28 @@ return new class extends Migration
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function up(): void
     {
         Schema::create(
             'audicoes',
-            function (Blueprint $tabela): void {
+            static function (Blueprint $tabela): void {
                 $tabela->id();
 
                 $tabela
-                    ->foreignId('utilizador_id')
-                    ->constrained('utilizadores')
+                    ->foreignId(
+                        'utilizador_id',
+                    )
+                    ->constrained(
+                        table: 'utilizadores',
+                    )
+                    ->cascadeOnUpdate()
                     ->cascadeOnDelete();
 
-                /*
-                 * Relação polimórfica em português.
-                 *
-                 * A configuração explícita será posteriormente efetuada
-                 * no modelo Audicao.
-                 */
-                $tabela->string(
+                $tabela->enum(
                     'tipo_audivel',
+                    self::TIPOS_AUDIVEL,
                 );
 
                 $tabela->unsignedBigInteger(
@@ -81,10 +98,12 @@ return new class extends Migration
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function down(): void
     {
-        Schema::dropIfExists('audicoes');
+        Schema::dropIfExists(
+            'audicoes',
+        );
     }
 };

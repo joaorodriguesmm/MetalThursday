@@ -9,63 +9,90 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Cria as tabelas técnicas de autenticação e sessões do Laravel.
  *
+ * Os nomes das tabelas são definidos pelo MetalThursday e utilizam
+ * português. Os nomes das colunas permanecem de acordo com os contratos dos
+ * repositórios de tokens e sessões do Laravel.
+ *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 return new class extends Migration
 {
     /**
-     * Cria as tabelas de recuperação de palavra-passe e sessões.
+     * Cria as tabelas de recuperação da palavra-passe e de sessões.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function up(): void
     {
         Schema::create(
-            'password_reset_tokens',
-            function (Blueprint $tabela): void {
+            'tokens_redefinicao_palavra_passe',
+            static function (Blueprint $tabela): void {
                 $tabela
-                    ->string('email')
+                    ->string(
+                        'email',
+                        255,
+                    )
                     ->primary();
 
-                $tabela->string('token');
+                $tabela->string(
+                    'token',
+                    255,
+                );
 
                 $tabela
-                    ->timestamp('created_at')
+                    ->timestamp(
+                        'created_at',
+                    )
                     ->nullable();
             },
         );
 
         Schema::create(
-            'sessions',
-            function (Blueprint $tabela): void {
+            'sessoes',
+            static function (Blueprint $tabela): void {
                 $tabela
-                    ->string('id')
+                    ->string(
+                        'id',
+                        255,
+                    )
                     ->primary();
 
-                /*
-                 * O gestor de sessões do Laravel utiliza este nome.
-                 */
                 $tabela
-                    ->foreignId('user_id')
+                    ->foreignId(
+                        'user_id',
+                    )
                     ->nullable()
-                    ->index();
+                    ->constrained(
+                        table: 'utilizadores',
+                    )
+                    ->cascadeOnUpdate()
+                    ->cascadeOnDelete();
 
                 $tabela
-                    ->string('ip_address', 45)
+                    ->string(
+                        'ip_address',
+                        45,
+                    )
                     ->nullable();
 
                 $tabela
-                    ->text('user_agent')
+                    ->text(
+                        'user_agent',
+                    )
                     ->nullable();
 
-                $tabela->longText('payload');
+                $tabela->longText(
+                    'payload',
+                );
 
                 $tabela
-                    ->integer('last_activity')
+                    ->integer(
+                        'last_activity',
+                    )
                     ->index();
             },
         );
@@ -76,11 +103,16 @@ return new class extends Migration
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function down(): void
     {
-        Schema::dropIfExists('sessions');
-        Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists(
+            'sessoes',
+        );
+
+        Schema::dropIfExists(
+            'tokens_redefinicao_palavra_passe',
+        );
     }
 };

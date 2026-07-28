@@ -9,9 +9,11 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Cria a tabela dos gostos atribuídos aos comentários.
  *
+ * Cada utilizador pode atribuir apenas um gosto a cada comentário.
+ *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 return new class extends Migration
 {
@@ -20,23 +22,33 @@ return new class extends Migration
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function up(): void
     {
         Schema::create(
             'gostos',
-            function (Blueprint $tabela): void {
+            static function (Blueprint $tabela): void {
                 $tabela->id();
 
                 $tabela
-                    ->foreignId('utilizador_id')
-                    ->constrained('utilizadores')
+                    ->foreignId(
+                        'utilizador_id',
+                    )
+                    ->constrained(
+                        table: 'utilizadores',
+                    )
+                    ->cascadeOnUpdate()
                     ->cascadeOnDelete();
 
                 $tabela
-                    ->foreignId('comentario_id')
-                    ->constrained('comentarios')
+                    ->foreignId(
+                        'comentario_id',
+                    )
+                    ->constrained(
+                        table: 'comentarios',
+                    )
+                    ->cascadeOnUpdate()
                     ->cascadeOnDelete();
 
                 $tabela->timestamps();
@@ -49,6 +61,11 @@ return new class extends Migration
                     'gostos_utilizador_comentario_unico',
                 );
 
+                /*
+                 * A restrição única começa por utilizador_id. Este índice
+                 * adicional otimiza a contagem e listagem dos gostos de um
+                 * comentário.
+                 */
                 $tabela->index(
                     'comentario_id',
                     'gostos_comentario_indice',
@@ -62,10 +79,12 @@ return new class extends Migration
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function down(): void
     {
-        Schema::dropIfExists('gostos');
+        Schema::dropIfExists(
+            'gostos',
+        );
     }
 };

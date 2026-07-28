@@ -9,87 +9,148 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Cria as tabelas técnicas das filas do Laravel.
  *
+ * Os nomes das tabelas são definidos pelo MetalThursday e utilizam
+ * português. Os nomes das colunas permanecem de acordo com os contratos dos
+ * repositórios de filas, lotes e trabalhos falhados do Laravel.
+ *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 return new class extends Migration
 {
     /**
-     * Cria as tabelas de trabalhos, lotes e falhas.
+     * Cria as tabelas de trabalhos, lotes e trabalhos falhados.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function up(): void
     {
         Schema::create(
-            'jobs',
-            function (Blueprint $tabela): void {
+            'trabalhos_fila',
+            static function (Blueprint $tabela): void {
                 $tabela->id();
 
                 $tabela
-                    ->string('queue')
+                    ->string(
+                        'queue',
+                        255,
+                    )
                     ->index();
 
-                $tabela->longText('payload');
-                $tabela->unsignedTinyInteger('attempts');
+                $tabela->longText(
+                    'payload',
+                );
+
+                $tabela->unsignedTinyInteger(
+                    'attempts',
+                );
 
                 $tabela
-                    ->unsignedInteger('reserved_at')
+                    ->unsignedInteger(
+                        'reserved_at',
+                    )
                     ->nullable();
 
-                $tabela->unsignedInteger('available_at');
-                $tabela->unsignedInteger('created_at');
+                $tabela->unsignedInteger(
+                    'available_at',
+                );
+
+                $tabela->unsignedInteger(
+                    'created_at',
+                );
             },
         );
 
         Schema::create(
-            'job_batches',
-            function (Blueprint $tabela): void {
+            'lotes_trabalhos_fila',
+            static function (Blueprint $tabela): void {
                 $tabela
-                    ->string('id')
+                    ->string(
+                        'id',
+                        255,
+                    )
                     ->primary();
 
-                $tabela->string('name');
-                $tabela->integer('total_jobs');
-                $tabela->integer('pending_jobs');
-                $tabela->integer('failed_jobs');
-                $tabela->longText('failed_job_ids');
+                $tabela->string(
+                    'name',
+                    255,
+                );
+
+                $tabela->integer(
+                    'total_jobs',
+                );
+
+                $tabela->integer(
+                    'pending_jobs',
+                );
+
+                $tabela->integer(
+                    'failed_jobs',
+                );
+
+                $tabela->longText(
+                    'failed_job_ids',
+                );
 
                 $tabela
-                    ->mediumText('options')
+                    ->mediumText(
+                        'options',
+                    )
                     ->nullable();
 
                 $tabela
-                    ->integer('cancelled_at')
+                    ->integer(
+                        'cancelled_at',
+                    )
                     ->nullable();
 
-                $tabela->integer('created_at');
+                $tabela->integer(
+                    'created_at',
+                );
 
                 $tabela
-                    ->integer('finished_at')
+                    ->integer(
+                        'finished_at',
+                    )
                     ->nullable();
             },
         );
 
         Schema::create(
-            'failed_jobs',
-            function (Blueprint $tabela): void {
+            'trabalhos_fila_falhados',
+            static function (Blueprint $tabela): void {
                 $tabela->id();
 
                 $tabela
-                    ->string('uuid')
+                    ->string(
+                        'uuid',
+                        255,
+                    )
                     ->unique();
 
-                $tabela->text('connection');
-                $tabela->text('queue');
-                $tabela->longText('payload');
-                $tabela->longText('exception');
+                $tabela->text(
+                    'connection',
+                );
+
+                $tabela->text(
+                    'queue',
+                );
+
+                $tabela->longText(
+                    'payload',
+                );
+
+                $tabela->longText(
+                    'exception',
+                );
 
                 $tabela
-                    ->timestamp('failed_at')
+                    ->timestamp(
+                        'failed_at',
+                    )
                     ->useCurrent();
             },
         );
@@ -100,12 +161,20 @@ return new class extends Migration
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function down(): void
     {
-        Schema::dropIfExists('failed_jobs');
-        Schema::dropIfExists('job_batches');
-        Schema::dropIfExists('jobs');
+        Schema::dropIfExists(
+            'trabalhos_fila_falhados',
+        );
+
+        Schema::dropIfExists(
+            'lotes_trabalhos_fila',
+        );
+
+        Schema::dropIfExists(
+            'trabalhos_fila',
+        );
     }
 };

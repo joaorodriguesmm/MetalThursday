@@ -9,9 +9,13 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Cria a tabela dos utilizadores da aplicação.
  *
+ * Os campos `email`, `email_verified_at`, `password` e `remember_token`
+ * permanecem em inglês por integrarem os contratos de autenticação,
+ * verificação de e-mail e recuperação da palavra-passe do Laravel.
+ *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 return new class extends Migration
 {
@@ -20,40 +24,57 @@ return new class extends Migration
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function up(): void
     {
         Schema::create(
             'utilizadores',
-            function (Blueprint $tabela): void {
+            static function (Blueprint $tabela): void {
                 $tabela->id();
 
-                $tabela->string('nome');
+                $tabela->string(
+                    'nome',
+                    255,
+                );
 
                 $tabela
-                    ->string('email')
+                    ->string(
+                        'email',
+                        255,
+                    )
                     ->unique();
 
-                /*
-                 * Estes campos mantêm os nomes convencionais do Laravel.
-                 */
                 $tabela
-                    ->timestamp('email_verified_at')
+                    ->timestamp(
+                        'email_verified_at',
+                    )
                     ->nullable();
 
-                $tabela->string('password');
+                $tabela->string(
+                    'password',
+                    255,
+                );
 
                 $tabela
-                    ->string('fotografia')
+                    ->string(
+                        'fotografia',
+                        255,
+                    )
                     ->nullable();
 
                 $tabela
-                    ->string('papel', 32)
-                    ->default('utilizador')
+                    ->string(
+                        'papel',
+                        32,
+                    )
+                    ->default(
+                        'utilizador',
+                    )
                     ->index();
 
                 $tabela->rememberToken();
+
                 $tabela->timestamps();
             },
         );
@@ -64,10 +85,12 @@ return new class extends Migration
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function down(): void
     {
-        Schema::dropIfExists('utilizadores');
+        Schema::dropIfExists(
+            'utilizadores',
+        );
     }
 };

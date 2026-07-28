@@ -9,9 +9,12 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Cria a tabela das bandas.
  *
+ * Cada banda pertence a uma origem geográfica e pode ser associada a vários
+ * géneros musicais.
+ *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 return new class extends Migration
 {
@@ -20,45 +23,82 @@ return new class extends Migration
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function up(): void
     {
         Schema::create(
             'bandas',
-            function (Blueprint $tabela): void {
+            static function (Blueprint $tabela): void {
                 $tabela->id();
 
-                $tabela
-                    ->string('nome')
-                    ->index();
+                $tabela->string(
+                    'nome',
+                    255,
+                );
 
                 $tabela
-                    ->foreignId('pais_id')
-                    ->constrained('paises')
+                    ->foreignId(
+                        'origem_geografica_id',
+                    )
+                    ->constrained(
+                        table: 'origens_geograficas',
+                    )
+                    ->cascadeOnUpdate()
                     ->restrictOnDelete();
 
                 $tabela
-                    ->foreignId('criado_por_id')
+                    ->foreignId(
+                        'criado_por_id',
+                    )
                     ->nullable()
-                    ->constrained('utilizadores')
+                    ->constrained(
+                        table: 'utilizadores',
+                    )
+                    ->cascadeOnUpdate()
                     ->nullOnDelete();
 
                 $tabela
-                    ->foreignId('atualizado_por_id')
+                    ->foreignId(
+                        'atualizado_por_id',
+                    )
                     ->nullable()
-                    ->constrained('utilizadores')
+                    ->constrained(
+                        table: 'utilizadores',
+                    )
+                    ->cascadeOnUpdate()
                     ->nullOnDelete();
 
                 $tabela->timestamps();
+
                 $tabela->softDeletes();
+
+                /*
+                 * Permite reutilizar o nome de uma banda eliminada
+                 * logicamente, mantendo a unicidade entre bandas ativas.
+                 */
+                $tabela
+                    ->string(
+                        'nome_ativo',
+                        255,
+                    )
+                    ->nullable()
+                    ->virtualAs(
+                        'if(`deleted_at` is null, `nome`, null)',
+                    );
+
+                $tabela->unique(
+                    'nome_ativo',
+                    'bandas_nome_ativo_unico',
+                );
 
                 $tabela->index(
                     [
-                        'pais_id',
+                        'origem_geografica_id',
+                        'deleted_at',
                         'nome',
                     ],
-                    'bandas_pais_nome_indice',
+                    'bandas_origem_estado_nome_indice',
                 );
             },
         );
@@ -69,10 +109,12 @@ return new class extends Migration
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function down(): void
     {
-        Schema::dropIfExists('bandas');
+        Schema::dropIfExists(
+            'bandas',
+        );
     }
 };

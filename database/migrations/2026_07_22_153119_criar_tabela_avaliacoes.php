@@ -4,20 +4,38 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
  * Cria a tabela das avaliações atribuídas pelos utilizadores.
  *
- * As avaliações podem pertencer a diferentes entidades da aplicação
- * através de uma relação polimórfica.
+ * As avaliações podem pertencer a diferentes entidades da aplicação através
+ * de uma relação polimórfica.
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 return new class extends Migration
 {
+    /**
+     * Tipos de entidades que podem receber avaliações.
+     *
+     * Estes valores correspondem aos aliases polimórficos persistidos pela
+     * aplicação e não devem depender dos namespaces PHP dos modelos.
+     *
+     * @var list<string>
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const TIPOS_AVALIAVEL = [
+        'metal_thursday',
+        'seccao_metal_thursday',
+    ];
+
     /**
      * Cria a tabela das avaliações.
      *
@@ -26,34 +44,36 @@ return new class extends Migration
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function up(): void
     {
         Schema::create(
             'avaliacoes',
-            function (Blueprint $tabela): void {
+            static function (Blueprint $tabela): void {
                 $tabela->id();
 
                 $tabela
-                    ->foreignId('utilizador_id')
-                    ->constrained('utilizadores')
+                    ->foreignId(
+                        'utilizador_id',
+                    )
+                    ->constrained(
+                        table: 'utilizadores',
+                    )
+                    ->cascadeOnUpdate()
                     ->cascadeOnDelete();
 
-                $tabela->decimal(
-                    'pontuacao',
-                    3,
-                    1,
-                );
+                $tabela
+                    ->decimal(
+                        'pontuacao',
+                        3,
+                        1,
+                    )
+                    ->unsigned();
 
-                /*
-                 * Relação polimórfica em português.
-                 *
-                 * A configuração explícita será posteriormente efetuada
-                 * no modelo Avaliacao.
-                 */
-                $tabela->string(
+                $tabela->enum(
                     'tipo_avaliavel',
+                    self::TIPOS_AVALIAVEL,
                 );
 
                 $tabela->unsignedBigInteger(
@@ -80,6 +100,17 @@ return new class extends Migration
                 );
             },
         );
+
+        DB::statement(
+            <<<'SQL'
+                ALTER TABLE `avaliacoes`
+                ADD CONSTRAINT `avaliacoes_pontuacao_valida_verificacao`
+                CHECK (
+                    `pontuacao` BETWEEN 0.5 AND 10.0
+                    AND MOD(`pontuacao` * 10, 5) = 0
+                )
+                SQL,
+        );
     }
 
     /**
@@ -87,10 +118,12 @@ return new class extends Migration
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function down(): void
     {
-        Schema::dropIfExists('avaliacoes');
+        Schema::dropIfExists(
+            'avaliacoes',
+        );
     }
 };
