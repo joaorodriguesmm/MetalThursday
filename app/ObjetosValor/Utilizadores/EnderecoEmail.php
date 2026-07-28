@@ -12,37 +12,35 @@ use Stringable;
  * Representa um endereço de e-mail válido e normalizado.
  *
  * O endereço é normalizado para minúsculas e não contém espaços exteriores.
- * Esta aplicação considera endereços que diferem apenas em maiúsculas e
- * minúsculas como sendo o mesmo endereço.
+ * A aplicação considera equivalentes os endereços que diferem apenas no uso
+ * de maiúsculas e minúsculas.
  *
  * @since 2.0.0
  *
- * @version 1.1.0
+ * @version 2.0.0
  */
 final readonly class EnderecoEmail implements JsonSerializable, Stringable
 {
     /**
      * Comprimento máximo permitido pela estrutura de persistência.
      *
-     * @var int
+     * Esta constante é pública para que as regras de validação da camada HTTP
+     * utilizem o mesmo limite do objeto de valor.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    private const COMPRIMENTO_MAXIMO = 255;
+    public const COMPRIMENTO_MAXIMO = 255;
 
     /**
-     * Cria o objeto com um endereço previamente validado.
+     * Cria o objeto com um endereço previamente validado e normalizado.
      *
-     * @param string $valor Endereço normalizado COMPRIMENTO_MAXIMO = 255;
-
-    /**
-     * Cria o.
+     * @param  string  $valor  Endereço normalizado.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     private function __construct(
         private string $valor,
@@ -58,27 +56,26 @@ final readonly class EnderecoEmail implements JsonSerializable, Stringable
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public static function deTexto(
         string $email,
     ): self {
-        $emailNormalizado =
-            mb_strtolower(
-                trim(
-                    $email,
-                ),
-            );
+        self::validarCaracteresControlo(
+            $email,
+        );
+
+        $emailNormalizado = mb_strtolower(
+            trim(
+                $email,
+            ),
+        );
 
         self::validarObrigatoriedade(
             $emailNormalizado,
         );
 
         self::validarComprimento(
-            $emailNormalizado,
-        );
-
-        self::validarCaracteresControlo(
             $emailNormalizado,
         );
 
@@ -124,8 +121,7 @@ final readonly class EnderecoEmail implements JsonSerializable, Stringable
     /**
      * Converte o objeto para texto.
      *
-     * Este nome permanece inalterado por corresponder a um método mágico do
-     * PHP.
+     * O nome permanece inalterado por corresponder a um método mágico do PHP.
      *
      * @return string Endereço normalizado.
      *
@@ -141,8 +137,8 @@ final readonly class EnderecoEmail implements JsonSerializable, Stringable
     /**
      * Converte o objeto para uma representação compatível com JSON.
      *
-     * Este nome permanece em inglês por corresponder ao contrato
-     * JsonSerializable do PHP.
+     * O nome permanece em inglês por corresponder ao contrato
+     * {@see JsonSerializable}.
      *
      * @return string Endereço normalizado.
      *
@@ -169,11 +165,13 @@ final readonly class EnderecoEmail implements JsonSerializable, Stringable
     private static function validarObrigatoriedade(
         string $email,
     ): void {
-        if ($email === '') {
-            throw new InvalidArgumentException(
-                'O endereço de e-mail é obrigatório.',
-            );
+        if ($email !== '') {
+            return;
         }
+
+        throw new InvalidArgumentException(
+            'O endereço de e-mail é obrigatório.',
+        );
     }
 
     /**
@@ -185,7 +183,7 @@ final readonly class EnderecoEmail implements JsonSerializable, Stringable
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private static function validarComprimento(
         string $email,
@@ -209,16 +207,17 @@ final readonly class EnderecoEmail implements JsonSerializable, Stringable
     /**
      * Impede a utilização de caracteres de controlo.
      *
-     * Esta validação evita, nomeadamente, a introdução de quebras de linha em
-     * valores posteriormente utilizados em comunicações por e-mail.
+     * A validação é realizada antes da normalização para que quebras de linha,
+     * tabulações ou outros caracteres de controlo não sejam silenciosamente
+     * removidos de um endereço recebido.
      *
-     * @param  string  $email  Endereço normalizado.
+     * @param  string  $email  Endereço original.
      *
      * @throws InvalidArgumentException Quando existem caracteres de controlo.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private static function validarCaracteresControlo(
         string $email,

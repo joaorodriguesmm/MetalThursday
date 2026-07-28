@@ -17,40 +17,42 @@ use Stringable;
  *
  * @since 2.0.0
  *
- * @version 1.1.0
+ * @version 2.0.0
  */
 final readonly class NomeUtilizador implements JsonSerializable, Stringable
 {
     /**
      * Comprimento mínimo permitido.
      *
-     * @var int
+     * Esta constante é pública para que as regras de validação da camada HTTP
+     * utilizem o mesmo limite do objeto de valor.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    private const COMPRIMENTO_MINIMO = 3;
+    public const COMPRIMENTO_MINIMO = 3;
 
     /**
      * Comprimento máximo permitido pela estrutura de persistência.
      *
-     * @var int
+     * Esta constante é pública para que as regras de validação da camada HTTP
+     * utilizem o mesmo limite do objeto de valor.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    private const COMPRIMENTO_MAXIMO = 255;
+    public const COMPRIMENTO_MAXIMO = 255;
 
     /**
-     * Cria o objeto com um valor previamente validado.
+     * Cria o objeto com um valor previamente validado e normalizado.
      *
      * @param  string  $valor  Nome normalizado.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     private function __construct(
         private string $valor,
@@ -66,19 +68,22 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public static function deTexto(
         string $nome,
     ): self {
+        self::validarCodificacao(
+            $nome,
+        );
+
         self::validarCaracteresControlo(
             $nome,
         );
 
-        $nomeNormalizado =
-            self::normalizar(
-                $nome,
-            );
+        $nomeNormalizado = self::normalizar(
+            $nome,
+        );
 
         self::validarObrigatoriedade(
             $nomeNormalizado,
@@ -135,8 +140,7 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
      */
     public function iniciais(): string
     {
-        $partes =
-            $this->partes();
+        $partes = $this->partes();
 
         if (count($partes) === 1) {
             return mb_strtoupper(
@@ -148,25 +152,22 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
             );
         }
 
-        $primeiroElemento =
-            $partes[0];
+        $primeiroElemento = $partes[0];
 
-        $ultimoElemento =
-            $partes[array_key_last(
-                $partes,
-            )];
+        $ultimoElemento = $partes[array_key_last(
+            $partes,
+        )];
 
         return mb_strtoupper(
             mb_substr(
                 $primeiroElemento,
                 0,
                 1,
-            )
-                .mb_substr(
-                    $ultimoElemento,
-                    0,
-                    1,
-                ),
+            ).mb_substr(
+                $ultimoElemento,
+                0,
+                1,
+            ),
         );
     }
 
@@ -192,8 +193,7 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
     /**
      * Converte o objeto para texto.
      *
-     * Este nome permanece inalterado por corresponder a um método mágico do
-     * PHP.
+     * O nome permanece inalterado por corresponder a um método mágico do PHP.
      *
      * @return string Nome normalizado.
      *
@@ -209,8 +209,8 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
     /**
      * Converte o objeto para uma representação compatível com JSON.
      *
-     * Este nome permanece em inglês por corresponder ao contrato
-     * JsonSerializable do PHP.
+     * O nome permanece em inglês por corresponder ao contrato
+     * {@see JsonSerializable}.
      *
      * @return string Nome normalizado.
      *
@@ -226,6 +226,10 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
     /**
      * Normaliza os espaços do nome.
      *
+     * Todos os grupos de espaços reconhecidos em texto Unicode são
+     * convertidos num único espaço ASCII. Os espaços resultantes nas
+     * extremidades são depois removidos.
+     *
      * @param  string  $nome  Nome original.
      * @return string Nome normalizado.
      *
@@ -233,19 +237,16 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private static function normalizar(
         string $nome,
     ): string {
-        $nomeNormalizado =
-            preg_replace(
-                '/\s+/u',
-                ' ',
-                trim(
-                    $nome,
-                ),
-            );
+        $nomeNormalizado = preg_replace(
+            '/\s+/u',
+            ' ',
+            $nome,
+        );
 
         if (! is_string($nomeNormalizado)) {
             throw new InvalidArgumentException(
@@ -253,7 +254,37 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
             );
         }
 
-        return $nomeNormalizado;
+        return trim(
+            $nomeNormalizado,
+        );
+    }
+
+    /**
+     * Valida que o nome utiliza uma codificação UTF-8 válida.
+     *
+     * @param  string  $nome  Nome original.
+     *
+     * @throws InvalidArgumentException Quando o texto não é UTF-8 válido.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private static function validarCodificacao(
+        string $nome,
+    ): void {
+        if (
+            preg_match(
+                '//u',
+                $nome,
+            ) === 1
+        ) {
+            return;
+        }
+
+        throw new InvalidArgumentException(
+            'O nome do utilizador contém texto inválido.',
+        );
     }
 
     /**
@@ -270,11 +301,13 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
     private static function validarObrigatoriedade(
         string $nome,
     ): void {
-        if ($nome === '') {
-            throw new InvalidArgumentException(
-                'O nome do utilizador é obrigatório.',
-            );
+        if ($nome !== '') {
+            return;
         }
+
+        throw new InvalidArgumentException(
+            'O nome do utilizador é obrigatório.',
+        );
     }
 
     /**
@@ -286,15 +319,14 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private static function validarComprimento(
         string $nome,
     ): void {
-        $comprimento =
-            mb_strlen(
-                $nome,
-            );
+        $comprimento = mb_strlen(
+            $nome,
+        );
 
         if ($comprimento < self::COMPRIMENTO_MINIMO) {
             throw new InvalidArgumentException(
@@ -305,21 +337,24 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
             );
         }
 
-        if ($comprimento > self::COMPRIMENTO_MAXIMO) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'O nome do utilizador não pode ter mais de %d caracteres.',
-                    self::COMPRIMENTO_MAXIMO,
-                ),
-            );
+        if ($comprimento <= self::COMPRIMENTO_MAXIMO) {
+            return;
         }
+
+        throw new InvalidArgumentException(
+            sprintf(
+                'O nome do utilizador não pode ter mais de %d caracteres.',
+                self::COMPRIMENTO_MAXIMO,
+            ),
+        );
     }
 
     /**
      * Impede caracteres de controlo não relacionados com espaços.
      *
      * Tabulações e quebras de linha são aceites na entrada e posteriormente
-     * normalizadas para espaços simples.
+     * normalizadas para espaços simples. Os restantes caracteres de controlo
+     * ASCII são rejeitados.
      *
      * @param  string  $nome  Nome original.
      *
@@ -357,13 +392,12 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
      */
     private function partes(): array
     {
-        $partes =
-            preg_split(
-                '/\s+/u',
-                $this->valor,
-                -1,
-                PREG_SPLIT_NO_EMPTY,
-            );
+        $partes = preg_split(
+            '/\s+/u',
+            $this->valor,
+            -1,
+            PREG_SPLIT_NO_EMPTY,
+        );
 
         if (
             ! is_array($partes)
