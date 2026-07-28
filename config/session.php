@@ -5,16 +5,16 @@ declare(strict_types=1);
 use Illuminate\Support\Str;
 
 /**
- * Define as configurações das sessões da aplicação.
+ * Define as sessões utilizadas pela aplicação.
  *
  * Os nomes das chaves e drivers permanecem em inglês por corresponderem aos
- * contratos internos de configuração do Laravel.
+ * contratos de configuração utilizados pelo Laravel.
  *
- * @return array<string, mixed> Configurações das sessões.
+ * @return array<string, mixed> Configuração das sessões.
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 3.1.0
  */
 return [
     /*
@@ -34,18 +34,12 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    /*
-     * Número de minutos durante os quais uma sessão pode permanecer inativa.
-     */
     'lifetime' => (int) env(
         'SESSION_LIFETIME',
         120,
     ),
 
-    /*
-     * Determina se a sessão termina quando o navegador é fechado.
-     */
-    'expire_on_close' => env(
+    'expire_on_close' => (bool) env(
         'SESSION_EXPIRE_ON_CLOSE',
         false,
     ),
@@ -56,10 +50,7 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    /*
-     * Determina se o conteúdo da sessão é encriptado antes de ser armazenado.
-     */
-    'encrypt' => env(
+    'encrypt' => (bool) env(
         'SESSION_ENCRYPT',
         true,
     ),
@@ -70,26 +61,14 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    /*
-     * Diretório utilizado exclusivamente pelo driver `file`.
-     */
     'files' => storage_path(
         'framework/sessions',
     ),
 
-    /*
-     * Ligação utilizada pelo driver `database`.
-     */
-    'connection' => 'mysql',
+    'connection' => 'mariadb',
 
-    /*
-     * Tabela utilizada pelo driver `database`.
-     */
     'table' => 'sessoes',
 
-    /*
-     * Armazenamento aplicável apenas a drivers de sessão baseados em cache.
-     */
     'store' => null,
 
     /*
@@ -98,9 +77,6 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    /*
-     * Probabilidade de 2 em 100 de limpar sessões expiradas num pedido.
-     */
     'lottery' => [
         2,
         100,
@@ -108,7 +84,7 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Cookie de sessão
+    | Cookie da sessão
     |--------------------------------------------------------------------------
     */
 
@@ -122,48 +98,31 @@ return [
         ).'-sessao',
     ),
 
-    /*
-     * Caminho no qual o cookie fica disponível.
-     */
     'path' => env(
         'SESSION_PATH',
         '/',
     ),
 
-    /*
-     * Domínio e subdomínios nos quais o cookie fica disponível.
-     */
     'domain' => env(
         'SESSION_DOMAIN',
     ),
 
-    /*
-     * Determina se o cookie só pode ser enviado através de HTTPS.
-     */
-    'secure' => env(
+    'secure' => (bool) env(
         'SESSION_SECURE_COOKIE',
+        false,
     ),
 
-    /*
-     * Impede que JavaScript aceda ao cookie.
-     */
-    'http_only' => env(
+    'http_only' => (bool) env(
         'SESSION_HTTP_ONLY',
         true,
     ),
 
-    /*
-     * Controla o envio do cookie em pedidos entre sites.
-     */
     'same_site' => env(
         'SESSION_SAME_SITE',
         'lax',
     ),
 
-    /*
-     * Associa o cookie ao site de nível superior em contextos entre sites.
-     */
-    'partitioned' => env(
+    'partitioned' => (bool) env(
         'SESSION_PARTITIONED_COOKIE',
         false,
     ),

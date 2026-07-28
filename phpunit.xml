@@ -26,7 +26,7 @@
         <env name="APP_MAINTENANCE_DRIVER" value="file" force="true"/>
         <env name="BCRYPT_ROUNDS" value="4" force="true"/>
         <env name="CACHE_STORE" value="array" force="true"/>
-        <env name="DB_CONNECTION" value="mysql" force="true"/>
+        <env name="DB_CONNECTION" value="mariadb" force="true"/>
         <env name="DB_DATABASE" value="metalthursday_testes" force="true"/>
         <env name="FILESYSTEM_DISK" value="privado" force="true"/>
         <env name="LOG_CHANNEL" value="pilha" force="true"/>

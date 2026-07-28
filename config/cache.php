@@ -8,13 +8,13 @@ use Illuminate\Support\Str;
  * Define os armazenamentos de cache utilizados pela aplicação.
  *
  * Os nomes das chaves, armazenamentos e drivers permanecem em inglês por
- * corresponderem aos contratos internos de configuração do Laravel.
+ * corresponderem aos contratos de configuração utilizados pelo Laravel.
  *
- * @return array<string, mixed> Configurações de cache.
+ * @return array<string, mixed> Configuração do cache.
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 3.1.0
  */
 return [
     /*
@@ -30,13 +30,13 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Armazenamentos de cache
+    | Armazenamentos disponíveis
     |--------------------------------------------------------------------------
     */
 
     'stores' => [
         /*
-         * Armazenamento temporário utilizado pelos testes automatizados.
+         * Armazenamento temporário mantido apenas durante o processo atual.
          */
         'array' => [
             'driver' => 'array',
@@ -45,23 +45,22 @@ return [
         ],
 
         /*
-         * Armazenamento persistente utilizado pela aplicação.
+         * Armazenamento persistente na base de dados.
          */
         'database' => [
             'driver' => 'database',
 
-            'connection' => 'mysql',
+            'connection' => 'mariadb',
 
             'table' => 'cache',
 
-            'lock_connection' => 'mysql',
+            'lock_connection' => 'mariadb',
 
             'lock_table' => 'bloqueios_cache',
         ],
 
         /*
-         * Armazenamento local de contingência para operações explicitamente
-         * configuradas para utilizar ficheiros.
+         * Armazenamento persistente no sistema de ficheiros.
          */
         'file' => [
             'driver' => 'file',

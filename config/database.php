@@ -2,19 +2,17 @@
 
 declare(strict_types=1);
 
-use Pdo\Mysql;
-
 /**
- * Define a ligação MySQL utilizada pela aplicação.
+ * Define a ligação à base de dados MariaDB utilizada pela aplicação.
  *
  * Os nomes das chaves e do driver permanecem em inglês por corresponderem
- * aos contratos internos de configuração do Laravel e do PDO.
+ * aos contratos de configuração utilizados pelo Laravel.
  *
- * @return array<string, mixed> Configurações da base de dados.
+ * @return array<string, mixed> Configuração da base de dados.
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 3.1.0
  */
 return [
     /*
@@ -25,18 +23,18 @@ return [
 
     'default' => env(
         'DB_CONNECTION',
-        'mysql',
+        'mariadb',
     ),
 
     /*
     |--------------------------------------------------------------------------
-    | Ligações à base de dados
+    | Ligações às bases de dados
     |--------------------------------------------------------------------------
     */
 
     'connections' => [
-        'mysql' => [
-            'driver' => 'mysql',
+        'mariadb' => [
+            'driver' => 'mariadb',
 
             'url' => env(
                 'DB_URL',
@@ -95,11 +93,7 @@ return [
             )
                 ? array_filter(
                     [
-                        (
-                            PHP_VERSION_ID >= 80500
-                            ? Mysql::ATTR_SSL_CA
-                            : PDO::MYSQL_ATTR_SSL_CA
-                        ) => env(
+                        PDO::MYSQL_ATTR_SSL_CA => env(
                             'MYSQL_ATTR_SSL_CA',
                         ),
                     ],
@@ -113,7 +107,7 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Repositório de migrations
+    | Repositório das migrations
     |--------------------------------------------------------------------------
     */
 
