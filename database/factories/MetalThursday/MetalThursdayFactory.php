@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 /**
- * Cria dados de teste para registos MetalThursday.
+ * Cria dados de teste para MetalThursdays.
  *
  * O nome `Factory` permanece em inglês por corresponder à convenção de
  * descoberta automática das factories do Laravel.
@@ -24,22 +24,18 @@ use InvalidArgumentException;
  *
  * @since 2.0.0
  *
- * @version 1.1.0
+ * @version 2.0.0
  */
 final class MetalThursdayFactory extends Factory
 {
     /**
      * Comprimento máximo do nome.
      *
-     * Corresponde ao comprimento predefinido das colunas `string` utilizadas
-     * pelo Laravel.
-     *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    private const COMPRIMENTO_MAXIMO_NOME =
-        255;
+    private const COMPRIMENTO_MAXIMO_NOME = 255;
 
     /**
      * Modelo associado à factory.
@@ -50,11 +46,10 @@ final class MetalThursdayFactory extends Factory
      *
      * @version 1.0.0
      */
-    protected $model =
-        MetalThursday::class;
+    protected $model = MetalThursday::class;
 
     /**
-     * Define os atributos predefinidos de um registo MetalThursday.
+     * Define os atributos predefinidos de uma MetalThursday.
      *
      * A data é calculada a partir de um número de dias único durante a
      * execução da factory, reduzindo a possibilidade de colisões com a
@@ -63,41 +58,46 @@ final class MetalThursdayFactory extends Factory
      * O nome `definition` permanece em inglês por corresponder ao método
      * convencional das factories do Laravel.
      *
-     * @return array<string, mixed> Atributos do registo MetalThursday.
+     * @return array<string, mixed> Atributos da MetalThursday.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function definition(): array
     {
-        $diasAnteriores =
-            $this
-                ->faker
-                ->unique()
-                ->numberBetween(
-                    0,
-                    10000,
-                );
+        $diasAnteriores = $this
+            ->faker
+            ->unique()
+            ->numberBetween(
+                0,
+                10000,
+            );
+
+        $data = CarbonImmutable::today()
+            ->subDays(
+                $diasAnteriores,
+            );
 
         return [
             'nome' => null,
 
-            'data' => CarbonImmutable::today()
-                ->subDays(
-                    $diasAnteriores,
+            'data' => $data,
+
+            'edicao_id' => Edicao::factory()
+                ->comPeriodo(
+                    $data->startOfMonth(),
+                    $data->endOfMonth(),
                 ),
 
-            'edicao_id' => Edicao::factory(),
+            'autor_id' => Utilizador::factory(),
 
-            'autor_id' => null,
-
-            'proximo_nomeado_id' => null,
+            'proximo_nomeado_id' => Utilizador::factory(),
         ];
     }
 
     /**
-     * Define um nome para o registo MetalThursday.
+     * Define um nome para a MetalThursday.
      *
      * @param  string  $nome  Nome pretendido.
      * @return static Factory configurada.
@@ -107,19 +107,18 @@ final class MetalThursdayFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function comNome(
         string $nome,
     ): static {
-        $nomeNormalizado =
-            Str::squish(
-                $nome,
-            );
+        $nomeNormalizado = Str::squish(
+            $nome,
+        );
 
         if ($nomeNormalizado === '') {
             throw new InvalidArgumentException(
-                'O nome do registo MetalThursday não pode estar vazio.',
+                'O nome da MetalThursday não pode estar vazio.',
             );
         }
 
@@ -130,7 +129,7 @@ final class MetalThursdayFactory extends Factory
         ) {
             throw new InvalidArgumentException(
                 sprintf(
-                    'O nome do registo MetalThursday não pode exceder %d caracteres.',
+                    'O nome da MetalThursday não pode exceder %d caracteres.',
                     self::COMPRIMENTO_MAXIMO_NOME,
                 ),
             );
@@ -144,7 +143,7 @@ final class MetalThursdayFactory extends Factory
     }
 
     /**
-     * Define a data do registo MetalThursday.
+     * Define a data da MetalThursday.
      *
      * A data é normalizada para o início do respetivo dia.
      *
@@ -158,10 +157,9 @@ final class MetalThursdayFactory extends Factory
     public function comData(
         CarbonInterface $data,
     ): static {
-        $dataNormalizada =
-            CarbonImmutable::instance(
-                $data,
-            )->startOfDay();
+        $dataNormalizada = CarbonImmutable::instance(
+            $data,
+        )->startOfDay();
 
         return $this->state(
             static fn (): array => [
@@ -171,7 +169,7 @@ final class MetalThursdayFactory extends Factory
     }
 
     /**
-     * Associa uma edição ao registo MetalThursday.
+     * Associa uma edição à MetalThursday.
      *
      * Quando nenhuma edição é indicada, é criada uma através da factory
      * respetiva.
@@ -184,7 +182,7 @@ final class MetalThursdayFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function comEdicao(
         ?Edicao $edicao = null,
@@ -192,19 +190,18 @@ final class MetalThursdayFactory extends Factory
         if ($edicao !== null) {
             $this->validarModeloPersistido(
                 $edicao,
-                'A edição associada ao registo MetalThursday deve estar persistida.',
+                'A edição associada à MetalThursday deve estar persistida.',
             );
         }
 
         return $this->for(
-            $edicao
-                ?? Edicao::factory(),
+            $edicao ?? Edicao::factory(),
             'edicao',
         );
     }
 
     /**
-     * Associa um autor ao registo MetalThursday.
+     * Associa um autor à MetalThursday.
      *
      * Quando nenhum utilizador é indicado, é criado um utilizador através da
      * factory respetiva.
@@ -217,7 +214,7 @@ final class MetalThursdayFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function comAutor(
         ?Utilizador $utilizador = null,
@@ -225,19 +222,18 @@ final class MetalThursdayFactory extends Factory
         if ($utilizador !== null) {
             $this->validarModeloPersistido(
                 $utilizador,
-                'O autor do registo MetalThursday deve estar persistido.',
+                'O autor da MetalThursday deve estar persistido.',
             );
         }
 
         return $this->for(
-            $utilizador
-                ?? Utilizador::factory(),
+            $utilizador ?? Utilizador::factory(),
             'autor',
         );
     }
 
     /**
-     * Associa o próximo utilizador nomeado ao registo MetalThursday.
+     * Associa o próximo utilizador nomeado à MetalThursday.
      *
      * Quando nenhum utilizador é indicado, é criado um utilizador através da
      * factory respetiva.
@@ -250,7 +246,7 @@ final class MetalThursdayFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function comProximoNomeado(
         ?Utilizador $utilizador = null,
@@ -263,8 +259,7 @@ final class MetalThursdayFactory extends Factory
         }
 
         return $this->for(
-            $utilizador
-                ?? Utilizador::factory(),
+            $utilizador ?? Utilizador::factory(),
             'proximoNomeado',
         );
     }

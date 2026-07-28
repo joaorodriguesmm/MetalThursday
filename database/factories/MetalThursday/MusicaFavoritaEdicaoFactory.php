@@ -22,7 +22,7 @@ use InvalidArgumentException;
  *
  * @since 2.0.0
  *
- * @version 1.1.0
+ * @version 2.0.0
  */
 final class MusicaFavoritaEdicaoFactory extends Factory
 {
@@ -33,8 +33,7 @@ final class MusicaFavoritaEdicaoFactory extends Factory
      *
      * @version 1.0.0
      */
-    private const POSICAO_MINIMA =
-        1;
+    private const POSICAO_MINIMA = 1;
 
     /**
      * Posição máxima permitida.
@@ -43,20 +42,16 @@ final class MusicaFavoritaEdicaoFactory extends Factory
      *
      * @version 1.0.0
      */
-    private const POSICAO_MAXIMA =
-        3;
+    private const POSICAO_MAXIMA = 3;
 
     /**
      * Comprimento máximo da identificação da música.
-     *
-     * Corresponde ao comprimento predefinido de uma coluna `string`.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    private const COMPRIMENTO_MAXIMO_MUSICA =
-        255;
+    private const COMPRIMENTO_MAXIMO_MUSICA = 255;
 
     /**
      * Modelo associado à factory.
@@ -67,8 +62,7 @@ final class MusicaFavoritaEdicaoFactory extends Factory
      *
      * @version 1.0.0
      */
-    protected $model =
-        MusicaFavoritaEdicao::class;
+    protected $model = MusicaFavoritaEdicao::class;
 
     /**
      * Define os atributos predefinidos de uma música favorita.
@@ -80,7 +74,7 @@ final class MusicaFavoritaEdicaoFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function definition(): array
     {
@@ -89,25 +83,35 @@ final class MusicaFavoritaEdicaoFactory extends Factory
 
             'utilizador_id' => Utilizador::factory(),
 
-            'posicao' => $this->faker->numberBetween(
-                self::POSICAO_MINIMA,
-                self::POSICAO_MAXIMA,
-            ),
+            'posicao' => $this
+                ->faker
+                ->numberBetween(
+                    self::POSICAO_MINIMA,
+                    self::POSICAO_MAXIMA,
+                ),
 
-            'musica' => sprintf(
-                '%s - %s',
-                $this
-                    ->faker
-                    ->words(
-                        2,
-                        true,
+            'musica' => Str::limit(
+                sprintf(
+                    '%s — %s',
+                    Str::ucfirst(
+                        $this
+                            ->faker
+                            ->words(
+                                2,
+                                true,
+                            ),
                     ),
-                $this
-                    ->faker
-                    ->words(
-                        3,
-                        true,
+                    Str::ucfirst(
+                        $this
+                            ->faker
+                            ->words(
+                                3,
+                                true,
+                            ),
                     ),
+                ),
+                self::COMPRIMENTO_MAXIMO_MUSICA,
+                '',
             ),
 
             'registado_por_id' => null,
@@ -124,7 +128,7 @@ final class MusicaFavoritaEdicaoFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function paraEdicao(
         Edicao $edicao,
@@ -151,7 +155,7 @@ final class MusicaFavoritaEdicaoFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function pertencenteA(
         Utilizador $utilizador,
@@ -178,7 +182,7 @@ final class MusicaFavoritaEdicaoFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function registadaPor(
         Utilizador $utilizador,
@@ -205,7 +209,7 @@ final class MusicaFavoritaEdicaoFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function comPosicao(
         int $posicao,
@@ -241,15 +245,14 @@ final class MusicaFavoritaEdicaoFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function comMusica(
         string $musica,
     ): static {
-        $musicaNormalizada =
-            Str::squish(
-                $musica,
-            );
+        $musicaNormalizada = Str::squish(
+            $musica,
+        );
 
         if ($musicaNormalizada === '') {
             throw new InvalidArgumentException(
@@ -278,24 +281,6 @@ final class MusicaFavoritaEdicaoFactory extends Factory
     }
 
     /**
-     * Cria uma escolha cujo proprietário deixou de estar identificado.
-     *
-     * @return static Factory configurada.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    public function semUtilizador(): static
-    {
-        return $this->state(
-            static fn (): array => [
-                'utilizador_id' => null,
-            ],
-        );
-    }
-
-    /**
      * Cria uma escolha sem o utilizador responsável pelo registo identificado.
      *
      * Este estado é útil para representar a eliminação posterior do
@@ -305,7 +290,7 @@ final class MusicaFavoritaEdicaoFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function semRegistador(): static
     {
