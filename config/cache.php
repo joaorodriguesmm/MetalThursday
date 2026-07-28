@@ -5,14 +5,16 @@ declare(strict_types=1);
 use Illuminate\Support\Str;
 
 /**
- * Define as configurações de cache da aplicação.
+ * Define os armazenamentos de cache utilizados pela aplicação.
  *
  * Os nomes das chaves, armazenamentos e drivers permanecem em inglês por
- * corresponderem aos contratos de configuração utilizados pelo Laravel.
+ * corresponderem aos contratos internos de configuração do Laravel.
+ *
+ * @return array<string, mixed> Configurações de cache.
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 3.0.0
  */
 return [
     /*
@@ -34,8 +36,7 @@ return [
 
     'stores' => [
         /*
-         * Armazenamento temporário mantido apenas em memória durante a
-         * execução do processo atual.
+         * Armazenamento temporário utilizado pelos testes automatizados.
          */
         'array' => [
             'driver' => 'array',
@@ -44,31 +45,23 @@ return [
         ],
 
         /*
-         * Armazenamento persistente na base de dados.
+         * Armazenamento persistente utilizado pela aplicação.
          */
         'database' => [
             'driver' => 'database',
 
-            'connection' => env(
-                'DB_CACHE_CONNECTION',
-            ),
+            'connection' => 'mysql',
 
-            'table' => env(
-                'DB_CACHE_TABLE',
-                'cache',
-            ),
+            'table' => 'cache',
 
-            'lock_connection' => env(
-                'DB_CACHE_LOCK_CONNECTION',
-            ),
+            'lock_connection' => 'mysql',
 
-            'lock_table' => env(
-                'DB_CACHE_LOCK_TABLE',
-            ),
+            'lock_table' => 'bloqueios_cache',
         ],
 
         /*
-         * Armazenamento persistente no sistema de ficheiros.
+         * Armazenamento local de contingência para operações explicitamente
+         * configuradas para utilizar ficheiros.
          */
         'file' => [
             'driver' => 'file',
@@ -80,118 +73,6 @@ return [
             'lock_path' => storage_path(
                 'framework/cache/data',
             ),
-        ],
-
-        /*
-         * Armazenamento distribuído através de Memcached.
-         */
-        'memcached' => [
-            'driver' => 'memcached',
-
-            'persistent_id' => env(
-                'MEMCACHED_PERSISTENT_ID',
-            ),
-
-            'sasl' => [
-                env(
-                    'MEMCACHED_USERNAME',
-                ),
-
-                env(
-                    'MEMCACHED_PASSWORD',
-                ),
-            ],
-
-            'options' => [
-            /*
-                 * Exemplo:
-                 *
-                 * Memcached::OPT_CONNECT_TIMEOUT => 2000,
-                 */],
-
-            'servers' => [
-                [
-                    'host' => env(
-                        'MEMCACHED_HOST',
-                        '127.0.0.1',
-                    ),
-
-                    'port' => (int) env(
-                        'MEMCACHED_PORT',
-                        11211,
-                    ),
-
-                    'weight' => 100,
-                ],
-            ],
-        ],
-
-        /*
-         * Armazenamento distribuído através de Redis.
-         */
-        'redis' => [
-            'driver' => 'redis',
-
-            'connection' => env(
-                'REDIS_CACHE_CONNECTION',
-                'cache',
-            ),
-
-            'lock_connection' => env(
-                'REDIS_CACHE_LOCK_CONNECTION',
-                'default',
-            ),
-        ],
-
-        /*
-         * Armazenamento distribuído através do Amazon DynamoDB.
-         */
-        'dynamodb' => [
-            'driver' => 'dynamodb',
-
-            'key' => env(
-                'AWS_ACCESS_KEY_ID',
-            ),
-
-            'secret' => env(
-                'AWS_SECRET_ACCESS_KEY',
-            ),
-
-            'region' => env(
-                'AWS_DEFAULT_REGION',
-                'us-east-1',
-            ),
-
-            'table' => env(
-                'DYNAMODB_CACHE_TABLE',
-                'cache',
-            ),
-
-            'endpoint' => env(
-                'DYNAMODB_ENDPOINT',
-            ),
-        ],
-
-        /*
-         * Armazenamento em memória disponibilizado pelo Laravel Octane.
-         */
-        'octane' => [
-            'driver' => 'octane',
-        ],
-
-        /*
-         * Armazenamento de contingência.
-         *
-         * Tenta utilizar a base de dados e, caso essa operação falhe, utiliza
-         * temporariamente o armazenamento em memória.
-         */
-        'failover' => [
-            'driver' => 'failover',
-
-            'stores' => [
-                'database',
-                'array',
-            ],
         ],
     ],
 
@@ -206,7 +87,7 @@ return [
         Str::slug(
             (string) env(
                 'APP_NAME',
-                'laravel',
+                'MetalThursday',
             ),
         ).'-cache-',
     ),

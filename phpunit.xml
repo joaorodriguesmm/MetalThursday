@@ -9,6 +9,7 @@
         <testsuite name="Unidade">
             <directory>tests/Unit</directory>
         </testsuite>
+
         <testsuite name="Funcionais">
             <directory>tests/Feature</directory>
         </testsuite>
@@ -27,7 +28,11 @@
         <env name="CACHE_STORE" value="array" force="true"/>
         <env name="DB_CONNECTION" value="mysql" force="true"/>
         <env name="DB_DATABASE" value="metalthursday_testes" force="true"/>
-        <env name="MAIL_MAILER" value="array" force="true"/>
+        <env name="FILESYSTEM_DISK" value="privado" force="true"/>
+        <env name="LOG_CHANNEL" value="pilha" force="true"/>
+        <env name="LOG_STACK" value="unico" force="true"/>
+        <env name="LOG_DEPRECATIONS_CHANNEL" value="nulo" force="true"/>
+        <env name="MAIL_MAILER" value="memoria" force="true"/>
         <env name="QUEUE_CONNECTION" value="sync" force="true"/>
         <env name="SESSION_DRIVER" value="array" force="true"/>
     </php>

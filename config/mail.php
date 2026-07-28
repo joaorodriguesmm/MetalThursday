@@ -3,14 +3,17 @@
 declare(strict_types=1);
 
 /**
- * Define as configurações de envio de correio eletrónico da aplicação.
+ * Define os meios de envio de correio eletrónico da aplicação.
  *
- * Os nomes das chaves, mailers e transports permanecem em inglês por
- * corresponderem aos contratos de configuração utilizados pelo Laravel.
+ * Os nomes das chaves e transports permanecem em inglês por corresponderem
+ * aos contratos internos de configuração do Laravel e do Symfony Mailer. Os
+ * nomes dos mailers definidos pelo MetalThursday utilizam português.
+ *
+ * @return array<string, mixed> Configurações de correio eletrónico.
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 3.0.0
  */
 return [
     /*
@@ -21,7 +24,7 @@ return [
 
     'default' => env(
         'MAIL_MAILER',
-        'log',
+        'registo',
     ),
 
     /*
@@ -32,7 +35,7 @@ return [
 
     'mailers' => [
         /*
-         * Envio através de um servidor SMTP.
+         * Envia mensagens através de um servidor SMTP.
          */
         'smtp' => [
             'transport' => 'smtp',
@@ -63,7 +66,10 @@ return [
                 'MAIL_PASSWORD',
             ),
 
-            'timeout' => null,
+            'timeout' => (int) env(
+                'MAIL_TIMEOUT',
+                30,
+            ),
 
             'local_domain' => env(
                 'MAIL_EHLO_DOMAIN',
@@ -78,90 +84,24 @@ return [
         ],
 
         /*
-         * Envio através do Amazon SES.
+         * Escreve as mensagens no sistema de registos sem as enviar.
          */
-        'ses' => [
-            'transport' => 'ses',
-        ],
-
-        /*
-         * Envio através do Postmark.
-         */
-        'postmark' => [
-            'transport' => 'postmark',
-        ],
-
-        /*
-         * Envio através do Resend.
-         */
-        'resend' => [
-            'transport' => 'resend',
-        ],
-
-        /*
-         * Envio através do executável sendmail do sistema.
-         */
-        'sendmail' => [
-            'transport' => 'sendmail',
-
-            'path' => env(
-                'MAIL_SENDMAIL_PATH',
-                '/usr/sbin/sendmail -bs -i',
-            ),
-        ],
-
-        /*
-         * Escreve as mensagens no sistema de registos da aplicação.
-         */
-        'log' => [
+        'registo' => [
             'transport' => 'log',
 
             'channel' => env(
                 'MAIL_LOG_CHANNEL',
+                'diario',
             ),
         ],
 
         /*
          * Mantém as mensagens em memória durante o processo atual.
          *
-         * É especialmente útil para testes automatizados.
+         * Este mailer é utilizado exclusivamente pelos testes automatizados.
          */
-        'array' => [
+        'memoria' => [
             'transport' => 'array',
-        ],
-
-        /*
-         * Tenta os mailers indicados sequencialmente até conseguir enviar.
-         */
-        'failover' => [
-            'transport' => 'failover',
-
-            'mailers' => [
-                'smtp',
-                'log',
-            ],
-
-            'retry_after' => (int) env(
-                'MAIL_FAILOVER_RETRY_AFTER',
-                60,
-            ),
-        ],
-
-        /*
-         * Distribui as mensagens alternadamente pelos mailers indicados.
-         */
-        'roundrobin' => [
-            'transport' => 'roundrobin',
-
-            'mailers' => [
-                'ses',
-                'postmark',
-            ],
-
-            'retry_after' => (int) env(
-                'MAIL_ROUNDROBIN_RETRY_AFTER',
-                60,
-            ),
         ],
     ],
 

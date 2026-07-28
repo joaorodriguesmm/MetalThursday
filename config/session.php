@@ -7,12 +7,14 @@ use Illuminate\Support\Str;
 /**
  * Define as configurações das sessões da aplicação.
  *
- * Os nomes das chaves permanecem em inglês por corresponderem aos contratos
- * de configuração utilizados pelo Laravel.
+ * Os nomes das chaves e drivers permanecem em inglês por corresponderem aos
+ * contratos internos de configuração do Laravel.
+ *
+ * @return array<string, mixed> Configurações das sessões.
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 3.0.0
  */
 return [
     /*
@@ -33,8 +35,7 @@ return [
     */
 
     /*
-     * Número de minutos durante os quais uma sessão pode permanecer inativa
-     * antes de expirar.
+     * Número de minutos durante os quais uma sessão pode permanecer inativa.
      */
     'lifetime' => (int) env(
         'SESSION_LIFETIME',
@@ -56,12 +57,11 @@ return [
     */
 
     /*
-     * Determina se os dados da sessão devem ser encriptados antes de serem
-     * armazenados.
+     * Determina se o conteúdo da sessão é encriptado antes de ser armazenado.
      */
     'encrypt' => env(
         'SESSION_ENCRYPT',
-        false,
+        true,
     ),
 
     /*
@@ -71,34 +71,26 @@ return [
     */
 
     /*
-     * Diretório utilizado pelo driver `file`.
+     * Diretório utilizado exclusivamente pelo driver `file`.
      */
     'files' => storage_path(
         'framework/sessions',
     ),
 
     /*
-     * Ligação utilizada pelos drivers `database` e `redis`.
+     * Ligação utilizada pelo driver `database`.
      */
-    'connection' => env(
-        'SESSION_CONNECTION',
-    ),
+    'connection' => 'mysql',
 
     /*
      * Tabela utilizada pelo driver `database`.
      */
-    'table' => env(
-        'SESSION_TABLE',
-        'sessions',
-    ),
+    'table' => 'sessoes',
 
     /*
-     * Armazenamento de cache utilizado pelos drivers `dynamodb`,
-     * `memcached` e `redis`.
+     * Armazenamento aplicável apenas a drivers de sessão baseados em cache.
      */
-    'store' => env(
-        'SESSION_STORE',
-    ),
+    'store' => null,
 
     /*
     |--------------------------------------------------------------------------
@@ -107,8 +99,7 @@ return [
     */
 
     /*
-     * Em cada pedido existe uma probabilidade de 2 em 100 de executar a
-     * limpeza das sessões expiradas.
+     * Probabilidade de 2 em 100 de limpar sessões expiradas num pedido.
      */
     'lottery' => [
         2,
@@ -128,11 +119,11 @@ return [
                 'APP_NAME',
                 'MetalThursday',
             ),
-        ).'-session',
+        ).'-sessao',
     ),
 
     /*
-     * Caminho no qual o cookie está disponível.
+     * Caminho no qual o cookie fica disponível.
      */
     'path' => env(
         'SESSION_PATH',
@@ -140,24 +131,21 @@ return [
     ),
 
     /*
-     * Domínio e subdomínios nos quais o cookie está disponível.
+     * Domínio e subdomínios nos quais o cookie fica disponível.
      */
     'domain' => env(
         'SESSION_DOMAIN',
     ),
 
     /*
-     * Quando ativo, o cookie é transmitido apenas através de HTTPS.
-     *
-     * A ausência de um valor predefinido permite distinguir entre uma
-     * configuração explicitamente falsa e uma configuração não definida.
+     * Determina se o cookie só pode ser enviado através de HTTPS.
      */
     'secure' => env(
         'SESSION_SECURE_COOKIE',
     ),
 
     /*
-     * Impede o acesso ao cookie através de JavaScript.
+     * Impede que JavaScript aceda ao cookie.
      */
     'http_only' => env(
         'SESSION_HTTP_ONLY',
@@ -166,8 +154,6 @@ return [
 
     /*
      * Controla o envio do cookie em pedidos entre sites.
-     *
-     * Valores suportados: `lax`, `strict`, `none` ou `null`.
      */
     'same_site' => env(
         'SESSION_SAME_SITE',
@@ -176,9 +162,6 @@ return [
 
     /*
      * Associa o cookie ao site de nível superior em contextos entre sites.
-     *
-     * Cookies particionados exigem normalmente `secure` ativo e
-     * `same_site` definido como `none`.
      */
     'partitioned' => env(
         'SESSION_PARTITIONED_COOKIE',

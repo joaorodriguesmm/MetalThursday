@@ -7,13 +7,15 @@ use App\Models\Autenticacao\Utilizador;
 /**
  * Define as configurações de autenticação da aplicação.
  *
- * Os nomes das chaves e os identificadores `web` e `users` permanecem em
- * inglês por corresponderem às convenções utilizadas pelo Laravel e pelo
- * respetivo ecossistema de autenticação.
+ * Os nomes das chaves, drivers e propriedades permanecem em inglês por
+ * corresponderem aos contratos internos de configuração do Laravel. Os
+ * identificadores definidos pelo MetalThursday utilizam português.
+ *
+ * @return array<string, mixed> Configurações de autenticação.
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 3.0.0
  */
 return [
     /*
@@ -23,15 +25,9 @@ return [
     */
 
     'defaults' => [
-        'guard' => env(
-            'AUTH_GUARD',
-            'web',
-        ),
+        'guard' => 'sessao',
 
-        'passwords' => env(
-            'AUTH_PASSWORD_BROKER',
-            'users',
-        ),
+        'passwords' => 'utilizadores',
     ],
 
     /*
@@ -41,10 +37,10 @@ return [
     */
 
     'guards' => [
-        'web' => [
+        'sessao' => [
             'driver' => 'session',
 
-            'provider' => 'users',
+            'provider' => 'utilizadores',
         ],
     ],
 
@@ -55,13 +51,10 @@ return [
     */
 
     'providers' => [
-        'users' => [
+        'utilizadores' => [
             'driver' => 'eloquent',
 
-            'model' => env(
-                'AUTH_MODEL',
-                Utilizador::class,
-            ),
+            'model' => Utilizador::class,
         ],
     ],
 
@@ -72,30 +65,22 @@ return [
     */
 
     'passwords' => [
-        'users' => [
-            'provider' => 'users',
+        'utilizadores' => [
+            'provider' => 'utilizadores',
 
-            'table' => env(
-                'AUTH_PASSWORD_RESET_TOKEN_TABLE',
-                'password_reset_tokens',
-            ),
+            'table' => 'tokens_redefinicao_palavra_passe',
 
             /*
-             * Número de minutos durante os quais o token é válido.
+             * Número de minutos durante os quais um token de redefinição
+             * permanece válido.
              */
-            'expire' => (int) env(
-                'AUTH_PASSWORD_RESET_TOKEN_EXPIRATION',
-                60,
-            ),
+            'expire' => 60,
 
             /*
              * Número de segundos que devem decorrer antes de poder ser
-             * solicitado um novo token.
+             * solicitado outro token para o mesmo endereço.
              */
-            'throttle' => (int) env(
-                'AUTH_PASSWORD_RESET_TOKEN_THROTTLE',
-                60,
-            ),
+            'throttle' => 60,
         ],
     ],
 
@@ -105,8 +90,9 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'password_timeout' => (int) env(
-        'AUTH_PASSWORD_TIMEOUT',
-        10800,
-    ),
+    /*
+     * Número de segundos durante os quais uma confirmação recente da
+     * palavra-passe permanece válida.
+     */
+    'password_timeout' => 10800,
 ];

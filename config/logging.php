@@ -4,19 +4,20 @@ declare(strict_types=1);
 
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
-use Monolog\Handler\SyslogUdpHandler;
 use Monolog\Processor\PsrLogMessageProcessor;
 
 /**
- * Define as configurações de registo de eventos da aplicação.
+ * Define os canais de registo de eventos da aplicação.
  *
- * Os nomes das chaves, canais e drivers permanecem em inglês por
- * corresponderem aos contratos de configuração utilizados pelo Laravel
- * e pelo Monolog.
+ * Os nomes das chaves e drivers permanecem em inglês por corresponderem aos
+ * contratos internos de configuração do Laravel e do Monolog. Os nomes dos
+ * canais definidos pelo MetalThursday utilizam português.
+ *
+ * @return array<string, mixed> Configurações de registo de eventos.
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 3.0.0
  */
 return [
     /*
@@ -27,7 +28,7 @@ return [
 
     'default' => env(
         'LOG_CHANNEL',
-        'stack',
+        'pilha',
     ),
 
     /*
@@ -39,10 +40,10 @@ return [
     'deprecations' => [
         'channel' => env(
             'LOG_DEPRECATIONS_CHANNEL',
-            'null',
+            'obsolescencias',
         ),
 
-        'trace' => env(
+        'trace' => (bool) env(
             'LOG_DEPRECATIONS_TRACE',
             false,
         ),
@@ -56,9 +57,9 @@ return [
 
     'channels' => [
         /*
-         * Agrega vários canais num único canal lógico.
+         * Agrega os canais definidos em LOG_STACK.
          */
-        'stack' => [
+        'pilha' => [
             'driver' => 'stack',
 
             'channels' => array_values(
@@ -73,7 +74,7 @@ return [
                             ',',
                             (string) env(
                                 'LOG_STACK',
-                                'single',
+                                'diario',
                             ),
                         ),
                     ),
@@ -87,9 +88,9 @@ return [
         ],
 
         /*
-         * Mantém todos os registos num único ficheiro.
+         * Mantém todos os eventos num único ficheiro.
          */
-        'single' => [
+        'unico' => [
             'driver' => 'single',
 
             'path' => storage_path(
@@ -105,9 +106,10 @@ return [
         ],
 
         /*
-         * Cria um ficheiro de registo por dia.
+         * Cria um ficheiro por dia e elimina os mais antigos após o período
+         * de retenção configurado.
          */
-        'daily' => [
+        'diario' => [
             'driver' => 'daily',
 
             'path' => storage_path(
@@ -128,80 +130,30 @@ return [
         ],
 
         /*
-         * Envia eventos críticos para um canal Slack.
+         * Regista separadamente avisos relacionados com funcionalidades
+         * obsoletas.
          */
-        'slack' => [
-            'driver' => 'slack',
+        'obsolescencias' => [
+            'driver' => 'daily',
 
-            'url' => env(
-                'LOG_SLACK_WEBHOOK_URL',
+            'path' => storage_path(
+                'logs/obsolescencias.log',
             ),
 
-            'username' => env(
-                'LOG_SLACK_USERNAME',
-                env(
-                    'APP_NAME',
-                    'MetalThursday',
-                ),
-            ),
+            'level' => 'notice',
 
-            'emoji' => env(
-                'LOG_SLACK_EMOJI',
-                ':boom:',
-            ),
-
-            'level' => env(
-                'LOG_LEVEL',
-                'critical',
+            'days' => (int) env(
+                'LOG_DAILY_DAYS',
+                14,
             ),
 
             'replace_placeholders' => true,
         ],
 
         /*
-         * Envia os registos para o serviço Papertrail.
+         * Escreve no fluxo de erros padrão do processo.
          */
-        'papertrail' => [
-            'driver' => 'monolog',
-
-            'level' => env(
-                'LOG_LEVEL',
-                'debug',
-            ),
-
-            'handler' => env(
-                'LOG_PAPERTRAIL_HANDLER',
-                SyslogUdpHandler::class,
-            ),
-
-            'handler_with' => [
-                'host' => env(
-                    'PAPERTRAIL_URL',
-                ),
-
-                'port' => env(
-                    'PAPERTRAIL_PORT',
-                ),
-
-                'connectionString' => 'tls://'
-                    .env(
-                        'PAPERTRAIL_URL',
-                    )
-                    .':'
-                    .env(
-                        'PAPERTRAIL_PORT',
-                    ),
-            ],
-
-            'processors' => [
-                PsrLogMessageProcessor::class,
-            ],
-        ],
-
-        /*
-         * Escreve os registos no fluxo de erros padrão.
-         */
-        'stderr' => [
+        'erro_padrao' => [
             'driver' => 'monolog',
 
             'level' => env(
@@ -215,59 +167,23 @@ return [
                 'stream' => 'php://stderr',
             ],
 
-            'formatter' => env(
-                'LOG_STDERR_FORMATTER',
-            ),
-
             'processors' => [
                 PsrLogMessageProcessor::class,
             ],
         ],
 
         /*
-         * Escreve os registos no serviço syslog do sistema.
+         * Descarta deliberadamente os eventos recebidos.
          */
-        'syslog' => [
-            'driver' => 'syslog',
-
-            'level' => env(
-                'LOG_LEVEL',
-                'debug',
-            ),
-
-            'facility' => env(
-                'LOG_SYSLOG_FACILITY',
-                LOG_USER,
-            ),
-
-            'replace_placeholders' => true,
-        ],
-
-        /*
-         * Escreve através do mecanismo error_log do PHP.
-         */
-        'errorlog' => [
-            'driver' => 'errorlog',
-
-            'level' => env(
-                'LOG_LEVEL',
-                'debug',
-            ),
-
-            'replace_placeholders' => true,
-        ],
-
-        /*
-         * Descarta intencionalmente todos os eventos recebidos.
-         */
-        'null' => [
+        'nulo' => [
             'driver' => 'monolog',
 
             'handler' => NullHandler::class,
         ],
 
         /*
-         * Canal utilizado quando o sistema de registo principal falha.
+         * O nome `emergency` é um contrato interno do Laravel e não pode ser
+         * traduzido.
          */
         'emergency' => [
             'path' => storage_path(

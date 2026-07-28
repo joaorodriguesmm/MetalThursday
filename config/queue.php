@@ -6,11 +6,13 @@ declare(strict_types=1);
  * Define as configurações das filas da aplicação.
  *
  * Os nomes das chaves, ligações e drivers permanecem em inglês por
- * corresponderem aos contratos de configuração utilizados pelo Laravel.
+ * corresponderem aos contratos internos de configuração do Laravel.
+ *
+ * @return array<string, mixed> Configurações das filas.
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 3.0.0
  */
 return [
     /*
@@ -33,144 +35,29 @@ return [
     'connections' => [
         /*
          * Executa o trabalho imediatamente no processo atual.
+         *
+         * Esta ligação é utilizada pelos testes automatizados.
          */
         'sync' => [
             'driver' => 'sync',
         ],
 
         /*
-         * Armazena os trabalhos na base de dados.
+         * Persiste os trabalhos na base de dados para processamento
+         * assíncrono.
          */
         'database' => [
             'driver' => 'database',
 
-            'connection' => env(
-                'DB_QUEUE_CONNECTION',
-            ),
+            'connection' => 'mysql',
 
-            'table' => env(
-                'DB_QUEUE_TABLE',
-                'jobs',
-            ),
+            'table' => 'trabalhos_fila',
 
-            'queue' => env(
-                'DB_QUEUE',
-                'default',
-            ),
+            'queue' => 'principal',
 
-            'retry_after' => (int) env(
-                'DB_QUEUE_RETRY_AFTER',
-                90,
-            ),
+            'retry_after' => 90,
 
-            'after_commit' => false,
-        ],
-
-        /*
-         * Armazena os trabalhos num servidor Beanstalkd.
-         */
-        'beanstalkd' => [
-            'driver' => 'beanstalkd',
-
-            'host' => env(
-                'BEANSTALKD_QUEUE_HOST',
-                'localhost',
-            ),
-
-            'queue' => env(
-                'BEANSTALKD_QUEUE',
-                'default',
-            ),
-
-            'retry_after' => (int) env(
-                'BEANSTALKD_QUEUE_RETRY_AFTER',
-                90,
-            ),
-
-            'block_for' => 0,
-            'after_commit' => false,
-        ],
-
-        /*
-         * Armazena os trabalhos no Amazon SQS.
-         */
-        'sqs' => [
-            'driver' => 'sqs',
-
-            'key' => env(
-                'AWS_ACCESS_KEY_ID',
-            ),
-
-            'secret' => env(
-                'AWS_SECRET_ACCESS_KEY',
-            ),
-
-            'prefix' => env(
-                'SQS_PREFIX',
-                'https://sqs.us-east-1.amazonaws.com/your-account-id',
-            ),
-
-            'queue' => env(
-                'SQS_QUEUE',
-                'default',
-            ),
-
-            'suffix' => env(
-                'SQS_SUFFIX',
-            ),
-
-            'region' => env(
-                'AWS_DEFAULT_REGION',
-                'us-east-1',
-            ),
-
-            'after_commit' => false,
-        ],
-
-        /*
-         * Armazena os trabalhos no Redis.
-         */
-        'redis' => [
-            'driver' => 'redis',
-
-            'connection' => env(
-                'REDIS_QUEUE_CONNECTION',
-                'default',
-            ),
-
-            'queue' => env(
-                'REDIS_QUEUE',
-                'default',
-            ),
-
-            'retry_after' => (int) env(
-                'REDIS_QUEUE_RETRY_AFTER',
-                90,
-            ),
-
-            'block_for' => null,
-            'after_commit' => false,
-        ],
-
-        /*
-         * Executa o trabalho no processo atual depois de a resposta HTTP
-         * ter sido enviada.
-         */
-        'deferred' => [
-            'driver' => 'deferred',
-        ],
-
-        /*
-         * Tenta guardar o trabalho na base de dados e, se essa operação
-         * falhar, executa-o através da ligação diferida.
-         */
-        'failover' => [
-            'driver' => 'failover',
-
-            'connections' => [
-                'database',
-                'deferred',
-            ],
+            'after_commit' => true,
         ],
     ],
 
@@ -181,12 +68,9 @@ return [
     */
 
     'batching' => [
-        'database' => env(
-            'DB_CONNECTION',
-            'sqlite',
-        ),
+        'database' => 'mysql',
 
-        'table' => 'job_batches',
+        'table' => 'lotes_trabalhos_fila',
     ],
 
     /*
@@ -196,16 +80,10 @@ return [
     */
 
     'failed' => [
-        'driver' => env(
-            'QUEUE_FAILED_DRIVER',
-            'database-uuids',
-        ),
+        'driver' => 'database-uuids',
 
-        'database' => env(
-            'DB_CONNECTION',
-            'sqlite',
-        ),
+        'database' => 'mysql',
 
-        'table' => 'failed_jobs',
+        'table' => 'trabalhos_fila_falhados',
     ],
 ];
