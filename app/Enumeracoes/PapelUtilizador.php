@@ -7,12 +7,12 @@ namespace App\Enumeracoes;
 /**
  * Representa os papéis atribuíveis aos utilizadores.
  *
- * Os valores correspondem aos valores permitidos pela coluna
+ * Os valores correspondem diretamente aos valores permitidos pela coluna
  * `utilizadores.papel`.
  *
  * @since 2.0.0
  *
- * @version 1.1.0
+ * @version 2.0.0
  */
 enum PapelUtilizador: string
 {
@@ -44,47 +44,6 @@ enum PapelUtilizador: string
     case SuperAdministrador = 'super_administrador';
 
     /**
-     * Tenta criar um papel a partir de um valor recebido.
-     *
-     * São também aceites aliases utilizados anteriormente pela aplicação.
-     * A comparação ignora espaços adicionais e diferenças entre letras
-     * maiúsculas e minúsculas.
-     *
-     * @param  mixed  $valor  Valor a converter.
-     * @return self|null Papel correspondente ou nulo quando o valor não é
-     *                   reconhecido.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    public static function tentarCriar(
-        mixed $valor,
-    ): ?self {
-        if (! is_string($valor)) {
-            return null;
-        }
-
-        $valorNormalizado = mb_strtolower(
-            trim($valor),
-        );
-
-        return match ($valorNormalizado) {
-            self::Utilizador->value,
-            'user' => self::Utilizador,
-
-            self::Administrador->value,
-            'admin' => self::Administrador,
-
-            self::SuperAdministrador->value,
-            'superadmin',
-            'super_admin' => self::SuperAdministrador,
-
-            default => null,
-        };
-    }
-
-    /**
      * Determina se o papel possui privilégios administrativos.
      *
      * @return bool Verdadeiro para administradores e superadministradores.
@@ -95,29 +54,7 @@ enum PapelUtilizador: string
      */
     public function possuiPrivilegiosAdministrativos(): bool
     {
-        return match ($this) {
-            self::Administrador,
-            self::SuperAdministrador => true,
-
-            self::Utilizador => false,
-        };
-    }
-
-    /**
-     * Determina se o papel corresponde a um administrador.
-     *
-     * Este método não considera o superadministrador como administrador
-     * comum.
-     *
-     * @return bool Verdadeiro apenas para o administrador.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    public function eAdministrador(): bool
-    {
-        return $this === self::Administrador;
+        return $this !== self::Utilizador;
     }
 
     /**

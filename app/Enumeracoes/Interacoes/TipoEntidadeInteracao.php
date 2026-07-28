@@ -18,28 +18,27 @@ use App\Models\MetalThursday\SeccaoMetalThursday;
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 enum TipoEntidadeInteracao: string
 {
     /**
-     * Representa um MetalThursday.
+     * Representa uma MetalThursday.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    case METAL_THURSDAY =
-        'metal-thursday';
+    case MetalThursday = 'metal-thursday';
 
     /**
-     * Representa uma secção de um MetalThursday.
+     * Representa uma secção de uma MetalThursday.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    case SECCAO_METAL_THURSDAY =
+    case SeccaoMetalThursday =
         'seccao-metal-thursday';
 
     /**
@@ -55,16 +54,16 @@ enum TipoEntidadeInteracao: string
     public function obterClasseModelo(): string
     {
         return match ($this) {
-            self::METAL_THURSDAY => MetalThursday::class,
+            self::MetalThursday => MetalThursday::class,
 
-            self::SECCAO_METAL_THURSDAY => SeccaoMetalThursday::class,
+            self::SeccaoMetalThursday => SeccaoMetalThursday::class,
         };
     }
 
     /**
      * Obtém o alias utilizado nas relações polimórficas.
      *
-     * @return string Alias persistido.
+     * @return 'metal_thursday'|'seccao_metal_thursday' Alias persistido.
      *
      * @since 2.0.0
      *
@@ -73,14 +72,17 @@ enum TipoEntidadeInteracao: string
     public function obterAliasPolimorfico(): string
     {
         return match ($this) {
-            self::METAL_THURSDAY => 'metal_thursday',
+            self::MetalThursday => 'metal_thursday',
 
-            self::SECCAO_METAL_THURSDAY => 'seccao_metal_thursday',
+            self::SeccaoMetalThursday => 'seccao_metal_thursday',
         };
     }
 
     /**
      * Resolve um slug público.
+     *
+     * A normalização limita-se à remoção de espaços exteriores e à conversão
+     * para minúsculas.
      *
      * @param  string  $slug  Slug recebido.
      * @return self|null Tipo correspondente ou nulo.
@@ -115,84 +117,36 @@ enum TipoEntidadeInteracao: string
         MetalThursday|SeccaoMetalThursday $modelo,
     ): self {
         return match (true) {
-            $modelo instanceof MetalThursday => self::METAL_THURSDAY,
+            $modelo instanceof MetalThursday => self::MetalThursday,
 
-            $modelo instanceof SeccaoMetalThursday => self::SECCAO_METAL_THURSDAY,
+            $modelo instanceof SeccaoMetalThursday => self::SeccaoMetalThursday,
         };
     }
 
     /**
-     * Resolve um alias polimórfico.
+     * Obtém o mapa utilizado pelas relações polimórficas das interações.
      *
-     * @param  string  $alias  Alias recebido.
-     * @return self|null Tipo correspondente ou nulo.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    public static function deAliasPolimorfico(
-        string $alias,
-    ): ?self {
-        $aliasNormalizado =
-            mb_strtolower(
-                trim(
-                    $alias,
-                ),
-            );
-
-        foreach (self::cases() as $tipo) {
-            if (
-                $tipo->obterAliasPolimorfico()
-                === $aliasNormalizado
-            ) {
-                return $tipo;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Obtém o mapa utilizado pelas relações polimórficas.
+     * O alias `utilizador`, necessário para as notificações persistidas, será
+     * acrescentado pelo provider geral porque não representa uma entidade de
+     * interação.
      *
      * @return array<
-     *     string,
+     *     'metal_thursday'|'seccao_metal_thursday',
      *     class-string<MetalThursday|SeccaoMetalThursday>
      * > Mapa de aliases.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public static function obterMapaPolimorfico(): array
     {
-        $mapa = [];
+        return [
+            self::MetalThursday
+                ->obterAliasPolimorfico() => MetalThursday::class,
 
-        foreach (self::cases() as $tipo) {
-            $mapa[$tipo->obterAliasPolimorfico()] =
-                $tipo->obterClasseModelo();
-        }
-
-        return $mapa;
-    }
-
-    /**
-     * Obtém todos os slugs públicos permitidos.
-     *
-     * @return list<string> Slugs públicos.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    public static function obterSlugs(): array
-    {
-        return array_map(
-            static fn (
-                self $tipo,
-            ): string => $tipo->value,
-            self::cases(),
-        );
+            self::SeccaoMetalThursday
+                ->obterAliasPolimorfico() => SeccaoMetalThursday::class,
+        ];
     }
 }

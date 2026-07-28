@@ -7,9 +7,12 @@ namespace App\Enumeracoes;
 /**
  * Representa os tipos de incorporação suportados nas secções.
  *
+ * Os valores correspondem diretamente aos valores persistidos na coluna
+ * `seccoes_metal_thursday.tipo_incorporacao`.
+ *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 enum TipoIncorporacao: string
 {
@@ -42,17 +45,18 @@ enum TipoIncorporacao: string
         'lista_reproducao_youtube';
 
     /**
-     * Tenta criar um tipo de incorporação a partir de um valor recebido.
+     * Tenta criar um tipo de incorporação a partir de um valor textual.
      *
-     * Os valores da versão anterior são temporariamente reconhecidos durante
-     * a reconstrução da aplicação.
+     * Apenas os valores definidos pela própria enumeração são aceites. A
+     * normalização limita-se à remoção de espaços exteriores e à conversão
+     * para minúsculas.
      *
      * @param  mixed  $valor  Valor recebido.
      * @return self|null Tipo correspondente ou nulo.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public static function tentarCriar(
         mixed $valor,
@@ -61,28 +65,19 @@ enum TipoIncorporacao: string
             return null;
         }
 
-        $valorNormalizado = mb_strtolower(
-            trim($valor),
+        return self::tryFrom(
+            mb_strtolower(
+                trim(
+                    $valor,
+                ),
+            ),
         );
-
-        return match ($valorNormalizado) {
-            self::Ligacao->value,
-            'link' => self::Ligacao,
-
-            self::VideoYouTube->value,
-            'youtube_video' => self::VideoYouTube,
-
-            self::ListaReproducaoYouTube->value,
-            'youtube_playlist' => self::ListaReproducaoYouTube,
-
-            default => null,
-        };
     }
 
     /**
      * Obtém a etiqueta apresentada ao utilizador.
      *
-     * @return string Etiqueta do tipo.
+     * @return string Etiqueta do tipo de incorporação.
      *
      * @since 2.0.0
      *
@@ -105,7 +100,7 @@ enum TipoIncorporacao: string
      *
      * A validação definitiva continua a ser efetuada no servidor.
      *
-     * @return string|null Expressão regular ou nulo para ligações comuns.
+     * @return string|null Expressão regular ou nula para ligações comuns.
      *
      * @since 2.0.0
      *
