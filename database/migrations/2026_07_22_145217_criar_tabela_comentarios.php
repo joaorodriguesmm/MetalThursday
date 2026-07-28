@@ -13,6 +13,10 @@ use Illuminate\Support\Facades\Schema;
  * Os comentários podem pertencer a diferentes entidades da aplicação
  * através de uma relação polimórfica e podem responder a outros comentários.
  *
+ * A aplicação é responsável por garantir que um comentário não responde a
+ * si próprio, que o comentário pai pertence à mesma entidade comentável e
+ * que não são criados ciclos na árvore de respostas.
+ *
  * @since 2.0.0
  *
  * @version 2.0.0
@@ -23,7 +27,7 @@ return new class extends Migration
      * Tipos de entidades que podem receber comentários.
      *
      * Estes valores correspondem aos aliases polimórficos persistidos pela
-     * aplicação e não devem depender dos namespaces PHP dos modelos.
+     * aplicação e não dependem dos namespaces PHP dos modelos.
      *
      * @var list<string>
      *
@@ -112,19 +116,8 @@ return new class extends Migration
                 ALTER TABLE `comentarios`
                 ADD CONSTRAINT `comentarios_conteudo_valido_verificacao`
                 CHECK (
-                    CHAR_LENGTH(`conteudo`) >= 1
-                    AND CHAR_LENGTH(`conteudo`) <= 2000
-                )
-                SQL,
-        );
-
-        DB::statement(
-            <<<'SQL'
-                ALTER TABLE `comentarios`
-                ADD CONSTRAINT `comentarios_pai_distinto_verificacao`
-                CHECK (
-                    `comentario_pai_id` IS NULL
-                    OR `comentario_pai_id` <> `id`
+                    CHAR_LENGTH(TRIM(`conteudo`))
+                    BETWEEN 1 AND 2000
                 )
                 SQL,
         );
