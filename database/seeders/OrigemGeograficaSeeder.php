@@ -4,50 +4,36 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Models\Geografia\Pais;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 /**
- * Regista os países, territórios especiais e agrupamentos geográficos
- * utilizados pela aplicação.
+ * Regista as origens geográficas utilizadas pela aplicação.
  *
- * O nome `Seeder` permanece em inglês por corresponder à convenção utilizada
- * pelo Laravel.
+ * Uma origem pode representar um país, uma nação constituinte, um território
+ * ou uma origem internacional agregada. O nome `Seeder` permanece em inglês
+ * por corresponder à convenção utilizada pelo Laravel.
  *
- * Os seguintes códigos pertencem ao intervalo reservado para utilização
- * interna da aplicação e não representam códigos ISO 3166-1 oficialmente
- * atribuídos:
+ * @since 2.0.0
  *
- * - `XE`: Inglaterra;
- * - `XK`: Kosovo;
- * - `XN`: Irlanda do Norte;
- * - `XS`: Escócia;
- * - `XW`: País de Gales;
- * - `XX`: Internacional.
- *
- * O Reino Unido permanece disponível separadamente através do código oficial
- * `GB`.
- *
- * Caso a coluna de códigos passe futuramente a aceitar mais de dois
- * caracteres, as nações constituintes do Reino Unido poderão utilizar os
- * códigos alargados `GB-ENG`, `GB-NIR`, `GB-SCT` e `GB-WLS`.
- *
- * @since 1.0.0
- *
- * @version 2.1.0
+ * @version 1.0.0
  */
-final class PaisSeeder extends Seeder
+final class OrigemGeograficaSeeder extends Seeder
 {
     /**
-     * Países e entidades geográficas indexados pelo respetivo código.
+     * Origens geográficas indexadas pelo respetivo código.
+     *
+     * Os países utilizam, sempre que aplicável, códigos ISO 3166-1 alfa-2.
+     * As nações constituintes do Reino Unido utilizam códigos ISO 3166-2, o
+     * Kosovo utiliza `XK` e a origem agregada internacional utiliza `INT`.
      *
      * @var array<string, string>
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 1.0.0
      */
-    private const PAISES_POR_CODIGO = [
+    private const ORIGENS_POR_CODIGO = [
         'AF' => 'Afeganistão',
         'ZA' => 'África do Sul',
         'AL' => 'Albânia',
@@ -107,7 +93,7 @@ final class PaisSeeder extends Seeder
         'AE' => 'Emirados Árabes Unidos',
         'EC' => 'Equador',
         'ER' => 'Eritreia',
-        'XS' => 'Escócia',
+        'GB-SCT' => 'Escócia',
         'SK' => 'Eslováquia',
         'SI' => 'Eslovénia',
         'ES' => 'Espanha',
@@ -138,11 +124,11 @@ final class PaisSeeder extends Seeder
         'SB' => 'Ilhas Salomão',
         'IN' => 'Índia',
         'ID' => 'Indonésia',
-        'XE' => 'Inglaterra',
+        'GB-ENG' => 'Inglaterra',
         'IR' => 'Irão',
         'IQ' => 'Iraque',
         'IE' => 'Irlanda',
-        'XN' => 'Irlanda do Norte',
+        'GB-NIR' => 'Irlanda do Norte',
         'IS' => 'Islândia',
         'IL' => 'Israel',
         'IT' => 'Itália',
@@ -188,7 +174,7 @@ final class PaisSeeder extends Seeder
         'NO' => 'Noruega',
         'NZ' => 'Nova Zelândia',
         'OM' => 'Omã',
-        'XW' => 'País de Gales',
+        'GB-WLS' => 'País de Gales',
         'NL' => 'Países Baixos',
         'PW' => 'Palau',
         'PS' => 'Palestina',
@@ -249,31 +235,26 @@ final class PaisSeeder extends Seeder
         'VN' => 'Vietname',
         'ZM' => 'Zâmbia',
         'ZW' => 'Zimbábue',
-        'XX' => 'Internacional',
+        'INT' => 'Internacional',
     ];
 
     /**
-     * Regista ou atualiza os países e entidades geográficas da aplicação.
+     * Regista ou atualiza as origens geográficas.
      *
      * O nome `run` permanece em inglês por corresponder ao método
      * convencional dos seeders do Laravel.
      *
-     * Os registos são inseridos através de uma única operação `upsert`,
-     * tornando o seeder idempotente e evitando uma consulta individual por
-     * registo.
+     * @since 2.0.0
      *
-     * @since 1.0.0
-     *
-     * @version 2.1.0
+     * @version 1.0.0
      */
     public function run(): void
     {
-        $agora =
-            now();
+        $agora = now();
 
         /** @var list<array{
          *     nome: string,
-         *     codigo_iso: string,
+         *     codigo: string,
          *     created_at: mixed,
          *     updated_at: mixed
          * }> $registos
@@ -281,12 +262,12 @@ final class PaisSeeder extends Seeder
         $registos = [];
 
         foreach (
-            self::PAISES_POR_CODIGO as $codigoIso => $nome
+            self::ORIGENS_POR_CODIGO as $codigo => $nome
         ) {
             $registos[] = [
                 'nome' => $nome,
 
-                'codigo_iso' => $codigoIso,
+                'codigo' => $codigo,
 
                 'created_at' => $agora,
 
@@ -294,10 +275,12 @@ final class PaisSeeder extends Seeder
             ];
         }
 
-        Pais::query()->upsert(
+        DB::table(
+            'origens_geograficas',
+        )->upsert(
             $registos,
             [
-                'codigo_iso',
+                'codigo',
             ],
             [
                 'nome',
