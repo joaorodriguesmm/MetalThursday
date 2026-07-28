@@ -12,25 +12,27 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 /**
- * Representa uma permissão de comunicação por e-mail.
+ * Representa uma permissão de comunicação por correio eletrónico.
  *
- * As permissões permitem controlar os tipos de mensagens que cada utilizador
- * está autorizado ou interessado em receber.
+ * Cada permissão possui um identificador técnico estável, um nome, uma
+ * descrição obrigatória e uma ordem de apresentação.
  *
  * @property int $id
- * @property string $nome
  * @property string $identificador
- * @property string|null $descricao
+ * @property string $nome
+ * @property string $descricao
+ * @property int $ordem
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
  * @property-read Collection<int, Utilizador> $utilizadores
  *
  * @since 1.0.0
  *
- * @version 2.1.0
+ * @version 3.0.0
  */
 class PermissaoEmail extends Model
 {
@@ -38,9 +40,43 @@ class PermissaoEmail extends Model
     use HasFactory;
 
     /**
-     * Nome da tabela intermédia entre permissões de e-mail e utilizadores.
+     * Comprimento máximo do identificador.
      *
-     * @var string
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public const COMPRIMENTO_MAXIMO_IDENTIFICADOR = 64;
+
+    /**
+     * Comprimento máximo do nome.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public const COMPRIMENTO_MAXIMO_NOME = 100;
+
+    /**
+     * Ordem mínima permitida.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public const ORDEM_MINIMA = 1;
+
+    /**
+     * Ordem máxima permitida.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public const ORDEM_MAXIMA = 255;
+
+    /**
+     * Nome da tabela intermédia entre permissões e utilizadores.
      *
      * @since 2.0.0
      *
@@ -63,25 +99,23 @@ class PermissaoEmail extends Model
     /**
      * Atributos permitidos em operações de atribuição em massa.
      *
-     * @var array<int, string>
+     * @var list<string>
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     protected $fillable = [
-        'nome',
         'identificador',
+        'nome',
         'descricao',
+        'ordem',
     ];
 
     /**
      * Cria a factory associada ao modelo.
      *
-     * A associação é explícita porque o modelo e a factory se encontram
-     * em namespaces próprios.
-     *
-     * @return PermissaoEmailFactory Factory das permissões de e-mail.
+     * @return PermissaoEmailFactory Factory das permissões.
      *
      * @since 2.0.0
      *
@@ -93,51 +127,15 @@ class PermissaoEmail extends Model
     }
 
     /**
-     * Normaliza o nome da permissão antes da persistência.
-     *
-     * @return Attribute<string, string> Atributo do nome.
-     *
-     * @throws InvalidArgumentException Quando o nome está vazio.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    protected function nome(): Attribute
-    {
-        return Attribute::make(
-            set: static function (
-                mixed $valor,
-            ): string {
-                $nomeNormalizado =
-                    trim(
-                        (string) $valor,
-                    );
-
-                if ($nomeNormalizado === '') {
-                    throw new InvalidArgumentException(
-                        'O nome da permissão de e-mail não pode estar vazio.',
-                    );
-                }
-
-                return $nomeNormalizado;
-            },
-        );
-    }
-
-    /**
-     * Normaliza o identificador antes da persistência.
-     *
-     * O identificador é guardado em minúsculas para que as comparações sejam
-     * consistentes em todos os ambientes.
+     * Normaliza e valida o identificador da permissão.
      *
      * @return Attribute<string, string> Atributo do identificador.
      *
-     * @throws InvalidArgumentException Quando o identificador está vazio.
+     * @throws InvalidArgumentException Quando o identificador não é válido.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     protected function identificador(): Attribute
     {
@@ -145,16 +143,24 @@ class PermissaoEmail extends Model
             set: static function (
                 mixed $valor,
             ): string {
-                $identificadorNormalizado =
-                    mb_strtolower(
-                        trim(
-                            (string) $valor,
-                        ),
-                    );
+                $identificadorNormalizado = mb_strtolower(
+                    trim(
+                        (string) $valor,
+                    ),
+                );
 
-                if ($identificadorNormalizado === '') {
+                if (
+                    $identificadorNormalizado === ''
+                    || strlen(
+                        $identificadorNormalizado,
+                    ) > self::COMPRIMENTO_MAXIMO_IDENTIFICADOR
+                    || preg_match(
+                        '/\A[a-z0-9]+(?:_[a-z0-9]+)*\z/',
+                        $identificadorNormalizado,
+                    ) !== 1
+                ) {
                     throw new InvalidArgumentException(
-                        'O identificador da permissão de e-mail não pode estar vazio.',
+                        'O identificador da permissão deve conter apenas letras minúsculas, números e sublinhados interiores.',
                     );
                 }
 
@@ -164,44 +170,126 @@ class PermissaoEmail extends Model
     }
 
     /**
-     * Normaliza a descrição antes da persistência.
+     * Normaliza e valida o nome da permissão.
      *
-     * Uma descrição vazia é convertida em nulo.
+     * @return Attribute<string, string> Atributo do nome.
      *
-     * @return Attribute<string|null, string|null> Atributo da descrição.
+     * @throws InvalidArgumentException Quando o nome não é válido.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
+     */
+    protected function nome(): Attribute
+    {
+        return Attribute::make(
+            set: static function (
+                mixed $valor,
+            ): string {
+                $nomeNormalizado = Str::squish(
+                    (string) $valor,
+                );
+
+                if ($nomeNormalizado === '') {
+                    throw new InvalidArgumentException(
+                        'O nome da permissão de e-mail não pode estar vazio.',
+                    );
+                }
+
+                if (
+                    mb_strlen(
+                        $nomeNormalizado,
+                    ) > self::COMPRIMENTO_MAXIMO_NOME
+                ) {
+                    throw new InvalidArgumentException(
+                        sprintf(
+                            'O nome da permissão de e-mail não pode exceder %d caracteres.',
+                            self::COMPRIMENTO_MAXIMO_NOME,
+                        ),
+                    );
+                }
+
+                return $nomeNormalizado;
+            },
+        );
+    }
+
+    /**
+     * Normaliza e valida a descrição da permissão.
+     *
+     * @return Attribute<string, string> Atributo da descrição.
+     *
+     * @throws InvalidArgumentException Quando a descrição está vazia.
+     *
+     * @since 2.0.0
+     *
+     * @version 2.0.0
      */
     protected function descricao(): Attribute
     {
         return Attribute::make(
             set: static function (
                 mixed $valor,
-            ): ?string {
-                if (! is_string($valor)) {
-                    return null;
+            ): string {
+                $descricaoNormalizada = Str::squish(
+                    (string) $valor,
+                );
+
+                if ($descricaoNormalizada === '') {
+                    throw new InvalidArgumentException(
+                        'A descrição da permissão de e-mail não pode estar vazia.',
+                    );
                 }
 
-                $descricaoNormalizada =
-                    trim(
-                        $valor,
-                    );
-
-                return $descricaoNormalizada !== ''
-                    ? $descricaoNormalizada
-                    : null;
+                return $descricaoNormalizada;
             },
         );
     }
 
     /**
-     * Obtém os utilizadores associados à permissão de e-mail.
+     * Normaliza e valida a ordem de apresentação.
      *
-     * A tabela intermédia não possui colunas adicionais nem marcas
-     * temporais, pelo que não é necessário utilizar `withPivot()` nem
-     * `withTimestamps()`.
+     * @return Attribute<int, int> Atributo da ordem.
+     *
+     * @throws InvalidArgumentException Quando a ordem não é válida.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    protected function ordem(): Attribute
+    {
+        return Attribute::make(
+            get: static fn (
+                mixed $valor,
+            ): int => (int) $valor,
+
+            set: static function (
+                mixed $valor,
+            ): int {
+                if (
+                    ! is_int(
+                        $valor,
+                    )
+                    || $valor < self::ORDEM_MINIMA
+                    || $valor > self::ORDEM_MAXIMA
+                ) {
+                    throw new InvalidArgumentException(
+                        sprintf(
+                            'A ordem da permissão deve estar entre %d e %d.',
+                            self::ORDEM_MINIMA,
+                            self::ORDEM_MAXIMA,
+                        ),
+                    );
+                }
+
+                return $valor;
+            },
+        );
+    }
+
+    /**
+     * Obtém os utilizadores associados à permissão.
      *
      * @return BelongsToMany<Utilizador, $this> Relação com os utilizadores.
      *
@@ -211,11 +299,18 @@ class PermissaoEmail extends Model
      */
     public function utilizadores(): BelongsToMany
     {
-        return $this->belongsToMany(
-            Utilizador::class,
-            self::TABELA_PERMISSAO_UTILIZADOR,
-            'permissao_email_id',
-            'utilizador_id',
-        );
+        return $this
+            ->belongsToMany(
+                Utilizador::class,
+                self::TABELA_PERMISSAO_UTILIZADOR,
+                'permissao_email_id',
+                'utilizador_id',
+            )
+            ->orderBy(
+                'utilizadores.nome',
+            )
+            ->orderBy(
+                'utilizadores.id',
+            );
     }
 }

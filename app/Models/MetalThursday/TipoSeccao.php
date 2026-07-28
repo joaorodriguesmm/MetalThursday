@@ -11,30 +11,69 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 /**
  * Representa um tipo de secção de uma MetalThursday.
  *
- * O tipo de secção identifica a natureza das secções e determina se estas
- * necessitam de informação detalhada adicional.
+ * Cada tipo possui um identificador técnico estável, um nome, uma descrição,
+ * uma ordem e a indicação de que exige informação musical detalhada.
  *
  * @property int $id
+ * @property string $identificador
  * @property string $nome
  * @property string $descricao
- * @property bool $tem_detalhes
+ * @property bool $exige_detalhes
+ * @property int $ordem
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
  * @property-read Collection<int, SeccaoMetalThursday> $seccoes
  *
  * @since 1.0.0
  *
- * @version 2.1.0
+ * @version 3.0.0
  */
 class TipoSeccao extends Model
 {
     /** @use HasFactory<TipoSeccaoFactory> */
     use HasFactory;
+
+    /**
+     * Comprimento máximo do identificador.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public const COMPRIMENTO_MAXIMO_IDENTIFICADOR = 32;
+
+    /**
+     * Comprimento máximo do nome.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public const COMPRIMENTO_MAXIMO_NOME = 64;
+
+    /**
+     * Ordem mínima permitida.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public const ORDEM_MINIMA = 1;
+
+    /**
+     * Ordem máxima permitida.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public const ORDEM_MAXIMA = 255;
 
     /**
      * Nome físico da tabela associada ao modelo.
@@ -50,39 +89,22 @@ class TipoSeccao extends Model
     /**
      * Atributos permitidos em operações de atribuição em massa.
      *
-     * @var array<int, string>
+     * @var list<string>
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     protected $fillable = [
+        'identificador',
         'nome',
         'descricao',
-        'tem_detalhes',
+        'exige_detalhes',
+        'ordem',
     ];
 
     /**
-     * Define as conversões automáticas dos atributos.
-     *
-     * @return array<string, string> Conversões dos atributos.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    protected function casts(): array
-    {
-        return [
-            'tem_detalhes' => 'boolean',
-        ];
-    }
-
-    /**
      * Cria a factory associada ao modelo.
-     *
-     * A associação é explícita porque o modelo e a factory se encontram em
-     * namespaces próprios.
      *
      * @return TipoSeccaoFactory Factory dos tipos de secção.
      *
@@ -96,15 +118,58 @@ class TipoSeccao extends Model
     }
 
     /**
-     * Normaliza o nome do tipo de secção antes da persistência.
+     * Normaliza e valida o identificador do tipo.
      *
-     * @return Attribute<string, string> Atributo do nome.
+     * @return Attribute<string, string> Atributo do identificador.
      *
-     * @throws InvalidArgumentException Quando o nome está vazio.
+     * @throws InvalidArgumentException Quando o identificador não é válido.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
+     */
+    protected function identificador(): Attribute
+    {
+        return Attribute::make(
+            set: static function (
+                mixed $valor,
+            ): string {
+                $identificadorNormalizado = mb_strtolower(
+                    trim(
+                        (string) $valor,
+                    ),
+                );
+
+                if (
+                    $identificadorNormalizado === ''
+                    || strlen(
+                        $identificadorNormalizado,
+                    ) > self::COMPRIMENTO_MAXIMO_IDENTIFICADOR
+                    || preg_match(
+                        '/\A[a-z0-9]+(?:_[a-z0-9]+)*\z/',
+                        $identificadorNormalizado,
+                    ) !== 1
+                ) {
+                    throw new InvalidArgumentException(
+                        'O identificador do tipo de secção deve conter apenas letras minúsculas, números e sublinhados interiores.',
+                    );
+                }
+
+                return $identificadorNormalizado;
+            },
+        );
+    }
+
+    /**
+     * Normaliza e valida o nome do tipo.
+     *
+     * @return Attribute<string, string> Atributo do nome.
+     *
+     * @throws InvalidArgumentException Quando o nome não é válido.
+     *
+     * @since 2.0.0
+     *
+     * @version 2.0.0
      */
     protected function nome(): Attribute
     {
@@ -112,7 +177,7 @@ class TipoSeccao extends Model
             set: static function (
                 mixed $valor,
             ): string {
-                $nomeNormalizado = trim(
+                $nomeNormalizado = Str::squish(
                     (string) $valor,
                 );
 
@@ -122,16 +187,26 @@ class TipoSeccao extends Model
                     );
                 }
 
+                if (
+                    mb_strlen(
+                        $nomeNormalizado,
+                    ) > self::COMPRIMENTO_MAXIMO_NOME
+                ) {
+                    throw new InvalidArgumentException(
+                        sprintf(
+                            'O nome do tipo de secção não pode exceder %d caracteres.',
+                            self::COMPRIMENTO_MAXIMO_NOME,
+                        ),
+                    );
+                }
+
                 return $nomeNormalizado;
             },
         );
     }
 
     /**
-     * Normaliza a descrição do tipo de secção antes da persistência.
-     *
-     * A descrição é obrigatória porque a respetiva coluna não aceita valores
-     * nulos.
+     * Normaliza e valida a descrição do tipo.
      *
      * @return Attribute<string, string> Atributo da descrição.
      *
@@ -139,7 +214,7 @@ class TipoSeccao extends Model
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     protected function descricao(): Attribute
     {
@@ -147,7 +222,7 @@ class TipoSeccao extends Model
             set: static function (
                 mixed $valor,
             ): string {
-                $descricaoNormalizada = trim(
+                $descricaoNormalizada = Str::squish(
                     (string) $valor,
                 );
 
@@ -163,6 +238,80 @@ class TipoSeccao extends Model
     }
 
     /**
+     * Normaliza e valida a indicação de detalhes obrigatórios.
+     *
+     * @return Attribute<bool, bool> Atributo da indicação.
+     *
+     * @throws InvalidArgumentException Quando o valor não é booleano.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    protected function exigeDetalhes(): Attribute
+    {
+        return Attribute::make(
+            get: static fn (
+                mixed $valor,
+            ): bool => (bool) $valor,
+
+            set: static function (
+                mixed $valor,
+            ): bool {
+                if (! is_bool($valor)) {
+                    throw new InvalidArgumentException(
+                        'A indicação de detalhes obrigatórios deve ser booleana.',
+                    );
+                }
+
+                return $valor;
+            },
+        );
+    }
+
+    /**
+     * Normaliza e valida a ordem de apresentação.
+     *
+     * @return Attribute<int, int> Atributo da ordem.
+     *
+     * @throws InvalidArgumentException Quando a ordem não é válida.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    protected function ordem(): Attribute
+    {
+        return Attribute::make(
+            get: static fn (
+                mixed $valor,
+            ): int => (int) $valor,
+
+            set: static function (
+                mixed $valor,
+            ): int {
+                if (
+                    ! is_int(
+                        $valor,
+                    )
+                    || $valor < self::ORDEM_MINIMA
+                    || $valor > self::ORDEM_MAXIMA
+                ) {
+                    throw new InvalidArgumentException(
+                        sprintf(
+                            'A ordem do tipo de secção deve estar entre %d e %d.',
+                            self::ORDEM_MINIMA,
+                            self::ORDEM_MAXIMA,
+                        ),
+                    );
+                }
+
+                return $valor;
+            },
+        );
+    }
+
+    /**
      * Obtém as secções que utilizam este tipo.
      *
      * @return HasMany<SeccaoMetalThursday, $this> Relação com as secções.
@@ -173,9 +322,16 @@ class TipoSeccao extends Model
      */
     public function seccoes(): HasMany
     {
-        return $this->hasMany(
-            SeccaoMetalThursday::class,
-            'tipo_seccao_id',
-        );
+        return $this
+            ->hasMany(
+                SeccaoMetalThursday::class,
+                'tipo_seccao_id',
+            )
+            ->orderBy(
+                'ordem',
+            )
+            ->orderBy(
+                'id',
+            );
     }
 }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models\Musica;
 
-use App\Models\Geografia\Pais;
+use App\Models\Geografia\OrigemGeografica;
 use App\Traits\Auditoria\RegistaAutoria;
 use Carbon\CarbonInterface;
 use Database\Factories\Musica\BandaFactory;
@@ -15,28 +15,29 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 /**
  * Representa uma banda musical.
  *
- * Cada banda pertence a um país e pode estar associada a vários géneros
- * musicais.
+ * Cada banda pertence a uma origem geográfica e pode estar associada a vários
+ * géneros musicais.
  *
  * @property int $id
  * @property string $nome
- * @property int $pais_id
+ * @property int $origem_geografica_id
  * @property int|null $criado_por_id
  * @property int|null $atualizado_por_id
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
  * @property CarbonInterface|null $deleted_at
- * @property-read Pais $pais
+ * @property-read OrigemGeografica $origemGeografica
  * @property-read Collection<int, Genero> $generos
  *
  * @since 1.0.0
  *
- * @version 2.1.0
+ * @version 3.0.0
  */
 class Banda extends Model
 {
@@ -47,9 +48,16 @@ class Banda extends Model
     use SoftDeletes;
 
     /**
-     * Nome da tabela intermédia entre bandas e géneros.
+     * Comprimento máximo do nome.
      *
-     * @var string
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public const COMPRIMENTO_MAXIMO_NOME = 255;
+
+    /**
+     * Nome da tabela intermédia entre bandas e géneros.
      *
      * @since 2.0.0
      *
@@ -72,43 +80,41 @@ class Banda extends Model
     /**
      * Atributos permitidos em operações de atribuição em massa.
      *
-     * O país deve ser associado explicitamente através da relação `pais()`.
-     * As colunas de auditoria são preenchidas automaticamente pelo trait
-     * {@see RegistaAutoria}.
+     * A origem geográfica deve ser associada explicitamente através da
+     * relação {@see OrigemGeografica()}.
      *
-     * @var array<int, string>
+     * @var list<string>
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
     protected $fillable = [
         'nome',
     ];
 
     /**
-     * Define as conversões automáticas dos atributos.
+     * Define as conversões automáticas dos identificadores.
      *
      * @return array<string, string> Conversões dos atributos.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     protected function casts(): array
     {
         return [
-            'pais_id' => 'integer',
+            'origem_geografica_id' => 'integer',
+
             'criado_por_id' => 'integer',
+
             'atualizado_por_id' => 'integer',
         ];
     }
 
     /**
      * Cria a factory associada ao modelo.
-     *
-     * A associação é explícita porque o modelo e a factory se encontram em
-     * namespaces próprios.
      *
      * @return BandaFactory Factory das bandas.
      *
@@ -122,15 +128,15 @@ class Banda extends Model
     }
 
     /**
-     * Normaliza o nome da banda antes da persistência.
+     * Normaliza e valida o nome da banda.
      *
      * @return Attribute<string, string> Atributo do nome.
      *
-     * @throws InvalidArgumentException Quando o nome está vazio.
+     * @throws InvalidArgumentException Quando o nome não é válido.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     protected function nome(): Attribute
     {
@@ -138,7 +144,7 @@ class Banda extends Model
             set: static function (
                 mixed $valor,
             ): string {
-                $nomeNormalizado = trim(
+                $nomeNormalizado = Str::squish(
                     (string) $valor,
                 );
 
@@ -148,33 +154,46 @@ class Banda extends Model
                     );
                 }
 
+                if (
+                    mb_strlen(
+                        $nomeNormalizado,
+                    ) > self::COMPRIMENTO_MAXIMO_NOME
+                ) {
+                    throw new InvalidArgumentException(
+                        sprintf(
+                            'O nome da banda não pode exceder %d caracteres.',
+                            self::COMPRIMENTO_MAXIMO_NOME,
+                        ),
+                    );
+                }
+
                 return $nomeNormalizado;
             },
         );
     }
 
     /**
-     * Obtém o país de origem da banda.
+     * Obtém a origem geográfica da banda.
      *
-     * @return BelongsTo<Pais, $this> Relação com o país.
+     * @return BelongsTo<OrigemGeografica, $this> Relação com a origem.
      *
-     * @since 1.0.0
+     * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 1.0.0
      */
-    public function pais(): BelongsTo
+    public function origemGeografica(): BelongsTo
     {
         return $this->belongsTo(
-            Pais::class,
-            'pais_id',
+            OrigemGeografica::class,
+            'origem_geografica_id',
         );
     }
 
     /**
      * Obtém os géneros musicais associados à banda.
      *
-     * Os géneros eliminados logicamente não são incluídos e os restantes
-     * são devolvidos por ordem alfabética.
+     * Os géneros eliminados logicamente não são incluídos e os restantes são
+     * devolvidos por ordem alfabética.
      *
      * @return BelongsToMany<Genero, $this> Relação com os géneros.
      *
@@ -191,7 +210,11 @@ class Banda extends Model
                 'banda_id',
                 'genero_id',
             )
-            ->orderBy('generos.nome')
-            ->orderBy('generos.id');
+            ->orderBy(
+                'generos.nome',
+            )
+            ->orderBy(
+                'generos.id',
+            );
     }
 }
