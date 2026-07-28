@@ -7,12 +7,16 @@ namespace App\Enumeracoes;
 /**
  * Representa uma resposta binária de sim ou não.
  *
- * Esta enumeração pode ser reutilizada em filtros, formulários, configurações
- * e outros pontos da aplicação que recebam uma escolha binária.
+ * A interpretação de valores recebidos externamente é estrita. Apenas os
+ * valores textuais públicos `sim` e `nao` são aceites por
+ * {@see tentarCriar()}.
+ *
+ * Conversões internas de valores booleanos devem ser efetuadas
+ * explicitamente através de {@see deBooleano()}.
  *
  * @since 2.0.0
  *
- * @version 1.1.0
+ * @version 2.0.0
  */
 enum RespostaBinaria: string
 {
@@ -35,68 +39,40 @@ enum RespostaBinaria: string
     case Nao = 'nao';
 
     /**
-     * Tenta criar uma resposta binária a partir de um valor recebido.
+     * Tenta criar uma resposta a partir de um valor textual.
      *
-     * São aceites valores booleanos, inteiros binários e representações
-     * textuais utilizadas habitualmente em formulários e filtros.
+     * Apenas os valores públicos definidos pela própria enumeração são
+     * aceites. Booleanos, inteiros e representações textuais alternativas não
+     * são convertidos implicitamente.
      *
-     * A comparação textual ignora espaços adicionais e diferenças entre
-     * letras maiúsculas e minúsculas.
-     *
-     * @param  mixed  $valor  Valor a converter.
-     * @return self|null Resposta correspondente ou nula quando o valor não é
-     *                   reconhecido.
+     * @param  mixed  $valor  Valor recebido.
+     * @return self|null Resposta correspondente ou nula.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public static function tentarCriar(
         mixed $valor,
     ): ?self {
-        if (is_bool($valor)) {
-            return self::deBooleano(
-                $valor,
-            );
-        }
-
-        if (is_int($valor)) {
-            return match ($valor) {
-                1 => self::Sim,
-                0 => self::Nao,
-                default => null,
-            };
-        }
-
         if (! is_string($valor)) {
             return null;
         }
 
-        $valorNormalizado = mb_strtolower(
-            trim($valor),
+        return self::tryFrom(
+            mb_strtolower(
+                trim(
+                    $valor,
+                ),
+            ),
         );
-
-        return match ($valorNormalizado) {
-            self::Sim->value,
-            'yes',
-            'true',
-            '1' => self::Sim,
-
-            self::Nao->value,
-            'não',
-            'no',
-            'false',
-            '0' => self::Nao,
-
-            default => null,
-        };
     }
 
     /**
-     * Cria uma resposta binária a partir de um valor booleano.
+     * Cria uma resposta a partir de um valor booleano explícito.
      *
      * @param  bool  $valor  Valor booleano.
-     * @return self Resposta binária correspondente.
+     * @return self Resposta correspondente.
      *
      * @since 2.0.0
      *
@@ -122,5 +98,22 @@ enum RespostaBinaria: string
     public function paraBooleano(): bool
     {
         return $this === self::Sim;
+    }
+
+    /**
+     * Obtém a etiqueta apresentada ao utilizador.
+     *
+     * @return string Etiqueta da resposta.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function etiqueta(): string
+    {
+        return match ($this) {
+            self::Sim => 'Sim',
+            self::Nao => 'Não',
+        };
     }
 }

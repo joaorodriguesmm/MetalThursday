@@ -7,9 +7,13 @@ namespace App\Enumeracoes;
 /**
  * Representa uma direção de ordenação disponibilizada pela aplicação.
  *
+ * Os valores persistidos em parâmetros públicos utilizam português. A
+ * conversão para os valores técnicos reconhecidos pelo construtor de
+ * consultas é efetuada explicitamente através de {@see paraSql()}.
+ *
  * @since 2.0.0
  *
- * @version 1.1.0
+ * @version 2.0.0
  */
 enum DirecaoOrdenacao: string
 {
@@ -32,21 +36,21 @@ enum DirecaoOrdenacao: string
     case Descendente = 'descendente';
 
     /**
-     * Tenta criar uma direção de ordenação a partir de um valor recebido.
+     * Tenta criar uma direção a partir de um valor textual.
      *
-     * Os valores técnicos `asc` e `desc` são também aceites para manter
-     * compatibilidade com parâmetros já utilizados pela aplicação.
+     * Apenas os valores públicos definidos pela própria enumeração são
+     * aceites. A normalização limita-se à remoção de espaços exteriores e à
+     * conversão para minúsculas.
      *
-     * A comparação ignora espaços adicionais e diferenças entre letras
-     * maiúsculas e minúsculas.
+     * Valores técnicos como `asc` e `desc` não são parâmetros públicos
+     * válidos e, consequentemente, não são aceites.
      *
-     * @param  mixed  $valor  Valor a converter.
-     * @return self|null Direção correspondente ou nula quando o valor não é
-     *                   reconhecido.
+     * @param  mixed  $valor  Valor recebido.
+     * @return self|null Direção correspondente ou nula.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public static function tentarCriar(
         mixed $valor,
@@ -55,25 +59,36 @@ enum DirecaoOrdenacao: string
             return null;
         }
 
-        $valorNormalizado = mb_strtolower(
-            trim($valor),
+        return self::tryFrom(
+            mb_strtolower(
+                trim(
+                    $valor,
+                ),
+            ),
         );
+    }
 
-        return match ($valorNormalizado) {
-            self::Ascendente->value,
-            'asc' => self::Ascendente,
-
-            self::Descendente->value,
-            'desc' => self::Descendente,
-
-            default => null,
+    /**
+     * Obtém a etiqueta apresentada ao utilizador.
+     *
+     * @return string Etiqueta da direção.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function etiqueta(): string
+    {
+        return match ($this) {
+            self::Ascendente => 'Ascendente',
+            self::Descendente => 'Descendente',
         };
     }
 
     /**
      * Obtém a direção reconhecida pelo construtor de consultas.
      *
-     * @return string Direção de ordenação equivalente.
+     * @return 'asc'|'desc' Direção técnica de ordenação.
      *
      * @since 2.0.0
      *

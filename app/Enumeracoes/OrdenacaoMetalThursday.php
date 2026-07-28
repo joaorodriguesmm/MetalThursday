@@ -7,9 +7,12 @@ namespace App\Enumeracoes;
 /**
  * Representa uma ordenação disponível na listagem de MetalThursdays.
  *
+ * Os valores correspondem diretamente aos parâmetros públicos aceites pela
+ * aplicação.
+ *
  * @since 2.0.0
  *
- * @version 1.1.0
+ * @version 2.0.0
  */
 enum OrdenacaoMetalThursday: string
 {
@@ -41,19 +44,18 @@ enum OrdenacaoMetalThursday: string
     case MinhaClassificacao = 'minha_classificacao';
 
     /**
-     * Tenta criar uma ordenação a partir de um valor recebido.
+     * Tenta criar uma ordenação a partir de um valor textual.
      *
-     * São também aceites aliases utilizados anteriormente pela aplicação.
-     * A comparação ignora espaços adicionais e diferenças entre letras
-     * maiúsculas e minúsculas.
+     * Apenas os valores públicos definidos pela própria enumeração são
+     * aceites. A normalização limita-se à remoção de espaços exteriores e à
+     * conversão para minúsculas.
      *
-     * @param  mixed  $valor  Valor a converter.
-     * @return self|null Ordenação correspondente ou nula quando o valor não é
-     *                   reconhecido.
+     * @param  mixed  $valor  Valor recebido.
+     * @return self|null Ordenação correspondente ou nula.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public static function tentarCriar(
         mixed $valor,
@@ -62,23 +64,30 @@ enum OrdenacaoMetalThursday: string
             return null;
         }
 
-        $valorNormalizado = strtolower(
-            trim($valor),
+        return self::tryFrom(
+            mb_strtolower(
+                trim(
+                    $valor,
+                ),
+            ),
         );
+    }
 
-        return match ($valorNormalizado) {
-            self::Data->value,
-            'date' => self::Data,
-
-            self::Classificacao->value,
-            'avaliacao',
-            'rating' => self::Classificacao,
-
-            self::MinhaClassificacao->value,
-            'minha_avaliacao',
-            'my_rating' => self::MinhaClassificacao,
-
-            default => null,
+    /**
+     * Obtém a etiqueta apresentada ao utilizador.
+     *
+     * @return string Etiqueta da ordenação.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function etiqueta(): string
+    {
+        return match ($this) {
+            self::Data => 'Data',
+            self::Classificacao => 'Avaliação média',
+            self::MinhaClassificacao => 'A minha avaliação',
         };
     }
 }
