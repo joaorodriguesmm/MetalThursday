@@ -10,6 +10,7 @@ use App\Http\Controllers\Autenticacao\ControladorVerificacaoEmail;
 use App\Http\Controllers\Utilizadores\ControladorPalavraPasse;
 use App\Http\Controllers\Utilizadores\ControladorPerfil;
 use App\Http\Controllers\Utilizadores\ControladorPermissoesEmail;
+use App\Models\Autenticacao\Convite;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -48,7 +49,7 @@ Route::middleware(
         )
             ->where(
                 'codigoConvite',
-                '[A-Za-z0-9_-]{10,128}',
+                Convite::PADRAO_CODIGO,
             )
             ->name(
                 'convites.aceitar',

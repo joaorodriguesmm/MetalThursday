@@ -26,7 +26,7 @@ use Throwable;
  *
  * @since 2.0.0
  *
- * @version 1.1.0
+ * @version 1.2.0
  */
 final class ServicoAtualizacaoPerfil
 {
@@ -45,9 +45,9 @@ final class ServicoAtualizacaoPerfil
      * Cria o serviço.
      *
      * @param  ServicoFotografiasUtilizador  $servicoFotografias  Serviço
-     *                                                            responsável pelas
-     *                                                            fotografias dos
-     *                                                            utilizadores.
+     *                                                            responsável
+     *                                                            pelas
+     *                                                            fotografias.
      *
      * @since 2.0.0
      *
@@ -80,7 +80,7 @@ final class ServicoAtualizacaoPerfil
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 1.2.0
      */
     public function atualizar(
         Utilizador $utilizador,
@@ -105,9 +105,11 @@ final class ServicoAtualizacaoPerfil
 
         $caminhoFotografiaNova =
             $fotografia instanceof UploadedFile
-            ? $this->servicoFotografias->guardar(
-                $fotografia,
-            )
+            ? $this
+                ->servicoFotografias
+                ->guardar(
+                    $fotografia,
+                )
             : null;
 
         $caminhoFotografiaAnterior =
@@ -169,14 +171,13 @@ final class ServicoAtualizacaoPerfil
 
                         return new PerfilAtualizado(
                             utilizador: $utilizadorBloqueado,
+
                             emailAlterado: $emailAlterado,
                         );
                     },
                     self::TENTATIVAS_TRANSACAO,
                 );
-        } catch (
-            UniqueConstraintViolationException $excecao
-        ) {
+        } catch (UniqueConstraintViolationException $excecao) {
             $this->eliminarFotografiaNovaAposFalha(
                 $caminhoFotografiaNova,
                 $excecao,
@@ -194,10 +195,6 @@ final class ServicoAtualizacaoPerfil
                 );
             }
 
-            /*
-             * A restrição violada não corresponde ao endereço de e-mail.
-             * Preserva-se a exceção original para não esconder o erro real.
-             */
             throw $excecao;
         } catch (Throwable $excecao) {
             $this->eliminarFotografiaNovaAposFalha(
@@ -211,8 +208,7 @@ final class ServicoAtualizacaoPerfil
         if (
             $caminhoFotografiaNova !== null
             && $caminhoFotografiaAnterior !== null
-            && $caminhoFotografiaAnterior
-            !== $caminhoFotografiaNova
+            && $caminhoFotografiaAnterior !== $caminhoFotografiaNova
         ) {
             $this->eliminarFotografiaAnterior(
                 $caminhoFotografiaAnterior,
@@ -385,7 +381,7 @@ final class ServicoAtualizacaoPerfil
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function eliminarFotografiaNovaAposFalha(
         ?string $caminho,
@@ -396,25 +392,11 @@ final class ServicoAtualizacaoPerfil
         }
 
         try {
-            $eliminada =
-                $this
-                    ->servicoFotografias
-                    ->eliminar(
-                        $caminho,
-                    );
-
-            if ($eliminada) {
-                return;
-            }
-
-            Log::error(
-                'Não foi possível eliminar a fotografia nova após uma falha na atualização do perfil.',
-                [
-                    'caminho' => $caminho,
-
-                    'excecao_original' => $excecaoOriginal::class,
-                ],
-            );
+            $this
+                ->servicoFotografias
+                ->eliminar(
+                    $caminho,
+                );
         } catch (Throwable $excecaoLimpeza) {
             Log::error(
                 'Ocorreu um erro ao eliminar a fotografia nova após uma falha na atualização do perfil.',
@@ -441,29 +423,17 @@ final class ServicoAtualizacaoPerfil
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function eliminarFotografiaAnterior(
         string $caminho,
     ): void {
         try {
-            $eliminada =
-                $this
-                    ->servicoFotografias
-                    ->eliminar(
-                        $caminho,
-                    );
-
-            if ($eliminada) {
-                return;
-            }
-
-            Log::warning(
-                'Não foi possível eliminar a fotografia anterior do utilizador.',
-                [
-                    'caminho' => $caminho,
-                ],
-            );
+            $this
+                ->servicoFotografias
+                ->eliminar(
+                    $caminho,
+                );
         } catch (Throwable $excecao) {
             Log::warning(
                 'Ocorreu um erro ao eliminar a fotografia anterior do utilizador.',

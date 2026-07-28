@@ -17,7 +17,7 @@ use Illuminate\View\View;
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 3.0.0
  */
 final class ControladorNotificacao extends Controller
 {
@@ -35,49 +35,61 @@ final class ControladorNotificacao extends Controller
     /**
      * Apresenta as notificações do utilizador autenticado.
      *
-     * @param  Request  $pedido  Pedido HTTP.
+     * A existência de notificações não lidas é verificada diretamente
+     * na base de dados, sem carregar todas as notificações para memória.
+     *
+     * @param  Request  $pedido  Pedido HTTP atual.
      * @return View Página das notificações.
      *
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function index(
         Request $pedido,
     ): View {
-        $utilizador = $this->obterUtilizadorAutenticado(
-            $pedido,
-        );
+        $utilizador =
+            $this->obterUtilizadorAutenticado(
+                $pedido,
+            );
 
-        $notificacoes = $utilizador
-            ->notifications()
-            ->select([
-                'id',
-                'type',
-                'notifiable_type',
-                'notifiable_id',
-                'data',
-                'read_at',
-                'created_at',
-                'updated_at',
-            ])
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->paginate(
-                self::ITENS_POR_PAGINA,
-            )
-            ->withQueryString();
+        $existemNotificacoesNaoLidas =
+            $utilizador
+                ->unreadNotifications()
+                ->exists();
+
+        $notificacoes =
+            $utilizador
+                ->notifications()
+                ->select([
+                    'id',
+                    'type',
+                    'notifiable_type',
+                    'notifiable_id',
+                    'data',
+                    'read_at',
+                    'created_at',
+                    'updated_at',
+                ])
+                ->orderByDesc(
+                    'created_at',
+                )
+                ->orderByDesc(
+                    'id',
+                )
+                ->paginate(
+                    self::ITENS_POR_PAGINA,
+                )
+                ->withQueryString();
 
         return view(
-            'notifications.index',
+            'notificacoes.indice',
             [
-                /*
-                 * A chave permanece temporariamente em inglês até à revisão
-                 * da vista.
-                 */
-                'notifications' => $notificacoes,
+                'notificacoes' => $notificacoes,
+
+                'existemNotificacoesNaoLidas' => $existemNotificacoesNaoLidas,
             ],
         );
     }
@@ -89,7 +101,7 @@ final class ControladorNotificacao extends Controller
      * que uma notificação pertencente a outra conta seja consultada ou
      * alterada.
      *
-     * @param  Request  $pedido  Pedido HTTP.
+     * @param  Request  $pedido  Pedido HTTP atual.
      * @param  string  $identificadorNotificacao  Identificador da notificação.
      * @return RedirectResponse Redirecionamento para a página anterior.
      *
@@ -97,30 +109,32 @@ final class ControladorNotificacao extends Controller
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function marcarComoLida(
         Request $pedido,
         string $identificadorNotificacao,
     ): RedirectResponse {
-        $utilizador = $this->obterUtilizadorAutenticado(
-            $pedido,
-        );
+        $utilizador =
+            $this->obterUtilizadorAutenticado(
+                $pedido,
+            );
 
         /** @var DatabaseNotification $notificacao */
-        $notificacao = $utilizador
-            ->notifications()
-            ->whereKey(
-                $identificadorNotificacao,
-            )
-            ->firstOrFail();
+        $notificacao =
+            $utilizador
+                ->notifications()
+                ->whereKey(
+                    $identificadorNotificacao,
+                )
+                ->firstOrFail();
 
         if ($notificacao->unread()) {
             $notificacao->markAsRead();
         }
 
         return back()->with(
-            'estado',
+            'sucesso',
             'Notificação marcada como lida.',
         );
     }
@@ -131,38 +145,45 @@ final class ControladorNotificacao extends Controller
      * A atualização é executada diretamente na base de dados, evitando
      * carregar todas as notificações para memória.
      *
-     * @param  Request  $pedido  Pedido HTTP.
+     * @param  Request  $pedido  Pedido HTTP atual.
      * @return RedirectResponse Redirecionamento para a página anterior.
      *
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function marcarTodasComoLidas(
         Request $pedido,
     ): RedirectResponse {
-        $utilizador = $this->obterUtilizadorAutenticado(
-            $pedido,
-        );
+        $utilizador =
+            $this->obterUtilizadorAutenticado(
+                $pedido,
+            );
 
-        $utilizador
-            ->unreadNotifications()
-            ->update([
-                'read_at' => now(),
-            ]);
+        $quantidadeAtualizada =
+            $utilizador
+                ->unreadNotifications()
+                ->update([
+                    'read_at' => now(),
+                ]);
+
+        $mensagem =
+            $quantidadeAtualizada === 1
+            ? 'A notificação não lida foi marcada como lida.'
+            : 'Todas as notificações foram marcadas como lidas.';
 
         return back()->with(
-            'estado',
-            'Todas as notificações foram marcadas como lidas.',
+            'sucesso',
+            $mensagem,
         );
     }
 
     /**
      * Obtém o utilizador autenticado.
      *
-     * @param  Request  $pedido  Pedido HTTP.
+     * @param  Request  $pedido  Pedido HTTP atual.
      * @return Utilizador Utilizador autenticado.
      *
      * @throws AuthenticationException Quando não existe autenticação válida.
@@ -174,7 +195,8 @@ final class ControladorNotificacao extends Controller
     private function obterUtilizadorAutenticado(
         Request $pedido,
     ): Utilizador {
-        $utilizador = $pedido->user();
+        $utilizador =
+            $pedido->user();
 
         if (! $utilizador instanceof Utilizador) {
             throw new AuthenticationException(

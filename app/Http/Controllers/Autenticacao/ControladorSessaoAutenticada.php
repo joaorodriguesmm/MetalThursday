@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Autenticacao;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Autenticacao\AutenticarUtilizadorRequest;
 use App\Models\Autenticacao\Utilizador;
+use App\Regras\Autenticacao\RequisitosPalavraPasse;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
@@ -19,7 +20,7 @@ use Illuminate\View\View;
  *
  * @since 1.0.0
  *
- * @version 2.1.0
+ * @version 3.0.0
  */
 final class ControladorSessaoAutenticada extends Controller
 {
@@ -30,20 +31,23 @@ final class ControladorSessaoAutenticada extends Controller
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function apresentar(): View
     {
         return view(
-            'auth.login',
+            'autenticacao.iniciar-sessao',
+            [
+                'comprimentoMaximoPalavraPasse' => RequisitosPalavraPasse::comprimentoMaximo(),
+            ],
         );
     }
 
     /**
      * Autentica o utilizador e regenera a sessão.
      *
-     * Utilizadores com endereço de e-mail por verificar não podem manter uma
-     * sessão autenticada.
+     * Utilizadores com o endereço de e-mail por verificar não podem manter
+     * uma sessão autenticada.
      *
      * @param  AutenticarUtilizadorRequest  $pedido  Pedido validado.
      * @return RedirectResponse Redirecionamento após a autenticação.
@@ -53,7 +57,7 @@ final class ControladorSessaoAutenticada extends Controller
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
     public function autenticar(
         AutenticarUtilizadorRequest $pedido,
@@ -96,7 +100,9 @@ final class ControladorSessaoAutenticada extends Controller
         }
 
         return redirect()->intended(
-            route('home'),
+            route(
+                'inicio',
+            ),
         );
     }
 
@@ -104,11 +110,11 @@ final class ControladorSessaoAutenticada extends Controller
      * Encerra a sessão do utilizador autenticado.
      *
      * @param  Request  $pedido  Pedido HTTP.
-     * @return RedirectResponse Redirecionamento para o formulário de entrada.
+     * @return RedirectResponse Redirecionamento para o início de sessão.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function terminar(
         Request $pedido,
@@ -123,18 +129,21 @@ final class ControladorSessaoAutenticada extends Controller
     }
 
     /**
-     * Termina a sessão e renova o token CSRF.
+     * Termina a sessão autenticada, invalida a sessão atual e regenera
+     * o token CSRF.
      *
      * @param  Request  $pedido  Pedido HTTP.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function terminarSessao(
         Request $pedido,
     ): void {
-        Auth::guard('web')->logout();
+        Auth::guard(
+            'web',
+        )->logout();
 
         $pedido
             ->session()

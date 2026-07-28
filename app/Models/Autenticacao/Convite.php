@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use InvalidArgumentException;
+use SensitiveParameter;
 
 /**
  * Representa um convite para registo na aplicação.
@@ -40,12 +41,49 @@ use InvalidArgumentException;
  *
  * @since 2.0.0
  *
- * @version 2.1.0
+ * @version 2.2.0
  */
 class Convite extends Model
 {
     /** @use HasFactory<ConviteFactory> */
     use HasFactory;
+
+    /**
+     * Comprimento mínimo permitido para um código de convite.
+     *
+     * @var int
+     *
+     * @since 2.2.0
+     *
+     * @version 1.0.0
+     */
+    public const COMPRIMENTO_MINIMO_CODIGO = 10;
+
+    /**
+     * Comprimento máximo permitido para um código de convite.
+     *
+     * @var int
+     *
+     * @since 2.2.0
+     *
+     * @version 1.0.0
+     */
+    public const COMPRIMENTO_MAXIMO_CODIGO = 128;
+
+    /**
+     * Padrão utilizado nas rotas para validar códigos de convite.
+     *
+     * A constante não inclui delimitadores de expressão regular para poder
+     * ser utilizada diretamente pelo método `where` das rotas.
+     *
+     * @var string
+     *
+     * @since 2.2.0
+     *
+     * @version 1.0.0
+     */
+    public const PADRAO_CODIGO =
+        '[A-Za-z0-9_-]{10,128}';
 
     /**
      * Algoritmo utilizado para calcular o hash dos códigos.
@@ -123,9 +161,13 @@ class Convite extends Model
     {
         return [
             'criado_por_id' => 'integer',
+
             'utilizado_por_id' => 'integer',
+
             'expira_em' => 'immutable_datetime',
+
             'utilizado_em' => 'immutable_datetime',
+
             'revogado_em' => 'immutable_datetime',
         ];
     }
@@ -190,14 +232,21 @@ class Convite extends Model
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function scopePendentes(
         Builder $consulta,
     ): Builder {
         return $consulta
-            ->whereNull('utilizado_em')
-            ->whereNull('revogado_em');
+            ->whereNull(
+                'utilizado_por_id',
+            )
+            ->whereNull(
+                'utilizado_em',
+            )
+            ->whereNull(
+                'revogado_em',
+            );
     }
 
     /**
@@ -211,24 +260,38 @@ class Convite extends Model
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function scopeDisponiveis(
         Builder $consulta,
     ): Builder {
+        $momentoAtual =
+            CarbonImmutable::now();
+
         return $consulta
-            ->whereNull('utilizado_em')
-            ->whereNull('revogado_em')
+            ->whereNull(
+                'utilizado_por_id',
+            )
+            ->whereNull(
+                'utilizado_em',
+            )
+            ->whereNull(
+                'revogado_em',
+            )
             ->where(
-                function (
+                static function (
                     Builder $consultaExpiracao,
+                ) use (
+                    $momentoAtual,
                 ): void {
                     $consultaExpiracao
-                        ->whereNull('expira_em')
+                        ->whereNull(
+                            'expira_em',
+                        )
                         ->orWhere(
                             'expira_em',
                             '>',
-                            now(),
+                            $momentoAtual,
                         );
                 },
             );
@@ -241,14 +304,15 @@ class Convite extends Model
      * @param  string  $codigo  Código original recebido.
      * @return Builder<Convite> Consulta limitada ao hash do código.
      *
-     * @throws InvalidArgumentException Quando o código está vazio.
+     * @throws InvalidArgumentException Quando o código não é válido.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function scopeComCodigo(
         Builder $consulta,
+        #[SensitiveParameter]
         string $codigo,
     ): Builder {
         return $consulta->where(
@@ -268,13 +332,14 @@ class Convite extends Model
      *
      * @param  string  $codigo  Código original do convite.
      *
-     * @throws InvalidArgumentException Quando o código está vazio.
+     * @throws InvalidArgumentException Quando o código não é válido.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function definirCodigo(
+        #[SensitiveParameter]
         string $codigo,
     ): void {
         $this->codigo_hash =
@@ -292,24 +357,28 @@ class Convite extends Model
      * @param  string  $codigo  Código original recebido.
      * @return bool Verdadeiro quando o código corresponde ao convite.
      *
-     * @throws InvalidArgumentException Quando o código está vazio.
+     * @throws InvalidArgumentException Quando o código não é válido.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function correspondeAoCodigo(
+        #[SensitiveParameter]
         string $codigo,
     ): bool {
+        $hashPersistido =
+            $this->codigo_hash;
+
         if (
-            ! isset($this->codigo_hash)
-            || $this->codigo_hash === ''
+            ! is_string($hashPersistido)
+            || $hashPersistido === ''
         ) {
             return false;
         }
 
         return hash_equals(
-            $this->codigo_hash,
+            $hashPersistido,
             self::calcularHashCodigo(
                 $codigo,
             ),
@@ -319,15 +388,20 @@ class Convite extends Model
     /**
      * Determina se o convite já foi utilizado.
      *
+     * Um convite é considerado utilizado quando possui o utilizador ou o
+     * momento de utilização preenchido. Desta forma, um estado parcialmente
+     * persistido não volta a ser considerado disponível.
+     *
      * @return bool Verdadeiro quando o convite já foi utilizado.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function foiUtilizado(): bool
     {
-        return $this->utilizado_em !== null;
+        return $this->utilizado_por_id !== null
+            || $this->utilizado_em !== null;
     }
 
     /**
@@ -352,7 +426,7 @@ class Convite extends Model
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function estaExpirado(
         ?CarbonInterface $momento = null,
@@ -361,8 +435,15 @@ class Convite extends Model
             return false;
         }
 
+        $momentoComparacao =
+            $momento !== null
+            ? CarbonImmutable::instance(
+                $momento,
+            )
+            : CarbonImmutable::now();
+
         return $this->expira_em->lessThanOrEqualTo(
-            $momento ?? now(),
+            $momentoComparacao,
         );
     }
 
@@ -401,28 +482,32 @@ class Convite extends Model
      *
      * @since 2.0.0
      *
-     * @version 2.1.0
+     * @version 2.2.0
      */
     public function utilizar(
         Utilizador $utilizador,
         ?CarbonInterface $momento = null,
     ): void {
         $momentoUtilizacao =
-            $momento ?? now();
-
-        if (
-            ! $this->estaDisponivel(
-                $momentoUtilizacao,
+            $momento !== null
+            ? CarbonImmutable::instance(
+                $momento,
             )
-        ) {
+            : CarbonImmutable::now();
+
+        if (! $this->estaDisponivel($momentoUtilizacao)) {
             throw new DomainException(
                 'O convite não está disponível para utilização.',
             );
         }
 
+        $identificadorUtilizador =
+            $utilizador->getKey();
+
         if (
             ! $utilizador->exists
-            || $utilizador->getKey() === null
+            || ! is_numeric($identificadorUtilizador)
+            || (int) $identificadorUtilizador < 1
         ) {
             throw new DomainException(
                 'O utilizador associado ao convite ainda não foi persistido.',
@@ -430,7 +515,7 @@ class Convite extends Model
         }
 
         $this->utilizado_por_id =
-            (int) $utilizador->getKey();
+            (int) $identificadorUtilizador;
 
         $this->utilizado_em =
             $momentoUtilizacao;
@@ -453,7 +538,7 @@ class Convite extends Model
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function revogar(
         ?CarbonInterface $momento = null,
@@ -469,40 +554,79 @@ class Convite extends Model
         }
 
         $this->revogado_em =
-            $momento ?? now();
+            $momento !== null
+            ? CarbonImmutable::instance(
+                $momento,
+            )
+            : CarbonImmutable::now();
+    }
+
+    /**
+     * Normaliza e valida um código de convite.
+     *
+     * Os espaços exteriores são removidos, mas a capitalização é preservada.
+     * Os códigos permanecem sensíveis a maiúsculas e minúsculas.
+     *
+     * @param  string  $codigo  Código original do convite.
+     * @return string Código normalizado.
+     *
+     * @throws InvalidArgumentException Quando o código não é válido.
+     *
+     * @since 2.2.0
+     *
+     * @version 1.0.0
+     */
+    public static function normalizarCodigo(
+        #[SensitiveParameter]
+        string $codigo,
+    ): string {
+        $codigoNormalizado =
+            trim(
+                $codigo,
+            );
+
+        $comprimento =
+            strlen(
+                $codigoNormalizado,
+            );
+
+        if (
+            $comprimento < self::COMPRIMENTO_MINIMO_CODIGO
+            || $comprimento > self::COMPRIMENTO_MAXIMO_CODIGO
+            || preg_match(
+                '/\A'.self::PADRAO_CODIGO.'\z/',
+                $codigoNormalizado,
+            ) !== 1
+        ) {
+            throw new InvalidArgumentException(
+                'O código do convite não é válido.',
+            );
+        }
+
+        return $codigoNormalizado;
     }
 
     /**
      * Calcula o hash persistido para um código de convite.
      *
-     * Os espaços no início e no fim são removidos, mas a capitalização é
-     * preservada. Assim, os códigos permanecem sensíveis a maiúsculas e
-     * minúsculas.
-     *
      * @param  string  $codigo  Código original do convite.
      * @return string Hash hexadecimal do código.
      *
-     * @throws InvalidArgumentException Quando o código está vazio.
+     * @throws InvalidArgumentException Quando o código não é válido.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public static function calcularHashCodigo(
+        #[SensitiveParameter]
         string $codigo,
     ): string {
-        $codigoNormalizado =
-            trim($codigo);
-
-        if ($codigoNormalizado === '') {
-            throw new InvalidArgumentException(
-                'O código do convite não pode estar vazio.',
-            );
-        }
-
         return hash(
             self::ALGORITMO_HASH,
-            $codigoNormalizado,
+            self::normalizarCodigo(
+                $codigo,
+            ),
         );
     }
 }

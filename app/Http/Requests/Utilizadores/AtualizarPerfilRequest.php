@@ -21,10 +21,22 @@ use LogicException;
  *
  * @since 1.0.0
  *
- * @version 2.1.0
+ * @version 2.2.0
  */
 final class AtualizarPerfilRequest extends FormRequest
 {
+    /**
+     * Tamanho máximo permitido para a fotografia, em kilobytes.
+     *
+     * @var int
+     *
+     * @since 2.2.0
+     *
+     * @version 1.0.0
+     */
+    private const TAMANHO_MAXIMO_FOTOGRAFIA_KILOBYTES =
+        10 * 1024;
+
     /**
      * Saco utilizado para os erros da atualização do perfil.
      *
@@ -69,11 +81,15 @@ final class AtualizarPerfilRequest extends FormRequest
     {
         $this->merge([
             'nome' => $this->normalizarNome(
-                $this->input('nome'),
+                $this->input(
+                    'nome',
+                ),
             ),
 
             'email' => $this->normalizarEmail(
-                $this->input('email'),
+                $this->input(
+                    'email',
+                ),
             ),
         ]);
     }
@@ -91,7 +107,7 @@ final class AtualizarPerfilRequest extends FormRequest
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 2.2.0
      */
     public function rules(): array
     {
@@ -110,7 +126,9 @@ final class AtualizarPerfilRequest extends FormRequest
                         'png',
                         'webp',
                     ])
-                    ->max('10mb'),
+                    ->max(
+                        self::TAMANHO_MAXIMO_FOTOGRAFIA_KILOBYTES,
+                    ),
             ],
 
             'nome' => [
@@ -145,7 +163,7 @@ final class AtualizarPerfilRequest extends FormRequest
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 2.2.0
      */
     public function messages(): array
     {
@@ -156,7 +174,7 @@ final class AtualizarPerfilRequest extends FormRequest
 
             'fotografia.mimetypes' => 'A fotografia deve estar no formato JPG, PNG ou WebP.',
 
-            'fotografia.max' => 'A fotografia não pode ter mais de 10 MB.',
+            'fotografia.max' => 'A fotografia não pode ter mais de 10 MiB.',
 
             'nome.required' => 'Por favor, insere o teu nome.',
 
@@ -328,15 +346,20 @@ final class AtualizarPerfilRequest extends FormRequest
             return $valor;
         }
 
-        $nome = preg_replace(
-            '/\s+/u',
-            ' ',
-            trim($valor),
-        );
+        $nome =
+            preg_replace(
+                '/\s+/u',
+                ' ',
+                trim(
+                    $valor,
+                ),
+            );
 
         return is_string($nome)
             ? $nome
-            : trim($valor);
+            : trim(
+                $valor,
+            );
     }
 
     /**
@@ -354,7 +377,9 @@ final class AtualizarPerfilRequest extends FormRequest
     ): mixed {
         return is_string($valor)
             ? mb_strtolower(
-                trim($valor),
+                trim(
+                    $valor,
+                ),
             )
             : $valor;
     }

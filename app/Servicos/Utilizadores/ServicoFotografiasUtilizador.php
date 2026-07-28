@@ -18,7 +18,7 @@ use RuntimeException;
  *
  * @since 2.0.0
  *
- * @version 1.1.0
+ * @version 2.0.0
  */
 final class ServicoFotografiasUtilizador
 {
@@ -58,11 +58,11 @@ final class ServicoFotografiasUtilizador
     /**
      * Guarda uma fotografia no disco público.
      *
-     * O Laravel gera um nome aleatório para o ficheiro, evitando utilizar o
-     * nome original enviado pelo utilizador.
+     * O Laravel gera um nome aleatório para o ficheiro, evitando utilizar
+     * o nome original fornecido pelo utilizador.
      *
      * @param  UploadedFile  $fotografia  Fotografia validada.
-     * @return string Caminho relativo do ficheiro guardado.
+     * @return string Caminho relativo do ficheiro armazenado.
      *
      * @throws InvalidArgumentException Quando o carregamento não é válido.
      * @throws RuntimeException Quando o armazenamento falha ou devolve um
@@ -70,7 +70,7 @@ final class ServicoFotografiasUtilizador
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function guardar(
         UploadedFile $fotografia,
@@ -93,13 +93,12 @@ final class ServicoFotografiasUtilizador
             );
         }
 
-        $caminhoNormalizado =
-            $this->normalizarCaminho(
-                $caminho,
-            );
+        $caminhoNormalizado = $this->normalizarCaminho(
+            $caminho,
+        );
 
         if (
-            ! $this->eCaminhoPermitido(
+            ! $this->caminhoPertenceAoDiretorioPermitido(
                 $caminhoNormalizado,
             )
         ) {
@@ -114,37 +113,37 @@ final class ServicoFotografiasUtilizador
     /**
      * Elimina uma fotografia gerida pela aplicação.
      *
-     * Um caminho nulo ou vazio representa a inexistência de fotografia e não
-     * constitui um erro. A operação é idempotente: um ficheiro inexistente é
-     * considerado eliminado.
+     * Um caminho nulo ou vazio representa a inexistência de fotografia. A
+     * operação é idempotente: um ficheiro inexistente é considerado
+     * eliminado.
      *
      * @param  string|null  $caminho  Caminho relativo da fotografia.
-     * @return bool Verdadeiro quando o ficheiro não existe ou foi eliminado.
      *
      * @throws InvalidArgumentException Quando o caminho não é válido ou não
      *                                  pertence ao diretório autorizado.
+     * @throws RuntimeException Quando o ficheiro existe, mas não pode ser
+     *                          eliminado.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function eliminar(
         ?string $caminho,
-    ): bool {
+    ): void {
         if (
             $caminho === null
             || trim($caminho) === ''
         ) {
-            return true;
+            return;
         }
 
-        $caminhoNormalizado =
-            $this->normalizarCaminho(
-                $caminho,
-            );
+        $caminhoNormalizado = $this->normalizarCaminho(
+            $caminho,
+        );
 
         if (
-            ! $this->eCaminhoPermitido(
+            ! $this->caminhoPertenceAoDiretorioPermitido(
                 $caminhoNormalizado,
             )
         ) {
@@ -153,30 +152,38 @@ final class ServicoFotografiasUtilizador
             );
         }
 
-        $disco =
-            Storage::disk(
-                self::DISCO,
-            );
+        $disco = Storage::disk(
+            self::DISCO,
+        );
 
         if (
             ! $disco->exists(
                 $caminhoNormalizado,
             )
         ) {
-            return true;
+            return;
         }
 
-        return $disco->delete(
+        $fotografiaEliminada = $disco->delete(
             $caminhoNormalizado,
         );
+
+        if (! $fotografiaEliminada) {
+            throw new RuntimeException(
+                sprintf(
+                    'Não foi possível eliminar a fotografia "%s".',
+                    $caminhoNormalizado,
+                ),
+            );
+        }
     }
 
     /**
      * Valida o carregamento recebido.
      *
-     * A validação de formato, dimensões e tamanho máximo deve continuar a ser
-     * efetuada pelo pedido HTTP. Este método confirma defensivamente que o
-     * carregamento não terminou com um erro.
+     * A validação do formato, dimensões e tamanho máximo pertence ao pedido
+     * HTTP. Este método confirma defensivamente que o carregamento não
+     * terminou com um erro.
      *
      * @param  UploadedFile  $fotografia  Fotografia recebida.
      *
@@ -217,10 +224,9 @@ final class ServicoFotografiasUtilizador
     private function normalizarCaminho(
         string $caminho,
     ): string {
-        $caminhoNormalizado =
-            trim(
-                $caminho,
-            );
+        $caminhoNormalizado = trim(
+            $caminho,
+        );
 
         if (
             $caminhoNormalizado === ''
@@ -268,11 +274,10 @@ final class ServicoFotografiasUtilizador
             );
         }
 
-        $segmentos =
-            explode(
-                '/',
-                $caminhoNormalizado,
-            );
+        $segmentos = explode(
+            '/',
+            $caminhoNormalizado,
+        );
 
         foreach ($segmentos as $segmento) {
             if (
@@ -295,21 +300,21 @@ final class ServicoFotografiasUtilizador
     /**
      * Determina se o caminho pertence ao diretório autorizado.
      *
-     * As fotografias são guardadas diretamente no diretório dos utilizadores.
-     * Não são aceites subdiretórios adicionais nem nomes de ficheiro vazios.
+     * As fotografias são guardadas diretamente no diretório dos
+     * utilizadores. Não são aceites subdiretórios adicionais nem nomes de
+     * ficheiro vazios.
      *
      * @param  string  $caminho  Caminho validado.
      * @return bool Verdadeiro quando o ficheiro é gerido pela aplicação.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 1.0.0
      */
-    private function eCaminhoPermitido(
+    private function caminhoPertenceAoDiretorioPermitido(
         string $caminho,
     ): bool {
-        $prefixo =
-            self::DIRETORIO
+        $prefixo = self::DIRETORIO
             .'/';
 
         if (
@@ -321,13 +326,12 @@ final class ServicoFotografiasUtilizador
             return false;
         }
 
-        $nomeFicheiro =
-            substr(
-                $caminho,
-                strlen(
-                    $prefixo,
-                ),
-            );
+        $nomeFicheiro = substr(
+            $caminho,
+            strlen(
+                $prefixo,
+            ),
+        );
 
         return $nomeFicheiro !== ''
             && ! str_contains(

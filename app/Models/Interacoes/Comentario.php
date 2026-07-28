@@ -8,14 +8,14 @@ use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use Carbon\CarbonInterface;
-use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Auth;
+use LogicException;
 
 /**
  * Representa um comentário publicado numa entidade comentável.
@@ -30,6 +30,8 @@ use Illuminate\Support\Facades\Auth;
  * @property string $tipo_comentavel
  * @property int $comentavel_id
  * @property int|null $comentario_pai_id
+ * @property int $quantidade_gostos
+ * @property bool $gostado_pelo_utilizador_autenticado
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
  * @property CarbonInterface|null $deleted_at
@@ -38,12 +40,10 @@ use Illuminate\Support\Facades\Auth;
  * @property-read Comentario|null $comentarioPai
  * @property-read Collection<int, Comentario> $respostas
  * @property-read Collection<int, Gosto> $gostos
- * @property-read int $quantidade_gostos
- * @property-read bool $gostado_pelo_utilizador_autenticado
  *
  * @since 1.0.0
  *
- * @version 2.1.0
+ * @version 3.0.0
  */
 class Comentario extends Model
 {
@@ -59,22 +59,6 @@ class Comentario extends Model
      * @version 2.0.0
      */
     protected $table = 'comentarios';
-
-    /**
-     * Relações carregadas automaticamente.
-     *
-     * O utilizador é normalmente necessário na apresentação dos comentários,
-     * pelo que é carregado juntamente com cada comentário.
-     *
-     * @var array<int, string>
-     *
-     * @since 1.0.0
-     *
-     * @version 2.0.0
-     */
-    protected $with = [
-        'utilizador',
-    ];
 
     /**
      * Atributos permitidos em operações de atribuição em massa.
@@ -97,18 +81,33 @@ class Comentario extends Model
     /**
      * Define as conversões automáticas dos atributos.
      *
+     * Os atributos `quantidade_gostos` e
+     * `gostado_pelo_utilizador_autenticado` são adicionados pelas consultas
+     * de apresentação e não correspondem a colunas físicas da tabela.
+     *
      * @return array<string, string> Conversões dos atributos.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     protected function casts(): array
     {
         return [
-            'utilizador_id' => 'integer',
-            'comentavel_id' => 'integer',
-            'comentario_pai_id' => 'integer',
+            'utilizador_id' =>
+            'integer',
+
+            'comentavel_id' =>
+            'integer',
+
+            'comentario_pai_id' =>
+            'integer',
+
+            'quantidade_gostos' =>
+            'integer',
+
+            'gostado_pelo_utilizador_autenticado' =>
+            'boolean',
         ];
     }
 
@@ -210,89 +209,109 @@ class Comentario extends Model
                 self::class,
                 'comentario_pai_id',
             )
-            ->orderBy('created_at')
-            ->orderBy('id');
+            ->orderBy(
+                'created_at',
+            )
+            ->orderBy(
+                'id',
+            );
     }
 
     /**
-     * Obtém a quantidade de gostos do comentário.
+     * Adiciona os dados necessários à apresentação de comentários.
      *
-     * Quando a contagem ou a relação já está carregada, o resultado é obtido
-     * em memória. Caso contrário, é executada uma consulta de contagem.
+     * A consulta carrega o autor, calcula a quantidade total de gostos e,
+     * quando existe um utilizador autenticado, determina se esse utilizador
+     * atribuiu gosto ao comentário.
      *
-     * @return Attribute<int, never> Quantidade de gostos.
+     * Este scope prepara apenas o nível atual da consulta. As respostas
+     * descendentes devem receber o mesmo scope através do serviço ou
+     * controlador responsável por carregar a árvore.
      *
-     * @since 1.0.0
+     * @param  Builder<Comentario>  $consulta  Consulta dos comentários.
+     * @param  int|null  $identificadorUtilizador  Utilizador autenticado.
+     * @return Builder<Comentario> Consulta preparada.
      *
-     * @version 2.0.0
+     * @since 3.0.0
+     *
+     * @version 1.0.0
      */
-    protected function quantidadeGostos(): Attribute
-    {
-        return Attribute::get(
-            function (): int {
-                if (
-                    array_key_exists(
-                        'gostos_count',
-                        $this->attributes,
-                    )
-                ) {
-                    return (int) $this->attributes['gostos_count'];
-                }
+    public function scopeComDadosApresentacao(
+        Builder $consulta,
+        ?int $identificadorUtilizador = null,
+    ): Builder {
+        $consulta
+            ->with(
+                'utilizador',
+            )
+            ->withCount([
+                'gostos as quantidade_gostos',
+            ]);
 
-                if ($this->relationLoaded('gostos')) {
-                    return $this
-                        ->getRelation('gostos')
-                        ->count();
-                }
+        if (
+            $identificadorUtilizador === null
+            || $identificadorUtilizador < 1
+        ) {
+            return $consulta;
+        }
 
-                return $this
-                    ->gostos()
-                    ->count();
+        return $consulta->withCount([
+            'gostos as gostado_pelo_utilizador_autenticado' =>
+            static function (
+                Builder $consultaGostos,
+            ) use (
+                $identificadorUtilizador,
+            ): void {
+                $consultaGostos->where(
+                    'utilizador_id',
+                    $identificadorUtilizador,
+                );
             },
+        ]);
+    }
+
+    /**
+     * Limita a consulta aos comentários principais.
+     *
+     * @param  Builder<Comentario>  $consulta  Consulta dos comentários.
+     * @return Builder<Comentario> Consulta limitada.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    public function scopePrincipais(
+        Builder $consulta,
+    ): Builder {
+        return $consulta->whereNull(
+            'comentario_pai_id',
         );
     }
 
     /**
-     * Determina se o utilizador autenticado gosta do comentário.
+     * Ordena os comentários cronologicamente.
      *
-     * Quando a relação dos gostos já estiver carregada, a verificação é
-     * efetuada em memória. Caso contrário, é executada uma consulta.
+     * O identificador é utilizado como segundo critério para garantir uma
+     * ordenação determinística quando dois comentários possuem o mesmo
+     * momento de criação.
      *
-     * @return Attribute<bool, never> Estado do gosto do utilizador
-     *                                autenticado.
+     * @param  Builder<Comentario>  $consulta  Consulta dos comentários.
+     * @return Builder<Comentario> Consulta ordenada.
      *
-     * @since 1.0.0
+     * @since 3.0.0
      *
-     * @version 2.0.0
+     * @version 1.0.0
      */
-    protected function gostadoPeloUtilizadorAutenticado(): Attribute
-    {
-        return Attribute::get(
-            function (): bool {
-                $utilizadorId = Auth::id();
-
-                if ($utilizadorId === null) {
-                    return false;
-                }
-
-                if ($this->relationLoaded('gostos')) {
-                    return $this
-                        ->getRelation('gostos')
-                        ->contains(
-                            'utilizador_id',
-                            (int) $utilizadorId,
-                        );
-                }
-
-                return $this
-                    ->gostos()
-                    ->where(
-                        'utilizador_id',
-                        $utilizadorId,
-                    )
-                    ->exists();
-            },
-        );
+    public function scopeOrdenadosCronologicamente(
+        Builder $consulta,
+    ): Builder {
+        return $consulta
+            ->orderBy(
+                'created_at',
+            )
+            ->orderBy(
+                'id',
+            );
     }
 
     /**
@@ -301,26 +320,57 @@ class Comentario extends Model
      * Um comentário pode pertencer diretamente a uma MetalThursday ou a uma
      * secção pertencente a uma MetalThursday.
      *
-     * Este método é um auxiliar de domínio e não uma relação Eloquent.
+     * As relações necessárias devem ser previamente carregadas para impedir
+     * consultas implícitas durante a utilização deste auxiliar.
      *
      * @return MetalThursday|null MetalThursday associada ou nula.
      *
+     * @throws LogicException Quando uma relação necessária não está carregada
+     *                        ou possui um tipo inesperado.
+     *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function metalThursdayAssociado(): ?MetalThursday
     {
-        $comentavel = $this->comentavel;
+        if (! $this->relationLoaded('comentavel')) {
+            throw new LogicException(
+                'A relação "comentavel" deve estar carregada antes de obter a MetalThursday associada.',
+            );
+        }
+
+        $comentavel = $this->getRelation(
+            'comentavel',
+        );
 
         if ($comentavel instanceof MetalThursday) {
             return $comentavel;
         }
 
-        if ($comentavel instanceof SeccaoMetalThursday) {
-            return $comentavel->metalThursday;
+        if (! $comentavel instanceof SeccaoMetalThursday) {
+            return null;
         }
 
-        return null;
+        if (! $comentavel->relationLoaded('metalThursday')) {
+            throw new LogicException(
+                'A relação "metalThursday" da secção deve estar carregada.',
+            );
+        }
+
+        $metalThursday = $comentavel->getRelation(
+            'metalThursday',
+        );
+
+        if (
+            $metalThursday !== null
+            && ! $metalThursday instanceof MetalThursday
+        ) {
+            throw new LogicException(
+                'A relação "metalThursday" da secção possui um tipo inesperado.',
+            );
+        }
+
+        return $metalThursday;
     }
 }

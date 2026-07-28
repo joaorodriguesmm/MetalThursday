@@ -11,10 +11,13 @@ use App\ObjetosValor\Utilizadores\EnderecoEmail;
 use App\ObjetosValor\Utilizadores\NomeUtilizador;
 use App\Regras\Autenticacao\RequisitosPalavraPasse;
 use App\Servicos\Comunicacoes\ServicoPermissoesEmail;
+use App\Servicos\Utilizadores\ServicoFotografiasUtilizador;
 use Carbon\CarbonImmutable;
 use DomainException;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use InvalidArgumentException;
 use SensitiveParameter;
 use Throwable;
@@ -22,12 +25,13 @@ use Throwable;
 /**
  * Gere o registo de utilizadores através de convites.
  *
- * A criação do utilizador, a atribuição das permissões de e-mail e a
- * utilização do convite são executadas na mesma transação.
+ * O serviço coordena o armazenamento da fotografia, a criação transacional
+ * do utilizador, a atribuição das permissões de e-mail e a utilização do
+ * convite.
  *
  * @since 2.0.0
  *
- * @version 1.1.0
+ * @version 2.1.0
  */
 final class ServicoRegistoPorConvite
 {
@@ -43,53 +47,47 @@ final class ServicoRegistoPorConvite
     private const TENTATIVAS_TRANSACAO = 3;
 
     /**
-     * Comprimento máximo aceite para um código de convite.
-     *
-     * @var int
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const COMPRIMENTO_MAXIMO_CODIGO = 255;
-
-    /**
-     * Cria o serviço.
+     * Cria uma nova instância do serviço.
      *
      * @param  ServicoPermissoesEmail  $servicoPermissoesEmail  Serviço
-     *                                                          responsável
-     *                                                          pelas permissões
-     *                                                          de e-mail.
+     *                                                          responsável pelas permissões de e-mail.
+     * @param  ServicoFotografiasUtilizador  $servicoFotografiasUtilizador
+     *                                                                      Serviço responsável pelas fotografias.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function __construct(
         private readonly ServicoPermissoesEmail $servicoPermissoesEmail,
+        private readonly ServicoFotografiasUtilizador $servicoFotografiasUtilizador,
     ) {}
 
     /**
      * Regista um utilizador através de um convite disponível.
      *
+     * A fotografia é armazenada antes da abertura da transação. Caso o
+     * registo transacional falhe, a fotografia armazenada é eliminada sem
+     * substituir a exceção que causou a falha.
+     *
      * @param  string  $codigoConvite  Código original do convite.
      * @param  string  $nome  Nome do novo utilizador.
      * @param  string  $email  Endereço de e-mail.
      * @param  string  $palavraPasse  Palavra-passe em texto simples.
-     * @param  string|null  $caminhoFotografia  Caminho relativo da fotografia.
+     * @param  UploadedFile|null  $fotografia  Fotografia enviada.
      * @param  array<int, int|string>  $identificadoresPermissoesEmail
-     *                                                                  Permissões
-     *                                                                  selecionadas.
+     *                                                                  Permissões selecionadas.
      * @return Utilizador Utilizador criado.
      *
-     * @throws DomainException Quando o convite não está disponível, o endereço
-     *                         não corresponde ao convite ou o e-mail já existe.
+     * @throws DomainException Quando o convite não está disponível, o
+     *                         endereço não corresponde ao convite ou o
+     *                         e-mail já existe.
      * @throws InvalidArgumentException Quando algum dado não é válido.
-     * @throws Throwable Quando ocorre outro erro durante a transação.
+     * @throws Throwable Quando o armazenamento ou o registo falham.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.1.0
      */
     public function registar(
         #[SensitiveParameter]
@@ -98,11 +96,11 @@ final class ServicoRegistoPorConvite
         string $email,
         #[SensitiveParameter]
         string $palavraPasse,
-        ?string $caminhoFotografia = null,
+        ?UploadedFile $fotografia = null,
         array $identificadoresPermissoesEmail = [],
     ): Utilizador {
         $codigoNormalizado =
-            $this->normalizarCodigoConvite(
+            Convite::normalizarCodigo(
                 $codigoConvite,
             );
 
@@ -125,118 +123,157 @@ final class ServicoRegistoPorConvite
             $palavraPasse,
         );
 
-        $caminhoNormalizado =
-            $this->normalizarCaminhoFotografia(
+        $caminhoFotografia =
+            $fotografia instanceof UploadedFile
+            ? $this
+                ->servicoFotografiasUtilizador
+                ->guardar(
+                    $fotografia,
+                )
+            : null;
+
+        try {
+            return $this->registarTransacionalmente(
+                codigoHash: $codigoHash,
+
+                nome: $nomeUtilizador,
+
+                email: $enderecoEmail,
+
+                palavraPasse: $palavraPasse,
+
+                caminhoFotografia: $caminhoFotografia,
+
+                identificadoresPermissoesEmail: $identificadoresPermissoesEmail,
+            );
+        } catch (UniqueConstraintViolationException $excecao) {
+            $this->eliminarFotografiaAposFalha(
                 $caminhoFotografia,
             );
 
-        try {
-            return DB::transaction(
-                function () use (
-                    $codigoHash,
-                    $nomeUtilizador,
-                    $enderecoEmail,
-                    $palavraPasse,
-                    $caminhoNormalizado,
-                    $identificadoresPermissoesEmail,
-                ): Utilizador {
-                    $momentoUtilizacao =
-                        CarbonImmutable::now();
-
-                    $convite =
-                        Convite::query()
-                            ->where(
-                                'codigo_hash',
-                                $codigoHash,
-                            )
-                            ->lockForUpdate()
-                            ->first();
-
-                    if (
-                        ! $convite instanceof Convite
-                        || ! $convite->estaDisponivel(
-                            $momentoUtilizacao,
-                        )
-                    ) {
-                        throw new DomainException(
-                            'O convite não está disponível para utilização.',
-                        );
-                    }
-
-                    $this->validarEmailDestino(
-                        $convite,
-                        $enderecoEmail,
-                    );
-
-                    $utilizador =
-                        new Utilizador;
-
-                    $utilizador->nome =
-                        $nomeUtilizador->valor();
-
-                    $utilizador->email =
-                        $enderecoEmail->valor();
-
-                    /*
-                     * O cast `hashed` do modelo aplica a hash antes da
-                     * persistência.
-                     */
-                    $utilizador->password =
-                        $palavraPasse;
-
-                    /*
-                     * O mutator do modelo Utilizador realiza a validação final
-                     * de segurança do caminho.
-                     */
-                    $utilizador->fotografia =
-                        $caminhoNormalizado;
-
-                    $utilizador->papel =
-                        PapelUtilizador::Utilizador;
-
-                    $utilizador->saveOrFail();
-
-                    $this
-                        ->servicoPermissoesEmail
-                        ->sincronizar(
-                            $utilizador,
-                            $identificadoresPermissoesEmail,
-                        );
-
-                    $convite->utilizar(
-                        $utilizador,
-                        $momentoUtilizacao,
-                    );
-
-                    $convite->saveOrFail();
-
-                    return $utilizador;
-                },
-                self::TENTATIVAS_TRANSACAO,
+            $this->relancarConflitoRestricaoUnica(
+                $excecao,
+                $enderecoEmail,
             );
-        } catch (
-            UniqueConstraintViolationException $excecao
-        ) {
-            if (
-                Utilizador::query()
-                    ->where(
-                        'email',
-                        $enderecoEmail->valor(),
-                    )
-                    ->exists()
-            ) {
-                throw new DomainException(
-                    'O endereço de e-mail já está associado a outro utilizador.',
-                    previous: $excecao,
-                );
-            }
+        } catch (Throwable $excecao) {
+            $this->eliminarFotografiaAposFalha(
+                $caminhoFotografia,
+            );
 
-            /*
-             * A restrição violada não pertence ao endereço de e-mail.
-             * Preservamos a exceção original para não esconder o erro real.
-             */
             throw $excecao;
         }
+    }
+
+    /**
+     * Executa o registo transacional do utilizador.
+     *
+     * @param  string  $codigoHash  Hash do código do convite.
+     * @param  NomeUtilizador  $nome  Nome validado do utilizador.
+     * @param  EnderecoEmail  $email  Endereço de e-mail validado.
+     * @param  string  $palavraPasse  Palavra-passe em texto simples.
+     * @param  string|null  $caminhoFotografia  Caminho da fotografia.
+     * @param  array<int, int|string>  $identificadoresPermissoesEmail
+     *                                                                  Permissões selecionadas.
+     * @return Utilizador Utilizador criado.
+     *
+     * @throws Throwable Quando a transação não pode ser concluída.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.1.0
+     */
+    private function registarTransacionalmente(
+        string $codigoHash,
+        NomeUtilizador $nome,
+        EnderecoEmail $email,
+        #[SensitiveParameter]
+        string $palavraPasse,
+        ?string $caminhoFotografia,
+        array $identificadoresPermissoesEmail,
+    ): Utilizador {
+        return DB::transaction(
+            function () use (
+                $codigoHash,
+                $nome,
+                $email,
+                $palavraPasse,
+                $caminhoFotografia,
+                $identificadoresPermissoesEmail,
+            ): Utilizador {
+                $momentoUtilizacao =
+                    CarbonImmutable::now();
+
+                $convite =
+                    Convite::query()
+                        ->where(
+                            'codigo_hash',
+                            $codigoHash,
+                        )
+                        ->lockForUpdate()
+                        ->first();
+
+                if (
+                    ! $convite instanceof Convite
+                    || ! $convite->estaDisponivel(
+                        $momentoUtilizacao,
+                    )
+                ) {
+                    throw new DomainException(
+                        'O convite não está disponível para utilização.',
+                    );
+                }
+
+                $this->validarEmailDestino(
+                    $convite,
+                    $email,
+                );
+
+                $utilizador =
+                    new Utilizador;
+
+                $utilizador->nome =
+                    $nome->valor();
+
+                $utilizador->email =
+                    $email->valor();
+
+                /*
+                 * A hash é aplicada explicitamente pelo serviço. O cast
+                 * `hashed` do modelo permanece como proteção adicional.
+                 */
+                $utilizador->password =
+                    Hash::make(
+                        $palavraPasse,
+                    );
+
+                /*
+                 * O mutator do modelo realiza a validação final de segurança
+                 * do caminho relativo da fotografia.
+                 */
+                $utilizador->fotografia =
+                    $caminhoFotografia;
+
+                $utilizador->papel =
+                    PapelUtilizador::Utilizador;
+
+                $utilizador->saveOrFail();
+
+                $this->servicoPermissoesEmail->sincronizar(
+                    $utilizador,
+                    $identificadoresPermissoesEmail,
+                );
+
+                $convite->utilizar(
+                    $utilizador,
+                    $momentoUtilizacao,
+                );
+
+                $convite->saveOrFail();
+
+                return $utilizador;
+            },
+            self::TENTATIVAS_TRANSACAO,
+        );
     }
 
     /**
@@ -280,87 +317,71 @@ final class ServicoRegistoPorConvite
     }
 
     /**
-     * Normaliza e valida o código do convite.
+     * Relança uma violação de restrição única com uma mensagem de domínio
+     * quando o conflito pertence ao endereço de e-mail.
      *
-     * Os espaços exteriores são removidos por se tratar de um valor recebido
-     * através de um formulário. O restante conteúdo mantém-se sensível a
-     * maiúsculas e minúsculas.
+     * @param  UniqueConstraintViolationException  $excecao  Exceção original.
+     * @param  EnderecoEmail  $email  Endereço utilizado no registo.
      *
-     * @param  string  $codigo  Código recebido.
-     * @return string Código normalizado.
-     *
-     * @throws InvalidArgumentException Quando o código não é válido.
+     * @throws DomainException Quando o endereço já está registado.
+     * @throws UniqueConstraintViolationException Quando a restrição violada
+     *                                            não pertence ao endereço.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    private function normalizarCodigoConvite(
-        #[SensitiveParameter]
-        string $codigo,
-    ): string {
-        $codigoNormalizado =
-            trim(
-                $codigo,
-            );
+    private function relancarConflitoRestricaoUnica(
+        UniqueConstraintViolationException $excecao,
+        EnderecoEmail $email,
+    ): never {
+        $emailJaExiste =
+            Utilizador::query()
+                ->where(
+                    'email',
+                    $email->valor(),
+                )
+                ->exists();
 
-        if ($codigoNormalizado === '') {
-            throw new InvalidArgumentException(
-                'O código do convite é obrigatório.',
-            );
-        }
-
-        if (
-            mb_strlen(
-                $codigoNormalizado,
-            ) > self::COMPRIMENTO_MAXIMO_CODIGO
-        ) {
-            throw new InvalidArgumentException(
-                'O código do convite é demasiado longo.',
+        if ($emailJaExiste) {
+            throw new DomainException(
+                'O endereço de e-mail já está associado a outro utilizador.',
+                previous: $excecao,
             );
         }
 
-        if (
-            preg_match(
-                '/[\x00-\x1F\x7F]/',
-                $codigoNormalizado,
-            ) === 1
-        ) {
-            throw new InvalidArgumentException(
-                'O código do convite contém caracteres inválidos.',
-            );
-        }
-
-        return $codigoNormalizado;
+        throw $excecao;
     }
 
     /**
-     * Normaliza o caminho da fotografia.
+     * Elimina a fotografia armazenada após uma falha do registo.
      *
-     * A validação definitiva de segurança é efetuada pelo mutator
-     * `fotografia` do modelo Utilizador.
+     * Uma eventual falha durante a limpeza é reportada, mas não substitui a
+     * exceção original do registo.
      *
-     * @param  string|null  $caminho  Caminho recebido.
-     * @return string|null Caminho normalizado ou nulo.
+     * @param  string|null  $caminhoFotografia  Caminho da fotografia.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 1.0.0
      */
-    private function normalizarCaminhoFotografia(
-        ?string $caminho,
-    ): ?string {
-        if ($caminho === null) {
-            return null;
+    private function eliminarFotografiaAposFalha(
+        ?string $caminhoFotografia,
+    ): void {
+        if ($caminhoFotografia === null) {
+            return;
         }
 
-        $caminhoNormalizado =
-            trim(
-                $caminho,
+        try {
+            $this
+                ->servicoFotografiasUtilizador
+                ->eliminar(
+                    $caminhoFotografia,
+                );
+        } catch (Throwable $excecaoLimpeza) {
+            report(
+                $excecaoLimpeza,
             );
-
-        return $caminhoNormalizado !== ''
-            ? $caminhoNormalizado
-            : null;
+        }
     }
 }

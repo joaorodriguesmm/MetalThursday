@@ -13,16 +13,16 @@ use SensitiveParameter;
  * Centraliza os requisitos de segurança das palavras-passe.
  *
  * Os mesmos requisitos são utilizados no registo, na alteração e na
- * redefinição da palavra-passe, bem como em comandos ou serviços internos.
+ * redefinição da palavra-passe, bem como em comandos e serviços internos.
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 final class RequisitosPalavraPasse
 {
     /**
-     * Comprimento mínimo exigido para uma palavra-passe.
+     * Comprimento mínimo exigido.
      *
      * @var int
      *
@@ -31,6 +31,20 @@ final class RequisitosPalavraPasse
      * @version 1.0.0
      */
     private const COMPRIMENTO_MINIMO = 12;
+
+    /**
+     * Comprimento máximo aceite.
+     *
+     * Este limite evita o processamento de entradas excessivamente grandes
+     * pelos algoritmos de derivação de palavra-passe.
+     *
+     * @var int
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const COMPRIMENTO_MAXIMO = 4096;
 
     /**
      * Impede a instanciação desta classe utilitária.
@@ -42,16 +56,44 @@ final class RequisitosPalavraPasse
     private function __construct() {}
 
     /**
-     * Cria a regra de validação da palavra-passe.
+     * Obtém o comprimento mínimo exigido.
      *
-     * A palavra-passe deve possuir pelo menos doze caracteres, incluindo
-     * letras maiúsculas e minúsculas, números e símbolos.
+     * @return int Comprimento mínimo.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public static function comprimentoMinimo(): int
+    {
+        return self::COMPRIMENTO_MINIMO;
+    }
+
+    /**
+     * Obtém o comprimento máximo aceite.
+     *
+     * @return int Comprimento máximo.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public static function comprimentoMaximo(): int
+    {
+        return self::COMPRIMENTO_MAXIMO;
+    }
+
+    /**
+     * Cria a regra de complexidade da palavra-passe.
+     *
+     * A palavra-passe deve possuir letras maiúsculas e minúsculas, números
+     * e símbolos.
      *
      * @return Password Regra configurada.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public static function regra(): Password
     {
@@ -64,10 +106,30 @@ final class RequisitosPalavraPasse
     }
 
     /**
+     * Obtém as regras aplicáveis a uma palavra-passe obrigatória.
+     *
+     * @return array<int, string|Password> Regras de validação.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public static function regrasObrigatorias(): array
+    {
+        return [
+            'bail',
+            'required',
+            'string',
+            'max:'.self::COMPRIMENTO_MAXIMO,
+            self::regra(),
+        ];
+    }
+
+    /**
      * Valida diretamente uma palavra-passe em texto simples.
      *
-     * Este método permite aplicar os mesmos requisitos fora dos pedidos HTTP,
-     * nomeadamente em comandos, importações ou serviços internos.
+     * Permite aplicar os mesmos requisitos fora dos pedidos HTTP,
+     * nomeadamente em comandos, importações e serviços internos.
      *
      * @param  string  $palavraPasse  Palavra-passe em texto simples.
      *
@@ -76,41 +138,40 @@ final class RequisitosPalavraPasse
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public static function validar(
         #[SensitiveParameter]
         string $palavraPasse,
     ): void {
-        $validador =
-            Validator::make(
-                [
-                    'palavra_passe' => $palavraPasse,
-                ],
-                [
-                    'palavra_passe' => [
-                        'required',
-                        'string',
-                        self::regra(),
-                    ],
-                ],
-                [
-                    'palavra_passe.required' => 'A palavra-passe é obrigatória.',
+        $validador = Validator::make(
+            [
+                'palavra_passe' => $palavraPasse,
+            ],
+            [
+                'palavra_passe' => self::regrasObrigatorias(),
+            ],
+            [
+                'palavra_passe.required' => 'A palavra-passe é obrigatória.',
 
-                    'palavra_passe.string' => 'A palavra-passe não é válida.',
-                ],
-            );
+                'palavra_passe.string' => 'A palavra-passe não é válida.',
+
+                'palavra_passe.max' => 'A palavra-passe é demasiado longa.',
+            ],
+            [
+                'palavra_passe' => 'palavra-passe',
+            ],
+        );
 
         if ($validador->passes()) {
             return;
         }
 
-        $mensagem =
-            $validador
-                ->errors()
-                ->first(
-                    'palavra_passe',
-                );
+        $mensagem = $validador
+            ->errors()
+            ->first(
+                'palavra_passe',
+            );
 
         throw new InvalidArgumentException(
             $mensagem !== ''

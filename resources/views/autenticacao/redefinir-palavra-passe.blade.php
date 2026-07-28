@@ -200,7 +200,7 @@
                 class="small text-decoration-none"
                 href="{{
                     route(
-                        'autenticacao.recuperar-palavra-passe',
+                        'password.request',
                     )
                 }}"
             >

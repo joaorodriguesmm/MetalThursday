@@ -35,10 +35,10 @@ import LimpadorFormulariosModais
  */
 const SELETORES = Object.freeze({
     ligacaoTerminarSessao:
-        '.logout-link',
+        '[data-terminar-sessao]',
 
     formularioTerminarSessao:
-        '#logout-form',
+        '#formulario-terminar-sessao',
 
     contentorVideo:
         '.video-lazy-load',

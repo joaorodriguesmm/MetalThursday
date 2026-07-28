@@ -17,7 +17,7 @@ use LogicException;
  *
  * @since 1.0.0
  *
- * @version 2.1.0
+ * @version 2.2.0
  */
 final class AtualizarPermissoesEmailRequest extends FormRequest
 {
@@ -60,16 +60,20 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
      * Os identificadores numéricos recebidos como strings são convertidos
      * para inteiros.
      *
+     * As chaves da lista são preservadas para permitir que a regra `list`
+     * rejeite estruturas associativas ou com índices inválidos.
+     *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 1.2.0
      */
     protected function prepareForValidation(): void
     {
-        $permissoes = $this->input(
-            'permissoes_email',
-            [],
-        );
+        $permissoes =
+            $this->input(
+                'permissoes_email',
+                [],
+            );
 
         if (! is_array($permissoes)) {
             $this->merge([
@@ -80,22 +84,20 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
         }
 
         $this->merge([
-            'permissoes_email' => array_values(
-                array_map(
-                    static function (
-                        mixed $identificador,
-                    ): mixed {
-                        if (
-                            is_string($identificador)
-                            && ctype_digit($identificador)
-                        ) {
-                            return (int) $identificador;
-                        }
+            'permissoes_email' => array_map(
+                static function (
+                    mixed $identificador,
+                ): mixed {
+                    if (
+                        is_string($identificador)
+                        && ctype_digit($identificador)
+                    ) {
+                        return (int) $identificador;
+                    }
 
-                        return $identificador;
-                    },
-                    $permissoes,
-                ),
+                    return $identificador;
+                },
+                $permissoes,
             ),
         ]);
     }
@@ -109,13 +111,12 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 2.2.0
      */
     public function rules(): array
     {
         return [
             'permissoes_email' => [
-                'present',
                 'array',
                 'list',
             ],
@@ -123,6 +124,7 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
             'permissoes_email.*' => [
                 'bail',
                 'integer',
+                'min:1',
                 'distinct:strict',
 
                 Rule::exists(
@@ -140,18 +142,18 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 2.2.0
      */
     public function messages(): array
     {
         return [
-            'permissoes_email.present' => 'A lista de permissões de e-mail deve ser enviada.',
-
             'permissoes_email.array' => 'As permissões de e-mail devem ser apresentadas numa lista.',
 
             'permissoes_email.list' => 'A lista de permissões de e-mail não tem um formato válido.',
 
             'permissoes_email.*.integer' => 'Cada permissão de e-mail deve possuir um identificador válido.',
+
+            'permissoes_email.*.min' => 'Cada permissão de e-mail deve possuir um identificador válido.',
 
             'permissoes_email.*.distinct' => 'A mesma permissão de e-mail não pode ser selecionada mais do que uma vez.',
 
@@ -187,13 +189,14 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 1.2.0
      */
-    public function identificadoresPermissoes(): array
+    public function obterIdentificadoresPermissoes(): array
     {
-        $identificadores = $this->validated(
-            'permissoes_email',
-        );
+        $identificadores =
+            $this->validated(
+                'permissoes_email',
+            );
 
         if (! is_array($identificadores)) {
             throw new LogicException(

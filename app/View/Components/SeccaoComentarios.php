@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\View\Components;
 
+use App\Enumeracoes\Interacoes\TipoEntidadeInteracao;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\Interacoes\Comentario;
 use App\Models\MetalThursday\MetalThursday;
@@ -11,7 +12,6 @@ use App\Models\MetalThursday\SeccaoMetalThursday;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 use Illuminate\View\Component;
 use LogicException;
 
@@ -113,7 +113,6 @@ final class SeccaoComentarios extends Component
      * Cria uma nova instância do componente.
      *
      * @param  MetalThursday|SeccaoMetalThursday  $comentavel  Entidade comentada.
-     * @param  string  $tipoComentavel  Tipo recebido pela utilização do componente.
      *
      * @throws LogicException Quando a entidade não está persistida, o tipo não
      *                        corresponde ao modelo ou a relação não foi carregada.
@@ -124,9 +123,9 @@ final class SeccaoComentarios extends Component
      */
     public function __construct(
         MetalThursday|SeccaoMetalThursday $comentavel,
-        string $tipoComentavel,
     ) {
-        $this->comentavel = $comentavel;
+        $this->comentavel =
+            $comentavel;
 
         $this->identificadorComentavel =
             $this->obterIdentificadorComentavel(
@@ -134,10 +133,9 @@ final class SeccaoComentarios extends Component
             );
 
         $this->tipoComentavel =
-            $this->normalizarTipoComentavel(
+            TipoEntidadeInteracao::deModelo(
                 $comentavel,
-                $tipoComentavel,
-            );
+            )->value;
 
         $this->comentarios =
             $this->obterComentarios(
@@ -147,18 +145,8 @@ final class SeccaoComentarios extends Component
         $this->utilizadorAutenticado =
             $this->obterUtilizadorAutenticado();
 
-        $tipoIdentificador = Str::of(
-            $this->tipoComentavel,
-        )
-            ->replace(
-                '_',
-                '-',
-            )
-            ->slug('-')
-            ->toString();
-
         $sufixoIdentificador =
-            "{$tipoIdentificador}-{$this->identificadorComentavel}";
+            "{$this->tipoComentavel}-{$this->identificadorComentavel}";
 
         $this->identificadorFormulario =
             "formulario-comentario-{$sufixoIdentificador}";
@@ -214,44 +202,6 @@ final class SeccaoComentarios extends Component
         }
 
         return (int) $identificador;
-    }
-
-    /**
-     * Normaliza e valida o tipo da entidade comentada.
-     *
-     * @param  MetalThursday|SeccaoMetalThursday  $comentavel  Entidade recebida.
-     * @param  string  $tipoRecebido  Tipo recebido pelo componente.
-     * @return string Tipo canónico.
-     *
-     * @throws LogicException Quando o tipo não corresponde ao modelo.
-     *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
-     */
-    private function normalizarTipoComentavel(
-        MetalThursday|SeccaoMetalThursday $comentavel,
-        string $tipoRecebido,
-    ): string {
-        $tipoEsperado = match (true) {
-            $comentavel instanceof MetalThursday => 'metal_thursday',
-
-            $comentavel instanceof SeccaoMetalThursday => 'seccao_metal_thursday',
-        };
-
-        $tipoNormalizado = mb_strtolower(
-            trim(
-                $tipoRecebido,
-            ),
-        );
-
-        if ($tipoNormalizado !== $tipoEsperado) {
-            throw new LogicException(
-                'O tipo da entidade comentada não corresponde ao modelo recebido.',
-            );
-        }
-
-        return $tipoEsperado;
     }
 
     /**

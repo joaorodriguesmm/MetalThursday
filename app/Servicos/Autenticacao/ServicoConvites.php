@@ -28,7 +28,7 @@ use Throwable;
  *
  * @since 2.0.0
  *
- * @version 1.1.0
+ * @version 1.2.0
  */
 final class ServicoConvites
 {
@@ -92,17 +92,6 @@ final class ServicoConvites
     private const COMPRIMENTO_MAXIMO_NOME = 255;
 
     /**
-     * Comprimento máximo aceite para um código recebido.
-     *
-     * @var int
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const COMPRIMENTO_MAXIMO_CODIGO = 255;
-
-    /**
      * Cria um novo convite.
      *
      * O código original nunca é guardado. Apenas o resultado devolvido contém
@@ -123,7 +112,7 @@ final class ServicoConvites
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 1.2.0
      */
     public function criar(
         string $nomeConvidado,
@@ -193,6 +182,10 @@ final class ServicoConvites
                     $codigo,
                 );
             } catch (UniqueConstraintViolationException $excecao) {
+                if (! $this->codigoJaExiste($codigo)) {
+                    throw $excecao;
+                }
+
                 if (
                     $tentativa
                     < self::MAXIMO_TENTATIVAS_GERACAO
@@ -224,14 +217,14 @@ final class ServicoConvites
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 1.2.0
      */
     public function encontrarDisponivelPorCodigo(
         #[SensitiveParameter]
         string $codigo,
     ): ?Convite {
         $codigoNormalizado =
-            $this->normalizarCodigoRecebido(
+            Convite::normalizarCodigo(
                 $codigo,
             );
 
@@ -338,6 +331,33 @@ final class ServicoConvites
 
         return self::PREFIXO_CODIGO
             .$codigoCodificado;
+    }
+
+    /**
+     * Verifica se o código gerado já possui um hash persistido.
+     *
+     * Este teste permite distinguir uma colisão real do código de uma
+     * violação de outra restrição única da tabela.
+     *
+     * @param  string  $codigo  Código original gerado.
+     * @return bool Verdadeiro quando o hash já existe.
+     *
+     * @since 2.1.0
+     *
+     * @version 1.0.0
+     */
+    private function codigoJaExiste(
+        #[SensitiveParameter]
+        string $codigo,
+    ): bool {
+        return Convite::query()
+            ->where(
+                'codigo_hash',
+                Convite::calcularHashCodigo(
+                    $codigo,
+                ),
+            )
+            ->exists();
     }
 
     /**
@@ -534,59 +554,5 @@ final class ServicoConvites
         }
 
         return $expiracao;
-    }
-
-    /**
-     * Normaliza um código recebido para pesquisa.
-     *
-     * O código continua sensível a maiúsculas e minúsculas. Apenas os espaços
-     * exteriores são removidos.
-     *
-     * @param  string  $codigo  Código recebido.
-     * @return string Código normalizado.
-     *
-     * @throws InvalidArgumentException Quando o código não é válido.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private function normalizarCodigoRecebido(
-        #[SensitiveParameter]
-        string $codigo,
-    ): string {
-        $codigoNormalizado =
-            trim(
-                $codigo,
-            );
-
-        if ($codigoNormalizado === '') {
-            throw new InvalidArgumentException(
-                'O código do convite não pode estar vazio.',
-            );
-        }
-
-        if (
-            mb_strlen(
-                $codigoNormalizado,
-            ) > self::COMPRIMENTO_MAXIMO_CODIGO
-        ) {
-            throw new InvalidArgumentException(
-                'O código do convite é demasiado longo.',
-            );
-        }
-
-        if (
-            preg_match(
-                '/[\x00-\x1F\x7F]/',
-                $codigoNormalizado,
-            ) === 1
-        ) {
-            throw new InvalidArgumentException(
-                'O código do convite contém caracteres inválidos.',
-            );
-        }
-
-        return $codigoNormalizado;
     }
 }

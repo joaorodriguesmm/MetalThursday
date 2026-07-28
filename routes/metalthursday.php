@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enumeracoes\Interacoes\TipoEntidadeInteracao;
 use App\Http\Controllers\Interacoes\ControladorAudicao;
 use App\Http\Controllers\Interacoes\ControladorAvaliacao;
 use App\Http\Controllers\Interacoes\ControladorComentario;
@@ -419,9 +420,9 @@ Route::middleware([
                 'guardar',
             ],
         )
-            ->where(
+            ->whereIn(
                 'tipoComentavel',
-                'metal_thursday|seccao_metal_thursday',
+                TipoEntidadeInteracao::obterSlugs(),
             )
             ->whereNumber(
                 'identificadorComentavel',
@@ -519,9 +520,9 @@ Route::middleware([
                 'guardar',
             ],
         )
-            ->where(
+            ->whereIn(
                 'tipoAvaliavel',
-                'metal_thursday|seccao_metal_thursday',
+                TipoEntidadeInteracao::obterSlugs(),
             )
             ->whereNumber(
                 'identificadorAvaliavel',
@@ -543,9 +544,9 @@ Route::middleware([
                 'alternar',
             ],
         )
-            ->where(
+            ->whereIn(
                 'tipoAudivel',
-                'metal_thursday|seccao_metal_thursday',
+                TipoEntidadeInteracao::obterSlugs(),
             )
             ->whereNumber(
                 'identificadorAudivel',

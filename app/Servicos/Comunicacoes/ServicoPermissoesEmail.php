@@ -22,7 +22,7 @@ use Throwable;
  *
  * @since 2.0.0
  *
- * @version 1.2.0
+ * @version 1.3.0
  */
 final class ServicoPermissoesEmail
 {
@@ -46,7 +46,10 @@ final class ServicoPermissoesEmail
      * Os valores são convertidos para inteiros positivos, deduplicados e
      * ordenados de forma crescente.
      *
-     * @param  array<int, int|string>  $identificadores  Valores recebidos.
+     * O tipo `mixed` é aceite defensivamente para que valores inválidos
+     * provoquem uma exceção de domínio controlada em vez de um erro de tipo.
+     *
+     * @param  array<int, mixed>  $identificadores  Valores recebidos.
      * @return list<int> Identificadores normalizados.
      *
      * @throws InvalidArgumentException Quando algum identificador não é
@@ -54,7 +57,7 @@ final class ServicoPermissoesEmail
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 1.2.0
      */
     public function normalizarIdentificadores(
         array $identificadores,
@@ -62,17 +65,18 @@ final class ServicoPermissoesEmail
         $normalizados = [];
 
         foreach ($identificadores as $identificador) {
-            $normalizados[] =
+            $identificadorNormalizado =
                 $this->normalizarIdentificador(
                     $identificador,
                 );
+
+            $normalizados[$identificadorNormalizado] =
+                $identificadorNormalizado;
         }
 
         $normalizados =
             array_values(
-                array_unique(
-                    $normalizados,
-                ),
+                $normalizados,
             );
 
         sort(
@@ -89,7 +93,7 @@ final class ServicoPermissoesEmail
      * Uma lista vazia remove todas as permissões atualmente atribuídas.
      *
      * @param  Utilizador  $utilizador  Utilizador persistido.
-     * @param  array<int, int|string>  $identificadores  Permissões recebidas.
+     * @param  array<int, mixed>  $identificadores  Permissões recebidas.
      * @return list<int> Identificadores efetivamente sincronizados.
      *
      * @throws InvalidArgumentException Quando o utilizador ou alguma permissão
@@ -99,7 +103,7 @@ final class ServicoPermissoesEmail
      *
      * @since 2.0.0
      *
-     * @version 1.2.0
+     * @version 1.3.0
      */
     public function sincronizar(
         Utilizador $utilizador,
@@ -240,7 +244,7 @@ final class ServicoPermissoesEmail
     /**
      * Normaliza um identificador individual.
      *
-     * @param  int|string  $identificador  Identificador recebido.
+     * @param  mixed  $identificador  Identificador recebido.
      * @return int Identificador normalizado.
      *
      * @throws InvalidArgumentException Quando o identificador não é um inteiro
@@ -248,10 +252,10 @@ final class ServicoPermissoesEmail
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function normalizarIdentificador(
-        int|string $identificador,
+        mixed $identificador,
     ): int {
         if (
             is_int($identificador)
@@ -303,14 +307,31 @@ final class ServicoPermissoesEmail
 
         if (
             ! $utilizador->exists
-            || ! is_numeric($identificador)
-            || (int) $identificador < 1
+            || ! is_int($identificador)
+            && ! is_string($identificador)
         ) {
             throw new InvalidArgumentException(
                 'O utilizador deve estar persistido antes de sincronizar as permissões.',
             );
         }
 
-        return (int) $identificador;
+        $identificadorNormalizado =
+            is_int($identificador)
+            ? $identificador
+            : (
+                ctype_digit(
+                    $identificador,
+                )
+                ? (int) $identificador
+                : 0
+            );
+
+        if ($identificadorNormalizado < 1) {
+            throw new InvalidArgumentException(
+                'O utilizador deve estar persistido antes de sincronizar as permissões.',
+            );
+        }
+
+        return $identificadorNormalizado;
     }
 }

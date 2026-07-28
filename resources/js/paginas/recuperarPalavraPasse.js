@@ -1,28 +1,45 @@
-import ValidadorFormulario from '../modulos/ValidadorFormulario';
+import ValidadorFormulario
+    from '../modulos/ValidadorFormulario';
 
 /**
  * Script específico da página de recuperação da palavra-passe.
  *
- * O identificador do formulário e o nome do campo `email` permanecem
- * inalterados por corresponderem aos contratos atuais da vista e da
- * autenticação.
+ * Inicializa a validação de apoio do formulário utilizado para solicitar
+ * uma ligação de redefinição.
+ *
+ * O nome do campo `email` permanece inalterado por corresponder ao
+ * contrato técnico da autenticação.
  *
  * @since 1.0.0
- * @version 2.1.0
+ * @version 2.2.0
  */
 
 /**
- * Inicia os comportamentos da página de recuperação da palavra-passe.
+ * Seletores utilizados na página de recuperação da palavra-passe.
  *
- * @returns {void}
+ * @type {Readonly<Record<string, string>>}
+ *
+ * @since 2.2.0
+ * @version 1.0.0
+ */
+const SELETORES = Object.freeze({
+    formulario:
+        '#formulario-recuperar-palavra-passe',
+});
+
+/**
+ * Inicia a validação do formulário de recuperação da palavra-passe.
+ *
+ * @return {void}
  *
  * @since 1.0.0
- * @version 2.1.0
+ * @version 2.2.0
  */
-function iniciarPaginaRecuperacaoPalavraPasse() {
-    const formulario = document.getElementById(
-        'forgot-password-form',
-    );
+function iniciarValidacaoFormulario() {
+    const formulario =
+        document.querySelector(
+            SELETORES.formulario,
+        );
 
     if (!(formulario instanceof HTMLFormElement)) {
         return;
@@ -53,6 +70,18 @@ function iniciarPaginaRecuperacaoPalavraPasse() {
             },
         },
     );
+}
+
+/**
+ * Inicia os comportamentos da página de recuperação da palavra-passe.
+ *
+ * @return {void}
+ *
+ * @since 1.0.0
+ * @version 2.2.0
+ */
+function iniciarPaginaRecuperacaoPalavraPasse() {
+    iniciarValidacaoFormulario();
 }
 
 if (document.readyState === 'loading') {

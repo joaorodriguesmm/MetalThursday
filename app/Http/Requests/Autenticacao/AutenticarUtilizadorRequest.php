@@ -4,22 +4,24 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Autenticacao;
 
+use App\Regras\Autenticacao\RequisitosPalavraPasse;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
+use LogicException;
 
 /**
  * Valida e processa um pedido de autenticação.
  *
- * A limitação de tentativas combina o endereço de e-mail normalizado com o
- * endereço IP do pedido, sem guardar esses valores diretamente na chave da
- * cache.
+ * A limitação de tentativas combina o endereço de e-mail normalizado com
+ * o endereço IP do pedido, sem armazenar diretamente esses dados na chave
+ * da cache.
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 3.1.0
  */
 final class AutenticarUtilizadorRequest extends FormRequest
 {
@@ -62,8 +64,8 @@ final class AutenticarUtilizadorRequest extends FormRequest
     /**
      * Normaliza o endereço de e-mail antes da validação.
      *
-     * A palavra-passe não é alterada, porque espaços podem fazer parte do seu
-     * valor.
+     * A palavra-passe não é alterada, porque os espaços podem fazer parte
+     * do respetivo valor.
      *
      * @since 2.0.0
      *
@@ -71,7 +73,10 @@ final class AutenticarUtilizadorRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        $email = $this->input('email');
+        $email =
+            $this->input(
+                'email',
+            );
 
         if (! is_string($email)) {
             return;
@@ -79,7 +84,9 @@ final class AutenticarUtilizadorRequest extends FormRequest
 
         $this->merge([
             'email' => mb_strtolower(
-                trim($email),
+                trim(
+                    $email,
+                ),
             ),
         ]);
     }
@@ -87,14 +94,15 @@ final class AutenticarUtilizadorRequest extends FormRequest
     /**
      * Obtém as regras de validação.
      *
-     * Os nomes `email`, `password` e `remember` são mantidos por fazerem parte
-     * do contrato atual do formulário e do sistema de autenticação.
+     * Não são aplicados os requisitos mínimos atuais de complexidade, porque
+     * uma conta existente pode ainda utilizar uma palavra-passe criada sob
+     * regras anteriores.
      *
      * @return array<string, array<int, string>> Regras de validação.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function rules(): array
     {
@@ -107,14 +115,14 @@ final class AutenticarUtilizadorRequest extends FormRequest
                 'max:255',
             ],
 
-            'password' => [
+            'palavra_passe' => [
                 'bail',
                 'required',
                 'string',
-                'max:4096',
+                'max:'.RequisitosPalavraPasse::comprimentoMaximo(),
             ],
 
-            'remember' => [
+            'manter_sessao_iniciada' => [
                 'nullable',
                 'boolean',
             ],
@@ -128,7 +136,7 @@ final class AutenticarUtilizadorRequest extends FormRequest
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function messages(): array
     {
@@ -141,13 +149,13 @@ final class AutenticarUtilizadorRequest extends FormRequest
 
             'email.max' => 'O endereço de e-mail não pode ter mais de 255 caracteres.',
 
-            'password.required' => 'Por favor, insere a palavra-passe.',
+            'palavra_passe.required' => 'Por favor, insere a palavra-passe.',
 
-            'password.string' => 'A palavra-passe deve ser uma sequência de caracteres.',
+            'palavra_passe.string' => 'A palavra-passe deve ser uma sequência de caracteres.',
 
-            'password.max' => 'A palavra-passe recebida é demasiado extensa.',
+            'palavra_passe.max' => 'A palavra-passe recebida é demasiado longa.',
 
-            'remember.boolean' => 'A opção de manter a sessão iniciada não é válida.',
+            'manter_sessao_iniciada.boolean' => 'A opção de manter a sessão iniciada não é válida.',
         ];
     }
 
@@ -158,16 +166,16 @@ final class AutenticarUtilizadorRequest extends FormRequest
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function attributes(): array
     {
         return [
             'email' => 'endereço de e-mail',
 
-            'password' => 'palavra-passe',
+            'palavra_passe' => 'palavra-passe',
 
-            'remember' => 'manter a sessão iniciada',
+            'manter_sessao_iniciada' => 'manter a sessão iniciada',
         ];
     }
 
@@ -179,27 +187,27 @@ final class AutenticarUtilizadorRequest extends FormRequest
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function autenticar(): void
     {
         $this->garantirAusenciaDeLimitacao();
 
-        $dados = $this->validated();
+        $autenticado =
+            Auth::guard(
+                'web',
+            )->attempt(
+                [
+                    'email' => $this->email(),
 
-        /** @var string $email */
-        $email = $dados['email'];
-
-        /** @var string $palavraPasse */
-        $palavraPasse = $dados['password'];
-
-        $autenticado = Auth::guard('web')->attempt(
-            [
-                'email' => $email,
-                'password' => $palavraPasse,
-            ],
-            $this->boolean('remember'),
-        );
+                    /*
+                     * `password` é uma chave interna obrigatória do contrato
+                     * de autenticação do Laravel.
+                     */
+                    'password' => $this->palavraPasse(),
+                ],
+                $this->manterSessaoIniciada(),
+            );
 
         if (! $autenticado) {
             RateLimiter::hit(
@@ -208,12 +216,62 @@ final class AutenticarUtilizadorRequest extends FormRequest
             );
 
             throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
+                'email' => trans(
+                    'auth.failed',
+                ),
             ]);
         }
 
         RateLimiter::clear(
             $this->obterChaveLimitacao(),
+        );
+    }
+
+    /**
+     * Obtém o endereço de e-mail validado.
+     *
+     * @return string Endereço de e-mail.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    public function email(): string
+    {
+        return $this->obterTextoValidado(
+            'email',
+        );
+    }
+
+    /**
+     * Obtém a palavra-passe validada.
+     *
+     * @return string Palavra-passe em texto simples.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    public function palavraPasse(): string
+    {
+        return $this->obterTextoValidado(
+            'palavra_passe',
+        );
+    }
+
+    /**
+     * Determina se a sessão deve permanecer iniciada.
+     *
+     * @return bool Verdadeiro quando a opção foi selecionada.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    public function manterSessaoIniciada(): bool
+    {
+        return $this->boolean(
+            'manter_sessao_iniciada',
         );
     }
 
@@ -229,7 +287,8 @@ final class AutenticarUtilizadorRequest extends FormRequest
      */
     private function garantirAusenciaDeLimitacao(): void
     {
-        $chave = $this->obterChaveLimitacao();
+        $chave =
+            $this->obterChaveLimitacao();
 
         if (
             ! RateLimiter::tooManyAttempts(
@@ -241,18 +300,22 @@ final class AutenticarUtilizadorRequest extends FormRequest
         }
 
         event(
-            new Lockout($this),
+            new Lockout(
+                $this,
+            ),
         );
 
-        $segundos = RateLimiter::availableIn(
-            $chave,
-        );
+        $segundos =
+            RateLimiter::availableIn(
+                $chave,
+            );
 
         throw ValidationException::withMessages([
             'email' => trans(
                 'auth.throttle',
                 [
                     'seconds' => $segundos,
+
                     'minutes' => (int) ceil(
                         $segundos / 60,
                     ),
@@ -265,7 +328,7 @@ final class AutenticarUtilizadorRequest extends FormRequest
      * Obtém a chave utilizada na limitação de tentativas.
      *
      * O endereço de e-mail e o IP são transformados num hash para não serem
-     * armazenados diretamente como identificador de cache.
+     * armazenados diretamente como identificador da cache.
      *
      * @return string Chave da limitação.
      *
@@ -275,21 +338,76 @@ final class AutenticarUtilizadorRequest extends FormRequest
      */
     private function obterChaveLimitacao(): string
     {
-        $email = $this->input(
-            'email',
-            '',
-        );
-
-        $emailNormalizado = is_string($email)
-            ? mb_strtolower(trim($email))
-            : '';
-
-        $enderecoIp = $this->ip()
+        $enderecoIp =
+            $this->ip()
             ?? 'desconhecido';
 
         return 'autenticacao:'.hash(
             'sha256',
-            $emailNormalizado.'|'.$enderecoIp,
+            $this->emailParaLimitacao()
+                .'|'
+                .$enderecoIp,
         );
+    }
+
+    /**
+     * Obtém o endereço de e-mail utilizado na chave de limitação.
+     *
+     * Este método pode ser executado antes da conclusão da validação, pelo
+     * que trabalha diretamente com a entrada normalizada do pedido.
+     *
+     * @return string Endereço normalizado ou texto vazio.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    private function emailParaLimitacao(): string
+    {
+        $email =
+            $this->input(
+                'email',
+                '',
+            );
+
+        return is_string($email)
+            ? mb_strtolower(
+                trim(
+                    $email,
+                ),
+            )
+            : '';
+    }
+
+    /**
+     * Obtém um texto validado.
+     *
+     * @param  string  $campo  Nome do campo.
+     * @return string Valor validado.
+     *
+     * @throws LogicException Quando o valor possui um tipo inesperado.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    private function obterTextoValidado(
+        string $campo,
+    ): string {
+        $valor =
+            $this->validated(
+                $campo,
+            );
+
+        if (! is_string($valor)) {
+            throw new LogicException(
+                sprintf(
+                    'O campo validado "%s" possui um tipo inesperado.',
+                    $campo,
+                ),
+            );
+        }
+
+        return $valor;
     }
 }

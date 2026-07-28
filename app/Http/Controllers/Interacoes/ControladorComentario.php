@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Interacoes;
 
+use App\Enumeracoes\Interacoes\TipoEntidadeInteracao;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Interacoes\AtualizarComentarioRequest;
 use App\Http\Requests\Interacoes\GuardarComentarioRequest;
@@ -200,10 +201,11 @@ final class ControladorComentario extends Controller
             $resposta,
         );
 
-        $this->notificadorInteracoes
+        $this
+            ->notificadorInteracoes
             ->notificarOutrosUtilizadores(
                 $comentavel,
-                'comentou',
+                'respondeu',
             );
 
         return response()->json(
@@ -295,9 +297,7 @@ final class ControladorComentario extends Controller
     /**
      * Resolve a entidade que recebe o comentário.
      *
-     * Apenas são aceites os identificadores canónicos da aplicação.
-     *
-     * @param  string  $tipo  Tipo recebido através da rota.
+     * @param  string  $tipo  Slug recebido através da rota.
      * @param  int  $identificador  Identificador da entidade.
      * @return MetalThursday|SeccaoMetalThursday Entidade encontrada.
      *
@@ -306,7 +306,7 @@ final class ControladorComentario extends Controller
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     private function resolverComentavel(
         string $tipo,
@@ -316,18 +316,17 @@ final class ControladorComentario extends Controller
             throw new NotFoundHttpException;
         }
 
-        $tipoNormalizado =
-            mb_strtolower(
-                trim($tipo),
+        $tipoEntidade =
+            TipoEntidadeInteracao::deSlug(
+                $tipo,
             );
 
-        $classeModelo = match ($tipoNormalizado) {
-            'metal_thursday' => MetalThursday::class,
+        if ($tipoEntidade === null) {
+            throw new NotFoundHttpException;
+        }
 
-            'seccao_metal_thursday' => SeccaoMetalThursday::class,
-
-            default => throw new NotFoundHttpException,
-        };
+        $classeModelo =
+            $tipoEntidade->obterClasseModelo();
 
         return $classeModelo::query()
             ->findOrFail(

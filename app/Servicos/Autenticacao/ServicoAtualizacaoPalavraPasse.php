@@ -29,7 +29,7 @@ use Throwable;
  *
  * @since 2.0.0
  *
- * @version 1.1.0
+ * @version 1.2.0
  */
 final class ServicoAtualizacaoPalavraPasse
 {
@@ -74,7 +74,7 @@ final class ServicoAtualizacaoPalavraPasse
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 1.2.0
      */
     public function atualizar(
         Utilizador $utilizador,
@@ -107,8 +107,9 @@ final class ServicoAtualizacaoPalavraPasse
                         ->firstOrFail();
 
                 $hashAtual =
-                    $utilizadorBloqueado
-                        ->getAuthPassword();
+                    $this->obterHashPalavraPasseAtual(
+                        $utilizadorBloqueado,
+                    );
 
                 $this->validarPalavraPasseAtual(
                     $palavraPasseAtual,
@@ -121,13 +122,18 @@ final class ServicoAtualizacaoPalavraPasse
                 );
 
                 /*
-                 * O cast `hashed` do modelo Utilizador aplica a hash antes da
-                 * persistência. A palavra-passe em texto simples nunca é
-                 * guardada diretamente na base de dados.
+                 * A hash é aplicada explicitamente pelo serviço. O cast
+                 * `hashed` do modelo permanece como proteção adicional.
                  */
                 $utilizadorBloqueado->password =
-                    $novaPalavraPasse;
+                    Hash::make(
+                        $novaPalavraPasse,
+                    );
 
+                /*
+                 * A renovação invalida os cookies persistentes anteriormente
+                 * emitidos através da funcionalidade «lembrar-me».
+                 */
                 $utilizadorBloqueado->setRememberToken(
                     Str::random(
                         self::COMPRIMENTO_TOKEN_PERSISTENTE,
@@ -175,28 +181,57 @@ final class ServicoAtualizacaoPalavraPasse
     }
 
     /**
+     * Obtém o hash persistido da palavra-passe atual.
+     *
+     * @param  Utilizador  $utilizador  Utilizador bloqueado.
+     * @return string Hash persistido.
+     *
+     * @throws PalavraPasseAtualIncorreta Quando o utilizador não possui um
+     *                                    hash válido.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function obterHashPalavraPasseAtual(
+        Utilizador $utilizador,
+    ): string {
+        $hashAtual =
+            $utilizador->getAuthPassword();
+
+        if (
+            ! is_string($hashAtual)
+            || $hashAtual === ''
+        ) {
+            throw new PalavraPasseAtualIncorreta(
+                'A palavra-passe atual não está correta.',
+            );
+        }
+
+        return $hashAtual;
+    }
+
+    /**
      * Confirma que a palavra-passe atual corresponde ao valor persistido.
      *
      * @param  string  $palavraPasseAtual  Palavra-passe atual em texto simples.
-     * @param  mixed  $hashAtual  Hash persistida.
+     * @param  string  $hashAtual  Hash persistido.
      *
      * @throws PalavraPasseAtualIncorreta Quando a palavra-passe não
      *                                    corresponde.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function validarPalavraPasseAtual(
         #[SensitiveParameter]
         string $palavraPasseAtual,
         #[SensitiveParameter]
-        mixed $hashAtual,
+        string $hashAtual,
     ): void {
         if (
-            is_string($hashAtual)
-            && $hashAtual !== ''
-            && Hash::check(
+            Hash::check(
                 $palavraPasseAtual,
                 $hashAtual,
             )

@@ -18,7 +18,7 @@ use SensitiveParameter;
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 final class ControladorVerificacaoEmail extends Controller
 {
@@ -42,8 +42,7 @@ final class ControladorVerificacaoEmail extends Controller
      *
      * @version 1.0.0
      */
-    private const RESULTADO_JA_VERIFICADO =
-        'ja_verificado';
+    private const RESULTADO_JA_VERIFICADO = 'ja_verificado';
 
     /**
      * Resultado utilizado quando o e-mail é verificado.
@@ -69,7 +68,7 @@ final class ControladorVerificacaoEmail extends Controller
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function __invoke(
         Request $pedido,
@@ -90,63 +89,65 @@ final class ControladorVerificacaoEmail extends Controller
             return $this->redirecionarLigacaoInvalida();
         }
 
-        $resultado = DB::transaction(
-            function () use (
-                $identificadorUtilizador,
-                $hash,
-            ): string {
-                $utilizador = Utilizador::query()
-                    ->lockForUpdate()
-                    ->find(
-                        $identificadorUtilizador,
-                    );
+        $resultado =
+            DB::transaction(
+                function () use (
+                    $identificadorUtilizador,
+                    $hash,
+                ): string {
+                    $utilizador =
+                        Utilizador::query()
+                            ->lockForUpdate()
+                            ->find(
+                                $identificadorUtilizador,
+                            );
 
-                if (
-                    $utilizador === null
-                    || ! $this->hashCorresponde(
-                        $utilizador,
-                        $hash,
-                    )
-                ) {
-                    return self::RESULTADO_INVALIDO;
-                }
-
-                if ($utilizador->hasVerifiedEmail()) {
-                    return self::RESULTADO_JA_VERIFICADO;
-                }
-
-                if (! $utilizador->markEmailAsVerified()) {
-                    throw new RuntimeException(
-                        'Não foi possível guardar a verificação do e-mail.',
-                    );
-                }
-
-                DB::afterCommit(
-                    static fn () => event(
-                        new Verified(
+                    if (
+                        ! $utilizador instanceof Utilizador
+                        || ! $this->hashCorresponde(
                             $utilizador,
-                        ),
-                    ),
-                );
+                            $hash,
+                        )
+                    ) {
+                        return self::RESULTADO_INVALIDO;
+                    }
 
-                return self::RESULTADO_VERIFICADO;
-            },
-        );
+                    if ($utilizador->hasVerifiedEmail()) {
+                        return self::RESULTADO_JA_VERIFICADO;
+                    }
+
+                    if (! $utilizador->markEmailAsVerified()) {
+                        throw new RuntimeException(
+                            'Não foi possível guardar a verificação do e-mail.',
+                        );
+                    }
+
+                    DB::afterCommit(
+                        static fn (): mixed => event(
+                            new Verified(
+                                $utilizador,
+                            ),
+                        ),
+                    );
+
+                    return self::RESULTADO_VERIFICADO;
+                },
+            );
 
         return match ($resultado) {
-            self::RESULTADO_JA_VERIFICADO => redirect()
-                ->route('login')
-                ->with(
-                    'estado',
-                    'O teu e-mail já estava verificado. Podes iniciar sessão.',
-                ),
+            self::RESULTADO_JA_VERIFICADO => to_route(
+                'login',
+            )->with(
+                'informacao',
+                'O teu e-mail já estava verificado. Podes iniciar sessão.',
+            ),
 
-            self::RESULTADO_VERIFICADO => redirect()
-                ->route('login')
-                ->with(
-                    'estado',
-                    'E-mail verificado com sucesso. Já podes iniciar sessão.',
-                ),
+            self::RESULTADO_VERIFICADO => to_route(
+                'login',
+            )->with(
+                'sucesso',
+                'E-mail verificado com sucesso. Já podes iniciar sessão.',
+            ),
 
             default => $this->redirecionarLigacaoInvalida(),
         };
@@ -168,10 +169,10 @@ final class ControladorVerificacaoEmail extends Controller
         #[SensitiveParameter]
         string $hash,
     ): bool {
-        $hashEsperado = sha1(
-            (string) $utilizador
-                ->getEmailForVerification(),
-        );
+        $hashEsperado =
+            sha1(
+                (string) $utilizador->getEmailForVerification(),
+            );
 
         return hash_equals(
             $hashEsperado,
@@ -192,15 +193,16 @@ final class ControladorVerificacaoEmail extends Controller
     private function converterParaIdentificador(
         string $valor,
     ): ?int {
-        $identificador = filter_var(
-            $valor,
-            FILTER_VALIDATE_INT,
-            [
-                'options' => [
-                    'min_range' => 1,
+        $identificador =
+            filter_var(
+                $valor,
+                FILTER_VALIDATE_INT,
+                [
+                    'options' => [
+                        'min_range' => 1,
+                    ],
                 ],
-            ],
-        );
+            );
 
         return $identificador === false
             ? null
@@ -214,14 +216,14 @@ final class ControladorVerificacaoEmail extends Controller
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function redirecionarLigacaoInvalida(): RedirectResponse
     {
-        return redirect()
-            ->route('login')
-            ->withErrors([
-                'email' => 'A ligação de verificação é inválida ou expirou.',
-            ]);
+        return to_route(
+            'login',
+        )->withErrors([
+            'email' => 'A ligação de verificação é inválida ou expirou.',
+        ]);
     }
 }

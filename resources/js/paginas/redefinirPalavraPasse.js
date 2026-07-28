@@ -1,30 +1,33 @@
-import AlternadorPalavraPasse from '../modulos/AlternadorPalavraPasse';
-import ValidadorFormulario from '../modulos/ValidadorFormulario';
+import AlternadorPalavraPasse
+    from '../modulos/AlternadorPalavraPasse';
+
+import ValidadorFormulario
+    from '../modulos/ValidadorFormulario';
 
 /**
  * Script específico da página de redefinição da palavra-passe.
  *
+ * Inicializa a validação de apoio do formulário e os alternadores de
+ * visibilidade dos campos de palavra-passe.
+ *
  * Os nomes dos campos `password` e `password_confirmation` permanecem
- * inalterados por corresponderem ao contrato convencional de autenticação.
+ * inalterados por corresponderem ao contrato técnico da autenticação.
  *
  * @since 1.0.0
- * @version 2.1.0
+ * @version 2.2.0
  */
 
 /**
- * Seletores utilizados na página.
+ * Seletores utilizados na página de redefinição da palavra-passe.
  *
- * @type {Readonly<{
- *     formulario: string,
- *     alternadorPalavraPasse: string
- * }>}
+ * @type {Readonly<Record<string, string>>}
  *
  * @since 2.1.0
- * @version 1.0.0
+ * @version 1.1.0
  */
 const SELETORES = Object.freeze({
     formulario:
-        'reset-password-form',
+        '#formulario-redefinir-palavra-passe',
 
     alternadorPalavraPasse:
         '[data-alvo-palavra-passe]',
@@ -33,15 +36,16 @@ const SELETORES = Object.freeze({
 /**
  * Inicia a validação do formulário de redefinição da palavra-passe.
  *
- * @returns {void}
+ * @return {void}
  *
  * @since 1.0.0
- * @version 2.1.0
+ * @version 2.2.0
  */
 function iniciarValidacaoFormulario() {
-    const formulario = document.getElementById(
-        SELETORES.formulario,
-    );
+    const formulario =
+        document.querySelector(
+            SELETORES.formulario,
+        );
 
     if (!(formulario instanceof HTMLFormElement)) {
         return;
@@ -53,7 +57,11 @@ function iniciarValidacaoFormulario() {
             regras: {
                 password: [
                     'obrigatorio',
-                    'minimo:8',
+                    'minimo:12',
+                    'maiuscula',
+                    'minuscula',
+                    'numero',
+                    'simbolo',
                 ],
 
                 password_confirmation: [
@@ -65,18 +73,30 @@ function iniciarValidacaoFormulario() {
             mensagens: {
                 password: {
                     obrigatorio:
-                        'Por favor, insere a palavra-passe.',
+                        'Por favor, insere a nova palavra-passe.',
 
                     minimo:
-                        'A palavra-passe deve ter, pelo menos, 8 caracteres.',
+                        'A nova palavra-passe deve ter, no mínimo, 12 caracteres.',
+
+                    maiuscula:
+                        'A nova palavra-passe deve incluir, pelo menos, uma letra maiúscula.',
+
+                    minuscula:
+                        'A nova palavra-passe deve incluir, pelo menos, uma letra minúscula.',
+
+                    numero:
+                        'A nova palavra-passe deve incluir, pelo menos, um número.',
+
+                    simbolo:
+                        'A nova palavra-passe deve incluir, pelo menos, um símbolo.',
                 },
 
                 password_confirmation: {
                     obrigatorio:
-                        'Por favor, confirma a palavra-passe.',
+                        'Por favor, confirma a nova palavra-passe.',
 
                     confirmado:
-                        'As palavras-passe não coincidem.',
+                        'A confirmação não corresponde à nova palavra-passe.',
                 },
             },
         },
@@ -86,18 +106,16 @@ function iniciarValidacaoFormulario() {
 /**
  * Inicia os alternadores de visibilidade das palavras-passe.
  *
- * Cada alternador deve ser um botão com o atributo
- * `data-alvo-palavra-passe` a indicar o identificador do respetivo campo.
- *
- * @returns {void}
+ * @return {void}
  *
  * @since 1.0.0
- * @version 2.1.0
+ * @version 2.2.0
  */
 function iniciarAlternadoresPalavraPasse() {
-    const alternadores = document.querySelectorAll(
-        SELETORES.alternadorPalavraPasse,
-    );
+    const alternadores =
+        document.querySelectorAll(
+            SELETORES.alternadorPalavraPasse,
+        );
 
     if (alternadores.length === 0) {
         return;
@@ -111,10 +129,10 @@ function iniciarAlternadoresPalavraPasse() {
 /**
  * Inicia os comportamentos da página de redefinição da palavra-passe.
  *
- * @returns {void}
+ * @return {void}
  *
  * @since 1.0.0
- * @version 2.1.0
+ * @version 2.2.0
  */
 function iniciarPaginaRedefinicaoPalavraPasse() {
     iniciarValidacaoFormulario();

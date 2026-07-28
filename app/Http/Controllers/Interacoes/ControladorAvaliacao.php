@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Interacoes;
 
+use App\Enumeracoes\Interacoes\TipoEntidadeInteracao;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Interacoes\GuardarAvaliacaoRequest;
 use App\Models\Autenticacao\Utilizador;
@@ -25,6 +26,17 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class ControladorAvaliacao extends Controller
 {
+    /**
+     * Número máximo de tentativas perante conflitos transitórios.
+     *
+     * @var int
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    private const TENTATIVAS_TRANSACAO = 3;
+
     /**
      * Cria o controlador.
      *
@@ -75,59 +87,61 @@ final class ControladorAvaliacao extends Controller
                 $identificadorAvaliavel,
             );
 
-        $resultado = DB::transaction(
-            function () use (
-                $avaliavel,
-                $identificadorUtilizador,
-                $pontuacao,
-            ): array {
-                $avaliavelBloqueado =
-                    $this->bloquearAvaliavel(
-                        $avaliavel,
-                    );
+        $resultado =
+            DB::transaction(
+                function () use (
+                    $avaliavel,
+                    $identificadorUtilizador,
+                    $pontuacao,
+                ): array {
+                    $avaliavelBloqueado =
+                        $this->bloquearAvaliavel(
+                            $avaliavel,
+                        );
 
-                $avaliacao = $avaliavelBloqueado
-                    ->avaliacoes()
-                    ->where(
-                        'utilizador_id',
-                        $identificadorUtilizador,
-                    )
-                    ->first();
+                    $avaliacao = $avaliavelBloqueado
+                        ->avaliacoes()
+                        ->where(
+                            'utilizador_id',
+                            $identificadorUtilizador,
+                        )
+                        ->first();
 
-                $avaliacaoAlterada = false;
+                    $avaliacaoAlterada = false;
 
-                if ($avaliacao instanceof Avaliacao) {
-                    $pontuacaoAtual = round(
-                        (float) $avaliacao->pontuacao,
-                        1,
-                    );
+                    if ($avaliacao instanceof Avaliacao) {
+                        $pontuacaoAtual = round(
+                            (float) $avaliacao->pontuacao,
+                            1,
+                        );
 
-                    if ($pontuacaoAtual !== $pontuacao) {
-                        $avaliacao->updateOrFail([
-                            'pontuacao' => $pontuacao,
-                        ]);
+                        if ($pontuacaoAtual !== $pontuacao) {
+                            $avaliacao->updateOrFail([
+                                'pontuacao' => $pontuacao,
+                            ]);
+
+                            $avaliacaoAlterada = true;
+                        }
+                    } else {
+                        $avaliavelBloqueado
+                            ->avaliacoes()
+                            ->create([
+                                'utilizador_id' => $identificadorUtilizador,
+
+                                'pontuacao' => $pontuacao,
+                            ]);
 
                         $avaliacaoAlterada = true;
                     }
-                } else {
-                    $avaliavelBloqueado
-                        ->avaliacoes()
-                        ->create([
-                            'utilizador_id' => $identificadorUtilizador,
 
-                            'pontuacao' => $pontuacao,
-                        ]);
+                    return [
+                        'avaliavel' => $avaliavelBloqueado,
 
-                    $avaliacaoAlterada = true;
-                }
-
-                return [
-                    'avaliavel' => $avaliavelBloqueado,
-
-                    'avaliacao_alterada' => $avaliacaoAlterada,
-                ];
-            },
-        );
+                        'avaliacao_alterada' => $avaliacaoAlterada,
+                    ];
+                },
+                self::TENTATIVAS_TRANSACAO,
+            );
 
         /** @var MetalThursday|SeccaoMetalThursday $avaliavelAtualizado */
         $avaliavelAtualizado =
@@ -156,7 +170,7 @@ final class ControladorAvaliacao extends Controller
 
             'pontuacao_utilizador' => $pontuacao,
 
-            'conteudo_indicador' => $this->obterConteudoIndicador(
+            'conteudo_indicador_html' => $this->obterConteudoIndicador(
                 $avaliavelAtualizado,
             ),
         ]);
@@ -165,19 +179,16 @@ final class ControladorAvaliacao extends Controller
     /**
      * Resolve a entidade que recebe a avaliação.
      *
-     * Apenas são aceites os identificadores canónicos definidos pela
-     * aplicação.
-     *
-     * @param  string  $tipo  Tipo recebido através da rota.
+     * @param  string  $tipo  Slug recebido através da rota.
      * @param  int  $identificador  Identificador recebido através da rota.
      * @return MetalThursday|SeccaoMetalThursday Entidade encontrada.
      *
-     * @throws NotFoundHttpException Quando o tipo não é reconhecido ou o
-     *                               identificador não é válido.
+     * @throws NotFoundHttpException Quando o tipo ou identificador não são
+     *                               válidos.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     private function resolverAvaliavel(
         string $tipo,
@@ -187,17 +198,17 @@ final class ControladorAvaliacao extends Controller
             throw new NotFoundHttpException;
         }
 
-        $tipoNormalizado = mb_strtolower(
-            trim($tipo),
-        );
+        $tipoEntidade =
+            TipoEntidadeInteracao::deSlug(
+                $tipo,
+            );
 
-        $classeModelo = match ($tipoNormalizado) {
-            'metal_thursday' => MetalThursday::class,
+        if ($tipoEntidade === null) {
+            throw new NotFoundHttpException;
+        }
 
-            'seccao_metal_thursday' => SeccaoMetalThursday::class,
-
-            default => throw new NotFoundHttpException,
-        };
+        $classeModelo =
+            $tipoEntidade->obterClasseModelo();
 
         return $classeModelo::query()
             ->findOrFail(

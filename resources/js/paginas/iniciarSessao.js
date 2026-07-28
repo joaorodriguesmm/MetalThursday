@@ -1,23 +1,33 @@
-import AlternadorPalavraPasse from '../modulos/AlternadorPalavraPasse';
-import ValidadorFormulario from '../modulos/ValidadorFormulario';
+import AlternadorPalavraPasse
+    from '../modulos/AlternadorPalavraPasse';
+
+import ValidadorFormulario
+    from '../modulos/ValidadorFormulario';
+
+/**
+ * Script específico da página de início de sessão.
+ *
+ * Inicializa a validação de apoio do formulário e o alternador de
+ * visibilidade da palavra-passe.
+ *
+ * Os nomes dos campos `email`, `password` e `remember` permanecem
+ * inalterados por corresponderem ao contrato técnico da autenticação.
+ *
+ * @since 1.0.0
+ * @version 2.1.0
+ */
 
 /**
  * Seletores utilizados na página de início de sessão.
  *
- * Os nomes dos campos `email` e `password` permanecem inalterados por
- * corresponderem aos contratos atuais do formulário e da autenticação.
- *
- * @type {Readonly<{
- *     formulario: string,
- *     alternadorPalavraPasse: string
- * }>}
+ * @type {Readonly<Record<string, string>>}
  *
  * @since 2.0.0
- * @version 1.0.0
+ * @version 1.1.0
  */
 const SELETORES = Object.freeze({
     formulario:
-        'formulario-iniciar-sessao',
+        '#formulario-iniciar-sessao',
 
     alternadorPalavraPasse:
         '[data-alvo-palavra-passe]',
@@ -26,15 +36,16 @@ const SELETORES = Object.freeze({
 /**
  * Inicia a validação do formulário.
  *
- * @returns {void}
+ * @return {void}
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 2.1.0
  */
 function iniciarValidacaoFormulario() {
-    const formulario = document.getElementById(
-        SELETORES.formulario,
-    );
+    const formulario =
+        document.querySelector(
+            SELETORES.formulario,
+        );
 
     if (!(formulario instanceof HTMLFormElement)) {
         return;
@@ -52,6 +63,7 @@ function iniciarValidacaoFormulario() {
 
                 password: [
                     'obrigatorio',
+                    'maximo:4096',
                 ],
             },
 
@@ -70,6 +82,9 @@ function iniciarValidacaoFormulario() {
                 password: {
                     obrigatorio:
                         'Por favor, insere a tua palavra-passe.',
+
+                    maximo:
+                        'A palavra-passe recebida é demasiado extensa.',
                 },
             },
         },
@@ -77,17 +92,18 @@ function iniciarValidacaoFormulario() {
 }
 
 /**
- * Inicia os alternadores de visibilidade da palavra-passe.
+ * Inicia o alternador de visibilidade da palavra-passe.
  *
- * @returns {void}
+ * @return {void}
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 2.1.0
  */
-function iniciarAlternadoresPalavraPasse() {
-    const alternadores = document.querySelectorAll(
-        SELETORES.alternadorPalavraPasse,
-    );
+function iniciarAlternadorPalavraPasse() {
+    const alternadores =
+        document.querySelectorAll(
+            SELETORES.alternadorPalavraPasse,
+        );
 
     if (alternadores.length === 0) {
         return;
@@ -101,14 +117,14 @@ function iniciarAlternadoresPalavraPasse() {
 /**
  * Inicia os comportamentos da página de início de sessão.
  *
- * @returns {void}
+ * @return {void}
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 2.1.0
  */
 function iniciarPaginaInicioSessao() {
     iniciarValidacaoFormulario();
-    iniciarAlternadoresPalavraPasse();
+    iniciarAlternadorPalavraPasse();
 }
 
 if (document.readyState === 'loading') {

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Interacoes;
 
+use App\Enumeracoes\Interacoes\TipoEntidadeInteracao;
 use App\Http\Controllers\Controller;
+use App\Models\Autenticacao\Utilizador;
 use App\Models\Interacoes\Audicao;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
@@ -16,19 +18,32 @@ use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Gere as audições associadas a MetalThursdays e respetivas secções.
+ * Gere as audições associadas aos MetalThursdays e às respetivas secções.
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 3.2.0
  */
 final class ControladorAudicao extends Controller
 {
     /**
+     * Número máximo de tentativas perante conflitos transitórios.
+     *
+     * @var int
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    private const TENTATIVAS_TRANSACAO = 3;
+
+    /**
      * Cria o controlador.
      *
-     * @param  NotificadorInteracoes  $notificadorInteracoes  Serviço responsável
-     *                                                        pelas notificações.
+     * @param  NotificadorInteracoes  $notificadorInteracoes  Serviço
+     *                                                        responsável
+     *                                                        pelas
+     *                                                        notificações.
      *
      * @since 2.0.0
      *
@@ -41,22 +56,18 @@ final class ControladorAudicao extends Controller
     /**
      * Adiciona ou remove a audição do utilizador autenticado.
      *
-     * A entidade é bloqueada durante a transação para impedir que pedidos
-     * simultâneos criem audições duplicadas ou resultados contraditórios.
-     *
-     * Os tipos antigos continuam temporariamente disponíveis até à revisão
-     * das rotas e do JavaScript.
-     *
      * @param  Request  $pedido  Pedido HTTP.
-     * @param  string  $tipoAudivel  Tipo da entidade ouvida.
+     * @param  string  $tipoAudivel  Tipo público da entidade ouvida.
      * @param  int  $identificadorAudivel  Identificador da entidade.
      * @return JsonResponse Estado atualizado da audição.
      *
      * @throws AuthenticationException Quando não existe autenticação válida.
+     * @throws NotFoundHttpException Quando o tipo ou identificador não são
+     *                               válidos.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.2.0
      */
     public function alternar(
         Request $pedido,
@@ -68,80 +79,89 @@ final class ControladorAudicao extends Controller
                 $pedido,
             );
 
-        $audivel = $this->resolverAudivel(
-            $tipoAudivel,
-            $identificadorAudivel,
-        );
+        $audivel =
+            $this->resolverAudivel(
+                $tipoAudivel,
+                $identificadorAudivel,
+            );
 
-        $resultado = DB::transaction(
-            function () use (
-                $audivel,
-                $identificadorUtilizador,
-            ): array {
-                $audivelBloqueado =
-                    $this->bloquearAudivel(
-                        $audivel,
-                    );
+        /**
+         * @var array{
+         *     audivel: MetalThursday|SeccaoMetalThursday,
+         *     marcado_como_ouvido: bool,
+         *     numero_audicoes: int
+         * } $resultado
+         */
+        $resultado =
+            DB::transaction(
+                function () use (
+                    $audivel,
+                    $identificadorUtilizador,
+                ): array {
+                    $audivelBloqueado =
+                        $this->bloquearAudivel(
+                            $audivel,
+                        );
 
-                $audicao = $audivelBloqueado
-                    ->audicoes()
-                    ->where(
-                        'utilizador_id',
-                        $identificadorUtilizador,
-                    )
-                    ->first();
+                    $audicao =
+                        $audivelBloqueado
+                            ->audicoes()
+                            ->where(
+                                'utilizador_id',
+                                $identificadorUtilizador,
+                            )
+                            ->first();
 
-                if ($audicao instanceof Audicao) {
-                    $audicao->deleteOrFail();
+                    if ($audicao instanceof Audicao) {
+                        $audicao->deleteOrFail();
 
-                    $marcadoComoOuvido = false;
-                } else {
-                    $audivelBloqueado
-                        ->audicoes()
-                        ->create([
-                            'utilizador_id' => $identificadorUtilizador,
-                        ]);
+                        $marcadoComoOuvido =
+                            false;
+                    } else {
+                        $audivelBloqueado
+                            ->audicoes()
+                            ->create([
+                                'utilizador_id' => $identificadorUtilizador,
+                            ]);
 
-                    $marcadoComoOuvido = true;
-                }
+                        $marcadoComoOuvido =
+                            true;
+                    }
 
-                return [
-                    'audivel' => $audivelBloqueado,
+                    return [
+                        'audivel' => $audivelBloqueado,
 
-                    'marcado_como_ouvido' => $marcadoComoOuvido,
+                        'marcado_como_ouvido' => $marcadoComoOuvido,
 
-                    'numero_audicoes' => $audivelBloqueado
-                        ->audicoes()
-                        ->count(),
-                ];
-            },
-        );
+                        'numero_audicoes' => $audivelBloqueado
+                            ->audicoes()
+                            ->count(),
+                    ];
+                },
+                self::TENTATIVAS_TRANSACAO,
+            );
 
-        /** @var MetalThursday|SeccaoMetalThursday $audivelAtualizado */
         $audivelAtualizado =
             $resultado['audivel'];
 
         $marcadoComoOuvido =
-            (bool) $resultado['marcado_como_ouvido'];
+            $resultado['marcado_como_ouvido'];
 
         if ($marcadoComoOuvido) {
-            $this->notificadorInteracoes
+            $this
+                ->notificadorInteracoes
                 ->notificarOutrosUtilizadores(
                     $audivelAtualizado,
-                    'marcou como ouvido',
+                    'ouviu',
                 );
         }
 
         return response()->json([
-            /*
-             * Estas chaves permanecem temporariamente em inglês porque são
-             * utilizadas pelo JavaScript atual.
-             */
-            'has_heard' => $marcadoComoOuvido,
+            'marcado_como_ouvido' => $marcadoComoOuvido,
 
-            'listens_count' => (int) $resultado['numero_audicoes'],
+            'numero_audicoes' => $resultado['numero_audicoes'],
 
-            'tooltip_html' => $this->obterConteudoIndicador(
+            'conteudo_indicador_html' => $this->obterConteudoIndicador(
                 $audivelAtualizado,
             ),
         ]);
@@ -150,15 +170,16 @@ final class ControladorAudicao extends Controller
     /**
      * Resolve a entidade que recebe a audição.
      *
-     * @param  string  $tipo  Tipo recebido através da rota.
+     * @param  string  $tipo  Slug recebido através da rota.
      * @param  int  $identificador  Identificador recebido através da rota.
      * @return MetalThursday|SeccaoMetalThursday Entidade encontrada.
      *
-     * @throws NotFoundHttpException Quando o tipo não é reconhecido.
+     * @throws NotFoundHttpException Quando o tipo ou identificador não são
+     *                               válidos.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 3.0.0
      */
     private function resolverAudivel(
         string $tipo,
@@ -168,21 +189,17 @@ final class ControladorAudicao extends Controller
             throw new NotFoundHttpException;
         }
 
-        $tipoNormalizado = mb_strtolower(
-            trim($tipo),
-        );
+        $tipoEntidade =
+            TipoEntidadeInteracao::deSlug(
+                $tipo,
+            );
 
-        $classeModelo = match ($tipoNormalizado) {
-            'metal_thursday',
-            'metal-thursday',
-            'metalthursday' => MetalThursday::class,
+        if ($tipoEntidade === null) {
+            throw new NotFoundHttpException;
+        }
 
-            'section',
-            'seccao',
-            'seccao_metal_thursday' => SeccaoMetalThursday::class,
-
-            default => throw new NotFoundHttpException,
-        };
+        $classeModelo =
+            $tipoEntidade->obterClasseModelo();
 
         return $classeModelo::query()
             ->findOrFail(
@@ -203,15 +220,17 @@ final class ControladorAudicao extends Controller
     private function bloquearAudivel(
         MetalThursday|SeccaoMetalThursday $audivel,
     ): MetalThursday|SeccaoMetalThursday {
-        $classeModelo = $audivel::class;
+        $classeModelo =
+            $audivel::class;
 
         /** @var MetalThursday|SeccaoMetalThursday $audivelBloqueado */
-        $audivelBloqueado = $classeModelo::query()
-            ->whereKey(
-                $audivel->getKey(),
-            )
-            ->lockForUpdate()
-            ->firstOrFail();
+        $audivelBloqueado =
+            $classeModelo::query()
+                ->whereKey(
+                    $audivel->getKey(),
+                )
+                ->lockForUpdate()
+                ->firstOrFail();
 
         return $audivelBloqueado;
     }
@@ -219,46 +238,63 @@ final class ControladorAudicao extends Controller
     /**
      * Obtém o conteúdo apresentado no indicador das audições.
      *
-     * Os nomes são escapados antes de serem incorporados no fragmento HTML.
-     *
-     * @param  MetalThursday|SeccaoMetalThursday  $audivel  Entidade consultada.
+     * @param  MetalThursday|SeccaoMetalThursday  $audivel  Entidade
+     *                                                      consultada.
      * @return string Conteúdo HTML do indicador.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function obterConteudoIndicador(
         MetalThursday|SeccaoMetalThursday $audivel,
     ): string {
-        $nomes = $audivel
-            ->audicoes()
-            ->with([
-                'utilizador:id,nome',
-            ])
-            ->orderBy('id')
-            ->get()
-            ->map(
-                static function (
-                    Audicao $audicao,
-                ): ?string {
-                    $nome = $audicao
-                        ->utilizador
-                        ?->nome;
+        $nomes =
+            $audivel
+                ->audicoes()
+                ->with([
+                    'utilizador:id,nome',
+                ])
+                ->orderBy(
+                    'id',
+                )
+                ->get()
+                ->map(
+                    static function (
+                        Audicao $audicao,
+                    ): ?string {
+                        $nome =
+                            $audicao
+                                ->utilizador
+                                ?->nome;
 
-                    return is_string($nome)
-                        && $nome !== ''
-                        ? $nome
-                        : null;
-                },
-            )
-            ->filter()
-            ->unique()
-            ->sort(
-                SORT_NATURAL
-                    | SORT_FLAG_CASE,
-            )
-            ->values();
+                        if (! is_string($nome)) {
+                            return null;
+                        }
+
+                        $nomeNormalizado =
+                            trim(
+                                $nome,
+                            );
+
+                        return $nomeNormalizado !== ''
+                            ? $nomeNormalizado
+                            : null;
+                    },
+                )
+                ->filter(
+                    static fn (
+                        mixed $nome,
+                    ): bool => is_string(
+                        $nome,
+                    ),
+                )
+                ->unique()
+                ->sort(
+                    SORT_NATURAL
+                        | SORT_FLAG_CASE,
+                )
+                ->values();
 
         if ($nomes->isEmpty()) {
             return 'Ninguém marcou como ouvido.';
@@ -268,9 +304,13 @@ final class ControladorAudicao extends Controller
             ->map(
                 static fn (
                     string $nome,
-                ): string => e($nome),
+                ): string => e(
+                    $nome,
+                ),
             )
-            ->implode('<br>');
+            ->implode(
+                '<br>',
+            );
     }
 
     /**
@@ -283,14 +323,22 @@ final class ControladorAudicao extends Controller
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function obterIdentificadorUtilizador(
         Request $pedido,
     ): int {
-        $identificador = $pedido
-            ->user()
-            ?->getAuthIdentifier();
+        $utilizador =
+            $pedido->user();
+
+        if (! $utilizador instanceof Utilizador) {
+            throw new AuthenticationException(
+                'É necessário iniciar sessão para registar uma audição.',
+            );
+        }
+
+        $identificador =
+            $utilizador->getKey();
 
         if (
             ! is_numeric($identificador)

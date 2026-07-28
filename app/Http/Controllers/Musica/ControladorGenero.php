@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Musica;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Musica\AtualizarGeneroRequest;
 use App\Http\Requests\Musica\CriarGeneroRequest;
+use App\Models\Musica\Banda;
 use App\Models\Musica\Genero;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -23,7 +24,7 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * @since 1.0.0
  *
- * @version 2.1.0
+ * @version 3.0.0
  */
 final class ControladorGenero extends Controller
 {
@@ -59,7 +60,7 @@ final class ControladorGenero extends Controller
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
     public function index(
         Request $pedido,
@@ -69,47 +70,61 @@ final class ControladorGenero extends Controller
             Genero::class,
         );
 
-        $pesquisa = $this->normalizarPesquisa(
-            $pedido->query('pesquisa'),
-        );
+        $pesquisa =
+            $this->normalizarPesquisa(
+                $pedido->query(
+                    'pesquisa',
+                ),
+            );
 
-        $generos = Genero::query()
+        $generos =
+            Genero::query()
             ->select([
                 'id',
                 'nome',
             ])
             ->with([
-                'pais' => static fn (
+                'generosPais' => static fn(
                     Builder $consulta,
                 ): Builder => $consulta
                     ->select([
                         'generos.id',
                         'generos.nome',
                     ])
-                    ->orderBy('generos.nome')
-                    ->orderBy('generos.id'),
+                    ->orderBy(
+                        'generos.nome',
+                    )
+                    ->orderBy(
+                        'generos.id',
+                    ),
             ])
             ->when(
                 $pesquisa !== null,
-                static fn (
+                static fn(
                     Builder $consulta,
                 ): Builder => $consulta->where(
                     'nome',
                     'like',
-                    '%'.$pesquisa.'%',
+                    '%' . $pesquisa . '%',
                 ),
             )
-            ->orderBy('nome')
-            ->orderBy('id')
+            ->orderBy(
+                'nome',
+            )
+            ->orderBy(
+                'id',
+            )
             ->paginate(
                 self::ITENS_POR_PAGINA,
             )
             ->withQueryString();
 
         return view(
-            'entities.genres.index',
+            'musica.generos.indice',
             [
                 'generos' => $generos,
+
+                'pesquisaAtual' => $pesquisa,
             ],
         );
     }
@@ -117,24 +132,26 @@ final class ControladorGenero extends Controller
     /**
      * Apresenta o formulário de criação.
      *
+     * @param  Request  $pedido  Pedido HTTP atual.
      * @return View Formulário de criação.
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
-    public function create(): View
-    {
+    public function create(
+        Request $pedido,
+    ): View {
         $this->authorize(
             'create',
             Genero::class,
         );
 
         return view(
-            'entities.genres.create',
-            [
-                'generos' => $this->obterGenerosOrdenados(),
-            ],
+            'musica.generos.criar',
+            $this->obterDadosFormulario(
+                $pedido,
+            ),
         );
     }
 
@@ -146,7 +163,7 @@ final class ControladorGenero extends Controller
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
     public function store(
         CriarGeneroRequest $pedido,
@@ -156,26 +173,33 @@ final class ControladorGenero extends Controller
             Genero::class,
         );
 
-        $dados = $pedido->validated();
+        $dados =
+            $pedido->validated();
 
-        $genero = DB::transaction(
-            static function () use (
-                $dados,
-            ): Genero {
-                $genero = Genero::query()->create([
-                    'nome' => $dados['nome'],
-                ]);
+        $genero =
+            DB::transaction(
+                static function () use (
+                    $dados,
+                ): Genero {
+                    $genero =
+                        Genero::query()
+                        ->create([
+                            'nome' => $dados['nome'],
+                        ]);
 
-                $genero->pais()->sync(
-                    $dados['generos_pai'],
-                );
+                    $genero
+                        ->generosPais()
+                        ->sync(
+                            $dados['generos_pai']
+                                ?? [],
+                        );
 
-                return $genero;
-            },
-        );
+                    return $genero;
+                },
+            );
 
         $genero->load([
-            'pais',
+            'generosPais',
         ]);
 
         if ($pedido->expectsJson()) {
@@ -190,9 +214,11 @@ final class ControladorGenero extends Controller
         }
 
         return redirect()
-            ->route('genres.index')
+            ->route(
+                'generos.indice',
+            )
             ->with(
-                'estado',
+                'sucesso',
                 'Género criado com sucesso.',
             );
     }
@@ -205,7 +231,7 @@ final class ControladorGenero extends Controller
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
     public function show(
         Genero $genero,
@@ -216,11 +242,12 @@ final class ControladorGenero extends Controller
         );
 
         $genero->loadMissing([
-            'pais',
-            'filhos',
+            'generosPais',
+            'generosFilhos',
         ]);
 
-        $bandas = $genero
+        $bandas =
+            $genero
             ->bandas()
             ->select([
                 'bandas.id',
@@ -228,7 +255,7 @@ final class ControladorGenero extends Controller
                 'bandas.pais_id',
             ])
             ->with([
-                'pais' => static fn (
+                'pais' => static fn(
                     Builder $consulta,
                 ): Builder => $consulta->select([
                     'id',
@@ -236,29 +263,55 @@ final class ControladorGenero extends Controller
                     'codigo_iso',
                 ]),
 
-                'generos' => static fn (
+                'generos' => static fn(
                     Builder $consulta,
                 ): Builder => $consulta
                     ->select([
                         'generos.id',
                         'generos.nome',
                     ])
-                    ->orderBy('generos.nome')
-                    ->orderBy('generos.id'),
+                    ->orderBy(
+                        'generos.nome',
+                    )
+                    ->orderBy(
+                        'generos.id',
+                    ),
             ])
-            ->orderBy('bandas.nome')
-            ->orderBy('bandas.id')
+            ->orderBy(
+                'bandas.nome',
+            )
+            ->orderBy(
+                'bandas.id',
+            )
             ->paginate(
                 self::ITENS_POR_PAGINA,
             )
             ->withQueryString();
 
-        return view(
-            'entities.genres.show',
-            [
-                'genero' => $genero,
+        $bandas->setCollection(
+            $bandas
+                ->getCollection()
+                ->map(
+                    fn(Banda $banda): array =>
+                    $this->prepararBandaAssociada(
+                        $banda,
+                        $genero,
+                    ),
+                ),
+        );
 
-                'bandas' => $bandas,
+        return view(
+            'musica.generos.detalhes',
+            [
+                'genero' =>
+                $genero,
+
+                'bandas' =>
+                $bandas,
+
+                ...$this->obterDadosCabecalhoGenero(
+                    $genero,
+                ),
             ],
         );
     }
@@ -266,17 +319,19 @@ final class ControladorGenero extends Controller
     /**
      * Apresenta o formulário de edição.
      *
-     * O próprio género e os seus descendentes são excluídos dos possíveis
-     * géneros pais.
+     * O próprio género e todos os seus descendentes são excluídos dos
+     * possíveis géneros pais.
      *
+     * @param  Request  $pedido  Pedido HTTP atual.
      * @param  Genero  $genero  Género editado.
      * @return View Formulário de edição.
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
     public function edit(
+        Request $pedido,
         Genero $genero,
     ): View {
         $this->authorize(
@@ -284,34 +339,16 @@ final class ControladorGenero extends Controller
             $genero,
         );
 
-        $genero->loadMissing([
-            'pais',
-        ]);
-
-        $identificadoresExcluidos =
-            $genero
-                ->obterIdentificadoresComDescendentes();
-
-        $generosDisponiveis = Genero::query()
-            ->select([
-                'id',
-                'nome',
-            ])
-            ->whereNotIn(
-                'id',
-                $identificadoresExcluidos,
-            )
-            ->orderBy('nome')
-            ->orderBy('id')
-            ->get();
+        $genero->loadMissing(
+            'generosPais',
+        );
 
         return view(
-            'entities.genres.edit',
-            [
-                'genero' => $genero,
-
-                'generos' => $generosDisponiveis,
-            ],
+            'musica.generos.editar',
+            $this->obterDadosFormulario(
+                $pedido,
+                $genero,
+            ),
         );
     }
 
@@ -324,7 +361,7 @@ final class ControladorGenero extends Controller
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
     public function update(
         AtualizarGeneroRequest $pedido,
@@ -335,7 +372,8 @@ final class ControladorGenero extends Controller
             $genero,
         );
 
-        $dados = $pedido->validated();
+        $dados =
+            $pedido->validated();
 
         DB::transaction(
             static function () use (
@@ -346,17 +384,20 @@ final class ControladorGenero extends Controller
                     'nome' => $dados['nome'],
                 ]);
 
-                $genero->pais()->sync(
-                    $dados['generos_pai'],
-                );
+                $genero
+                    ->generosPais()
+                    ->sync(
+                        $dados['generos_pai']
+                            ?? [],
+                    );
             },
         );
 
         $genero
             ->refresh()
             ->load([
-                'pais',
-                'filhos',
+                'generosPais',
+                'generosFilhos',
             ]);
 
         if ($pedido->expectsJson()) {
@@ -368,9 +409,11 @@ final class ControladorGenero extends Controller
         }
 
         return redirect()
-            ->route('genres.index')
+            ->route(
+                'generos.indice',
+            )
             ->with(
-                'estado',
+                'sucesso',
                 'Género atualizado com sucesso.',
             );
     }
@@ -384,7 +427,7 @@ final class ControladorGenero extends Controller
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
     public function destroy(
         Request $pedido,
@@ -405,31 +448,142 @@ final class ControladorGenero extends Controller
         }
 
         return redirect()
-            ->route('genres.index')
+            ->route(
+                'generos.indice',
+            )
             ->with(
-                'estado',
+                'sucesso',
                 'Género eliminado com sucesso.',
             );
     }
 
     /**
-     * Obtém todos os géneros ordenados alfabeticamente.
+     * Obtém os dados utilizados pelo formulário de géneros.
      *
+     * Quando existe uma submissão anterior inválida, os respetivos valores
+     * são recuperados da sessão. Durante a edição, são utilizados como
+     * predefinição os dados do género.
+     *
+     * O próprio género e os seus descendentes são excluídos dos géneros
+     * disponíveis como pais.
+     *
+     * @param  Request  $pedido  Pedido HTTP atual.
+     * @param  Genero|null  $genero  Género editado ou nulo durante a criação.
+     * @return array{
+     *     genero: Genero|null,
+     *     generosDisponiveis: Collection<int, Genero>,
+     *     emEdicao: bool,
+     *     enderecoFormulario: string,
+     *     nomeGenero: string,
+     *     identificadoresGenerosPaisSelecionados: array<int, string>,
+     *     textoBotaoSubmissao: string
+     * } Dados preparados.
+     *
+     * @since 2.0.0
+     *
+     * @version 3.0.0
+     */
+    private function obterDadosFormulario(
+        Request $pedido,
+        ?Genero $genero = null,
+    ): array {
+        $emEdicao =
+            $genero instanceof Genero;
+
+        if ($emEdicao) {
+            $genero->loadMissing(
+                'generosPais',
+            );
+
+            $identificadoresGenerosPaisModelo =
+                $genero
+                ->generosPais
+                ->modelKeys();
+
+            $identificadoresExcluidos =
+                $genero
+                ->obterIdentificadoresComDescendentes();
+
+            $enderecoFormulario =
+                route(
+                    'generos.atualizar',
+                    $genero,
+                );
+        } else {
+            $identificadoresGenerosPaisModelo = [];
+            $identificadoresExcluidos = [];
+
+            $enderecoFormulario =
+                route(
+                    'generos.guardar',
+                );
+        }
+
+        return [
+            'genero' => $genero,
+
+            'generosDisponiveis' => $this->obterGenerosDisponiveis(
+                $identificadoresExcluidos,
+            ),
+
+            'emEdicao' => $emEdicao,
+
+            'enderecoFormulario' => $enderecoFormulario,
+
+            'nomeGenero' => $this->normalizarTextoFormulario(
+                $pedido->old(
+                    'nome',
+                    $genero?->nome,
+                ),
+            ),
+
+            'identificadoresGenerosPaisSelecionados' => $this->normalizarListaIdentificadoresFormulario(
+                $pedido->old(
+                    'generos_pai',
+                    $identificadoresGenerosPaisModelo,
+                ),
+            ),
+
+            'textoBotaoSubmissao' => $emEdicao
+                ? 'Guardar alterações'
+                : 'Criar género',
+        ];
+    }
+
+    /**
+     * Obtém os géneros disponíveis para utilização como géneros pais.
+     *
+     * @param  array<int, int|string>  $identificadoresExcluidos
+     *                                                            Identificadores que não podem ser selecionados.
      * @return Collection<int, Genero> Géneros disponíveis.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    private function obterGenerosOrdenados(): Collection
-    {
+    private function obterGenerosDisponiveis(
+        array $identificadoresExcluidos,
+    ): Collection {
         return Genero::query()
             ->select([
                 'id',
                 'nome',
             ])
-            ->orderBy('nome')
-            ->orderBy('id')
+            ->when(
+                $identificadoresExcluidos !== [],
+                static fn(
+                    Builder $consulta,
+                ): Builder => $consulta->whereNotIn(
+                    'id',
+                    $identificadoresExcluidos,
+                ),
+            )
+            ->orderBy(
+                'nome',
+            )
+            ->orderBy(
+                'id',
+            )
             ->get();
     }
 
@@ -441,7 +595,7 @@ final class ControladorGenero extends Controller
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function normalizarPesquisa(
         mixed $valor,
@@ -450,9 +604,10 @@ final class ControladorGenero extends Controller
             return null;
         }
 
-        $pesquisa = trim(
-            $valor,
-        );
+        $pesquisa =
+            trim(
+                $valor,
+            );
 
         if ($pesquisa === '') {
             return null;
@@ -463,5 +618,266 @@ final class ControladorGenero extends Controller
             0,
             self::LIMITE_PESQUISA,
         );
+    }
+
+    /**
+     * Normaliza um texto utilizado num formulário.
+     *
+     * @param  mixed  $valor  Valor recebido.
+     * @return string Texto normalizado.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    private function normalizarTextoFormulario(
+        mixed $valor,
+    ): string {
+        if (
+            ! is_string($valor)
+            && ! is_int($valor)
+            && ! is_float($valor)
+        ) {
+            return '';
+        }
+
+        return trim(
+            (string) $valor,
+        );
+    }
+
+    /**
+     * Normaliza um identificador utilizado num formulário.
+     *
+     * @param  mixed  $valor  Valor recebido.
+     * @return string Identificador normalizado.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    private function normalizarIdentificadorFormulario(
+        mixed $valor,
+    ): string {
+        if (is_int($valor)) {
+            return $valor > 0
+                ? (string) $valor
+                : '';
+        }
+
+        if (! is_string($valor)) {
+            return '';
+        }
+
+        $identificador =
+            trim(
+                $valor,
+            );
+
+        if (
+            $identificador === ''
+            || ! ctype_digit($identificador)
+            || (int) $identificador < 1
+        ) {
+            return '';
+        }
+
+        return (string) (int) $identificador;
+    }
+
+    /**
+     * Normaliza uma lista de identificadores do formulário.
+     *
+     * Identificadores inválidos são ignorados e valores repetidos são
+     * removidos.
+     *
+     * @param  mixed  $valores  Valores recebidos.
+     * @return array<int, string> Identificadores normalizados.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    private function normalizarListaIdentificadoresFormulario(
+        mixed $valores,
+    ): array {
+        if (! is_array($valores)) {
+            return [];
+        }
+
+        $identificadores = [];
+
+        foreach ($valores as $valor) {
+            $identificador =
+                $this->normalizarIdentificadorFormulario(
+                    $valor,
+                );
+
+            if ($identificador === '') {
+                continue;
+            }
+
+            $identificadores[$identificador] =
+                $identificador;
+        }
+
+        return array_values(
+            $identificadores,
+        );
+    }
+
+    /**
+     * Prepara os dados do cabeçalho da página de detalhes.
+     *
+     * @param  Genero  $genero  Género apresentado.
+     * @return array{
+     *     nomesGenerosPais: string|null,
+     *     nomesGenerosFilhos: string|null
+     * } Dados preparados.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    private function obterDadosCabecalhoGenero(
+        Genero $genero,
+    ): array {
+        return [
+            'nomesGenerosPais' =>
+            $this->juntarNomesGeneros(
+                $genero->generosPais,
+            ),
+
+            'nomesGenerosFilhos' =>
+            $this->juntarNomesGeneros(
+                $genero->generosFilhos,
+            ),
+        ];
+    }
+
+    /**
+     * Prepara uma banda associada para apresentação.
+     *
+     * @param  Banda  $banda  Banda apresentada.
+     * @param  Genero  $generoAtual  Género da página atual.
+     * @return array{
+     *     modelo: Banda,
+     *     identificador: int,
+     *     nome: string,
+     *     nomePais: string,
+     *     nomesOutrosGeneros: string|null
+     * } Dados preparados.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    private function prepararBandaAssociada(
+        Banda $banda,
+        Genero $generoAtual,
+    ): array {
+        $identificadorGeneroAtual =
+            (int) $generoAtual->getKey();
+
+        $outrosGeneros =
+            $banda
+            ->generos
+            ->filter(
+                static fn(Genero $genero): bool =>
+                (int) $genero->getKey()
+                    !== $identificadorGeneroAtual,
+            )
+            ->values();
+
+        return [
+            'modelo' =>
+            $banda,
+
+            'identificador' =>
+            (int) $banda->getKey(),
+
+            'nome' =>
+            $this->normalizarTextoApresentacao(
+                $banda->nome,
+            )
+                ?? 'Banda indisponível',
+
+            'nomePais' =>
+            $this->normalizarTextoApresentacao(
+                $banda->pais?->nome,
+            )
+                ?? 'País indisponível',
+
+            'nomesOutrosGeneros' =>
+            $this->juntarNomesGeneros(
+                $outrosGeneros,
+            ),
+        ];
+    }
+
+    /**
+     * Junta os nomes de uma coleção de géneros.
+     *
+     * @param  Collection<int, Genero>  $generos  Géneros apresentados.
+     * @return string|null Nomes separados por vírgulas ou nulo.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    private function juntarNomesGeneros(
+        Collection $generos,
+    ): ?string {
+        $nomes = [];
+
+        foreach ($generos as $genero) {
+            if (! $genero instanceof Genero) {
+                continue;
+            }
+
+            $nome =
+                $this->normalizarTextoApresentacao(
+                    $genero->nome,
+                );
+
+            if ($nome !== null) {
+                $nomes[] =
+                    $nome;
+            }
+        }
+
+        return $nomes !== []
+            ? implode(
+                ', ',
+                $nomes,
+            )
+            : null;
+    }
+
+    /**
+     * Normaliza um texto destinado à apresentação.
+     *
+     * @param  mixed  $valor  Valor recebido.
+     * @return string|null Texto normalizado.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    private function normalizarTextoApresentacao(
+        mixed $valor,
+    ): ?string {
+        if (! is_string($valor)) {
+            return null;
+        }
+
+        $texto =
+            trim(
+                $valor,
+            );
+
+        return $texto !== ''
+            ? $texto
+            : null;
     }
 }

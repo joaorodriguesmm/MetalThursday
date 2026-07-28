@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Autenticacao;
 
 use Illuminate\Foundation\Http\FormRequest;
+use LogicException;
 
 /**
  * Valida o pedido de envio de uma ligação para redefinir a palavra-passe.
@@ -14,7 +15,7 @@ use Illuminate\Foundation\Http\FormRequest;
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 3.1.0
  */
 final class SolicitarRedefinicaoPalavraPasseRequest extends FormRequest
 {
@@ -41,7 +42,10 @@ final class SolicitarRedefinicaoPalavraPasseRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        $email = $this->input('email');
+        $email =
+            $this->input(
+                'email',
+            );
 
         if (! is_string($email)) {
             return;
@@ -49,7 +53,9 @@ final class SolicitarRedefinicaoPalavraPasseRequest extends FormRequest
 
         $this->merge([
             'email' => mb_strtolower(
-                trim($email),
+                trim(
+                    $email,
+                ),
             ),
         ]);
     }
@@ -57,7 +63,7 @@ final class SolicitarRedefinicaoPalavraPasseRequest extends FormRequest
     /**
      * Obtém as regras de validação.
      *
-     * Não é utilizada uma regra `exists`, porque a resposta não deve revelar
+     * Não é utilizada a regra `exists`, porque a resposta não deve revelar
      * se o endereço está ou não associado a uma conta.
      *
      * @return array<string, array<int, string>> Regras de validação.
@@ -115,5 +121,33 @@ final class SolicitarRedefinicaoPalavraPasseRequest extends FormRequest
         return [
             'email' => 'endereço de e-mail',
         ];
+    }
+
+    /**
+     * Obtém o endereço de e-mail validado.
+     *
+     * @return string Endereço de e-mail normalizado.
+     *
+     * @throws LogicException Quando o valor validado possui um tipo
+     *                        inesperado.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    public function email(): string
+    {
+        $email =
+            $this->validated(
+                'email',
+            );
+
+        if (! is_string($email)) {
+            throw new LogicException(
+                'O endereço de e-mail validado possui um tipo inesperado.',
+            );
+        }
+
+        return $email;
     }
 }

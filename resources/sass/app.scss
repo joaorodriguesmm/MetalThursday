@@ -167,8 +167,52 @@ h6,
 }
 
 /**
- * Avatar e pré-visualização da fotografia.
+ * Componente de avatar do utilizador.
  */
+.avatar-utilizador {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width:
+        var(
+            --tamanho-avatar,
+            40px
+        );
+
+    height:
+        var(
+            --tamanho-avatar,
+            40px
+        );
+
+    overflow: hidden;
+    vertical-align: middle;
+    border-radius: 50%;
+}
+
+.avatar-utilizador--fotografia {
+    object-fit: cover;
+}
+
+.avatar-utilizador--iniciais {
+    color: $branco;
+    font-family: sans-serif;
+    font-size:
+        calc(
+            var(
+                --tamanho-avatar,
+                40px
+            )
+            / 2.5
+        );
+
+    font-weight: bold;
+    line-height: 1;
+    user-select: none;
+    background-color: $cinzento-borda;
+}
+
 .avatar-circle,
 .avatar-preview {
     width: 80px;
@@ -439,19 +483,32 @@ a {
     text-decoration: none !important;
 }
 
-.profile-pic-wrapper {
+/**
+ * Contentor do avatar apresentado na navegação.
+ */
+.contentor-avatar-navegacao {
     position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 40px;
     height: 40px;
     overflow: visible;
 }
 
-.dropdown-indicator {
+/**
+ * Indicador do menu do utilizador.
+ */
+.indicador-menu-utilizador {
     right: 0;
     bottom: 0;
     z-index: 10;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 16px;
     height: 16px;
+    color: $branco;
     font-size: 0.6em;
     line-height: 1;
     border:
@@ -479,24 +536,59 @@ a {
         0.75rem;
 }
 
-.notification-icon-wrapper {
+/**
+ * Ligação para a página de notificações.
+ */
+.icone-notificacoes {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 40px;
     height: 40px;
-    background-color:
-        $vermelho-destaque;
-
+    background-color: $vermelho-destaque;
     border-radius: 50%;
+    transition:
+        background-color
+        0.2s
+        ease-in-out;
+
+    &:hover,
+    &:focus-visible,
+    &.active {
+        color: $branco;
+        text-decoration: none;
+        background-color:
+            color.adjust(
+                $vermelho-destaque,
+                $lightness: 8%,
+            );
+    }
+
+    &:focus-visible {
+        outline:
+            2px solid
+            $branco;
+
+        outline-offset: 2px;
+    }
 }
 
-.notification-badge {
+/**
+ * Indicador da quantidade de notificações por ler.
+ */
+.indicador-notificacoes {
     z-index: 10;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     min-width: 1.5em;
     height: 1.5em;
-    padding: 0;
+    padding:
+        0
+        0.35em;
+
     font-size: 0.75em;
+    line-height: 1;
 }
 
 .dropdown-item:hover,
@@ -711,7 +803,7 @@ input[type="number"] {
             0.1s
             ease-in-out;
 
-        &.star-filled {
+        &.estrela-preenchida {
             color: $vermelho-destaque;
         }
     }

@@ -6,7 +6,7 @@ import Swal from 'sweetalert2';
  * Gere as interações assíncronas da aplicação.
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 3.0.0
  */
 class GestorInteracoes {
     /**
@@ -55,7 +55,7 @@ class GestorInteracoes {
      * @param {MouseEvent} evento Evento de clique.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     tratarClique(evento) {
         if (!(evento.target instanceof Element)) {
@@ -73,19 +73,21 @@ class GestorInteracoes {
     }
 
     /**
-     * Trata a submissão de formulários de edição de comentários.
+     * Trata a submissão dos formulários de edição de comentários.
      *
      * @param {SubmitEvent} evento Evento de submissão.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     tratarSubmissao(evento) {
         const formulario = evento.target;
 
         if (
             !(formulario instanceof HTMLFormElement)
-            || !formulario.matches('.formulario-edicao-comentario form')
+            || !formulario.matches(
+                'form[data-formulario-edicao-comentario]',
+            )
         ) {
             return;
         }
@@ -100,7 +102,7 @@ class GestorInteracoes {
      * @param {MouseEvent} evento Evento de sobreposição.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     tratarSobreposicao(evento) {
         if (!(evento.target instanceof Element)) {
@@ -108,7 +110,8 @@ class GestorInteracoes {
         }
 
         const elemento = evento.target.closest(
-            '[data-comentario-id][data-bs-toggle="tooltip"]',
+            '[data-endereco-utilizadores-gosto]'
+                + '[data-bs-toggle="tooltip"]',
         );
 
         if (
@@ -126,36 +129,36 @@ class GestorInteracoes {
      * Carrega os utilizadores que gostaram de um comentário.
      *
      * @param {HTMLElement} elemento Elemento associado ao tooltip.
-     *
      * @returns {Promise<void>}
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
     async carregarTooltipGostos(elemento) {
-        const url = elemento.dataset.urlUtilizadoresGosto;
+        const endereco = elemento.dataset.enderecoUtilizadoresGosto;
 
-        if (!url) {
+        if (!endereco) {
             return;
         }
 
         elemento.dataset.estadoTooltipGostos = 'a-carregar';
 
         try {
-            const resposta = await axios.get(url, {
+            const resposta = await axios.get(endereco, {
                 headers: this.obterCabecalhosJson(),
             });
 
-            const conteudo = resposta.data?.html_tooltip;
+            const conteudo =
+                resposta.data?.conteudo_indicador_html;
 
-            if (typeof conteudo === 'string') {
-                this.atualizarTooltip(elemento, conteudo);
-                elemento.dataset.estadoTooltipGostos = 'carregado';
+            if (typeof conteudo !== 'string') {
+                delete elemento.dataset.estadoTooltipGostos;
 
                 return;
             }
 
-            delete elemento.dataset.estadoTooltipGostos;
+            this.atualizarTooltip(elemento, conteudo);
+            elemento.dataset.estadoTooltipGostos = 'carregado';
         } catch {
             delete elemento.dataset.estadoTooltipGostos;
         }
@@ -165,11 +168,10 @@ class GestorInteracoes {
      * Trata uma interação iniciada pelo utilizador.
      *
      * @param {HTMLElement} botao Elemento que iniciou a interação.
-     *
      * @returns {Promise<void>}
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
     async tratarInteracao(botao) {
         const tipo = botao.dataset.tipoInteracao;
@@ -180,10 +182,10 @@ class GestorInteracoes {
 
         if (
             [
-                'alternar-resposta',
-                'cancelar-resposta',
-                'iniciar-edicao',
-                'cancelar-edicao',
+                'alternar-resposta-comentario',
+                'cancelar-resposta-comentario',
+                'iniciar-edicao-comentario',
+                'cancelar-edicao-comentario',
             ].includes(tipo)
         ) {
             this.atualizarInterface(botao, tipo);
@@ -191,13 +193,16 @@ class GestorInteracoes {
             return;
         }
 
-        const url = botao.dataset.url;
+        const endereco = botao.dataset.endereco;
 
-        if (!url || this.elementosEmProcessamento.has(botao)) {
+        if (!endereco || this.elementosEmProcessamento.has(botao)) {
             return;
         }
 
-        if (tipo === 'eliminar' && !(await this.confirmarEliminacao())) {
+        if (
+            tipo === 'eliminar'
+            && !(await this.confirmarEliminacao(botao))
+        ) {
             return;
         }
 
@@ -212,26 +217,41 @@ class GestorInteracoes {
         try {
             const resposta =
                 tipo === 'eliminar'
-                    ? await axios.delete(url, {
+                    ? await axios.delete(endereco, {
                         headers: this.obterCabecalhosJson(),
                     })
-                    : await axios.post(url, {}, {
+                    : await axios.post(endereco, {}, {
                         headers: this.obterCabecalhosJson(),
                     });
 
-            const mensagem = resposta.data?.mensagem;
+            const dados =
+                resposta.data
+                && typeof resposta.data === 'object'
+                    ? resposta.data
+                    : {};
 
-            if (typeof mensagem === 'string' && mensagem.trim() !== '') {
+            this.atualizarInterface(botao, tipo, dados);
+
+            const mensagemResposta = dados.mensagem;
+            const mensagemConfigurada = botao.dataset.mensagemSucesso;
+
+            const mensagem =
+                typeof mensagemResposta === 'string'
+                && mensagemResposta.trim() !== ''
+                    ? mensagemResposta
+                    : mensagemConfigurada;
+
+            if (
+                typeof mensagem === 'string'
+                && mensagem.trim() !== ''
+            ) {
                 this.mostrarMensagemSucesso(mensagem);
             }
-
-            this.atualizarInterface(
-                botao,
-                tipo,
-                resposta.data ?? {},
-            );
         } catch (erro) {
-            this.mostrarErroPedido(erro);
+            this.mostrarErroPedido(
+                erro,
+                botao.dataset.mensagemErro,
+            );
         } finally {
             this.elementosEmProcessamento.delete(botao);
             this.definirElementoDesativado(botao, estavaDesativado);
@@ -241,14 +261,19 @@ class GestorInteracoes {
     /**
      * Solicita a confirmação da eliminação.
      *
+     * @param {HTMLElement} botao Botão que iniciou a eliminação.
      * @returns {Promise<boolean>}
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    async confirmarEliminacao() {
+    async confirmarEliminacao(botao) {
+        const mensagem =
+            botao.dataset.mensagemConfirmacao
+            ?? 'Tens a certeza de que pretendes eliminar?';
+
         const resultado = await Swal.fire({
-            title: 'Tens a certeza de que pretendes eliminar?',
+            title: mensagem,
             text: 'Esta ação não pode ser revertida.',
             icon: 'warning',
             showCancelButton: true,
@@ -263,11 +288,10 @@ class GestorInteracoes {
      * Submete a edição de um comentário.
      *
      * @param {HTMLFormElement} formulario Formulário de edição.
-     *
      * @returns {Promise<void>}
      *
      * @since 1.1.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
     async submeterEdicaoComentario(formulario) {
         if (this.elementosEmProcessamento.has(formulario)) {
@@ -277,15 +301,22 @@ class GestorInteracoes {
         const botaoSubmeter = formulario.querySelector(
             'button[type="submit"]',
         );
-        const campoConteudo = formulario.querySelector('textarea');
-        const elementoErro = formulario.querySelector('.invalid-feedback');
-        const url = formulario.dataset.url;
+
+        const campoConteudo = formulario.querySelector(
+            '[data-campo-conteudo-comentario]',
+        );
+
+        const elementoErro = formulario.querySelector(
+            '.invalid-feedback',
+        );
+
+        const endereco = formulario.dataset.endereco;
 
         if (
             !(botaoSubmeter instanceof HTMLButtonElement)
             || !(campoConteudo instanceof HTMLTextAreaElement)
             || !(elementoErro instanceof HTMLElement)
-            || !url
+            || !endereco
         ) {
             return;
         }
@@ -294,22 +325,22 @@ class GestorInteracoes {
         const botaoEstavaDesativado = botaoSubmeter.disabled;
 
         this.elementosEmProcessamento.add(formulario);
-
         botaoSubmeter.disabled = true;
+
         botaoSubmeter.innerHTML = [
             '<span class="spinner-border spinner-border-sm"',
             'role="status" aria-hidden="true"></span>',
             '<span>A guardar...</span>',
         ].join(' ');
 
-        campoConteudo.classList.remove('is-invalid');
-        campoConteudo.removeAttribute('aria-invalid');
-        elementoErro.textContent = '';
-        elementoErro.classList.remove('d-block');
+        this.limparErroCampo(
+            campoConteudo,
+            elementoErro,
+        );
 
         try {
             const resposta = await axios.patch(
-                url,
+                endereco,
                 {
                     conteudo: campoConteudo.value,
                 },
@@ -318,35 +349,64 @@ class GestorInteracoes {
                 },
             );
 
-            const contentorComentario = formulario.closest('.comentario');
-            const apresentacaoConteudo = contentorComentario?.querySelector(
-                '.conteudo-comentario p',
-            );
-            const contentorFormulario = formulario.closest(
-                '.formulario-edicao-comentario',
-            );
-            const conteudoHtml = resposta.data?.conteudo_html;
+            const conteudoAtualizado =
+                resposta.data?.comentario?.conteudo;
+
+            const comentario =
+                formulario.closest('.comentario');
+
+            const apresentacao =
+                comentario?.querySelector(
+                    '[data-conteudo-comentario] p',
+                );
+
+            const contentorFormulario =
+                formulario.closest(
+                    '.contentor-edicao-comentario',
+                );
+
+            const contentorConteudo =
+                comentario?.querySelector(
+                    '[data-conteudo-comentario]',
+                );
 
             if (
-                contentorComentario instanceof HTMLElement
-                && apresentacaoConteudo instanceof HTMLElement
+                typeof conteudoAtualizado === 'string'
+                && apresentacao instanceof HTMLElement
                 && contentorFormulario instanceof HTMLElement
-                && typeof conteudoHtml === 'string'
+                && contentorConteudo instanceof HTMLElement
             ) {
-                apresentacaoConteudo.innerHTML = conteudoHtml;
-                contentorFormulario.style.display = 'none';
+                this.apresentarTextoComQuebras(
+                    apresentacao,
+                    conteudoAtualizado,
+                );
 
-                const conteudoComentario =
-                    contentorComentario.querySelector(
-                        '.conteudo-comentario',
-                    );
-
-                if (conteudoComentario instanceof HTMLElement) {
-                    conteudoComentario.style.display = 'block';
-                }
+                campoConteudo.value =
+                    conteudoAtualizado;
 
                 campoConteudo.dataset.valorOriginal =
-                    campoConteudo.value;
+                    conteudoAtualizado;
+
+                contentorFormulario.hidden = true;
+
+                contentorFormulario.setAttribute(
+                    'aria-hidden',
+                    'true',
+                );
+
+                contentorConteudo.hidden = false;
+            }
+
+            const mensagem =
+                resposta.data?.mensagem;
+
+            if (
+                typeof mensagem === 'string'
+                && mensagem.trim() !== ''
+            ) {
+                this.mostrarMensagemSucesso(
+                    mensagem,
+                );
             }
         } catch (erro) {
             const mensagemValidacao =
@@ -357,17 +417,30 @@ class GestorInteracoes {
 
             if (typeof mensagemValidacao === 'string') {
                 campoConteudo.classList.add('is-invalid');
-                campoConteudo.setAttribute('aria-invalid', 'true');
-                elementoErro.textContent = mensagemValidacao;
+
+                campoConteudo.setAttribute(
+                    'aria-invalid',
+                    'true',
+                );
+
+                elementoErro.textContent =
+                    mensagemValidacao;
+
                 elementoErro.classList.add('d-block');
                 campoConteudo.focus();
             } else {
                 this.mostrarErroPedido(erro);
             }
         } finally {
-            botaoSubmeter.disabled = botaoEstavaDesativado;
-            botaoSubmeter.innerHTML = conteudoOriginalBotao;
-            this.elementosEmProcessamento.delete(formulario);
+            botaoSubmeter.disabled =
+                botaoEstavaDesativado;
+
+            botaoSubmeter.innerHTML =
+                conteudoOriginalBotao;
+
+            this.elementosEmProcessamento.delete(
+                formulario,
+            );
         }
     }
 
@@ -379,40 +452,66 @@ class GestorInteracoes {
      * @param {Record<string, unknown>} dados Dados devolvidos pelo servidor.
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
-    atualizarInterface(botao, tipo, dados = {}) {
+    atualizarInterface(
+        botao,
+        tipo,
+        dados = {},
+    ) {
         switch (tipo) {
-            case 'gosto': {
-                this.atualizarGosto(botao, dados);
-                break;
-            }
+            case 'alternar-gosto':
+                this.atualizarGosto(
+                    botao,
+                    dados,
+                );
 
-            case 'audicao': {
-                this.atualizarAudicao(botao, dados);
                 break;
-            }
 
-            case 'eliminar': {
-                this.removerElemento(botao);
-                break;
-            }
+            case 'alternar-audicao':
+                this.atualizarAudicao(
+                    botao,
+                    dados,
+                );
 
-            case 'alternar-resposta':
-            case 'cancelar-resposta': {
-                this.alternarFormularioResposta(botao, tipo);
                 break;
-            }
 
-            case 'iniciar-edicao': {
-                this.iniciarEdicaoComentario(botao);
-                break;
-            }
+            case 'eliminar':
+                this.removerElemento(
+                    botao,
+                );
 
-            case 'cancelar-edicao': {
-                this.cancelarEdicaoComentario(botao);
                 break;
-            }
+
+            case 'alternar-resposta-comentario':
+                this.alternarFormularioResposta(
+                    botao,
+                    true,
+                );
+
+                break;
+
+            case 'cancelar-resposta-comentario':
+                this.alternarFormularioResposta(
+                    botao,
+                    false,
+                );
+
+                break;
+
+            case 'iniciar-edicao-comentario':
+                this.iniciarEdicaoComentario(
+                    botao,
+                );
+
+                break;
+
+            case 'cancelar-edicao-comentario':
+                this.cancelarEdicaoComentario(
+                    botao,
+                );
+
+                break;
 
             default:
                 break;
@@ -426,37 +525,99 @@ class GestorInteracoes {
      * @param {Record<string, unknown>} dados Dados devolvidos pelo servidor.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    atualizarGosto(botao, dados) {
-        const envolucro =
-            botao.querySelector('[data-comentario-id]')
-            ?? botao.closest('[data-comentario-id]');
+    atualizarGosto(
+        botao,
+        dados,
+    ) {
+        const adicionado =
+            dados.adicionado === true;
 
-        if (!(envolucro instanceof HTMLElement)) {
-            return;
-        }
+        const numeroGostos =
+            Number.parseInt(
+                String(
+                    dados.numero_gostos
+                    ?? '',
+                ),
+                10,
+            );
 
-        const total = envolucro.querySelector('.total-atual');
+        const icone =
+            botao.querySelector(
+                '[data-icone-gosto]',
+            );
 
-        if (
-            total instanceof HTMLElement
-            && Number.isFinite(Number(dados.total_gostos))
-        ) {
-            total.textContent = String(dados.total_gostos);
-        }
-
-        const temGosto = dados.tem_gosto === true;
-        const icone = envolucro.querySelector('i');
+        const quantidade =
+            botao.querySelector(
+                '[data-quantidade-gostos]',
+            );
 
         if (icone instanceof HTMLElement) {
-            icone.classList.toggle('bi-heart', !temGosto);
-            icone.classList.toggle('bi-heart-fill', temGosto);
-            icone.classList.toggle('text-danger', temGosto);
+            icone.classList.toggle(
+                'bi-heart',
+                !adicionado,
+            );
+
+            icone.classList.toggle(
+                'bi-heart-fill',
+                adicionado,
+            );
+
+            icone.classList.toggle(
+                'text-danger',
+                adicionado,
+            );
         }
 
-        delete envolucro.dataset.estadoTooltipGostos;
-        this.atualizarTooltip(envolucro, 'A carregar...');
+        if (
+            quantidade instanceof HTMLElement
+            && Number.isInteger(numeroGostos)
+            && numeroGostos >= 0
+        ) {
+            quantidade.textContent =
+                String(numeroGostos);
+        }
+
+        botao.setAttribute(
+            'aria-pressed',
+            String(adicionado),
+        );
+
+        if (
+            Number.isInteger(numeroGostos)
+            && numeroGostos >= 0
+        ) {
+            const acao =
+                adicionado
+                    ? 'Remover gosto'
+                    : 'Adicionar gosto';
+
+            const unidade =
+                numeroGostos === 1
+                    ? 'gosto'
+                    : 'gostos';
+
+            botao.setAttribute(
+                'aria-label',
+                `${acao}. ${numeroGostos} ${unidade}.`,
+            );
+        }
+
+        const conteudo =
+            dados.conteudo_indicador_html;
+
+        if (typeof conteudo === 'string') {
+            this.atualizarTooltip(
+                botao,
+                conteudo,
+            );
+
+            botao.dataset.estadoTooltipGostos =
+                'carregado';
+        } else {
+            delete botao.dataset.estadoTooltipGostos;
+        }
     }
 
     /**
@@ -466,54 +627,80 @@ class GestorInteracoes {
      * @param {Record<string, unknown>} dados Dados devolvidos pelo servidor.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    atualizarAudicao(botao, dados) {
-        const textoBotao = botao.querySelector(
-            '[data-texto-interacao]',
-        );
-        const tipoAudivel = botao.dataset.tipoAudivel;
-        const foiOuvido = dados.foi_ouvido === true;
+    atualizarAudicao(
+        botao,
+        dados,
+    ) {
+        const marcadoComoOuvido =
+            dados.marcado_como_ouvido === true;
+
+        const numeroAudicoes =
+            Number.parseInt(
+                String(
+                    dados.numero_audicoes
+                    ?? '',
+                ),
+                10,
+            );
+
+        const tipoAudivel =
+            botao.dataset.tipoAudivel;
+
+        const textoBotao =
+            botao.querySelector(
+                '[data-texto-interacao], span',
+            );
 
         if (textoBotao instanceof HTMLElement) {
             textoBotao.textContent =
-                tipoAudivel === 'secao'
-                    ? foiOuvido
+                tipoAudivel === 'seccao-metal-thursday'
+                    ? marcadoComoOuvido
                         ? 'Ouvido'
                         : 'Marcar como ouvido'
-                    : foiOuvido
+                    : marcadoComoOuvido
                         ? 'Ouvida'
                         : 'Marcar MetalThursday como ouvida';
         }
 
-        const contentorInteracoes = botao.closest(
-            '[data-contentor-interacoes]',
-        );
+        const contentorInteracoes =
+            botao.closest(
+                '[data-contentor-interacoes]',
+            );
+
         const apresentacaoAudicoes =
             contentorInteracoes?.querySelector(
                 '.apresentacao-audicoes',
             );
 
-        if (!(apresentacaoAudicoes instanceof HTMLElement)) {
+        if (
+            !(apresentacaoAudicoes instanceof HTMLElement)
+        ) {
             return;
         }
 
-        const totalAudicoes = apresentacaoAudicoes.querySelector(
-            '.total-audicoes',
-        );
+        const quantidade =
+            apresentacaoAudicoes.querySelector(
+                '.quantidade-audicoes',
+            );
 
         if (
-            totalAudicoes instanceof HTMLElement
-            && Number.isFinite(Number(dados.total_audicoes))
+            quantidade instanceof HTMLElement
+            && Number.isInteger(numeroAudicoes)
+            && numeroAudicoes >= 0
         ) {
-            totalAudicoes.textContent =
-                String(dados.total_audicoes);
+            quantidade.textContent =
+                String(numeroAudicoes);
         }
 
-        if (typeof dados.html_tooltip === 'string') {
+        const conteudo =
+            dados.conteudo_indicador_html;
+
+        if (typeof conteudo === 'string') {
             this.atualizarTooltip(
                 apresentacaoAudicoes,
-                dados.html_tooltip,
+                conteudo,
             );
         }
     }
@@ -524,19 +711,22 @@ class GestorInteracoes {
      * @param {HTMLElement} botao Botão da interação.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     removerElemento(botao) {
-        const seletor = botao.dataset.seletorRemocao;
+        const seletor =
+            botao.dataset.seletorElementoRemovivel;
 
         if (!seletor) {
             return;
         }
 
-        let elemento;
+        let elemento = null;
 
         try {
-            elemento = botao.closest(seletor);
+            elemento =
+                botao.closest(seletor)
+                ?? document.querySelector(seletor);
         } catch {
             return;
         }
@@ -545,8 +735,11 @@ class GestorInteracoes {
             return;
         }
 
-        elemento.style.transition = 'opacity 0.3s ease-out';
-        elemento.style.opacity = '0';
+        elemento.style.transition =
+            'opacity 0.3s ease-out';
+
+        elemento.style.opacity =
+            '0';
 
         window.setTimeout(
             () => elemento.remove(),
@@ -558,32 +751,46 @@ class GestorInteracoes {
      * Alterna a apresentação do formulário de resposta.
      *
      * @param {HTMLElement} botao Botão da interação.
-     * @param {string} tipo Tipo da interação.
+     * @param {boolean} alternar Indica se o estado deve ser alternado.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    alternarFormularioResposta(botao, tipo) {
-        const comentario = botao.closest('.comentario');
-        const formularioResposta = comentario?.querySelector(
-            '.contentor-formulario-resposta',
-        );
+    alternarFormularioResposta(
+        botao,
+        alternar,
+    ) {
+        const contentor =
+            this.obterElementoControlado(
+                botao,
+            );
 
-        if (!(formularioResposta instanceof HTMLElement)) {
+        if (!(contentor instanceof HTMLElement)) {
             return;
         }
 
-        const deveMostrar =
-            tipo === 'alternar-resposta'
-            && formularioResposta.style.display === 'none';
+        const mostrar =
+            alternar
+                ? contentor.hidden
+                : false;
 
-        formularioResposta.style.display =
-            deveMostrar
-                ? 'block'
-                : 'none';
+        contentor.hidden =
+            !mostrar;
 
-        if (deveMostrar) {
-            formularioResposta.querySelector('textarea')?.focus();
+        contentor.setAttribute(
+            'aria-hidden',
+            String(!mostrar),
+        );
+
+        botao.setAttribute(
+            'aria-expanded',
+            String(mostrar),
+        );
+
+        if (mostrar) {
+            contentor
+                .querySelector('textarea')
+                ?.focus();
         }
     }
 
@@ -593,29 +800,54 @@ class GestorInteracoes {
      * @param {HTMLElement} botao Botão da interação.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     iniciarEdicaoComentario(botao) {
-        const comentario = botao.closest('.comentario');
-        const conteudo = comentario?.querySelector(
-            '.conteudo-comentario',
-        );
-        const contentorFormulario = comentario?.querySelector(
-            '.formulario-edicao-comentario',
-        );
-        const campo = contentorFormulario?.querySelector('textarea');
+        const contentorFormulario =
+            this.obterElementoControlado(
+                botao,
+            );
+
+        const comentario =
+            botao.closest('.comentario');
+
+        const conteudo =
+            comentario?.querySelector(
+                '[data-conteudo-comentario]',
+            );
+
+        const campo =
+            contentorFormulario?.querySelector(
+                '[data-campo-conteudo-comentario]',
+            );
 
         if (
-            !(conteudo instanceof HTMLElement)
-            || !(contentorFormulario instanceof HTMLElement)
+            !(contentorFormulario instanceof HTMLElement)
+            || !(conteudo instanceof HTMLElement)
             || !(campo instanceof HTMLTextAreaElement)
         ) {
             return;
         }
 
-        campo.dataset.valorOriginal = campo.value;
-        conteudo.style.display = 'none';
-        contentorFormulario.style.display = 'block';
+        campo.dataset.valorOriginal =
+            campo.value;
+
+        conteudo.hidden =
+            true;
+
+        contentorFormulario.hidden =
+            false;
+
+        contentorFormulario.setAttribute(
+            'aria-hidden',
+            'false',
+        );
+
+        botao.setAttribute(
+            'aria-expanded',
+            'true',
+        );
+
         campo.focus();
     }
 
@@ -625,44 +857,161 @@ class GestorInteracoes {
      * @param {HTMLElement} botao Botão da interação.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     cancelarEdicaoComentario(botao) {
-        const comentario = botao.closest('.comentario');
-        const conteudo = comentario?.querySelector(
-            '.conteudo-comentario',
-        );
-        const contentorFormulario = comentario?.querySelector(
-            '.formulario-edicao-comentario',
-        );
-        const campo = contentorFormulario?.querySelector('textarea');
+        const contentorFormulario =
+            this.obterElementoControlado(
+                botao,
+            );
+
+        const comentario =
+            botao.closest('.comentario');
+
+        const conteudo =
+            comentario?.querySelector(
+                '[data-conteudo-comentario]',
+            );
+
+        const campo =
+            contentorFormulario?.querySelector(
+                '[data-campo-conteudo-comentario]',
+            );
+
+        const elementoErro =
+            contentorFormulario?.querySelector(
+                '.invalid-feedback',
+            );
 
         if (
-            !(conteudo instanceof HTMLElement)
-            || !(contentorFormulario instanceof HTMLElement)
+            !(contentorFormulario instanceof HTMLElement)
+            || !(conteudo instanceof HTMLElement)
             || !(campo instanceof HTMLTextAreaElement)
         ) {
             return;
         }
 
-        if (typeof campo.dataset.valorOriginal === 'string') {
-            campo.value = campo.dataset.valorOriginal;
+        if (
+            typeof campo.dataset.valorOriginal
+            === 'string'
+        ) {
+            campo.value =
+                campo.dataset.valorOriginal;
         }
-
-        campo.classList.remove('is-invalid');
-        campo.removeAttribute('aria-invalid');
-
-        const elementoErro = contentorFormulario.querySelector(
-            '.invalid-feedback',
-        );
 
         if (elementoErro instanceof HTMLElement) {
-            elementoErro.textContent = '';
-            elementoErro.classList.remove('d-block');
+            this.limparErroCampo(
+                campo,
+                elementoErro,
+            );
         }
 
-        contentorFormulario.style.display = 'none';
-        conteudo.style.display = 'block';
+        contentorFormulario.hidden =
+            true;
+
+        contentorFormulario.setAttribute(
+            'aria-hidden',
+            'true',
+        );
+
+        conteudo.hidden =
+            false;
+    }
+
+    /**
+     * Obtém o elemento identificado por `aria-controls`.
+     *
+     * @param {HTMLElement} botao Botão controlador.
+     * @returns {HTMLElement|null}
+     *
+     * @since 3.0.0
+     * @version 1.0.0
+     */
+    obterElementoControlado(botao) {
+        const identificador =
+            botao.getAttribute(
+                'aria-controls',
+            );
+
+        if (!identificador) {
+            return null;
+        }
+
+        const elemento =
+            document.getElementById(
+                identificador,
+            );
+
+        return elemento instanceof HTMLElement
+            ? elemento
+            : null;
+    }
+
+    /**
+     * Limpa o erro de validação de um campo.
+     *
+     * @param {HTMLTextAreaElement} campo Campo validado.
+     * @param {HTMLElement} elementoErro Elemento da mensagem.
+     *
+     * @since 3.0.0
+     * @version 1.0.0
+     */
+    limparErroCampo(
+        campo,
+        elementoErro,
+    ) {
+        campo.classList.remove(
+            'is-invalid',
+        );
+
+        campo.removeAttribute(
+            'aria-invalid',
+        );
+
+        elementoErro.textContent =
+            '';
+
+        elementoErro.classList.remove(
+            'd-block',
+        );
+    }
+
+    /**
+     * Apresenta texto preservando quebras de linha sem introduzir HTML.
+     *
+     * @param {HTMLElement} elemento Elemento de destino.
+     * @param {string} texto Texto apresentado.
+     *
+     * @since 3.0.0
+     * @version 1.0.0
+     */
+    apresentarTextoComQuebras(
+        elemento,
+        texto,
+    ) {
+        elemento.replaceChildren();
+
+        const linhas =
+            texto.split(/\r?\n/u);
+
+        linhas.forEach(
+            (
+                linha,
+                indice,
+            ) => {
+                if (indice > 0) {
+                    elemento.append(
+                        document.createElement('br'),
+                    );
+                }
+
+                elemento.append(
+                    document.createTextNode(
+                        linha,
+                    ),
+                );
+            },
+        );
     }
 
     /**
@@ -674,15 +1023,26 @@ class GestorInteracoes {
      * @since 1.0.0
      * @version 2.0.0
      */
-    atualizarTooltip(elemento, conteudo) {
-        elemento.setAttribute('data-bs-title', conteudo);
+    atualizarTooltip(
+        elemento,
+        conteudo,
+    ) {
+        elemento.setAttribute(
+            'data-bs-title',
+            conteudo,
+        );
 
-        Tooltip.getInstance(elemento)?.dispose();
+        Tooltip
+            .getInstance(elemento)
+            ?.dispose();
 
-        new Tooltip(elemento, {
-            html: true,
-            title: conteudo,
-        });
+        new Tooltip(
+            elemento,
+            {
+                html: true,
+                title: conteudo,
+            },
+        );
     }
 
     /**
@@ -709,16 +1069,26 @@ class GestorInteracoes {
      * Apresenta a mensagem de erro de um pedido.
      *
      * @param {unknown} erro Erro capturado.
+     * @param {string|undefined} mensagemPredefinida Mensagem configurada.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    mostrarErroPedido(erro) {
-        const mensagem =
+    mostrarErroPedido(
+        erro,
+        mensagemPredefinida = undefined,
+    ) {
+        const mensagemResposta =
             axios.isAxiosError(erro)
-            && typeof erro.response?.data?.mensagem === 'string'
+            && typeof erro.response?.data?.mensagem
+            === 'string'
                 ? erro.response.data.mensagem
-                : 'Ocorreu um erro ao processar a ação.';
+                : null;
+
+        const mensagem =
+            mensagemResposta
+            ?? mensagemPredefinida
+            ?? 'Ocorreu um erro ao processar a ação.';
 
         Swal.fire({
             icon: 'error',
@@ -736,9 +1106,13 @@ class GestorInteracoes {
      * @since 2.0.0
      * @version 1.0.0
      */
-    definirElementoDesativado(elemento, desativado) {
+    definirElementoDesativado(
+        elemento,
+        desativado,
+    ) {
         if (elemento instanceof HTMLButtonElement) {
-            elemento.disabled = desativado;
+            elemento.disabled =
+                desativado;
         }
 
         elemento.setAttribute(
@@ -780,10 +1154,12 @@ class GestorInteracoes {
             'click',
             this.aoClicar,
         );
+
         this.contentor.removeEventListener(
             'submit',
             this.aoSubmeter,
         );
+
         this.contentor.removeEventListener(
             'mouseover',
             this.aoSobrepor,

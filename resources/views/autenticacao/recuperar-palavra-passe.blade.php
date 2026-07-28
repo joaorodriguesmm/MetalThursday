@@ -93,7 +93,7 @@
                 class="small text-decoration-none"
                 href="{{
                     route(
-                        'autenticacao.iniciar-sessao',
+                        'login',
                     )
                 }}"
             >

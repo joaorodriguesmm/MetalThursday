@@ -18,7 +18,7 @@ use Illuminate\Http\RedirectResponse;
  *
  * @since 2.0.0
  *
- * @version 1.1.0
+ * @version 1.2.0
  */
 final class ControladorPalavraPasse extends Controller
 {
@@ -34,16 +34,16 @@ final class ControladorPalavraPasse extends Controller
     private const SACO_ERROS = 'palavraPasse';
 
     /**
-     * Estado enviado depois de uma atualização bem-sucedida.
+     * Mensagem apresentada após a atualização da palavra-passe.
      *
      * @var string
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    private const ESTADO_ATUALIZADA =
-        'palavra-passe-atualizada';
+    private const MENSAGEM_SUCESSO =
+        'Palavra-passe atualizada com sucesso.';
 
     /**
      * Cria o controlador.
@@ -72,7 +72,7 @@ final class ControladorPalavraPasse extends Controller
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 1.2.0
      */
     public function atualizar(
         AtualizarPalavraPasseRequest $pedido,
@@ -82,7 +82,8 @@ final class ControladorPalavraPasse extends Controller
                 $pedido,
             );
 
-        $dados = $pedido->validated();
+        $dados =
+            $pedido->validated();
 
         /** @var string $palavraPasseAtual */
         $palavraPasseAtual =
@@ -93,14 +94,14 @@ final class ControladorPalavraPasse extends Controller
             $dados['nova_palavra_passe'];
 
         try {
-            $this->servicoPalavraPasse->atualizar(
-                $utilizador,
-                $palavraPasseAtual,
-                $novaPalavraPasse,
-            );
-        } catch (
-            PalavraPasseAtualIncorreta $excecao
-        ) {
+            $this
+                ->servicoPalavraPasse
+                ->atualizar(
+                    $utilizador,
+                    $palavraPasseAtual,
+                    $novaPalavraPasse,
+                );
+        } catch (PalavraPasseAtualIncorreta $excecao) {
             return to_route(
                 'perfil.editar',
             )->withErrors(
@@ -109,9 +110,7 @@ final class ControladorPalavraPasse extends Controller
                 ],
                 self::SACO_ERROS,
             );
-        } catch (
-            NovaPalavraPasseIgualAAtual $excecao
-        ) {
+        } catch (NovaPalavraPasseIgualAAtual $excecao) {
             return to_route(
                 'perfil.editar',
             )->withErrors(
@@ -125,8 +124,8 @@ final class ControladorPalavraPasse extends Controller
         return to_route(
             'perfil.editar',
         )->with(
-            'estado',
-            self::ESTADO_ATUALIZADA,
+            'sucesso',
+            self::MENSAGEM_SUCESSO,
         );
     }
 
@@ -145,7 +144,8 @@ final class ControladorPalavraPasse extends Controller
     private function obterUtilizadorAutenticado(
         AtualizarPalavraPasseRequest $pedido,
     ): Utilizador {
-        $utilizador = $pedido->user();
+        $utilizador =
+            $pedido->user();
 
         if (! $utilizador instanceof Utilizador) {
             throw new AuthenticationException(

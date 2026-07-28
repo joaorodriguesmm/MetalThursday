@@ -13,6 +13,7 @@ use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\Musica\Banda;
 use App\Models\Musica\Genero;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -29,7 +30,7 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * @since 1.0.0
  *
- * @version 2.1.0
+ * @version 3.0.0
  */
 final class ControladorBanda extends Controller
 {
@@ -75,18 +76,22 @@ final class ControladorBanda extends Controller
             Banda::class,
         );
 
-        $pesquisa = $this->normalizarPesquisa(
-            $pedido->query('pesquisa'),
-        );
+        $pesquisa =
+            $this->normalizarPesquisa(
+                $pedido->query(
+                    'pesquisa',
+                ),
+            );
 
-        $bandas = Banda::query()
+        $bandas =
+            Banda::query()
             ->select([
                 'id',
                 'nome',
                 'pais_id',
             ])
             ->with([
-                'pais' => static fn (
+                'pais' => static fn(
                     Builder $consulta,
                 ): Builder => $consulta->select([
                     'id',
@@ -94,37 +99,49 @@ final class ControladorBanda extends Controller
                     'codigo_iso',
                 ]),
 
-                'generos' => static fn (
+                'generos' => static fn(
                     Builder $consulta,
                 ): Builder => $consulta
                     ->select([
                         'generos.id',
                         'generos.nome',
                     ])
-                    ->orderBy('generos.nome')
-                    ->orderBy('generos.id'),
+                    ->orderBy(
+                        'generos.nome',
+                    )
+                    ->orderBy(
+                        'generos.id',
+                    ),
             ])
             ->when(
                 $pesquisa !== null,
-                static fn (
+                static fn(
                     Builder $consulta,
                 ): Builder => $consulta->where(
                     'nome',
                     'like',
-                    '%'.$pesquisa.'%',
+                    '%' . $pesquisa . '%',
                 ),
             )
-            ->orderBy('nome')
-            ->orderBy('id')
+            ->orderBy(
+                'nome',
+            )
+            ->orderBy(
+                'id',
+            )
             ->paginate(
                 self::ITENS_POR_PAGINA,
             )
             ->withQueryString();
 
         return view(
-            'entities.bands.index',
+            'musica.bandas.indice',
             [
-                'bandas' => $bandas,
+                'bandas' =>
+                $bandas,
+
+                'pesquisaAtual' =>
+                $pesquisa,
             ],
         );
     }
@@ -132,22 +149,26 @@ final class ControladorBanda extends Controller
     /**
      * Apresenta o formulário de criação.
      *
+     * @param  Request  $pedido  Pedido HTTP atual.
      * @return View Formulário de criação.
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
-    public function create(): View
-    {
+    public function create(
+        Request $pedido,
+    ): View {
         $this->authorize(
             'create',
             Banda::class,
         );
 
         return view(
-            'entities.bands.create',
-            $this->obterDadosFormulario(),
+            'musica.bandas.criar',
+            $this->obterDadosFormulario(
+                $pedido,
+            ),
         );
     }
 
@@ -159,7 +180,7 @@ final class ControladorBanda extends Controller
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
     public function store(
         CriarBandaRequest $pedido,
@@ -169,23 +190,31 @@ final class ControladorBanda extends Controller
             Banda::class,
         );
 
-        $dados = $pedido->validated();
+        $dados =
+            $pedido->validated();
 
-        $banda = DB::transaction(
-            static function () use ($dados): Banda {
-                $banda = Banda::query()->create([
-                    'nome' => $dados['nome'],
+        $banda =
+            DB::transaction(
+                static function () use (
+                    $dados,
+                ): Banda {
+                    $banda =
+                        Banda::query()
+                        ->create([
+                            'nome' => $dados['nome'],
 
-                    'pais_id' => $dados['pais_id'],
-                ]);
+                            'pais_id' => $dados['pais_id'],
+                        ]);
 
-                $banda->generos()->sync(
-                    $dados['generos'],
-                );
+                    $banda
+                        ->generos()
+                        ->sync(
+                            $dados['generos'],
+                        );
 
-                return $banda;
-            },
-        );
+                    return $banda;
+                },
+            );
 
         $banda->load([
             'pais',
@@ -204,9 +233,11 @@ final class ControladorBanda extends Controller
         }
 
         return redirect()
-            ->route('bands.index')
+            ->route(
+                'bandas.indice',
+            )
             ->with(
-                'estado',
+                'sucesso',
                 'Banda criada com sucesso.',
             );
     }
@@ -234,8 +265,11 @@ final class ControladorBanda extends Controller
             'generos',
         ]);
 
-        $modeloSeccao = new SeccaoMetalThursday;
-        $modeloMetalThursday = new MetalThursday;
+        $modeloSeccao =
+            new SeccaoMetalThursday;
+
+        $modeloMetalThursday =
+            new MetalThursday;
 
         $tabelaSeccoes =
             $modeloSeccao->getTable();
@@ -246,21 +280,22 @@ final class ControladorBanda extends Controller
         $aliasOrdenacao =
             'metal_thursdays_ordenacao';
 
-        $seccoes = SeccaoMetalThursday::query()
+        $seccoes =
+            SeccaoMetalThursday::query()
             ->select(
-                $tabelaSeccoes.'.*',
+                $tabelaSeccoes . '.*',
             )
             ->join(
                 $tabelaMetalThursdays
-                    .' as '
-                    .$aliasOrdenacao,
-                $aliasOrdenacao.'.id',
+                    . ' as '
+                    . $aliasOrdenacao,
+                $aliasOrdenacao . '.id',
                 '=',
                 $tabelaSeccoes
-                    .'.metal_thursday_id',
+                    . '.metal_thursday_id',
             )
             ->where(
-                $tabelaSeccoes.'.banda_id',
+                $tabelaSeccoes . '.banda_id',
                 $banda->getKey(),
             )
             ->with([
@@ -268,10 +303,10 @@ final class ControladorBanda extends Controller
                 'tipoSeccao',
             ])
             ->orderByDesc(
-                $aliasOrdenacao.'.data',
+                $aliasOrdenacao . '.data',
             )
             ->orderByDesc(
-                $tabelaSeccoes.'.id',
+                $tabelaSeccoes . '.id',
             )
             ->paginate(
                 self::ITENS_POR_PAGINA,
@@ -279,11 +314,17 @@ final class ControladorBanda extends Controller
             ->withQueryString();
 
         return view(
-            'entities.bands.show',
+            'musica.bandas.detalhes',
             [
-                'banda' => $banda,
+                'banda' =>
+                $banda,
 
-                'seccoes' => $seccoes,
+                'seccoes' =>
+                $seccoes,
+
+                ...$this->obterDadosCabecalho(
+                    $banda,
+                ),
             ],
         );
     }
@@ -291,14 +332,16 @@ final class ControladorBanda extends Controller
     /**
      * Apresenta o formulário de edição.
      *
+     * @param  Request  $pedido  Pedido HTTP atual.
      * @param  Banda  $banda  Banda editada.
      * @return View Formulário de edição.
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
     public function edit(
+        Request $pedido,
         Banda $banda,
     ): View {
         $this->authorize(
@@ -312,12 +355,11 @@ final class ControladorBanda extends Controller
         ]);
 
         return view(
-            'entities.bands.edit',
-            [
-                'banda' => $banda,
-
-                ...$this->obterDadosFormulario(),
-            ],
+            'musica.bandas.editar',
+            $this->obterDadosFormulario(
+                $pedido,
+                $banda,
+            ),
         );
     }
 
@@ -330,7 +372,7 @@ final class ControladorBanda extends Controller
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
     public function update(
         AtualizarBandaRequest $pedido,
@@ -341,7 +383,8 @@ final class ControladorBanda extends Controller
             $banda,
         );
 
-        $dados = $pedido->validated();
+        $dados =
+            $pedido->validated();
 
         DB::transaction(
             static function () use (
@@ -354,9 +397,11 @@ final class ControladorBanda extends Controller
                     'pais_id' => $dados['pais_id'],
                 ]);
 
-                $banda->generos()->sync(
-                    $dados['generos'],
-                );
+                $banda
+                    ->generos()
+                    ->sync(
+                        $dados['generos'],
+                    );
             },
         );
 
@@ -376,9 +421,11 @@ final class ControladorBanda extends Controller
         }
 
         return redirect()
-            ->route('bands.index')
+            ->route(
+                'bandas.indice',
+            )
             ->with(
-                'estado',
+                'sucesso',
                 'Banda atualizada com sucesso.',
             );
     }
@@ -392,7 +439,7 @@ final class ControladorBanda extends Controller
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
     public function destroy(
         Request $pedido,
@@ -413,33 +460,87 @@ final class ControladorBanda extends Controller
         }
 
         return redirect()
-            ->route('bands.index')
+            ->route(
+                'bandas.indice',
+            )
             ->with(
-                'estado',
+                'sucesso',
                 'Banda eliminada com sucesso.',
             );
     }
 
     /**
-     * Obtém os dados utilizados pelos formulários.
+     * Obtém os dados utilizados pelo formulário de bandas.
      *
-     * @return array<string, mixed> Dados dos formulários.
+     * Quando existe uma submissão anterior inválida, os respetivos valores
+     * são recuperados da sessão. Durante a edição, são utilizados como
+     * predefinição os dados da banda.
+     *
+     * @param  Request  $pedido  Pedido HTTP atual.
+     * @param  Banda|null  $banda  Banda editada ou nula durante a criação.
+     * @return array{
+     *     banda: Banda|null,
+     *     paises: Collection<int, Pais>,
+     *     generos: Collection<int, Genero>,
+     *     emEdicao: bool,
+     *     enderecoFormulario: string,
+     *     nomeBanda: string,
+     *     identificadorPaisSelecionado: string,
+     *     identificadoresGenerosSelecionados: array<int, string>,
+     *     textoBotaoSubmissao: string
+     * } Dados preparados.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 3.0.0
      */
-    private function obterDadosFormulario(): array
-    {
+    private function obterDadosFormulario(
+        Request $pedido,
+        ?Banda $banda = null,
+    ): array {
+        $emEdicao =
+            $banda instanceof Banda;
+
+        if ($emEdicao) {
+            $banda->loadMissing(
+                'generos',
+            );
+
+            $enderecoFormulario =
+                route(
+                    'bandas.atualizar',
+                    $banda,
+                );
+
+            $identificadoresGenerosModelo =
+                $banda
+                ->generos
+                ->modelKeys();
+        } else {
+            $enderecoFormulario =
+                route(
+                    'bandas.guardar',
+                );
+
+            $identificadoresGenerosModelo =
+                [];
+        }
+
         return [
+            'banda' => $banda,
+
             'paises' => Pais::query()
                 ->select([
                     'id',
                     'nome',
                     'codigo_iso',
                 ])
-                ->orderBy('nome')
-                ->orderBy('id')
+                ->orderBy(
+                    'nome',
+                )
+                ->orderBy(
+                    'id',
+                )
                 ->get(),
 
             'generos' => Genero::query()
@@ -447,9 +548,42 @@ final class ControladorBanda extends Controller
                     'id',
                     'nome',
                 ])
-                ->orderBy('nome')
-                ->orderBy('id')
+                ->orderBy(
+                    'nome',
+                )
+                ->orderBy(
+                    'id',
+                )
                 ->get(),
+
+            'emEdicao' => $emEdicao,
+
+            'enderecoFormulario' => $enderecoFormulario,
+
+            'nomeBanda' => $this->normalizarTextoFormulario(
+                $pedido->old(
+                    'nome',
+                    $banda?->nome,
+                ),
+            ),
+
+            'identificadorPaisSelecionado' => $this->normalizarIdentificadorFormulario(
+                $pedido->old(
+                    'pais_id',
+                    $banda?->pais_id,
+                ),
+            ),
+
+            'identificadoresGenerosSelecionados' => $this->normalizarListaIdentificadoresFormulario(
+                $pedido->old(
+                    'generos',
+                    $identificadoresGenerosModelo,
+                ),
+            ),
+
+            'textoBotaoSubmissao' => $emEdicao
+                ? 'Guardar alterações'
+                : 'Criar banda',
         ];
     }
 
@@ -470,9 +604,10 @@ final class ControladorBanda extends Controller
             return null;
         }
 
-        $pesquisa = trim(
-            $valor,
-        );
+        $pesquisa =
+            trim(
+                $valor,
+            );
 
         if ($pesquisa === '') {
             return null;
@@ -483,5 +618,194 @@ final class ControladorBanda extends Controller
             0,
             self::LIMITE_PESQUISA,
         );
+    }
+
+    /**
+     * Normaliza um texto utilizado num formulário.
+     *
+     * @param  mixed  $valor  Valor recebido.
+     * @return string Texto normalizado.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    private function normalizarTextoFormulario(
+        mixed $valor,
+    ): string {
+        if (
+            ! is_string($valor)
+            && ! is_int($valor)
+            && ! is_float($valor)
+        ) {
+            return '';
+        }
+
+        return trim(
+            (string) $valor,
+        );
+    }
+
+    /**
+     * Normaliza um identificador utilizado num formulário.
+     *
+     * @param  mixed  $valor  Valor recebido.
+     * @return string Identificador normalizado.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    private function normalizarIdentificadorFormulario(
+        mixed $valor,
+    ): string {
+        if (is_int($valor)) {
+            return $valor > 0
+                ? (string) $valor
+                : '';
+        }
+
+        if (! is_string($valor)) {
+            return '';
+        }
+
+        $identificador =
+            trim(
+                $valor,
+            );
+
+        if (
+            $identificador === ''
+            || ! ctype_digit($identificador)
+            || (int) $identificador < 1
+        ) {
+            return '';
+        }
+
+        return (string) (int) $identificador;
+    }
+
+    /**
+     * Normaliza uma lista de identificadores do formulário.
+     *
+     * Identificadores inválidos são ignorados e valores repetidos são
+     * removidos.
+     *
+     * @param  mixed  $valores  Valores recebidos.
+     * @return array<int, string> Identificadores normalizados.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    private function normalizarListaIdentificadoresFormulario(
+        mixed $valores,
+    ): array {
+        if (! is_array($valores)) {
+            return [];
+        }
+
+        $identificadores =
+            [];
+
+        foreach ($valores as $valor) {
+            $identificador =
+                $this->normalizarIdentificadorFormulario(
+                    $valor,
+                );
+
+            if ($identificador === '') {
+                continue;
+            }
+
+            $identificadores[$identificador] =
+                $identificador;
+        }
+
+        return array_values(
+            $identificadores,
+        );
+    }
+
+    /**
+     * Prepara os dados do cabeçalho da página de detalhes da banda.
+     *
+     * @param  Banda  $banda  Banda apresentada.
+     * @return array{
+     *     nomePaisBanda: string|null,
+     *     nomesGenerosBanda: string|null
+     * } Dados preparados.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    private function obterDadosCabecalho(
+        Banda $banda,
+    ): array {
+        $nomePais =
+            $banda->pais instanceof Pais
+            ? $this->normalizarTextoApresentacao(
+                $banda->pais->nome,
+            )
+            : null;
+
+        $nomesGeneros = [];
+
+        foreach ($banda->generos as $genero) {
+            if (! $genero instanceof Genero) {
+                continue;
+            }
+
+            $nomeGenero =
+                $this->normalizarTextoApresentacao(
+                    $genero->nome,
+                );
+
+            if ($nomeGenero !== null) {
+                $nomesGeneros[] =
+                    $nomeGenero;
+            }
+        }
+
+        return [
+            'nomePaisBanda' =>
+            $nomePais,
+
+            'nomesGenerosBanda' =>
+            $nomesGeneros !== []
+                ? implode(
+                    ', ',
+                    $nomesGeneros,
+                )
+                : null,
+        ];
+    }
+
+    /**
+     * Normaliza um texto destinado à apresentação.
+     *
+     * @param  mixed  $valor  Valor recebido.
+     * @return string|null Texto normalizado.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    private function normalizarTextoApresentacao(
+        mixed $valor,
+    ): ?string {
+        if (! is_string($valor)) {
+            return null;
+        }
+
+        $texto =
+            trim(
+                $valor,
+            );
+
+        return $texto !== ''
+            ? $texto
+            : null;
     }
 }

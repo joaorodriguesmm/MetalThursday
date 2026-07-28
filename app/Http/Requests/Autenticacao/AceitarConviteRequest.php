@@ -4,29 +4,45 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Autenticacao;
 
+use App\Models\Autenticacao\Convite;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\Comunicacao\PermissaoEmail;
+use App\Regras\Autenticacao\RequisitosPalavraPasse;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\Rules\File;
+use LogicException;
 
 /**
- * Valida os dados necessários para aceitar um convite e criar um utilizador.
+ * Valida e normaliza os dados necessários para aceitar um convite.
  *
- * A disponibilidade, validade, expiração e utilização do convite são
- * verificadas pelo serviço responsável dentro de uma transação.
+ * A disponibilidade, expiração e utilização do convite são verificadas pelo
+ * serviço de registo dentro da respetiva transação.
  *
  * @since 1.0.0
  *
- * @version 2.1.0
+ * @version 3.1.0
  */
 final class AceitarConviteRequest extends FormRequest
 {
     /**
+     * Tamanho máximo permitido para a fotografia, em kilobytes.
+     *
+     * @var int
+     *
+     * @since 3.1.0
+     *
+     * @version 1.0.0
+     */
+    private const TAMANHO_MAXIMO_FOTOGRAFIA_KILOBYTES =
+        10 * 1024;
+
+    /**
      * Determina se o pedido pode ser processado.
      *
      * A validade do convite é uma regra de domínio e não uma regra de
-     * autorização deste pedido.
+     * autorização do pedido.
      *
      * @return bool Verdadeiro para permitir a validação.
      *
@@ -42,26 +58,37 @@ final class AceitarConviteRequest extends FormRequest
     /**
      * Normaliza os valores recebidos antes da validação.
      *
-     * O código do convite mantém a capitalização, porque é sensível a
+     * O código do convite mantém a capitalização por ser sensível a
      * maiúsculas e minúsculas.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.2.0
      */
     protected function prepareForValidation(): void
     {
+        $codigoConvite =
+            $this->input(
+                'codigo_convite',
+            );
+
         $this->merge([
-            'codigo_convite' => $this->normalizarTexto(
-                $this->input('codigo_convite'),
-            ),
+            'codigo_convite' => is_string($codigoConvite)
+                ? trim(
+                    $codigoConvite,
+                )
+                : $codigoConvite,
 
             'nome' => $this->normalizarNome(
-                $this->input('nome'),
+                $this->input(
+                    'nome',
+                ),
             ),
 
             'email' => $this->normalizarEmail(
-                $this->input('email'),
+                $this->input(
+                    'email',
+                ),
             ),
 
             'permissoes_email' => $this->normalizarPermissoesEmail(
@@ -76,14 +103,14 @@ final class AceitarConviteRequest extends FormRequest
     /**
      * Obtém as regras de validação.
      *
-     * O código do convite não utiliza `exists`, porque apenas o respetivo hash
-     * é guardado na base de dados.
+     * O código do convite não utiliza a regra `exists`, porque apenas o hash
+     * do código é guardado na base de dados.
      *
      * @return array<string, array<int, mixed>> Regras de validação.
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.1.0
      */
     public function rules(): array
     {
@@ -92,15 +119,9 @@ final class AceitarConviteRequest extends FormRequest
                 'bail',
                 'required',
                 'string',
-                'max:128',
-            ],
-
-            'fotografia' => [
-                'nullable',
-                'file',
-                'image',
-                'mimes:jpg,jpeg,png,webp',
-                'max:10240',
+                'min:'.Convite::COMPRIMENTO_MINIMO_CODIGO,
+                'max:'.Convite::COMPRIMENTO_MAXIMO_CODIGO,
+                'regex:/\A'.Convite::PADRAO_CODIGO.'\z/',
             ],
 
             'nome' => [
@@ -117,28 +138,40 @@ final class AceitarConviteRequest extends FormRequest
                 'string',
                 'email:rfc',
                 'max:255',
+
                 Rule::unique(
                     Utilizador::class,
                     'email',
                 ),
             ],
 
-            'palavra_passe' => [
+            'fotografia' => [
                 'bail',
-                'required',
-                'string',
-                Password::defaults(),
+                'nullable',
+
+                File::image()
+                    ->types([
+                        'jpg',
+                        'jpeg',
+                        'png',
+                        'webp',
+                    ])
+                    ->max(
+                        self::TAMANHO_MAXIMO_FOTOGRAFIA_KILOBYTES,
+                    ),
             ],
+
+            'palavra_passe' => RequisitosPalavraPasse::regrasObrigatorias(),
 
             'confirmacao_palavra_passe' => [
                 'bail',
                 'required',
                 'string',
+                'max:'.RequisitosPalavraPasse::comprimentoMaximo(),
                 'same:palavra_passe',
             ],
 
             'permissoes_email' => [
-                'present',
                 'array',
             ],
 
@@ -146,6 +179,7 @@ final class AceitarConviteRequest extends FormRequest
                 'bail',
                 'integer',
                 'distinct:strict',
+
                 Rule::exists(
                     PermissaoEmail::class,
                     'id',
@@ -161,7 +195,7 @@ final class AceitarConviteRequest extends FormRequest
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.1.0
      */
     public function messages(): array
     {
@@ -170,15 +204,11 @@ final class AceitarConviteRequest extends FormRequest
 
             'codigo_convite.string' => 'O código do convite não é válido.',
 
+            'codigo_convite.min' => 'O código do convite não é válido.',
+
             'codigo_convite.max' => 'O código do convite não é válido.',
 
-            'fotografia.file' => 'A fotografia recebida não é um ficheiro válido.',
-
-            'fotografia.image' => 'A fotografia deve ser uma imagem válida.',
-
-            'fotografia.mimes' => 'A fotografia deve estar no formato JPG, PNG ou WebP.',
-
-            'fotografia.max' => 'A fotografia não pode ter mais de 10 MB.',
+            'codigo_convite.regex' => 'O código do convite não é válido.',
 
             'nome.required' => 'Por favor, insere o teu nome.',
 
@@ -198,17 +228,25 @@ final class AceitarConviteRequest extends FormRequest
 
             'email.unique' => 'O endereço de e-mail já está associado a outro utilizador.',
 
+            'fotografia.image' => 'A fotografia deve ser uma imagem válida.',
+
+            'fotografia.mimes' => 'A fotografia deve estar no formato JPG, PNG ou WebP.',
+
+            'fotografia.max' => 'A fotografia não pode ter mais de 10 MiB.',
+
             'palavra_passe.required' => 'Por favor, insere uma palavra-passe.',
 
             'palavra_passe.string' => 'A palavra-passe deve ser uma sequência de caracteres.',
+
+            'palavra_passe.max' => 'A palavra-passe é demasiado longa.',
 
             'confirmacao_palavra_passe.required' => 'Por favor, confirma a palavra-passe.',
 
             'confirmacao_palavra_passe.string' => 'A confirmação da palavra-passe não é válida.',
 
-            'confirmacao_palavra_passe.same' => 'A palavra-passe e a confirmação não coincidem.',
+            'confirmacao_palavra_passe.max' => 'A confirmação da palavra-passe é demasiado longa.',
 
-            'permissoes_email.present' => 'Não foram recebidas as permissões de e-mail.',
+            'confirmacao_palavra_passe.same' => 'A palavra-passe e a confirmação não coincidem.',
 
             'permissoes_email.array' => 'As permissões de e-mail recebidas não são válidas.',
 
@@ -234,11 +272,11 @@ final class AceitarConviteRequest extends FormRequest
         return [
             'codigo_convite' => 'código do convite',
 
-            'fotografia' => 'fotografia',
-
             'nome' => 'nome',
 
             'email' => 'endereço de e-mail',
+
+            'fotografia' => 'fotografia',
 
             'palavra_passe' => 'palavra-passe',
 
@@ -251,21 +289,166 @@ final class AceitarConviteRequest extends FormRequest
     }
 
     /**
-     * Normaliza um texto recebido.
+     * Obtém o código do convite validado.
      *
-     * @param  mixed  $valor  Valor recebido.
-     * @return mixed Texto normalizado ou valor original.
+     * @return string Código do convite.
      *
-     * @since 2.1.0
+     * @since 3.0.0
      *
      * @version 1.0.0
      */
-    private function normalizarTexto(
-        mixed $valor,
-    ): mixed {
-        return is_string($valor)
-            ? trim($valor)
-            : $valor;
+    public function codigoConvite(): string
+    {
+        return $this->obterTextoValidado(
+            'codigo_convite',
+        );
+    }
+
+    /**
+     * Obtém o nome validado.
+     *
+     * @return string Nome do utilizador.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    public function nome(): string
+    {
+        return $this->obterTextoValidado(
+            'nome',
+        );
+    }
+
+    /**
+     * Obtém o endereço de e-mail validado.
+     *
+     * @return string Endereço de e-mail.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    public function email(): string
+    {
+        return $this->obterTextoValidado(
+            'email',
+        );
+    }
+
+    /**
+     * Obtém a palavra-passe validada.
+     *
+     * @return string Palavra-passe em texto simples.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    public function palavraPasse(): string
+    {
+        return $this->obterTextoValidado(
+            'palavra_passe',
+        );
+    }
+
+    /**
+     * Obtém a fotografia validada.
+     *
+     * @return UploadedFile|null Fotografia enviada ou nulo.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    public function fotografia(): ?UploadedFile
+    {
+        $fotografia =
+            $this->file(
+                'fotografia',
+            );
+
+        if ($fotografia === null) {
+            return null;
+        }
+
+        if (! $fotografia instanceof UploadedFile) {
+            throw new LogicException(
+                'A fotografia validada possui um tipo inesperado.',
+            );
+        }
+
+        return $fotografia;
+    }
+
+    /**
+     * Obtém os identificadores validados das permissões de e-mail.
+     *
+     * @return array<int, int> Identificadores das permissões.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    public function identificadoresPermissoesEmail(): array
+    {
+        $identificadores =
+            $this->validated(
+                'permissoes_email',
+                [],
+            );
+
+        if (! is_array($identificadores)) {
+            throw new LogicException(
+                'As permissões de e-mail validadas possuem um tipo inesperado.',
+            );
+        }
+
+        foreach ($identificadores as $identificador) {
+            if (! is_int($identificador)) {
+                throw new LogicException(
+                    'Uma permissão de e-mail validada possui um tipo inesperado.',
+                );
+            }
+        }
+
+        /** @var array<int, int> $identificadores */
+        return array_values(
+            $identificadores,
+        );
+    }
+
+    /**
+     * Obtém um texto validado.
+     *
+     * @param  string  $campo  Nome do campo validado.
+     * @return string Texto validado.
+     *
+     * @throws LogicException Quando o valor validado possui um tipo
+     *                        inesperado.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    private function obterTextoValidado(
+        string $campo,
+    ): string {
+        $valor =
+            $this->validated(
+                $campo,
+            );
+
+        if (! is_string($valor)) {
+            throw new LogicException(
+                sprintf(
+                    'O campo validado "%s" possui um tipo inesperado.',
+                    $campo,
+                ),
+            );
+        }
+
+        return $valor;
     }
 
     /**
@@ -285,15 +468,20 @@ final class AceitarConviteRequest extends FormRequest
             return $valor;
         }
 
-        $nome = preg_replace(
-            '/\s+/u',
-            ' ',
-            trim($valor),
-        );
+        $nome =
+            preg_replace(
+                '/\s+/u',
+                ' ',
+                trim(
+                    $valor,
+                ),
+            );
 
         return is_string($nome)
             ? $nome
-            : trim($valor);
+            : trim(
+                $valor,
+            );
     }
 
     /**
@@ -311,7 +499,9 @@ final class AceitarConviteRequest extends FormRequest
     ): mixed {
         return is_string($valor)
             ? mb_strtolower(
-                trim($valor),
+                trim(
+                    $valor,
+                ),
             )
             : $valor;
     }
@@ -319,8 +509,8 @@ final class AceitarConviteRequest extends FormRequest
     /**
      * Normaliza os identificadores das permissões de e-mail.
      *
-     * Valores numéricos são convertidos para inteiros. Os restantes valores
-     * são preservados para que a validação os possa rejeitar.
+     * Os valores numéricos são convertidos para inteiros. Os restantes são
+     * preservados para que a validação os rejeite.
      *
      * @param  mixed  $valor  Valor recebido.
      * @return mixed Lista normalizada ou valor original.
@@ -346,7 +536,9 @@ final class AceitarConviteRequest extends FormRequest
             ): mixed {
                 if (
                     is_string($identificador)
-                    && ctype_digit($identificador)
+                    && ctype_digit(
+                        $identificador,
+                    )
                 ) {
                     return (int) $identificador;
                 }

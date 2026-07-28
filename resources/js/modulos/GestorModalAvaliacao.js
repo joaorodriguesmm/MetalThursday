@@ -1,57 +1,87 @@
-import { Tooltip } from 'bootstrap';
+import { Modal, Tooltip } from 'bootstrap';
 import TratadorFormularioAjax from './TratadorFormularioAjax';
 
 /**
  * Gere a interatividade da janela modal de avaliação.
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 3.0.0
  */
 class GestorModalAvaliacao {
     /**
      * Cria um gestor da janela modal de avaliação.
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
     constructor() {
-        this.modal = document.getElementById('ratingModal');
-        this.formulario = document.getElementById('rating-form');
-        this.contentorEstrelas = document.getElementById(
-            'interactive-stars',
-        );
-        this.campoAvaliacao = document.getElementById(
-            'rating-value-hidden',
-        );
-        this.elementoFeedback = document.getElementById(
-            'rating-live-feedback',
-        );
-        this.elementoNomeAvaliado = document.getElementById(
-            'rateable-name',
-        );
-        this.campoTipoAvaliado = document.getElementById(
-            'rateable-type-hidden',
-        );
-        this.campoIdAvaliado = document.getElementById(
-            'rateable-id-hidden',
-        );
+        this.modal =
+            document.getElementById(
+                'modal-avaliacao',
+            );
 
-        this.avaliacaoAtual = 0;
-        this.avaliacaoSelecionada = 0;
+        this.formulario =
+            this.modal?.querySelector(
+                'form[data-formulario-avaliacao]',
+            );
+
+        this.contentorEstrelas =
+            this.modal?.querySelector(
+                '[data-estrelas-avaliacao]',
+            );
+
+        this.campoPontuacao =
+            this.formulario?.querySelector(
+                'input[name="pontuacao"]',
+            );
+
+        this.elementoFeedback =
+            this.modal?.querySelector(
+                '[data-feedback-avaliacao]',
+            );
+
+        this.elementoNomeAvaliavel =
+            this.modal?.querySelector(
+                '[data-nome-avaliavel]',
+            );
+
+        this.pontuacaoAtual = 0;
+        this.pontuacaoSelecionada = 0;
         this.botaoAcionador = null;
         this.emSubmissao = false;
         this.iniciado = false;
 
-        this.aoAbrirModal = (evento) => this.configurarModal(evento);
-        this.aoFecharModal = () => this.reporEstado();
-        this.aoMoverRato = (evento) => this.tratarMovimentoRato(evento);
-        this.aoSairEstrelas = () => this.tratarSaidaRato();
-        this.aoClicarEstrela = (evento) => {
-            this.tratarCliqueEstrela(evento);
-        };
-        this.aoSubmeterFormulario = (evento) => {
-            this.submeterFormulario(evento);
-        };
+        this.aoAbrirModal =
+            (evento) =>
+                this.configurarModal(
+                    evento,
+                );
+
+        this.aoFecharModal =
+            () =>
+                this.reporEstado();
+
+        this.aoMoverRato =
+            (evento) =>
+                this.tratarMovimentoRato(
+                    evento,
+                );
+
+        this.aoSairEstrelas =
+            () =>
+                this.tratarSaidaRato();
+
+        this.aoClicarEstrela =
+            (evento) =>
+                this.tratarCliqueEstrela(
+                    evento,
+                );
+
+        this.aoSubmeterFormulario =
+            (evento) =>
+                this.submeterFormulario(
+                    evento,
+                );
 
         if (this.estaAtivo()) {
             this.iniciar();
@@ -64,16 +94,15 @@ class GestorModalAvaliacao {
      * @returns {boolean}
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     estaAtivo() {
         return this.modal instanceof HTMLElement
             && this.formulario instanceof HTMLFormElement
+            && this.formulario.id.trim() !== ''
             && this.contentorEstrelas instanceof HTMLElement
-            && this.campoAvaliacao instanceof HTMLInputElement
-            && this.elementoNomeAvaliado instanceof HTMLElement
-            && this.campoTipoAvaliado instanceof HTMLInputElement
-            && this.campoIdAvaliado instanceof HTMLInputElement;
+            && this.campoPontuacao instanceof HTMLInputElement
+            && this.elementoNomeAvaliavel instanceof HTMLElement;
     }
 
     /**
@@ -126,72 +155,93 @@ class GestorModalAvaliacao {
      * @param {Event} evento Evento de abertura da janela modal.
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
     configurarModal(evento) {
-        const acionador = evento.relatedTarget;
+        const acionador =
+            evento.relatedTarget;
 
         if (!(acionador instanceof HTMLElement)) {
             return;
         }
 
-        const tipoAvaliado =
-            acionador.dataset.rateableType?.trim()
+        const tipoAvaliavel =
+            acionador.dataset.tipoAvaliavel?.trim()
             ?? '';
 
-        const idAvaliado =
-            acionador.dataset.rateableId?.trim()
+        const identificadorAvaliavel =
+            acionador
+                .dataset
+                .identificadorAvaliavel
+                ?.trim()
             ?? '';
 
-        const nomeAvaliado =
-            acionador.dataset.rateableName?.trim()
+        const nomeAvaliavel =
+            acionador.dataset.nomeAvaliavel?.trim()
             ?? '';
 
-        const avaliacaoUtilizador =
-            this.normalizarAvaliacao(
-                acionador.dataset.userRating,
+        const enderecoAvaliacao =
+            acionador.dataset.enderecoAvaliacao?.trim()
+            ?? '';
+
+        const pontuacaoUtilizador =
+            this.normalizarPontuacao(
+                acionador.dataset.pontuacaoUtilizador,
             );
 
-        if (tipoAvaliado === '' || idAvaliado === '') {
+        if (
+            tipoAvaliavel === ''
+            || identificadorAvaliavel === ''
+            || enderecoAvaliacao === ''
+        ) {
+            this.apresentarErroAvaliacao(
+                'Não foi possível preparar esta avaliação.',
+            );
+
             return;
         }
 
-        this.botaoAcionador = acionador;
-        this.campoTipoAvaliado.value = tipoAvaliado;
-        this.campoIdAvaliado.value = idAvaliado;
+        this.botaoAcionador =
+            acionador;
+
         this.formulario.action =
-            `/${tipoAvaliado}/${idAvaliado}/rate`;
+            enderecoAvaliacao;
 
-        this.elementoNomeAvaliado.textContent =
-            nomeAvaliado;
+        this.formulario.dataset.tipoAvaliavel =
+            tipoAvaliavel;
 
-        this.avaliacaoSelecionada =
-            avaliacaoUtilizador;
+        this.formulario.dataset.identificadorAvaliavel =
+            identificadorAvaliavel;
 
-        this.avaliacaoAtual =
-            avaliacaoUtilizador;
+        this.elementoNomeAvaliavel.textContent =
+            nomeAvaliavel;
 
-        this.campoAvaliacao.value =
-            String(avaliacaoUtilizador);
+        this.pontuacaoSelecionada =
+            pontuacaoUtilizador;
+
+        this.pontuacaoAtual =
+            pontuacaoUtilizador;
+
+        this.campoPontuacao.value =
+            String(pontuacaoUtilizador);
 
         this.atualizarEstrelas(
-            avaliacaoUtilizador,
+            pontuacaoUtilizador,
         );
 
         this.limparErroAvaliacao();
     }
 
     /**
-     * Converte um valor numa avaliação válida entre zero e dez.
+     * Converte um valor numa pontuação válida entre zero e dez.
      *
      * @param {unknown} valor Valor a normalizar.
-     *
      * @returns {number}
      *
      * @since 2.0.0
      * @version 1.0.0
      */
-    normalizarAvaliacao(valor) {
+    normalizarPontuacao(valor) {
         const numero =
             Number.parseFloat(
                 String(valor ?? ''),
@@ -224,40 +274,40 @@ class GestorModalAvaliacao {
      * @version 2.0.0
      */
     tratarMovimentoRato(evento) {
-        const avaliacao =
-            this.obterAvaliacaoDoEvento(
+        const pontuacao =
+            this.obterPontuacaoDoEvento(
                 evento,
             );
 
-        if (avaliacao === null) {
+        if (pontuacao === null) {
             return;
         }
 
-        this.avaliacaoAtual =
-            avaliacao;
+        this.pontuacaoAtual =
+            pontuacao;
 
         this.atualizarEstrelas(
-            avaliacao,
+            pontuacao,
         );
     }
 
     /**
-     * Repõe a avaliação selecionada quando o rato sai das estrelas.
+     * Repõe a pontuação selecionada quando o rato sai das estrelas.
      *
      * @since 1.0.0
      * @version 2.0.0
      */
     tratarSaidaRato() {
-        this.avaliacaoAtual =
-            this.avaliacaoSelecionada;
+        this.pontuacaoAtual =
+            this.pontuacaoSelecionada;
 
         this.atualizarEstrelas(
-            this.avaliacaoSelecionada,
+            this.pontuacaoSelecionada,
         );
     }
 
     /**
-     * Guarda a avaliação correspondente à estrela selecionada.
+     * Guarda a pontuação correspondente à estrela selecionada.
      *
      * @param {MouseEvent} evento Evento de clique.
      *
@@ -265,49 +315,48 @@ class GestorModalAvaliacao {
      * @version 2.0.0
      */
     tratarCliqueEstrela(evento) {
-        const avaliacao =
-            this.obterAvaliacaoDoEvento(
+        const pontuacao =
+            this.obterPontuacaoDoEvento(
                 evento,
             );
 
-        if (avaliacao === null) {
+        if (pontuacao === null) {
             return;
         }
 
-        this.avaliacaoSelecionada =
-            avaliacao;
+        this.pontuacaoSelecionada =
+            pontuacao;
 
-        this.avaliacaoAtual =
-            avaliacao;
+        this.pontuacaoAtual =
+            pontuacao;
 
-        this.campoAvaliacao.value =
-            String(avaliacao);
+        this.campoPontuacao.value =
+            String(pontuacao);
 
         this.atualizarEstrelas(
-            avaliacao,
+            pontuacao,
         );
 
         this.limparErroAvaliacao();
     }
 
     /**
-     * Obtém a avaliação correspondente à posição do rato numa estrela.
+     * Obtém a pontuação correspondente à posição do rato numa estrela.
      *
      * @param {MouseEvent} evento Evento do rato.
-     *
      * @returns {number|null}
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
-    obterAvaliacaoDoEvento(evento) {
+    obterPontuacaoDoEvento(evento) {
         if (!(evento.target instanceof Element)) {
             return null;
         }
 
         const estrela =
             evento.target.closest(
-                'i[data-value]',
+                '[data-valor]',
             );
 
         if (
@@ -321,7 +370,8 @@ class GestorModalAvaliacao {
 
         const valorBase =
             Number.parseInt(
-                estrela.dataset.value ?? '',
+                estrela.dataset.valor
+                ?? '',
                 10,
             );
 
@@ -336,7 +386,7 @@ class GestorModalAvaliacao {
             evento.clientX - limites.left
             < limites.width / 2;
 
-        return this.normalizarAvaliacao(
+        return this.normalizarPontuacao(
             metadeEsquerda
                 ? valorBase - 0.5
                 : valorBase,
@@ -346,74 +396,84 @@ class GestorModalAvaliacao {
     /**
      * Atualiza a representação visual das estrelas.
      *
-     * @param {number} avaliacao Valor da avaliação.
+     * @param {number} pontuacao Valor da avaliação.
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
-    atualizarEstrelas(avaliacao) {
+    atualizarEstrelas(pontuacao) {
         const estrelas =
-            this.contentorEstrelas.querySelectorAll(
-                'i[data-value]',
-            );
+            this.contentorEstrelas
+                .querySelectorAll(
+                    '[data-valor]',
+                );
 
         const estrelasCompletas =
-            Math.floor(avaliacao);
+            Math.floor(
+                pontuacao,
+            );
 
         const temMeiaEstrela =
-            avaliacao % 1 !== 0;
+            pontuacao % 1 !== 0;
 
-        estrelas.forEach((estrela) => {
-            const valorEstrela =
-                Number.parseInt(
-                    estrela.dataset.value ?? '',
-                    10,
-                );
+        estrelas.forEach(
+            (estrela) => {
+                const valorEstrela =
+                    Number.parseInt(
+                        estrela.dataset.valor
+                        ?? '',
+                        10,
+                    );
 
-            estrela.classList.remove(
-                'bi-star',
-                'bi-star-fill',
-                'bi-star-half',
-                'star-filled',
-            );
-
-            if (
-                valorEstrela
-                <= estrelasCompletas
-            ) {
-                estrela.classList.add(
+                estrela.classList.remove(
+                    'bi-star',
                     'bi-star-fill',
-                    'star-filled',
-                );
-
-                return;
-            }
-
-            if (
-                temMeiaEstrela
-                && valorEstrela
-                === estrelasCompletas + 1
-            ) {
-                estrela.classList.add(
                     'bi-star-half',
-                    'star-filled',
+                    'estrela-preenchida',
                 );
 
-                return;
-            }
+                if (
+                    valorEstrela
+                    <= estrelasCompletas
+                ) {
+                    estrela.classList.add(
+                        'bi-star-fill',
+                        'estrela-preenchida',
+                    );
 
-            estrela.classList.add(
-                'bi-star',
-            );
-        });
+                    return;
+                }
+
+                if (
+                    temMeiaEstrela
+                    && valorEstrela
+                    === estrelasCompletas + 1
+                ) {
+                    estrela.classList.add(
+                        'bi-star-half',
+                        'estrela-preenchida',
+                    );
+
+                    return;
+                }
+
+                estrela.classList.add(
+                    'bi-star',
+                );
+            },
+        );
 
         if (
             this.elementoFeedback
             instanceof HTMLElement
         ) {
             this.elementoFeedback.textContent =
-                avaliacao > 0
-                    ? `A tua seleção: ${avaliacao.toFixed(1)}/10`
+                pontuacao > 0
+                    ? `A tua seleção: ${
+                        this.formatarPontuacao(
+                            pontuacao,
+                        )
+                    }/10`
                     : 'Clica numa estrela para avaliar.';
         }
     }
@@ -422,7 +482,6 @@ class GestorModalAvaliacao {
      * Submete o formulário de avaliação.
      *
      * @param {SubmitEvent} evento Evento de submissão.
-     *
      * @returns {Promise<void>}
      *
      * @since 1.0.0
@@ -442,7 +501,7 @@ class GestorModalAvaliacao {
         }
 
         if (
-            this.avaliacaoSelecionada
+            this.pontuacaoSelecionada
             <= 0
         ) {
             this.apresentarErroAvaliacao(
@@ -452,7 +511,8 @@ class GestorModalAvaliacao {
             return;
         }
 
-        this.emSubmissao = true;
+        this.emSubmissao =
+            true;
 
         try {
             const tratadorFormulario =
@@ -467,20 +527,18 @@ class GestorModalAvaliacao {
 
             await tratadorFormulario.submeter();
         } finally {
-            this.emSubmissao = false;
+            this.emSubmissao =
+                false;
         }
     }
 
     /**
      * Atualiza o botão acionador e o resumo das avaliações.
      *
-     * As chaves da resposta permanecem temporariamente inalteradas até à
-     * revisão do controlador responsável pela avaliação.
-     *
      * @param {Record<string, unknown>} dados Dados devolvidos pelo servidor.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 3.0.0
      */
     atualizarResultado(dados) {
         if (
@@ -492,112 +550,144 @@ class GestorModalAvaliacao {
             return;
         }
 
-        const avaliacaoUtilizador =
+        const pontuacaoUtilizador =
             Number(
-                dados.user_rating,
+                dados.pontuacao_utilizador,
             );
 
-        const avaliacaoMedia =
-            dados.average_rating;
+        const mediaAvaliacoes =
+            Number(
+                dados.media_avaliacoes,
+            );
 
-        const totalAvaliacoes =
-            dados.ratings_count;
+        const numeroAvaliacoes =
+            Number.parseInt(
+                String(
+                    dados.numero_avaliacoes
+                    ?? '',
+                ),
+                10,
+            );
 
-        const conteudoTooltip =
-            dados.tooltip_html;
+        const conteudoIndicador =
+            dados.conteudo_indicador_html;
 
         if (
             Number.isFinite(
-                avaliacaoUtilizador,
+                pontuacaoUtilizador,
             )
         ) {
             const textoBotao =
-                this.botaoAcionador.querySelector(
-                    '[data-rating-button-text], span',
-                );
+                this.botaoAcionador
+                    .querySelector(
+                        '[data-texto-avaliacao], span',
+                    );
 
             if (
                 textoBotao
                 instanceof HTMLElement
             ) {
                 textoBotao.textContent =
-                    `A tua avaliação: ${avaliacaoUtilizador.toFixed(1)}`;
+                    `A tua avaliação: ${
+                        this.formatarPontuacao(
+                            pontuacaoUtilizador,
+                        )
+                    }`;
             }
 
-            this.botaoAcionador.dataset.userRating =
-                String(
-                    avaliacaoUtilizador,
-                );
-
-            this.botaoAcionador.classList.remove(
-                'btn-dark',
-                'btn-outline-warning',
-            );
-
-            this.botaoAcionador.classList.add(
-                'btn-warning',
-            );
-        }
-
-        const apresentacaoAvaliacao =
             this.botaoAcionador
-                .closest('.d-flex')
-                ?.querySelector(
-                    '.rating-display',
-                );
+                .dataset
+                .pontuacaoUtilizador =
+                    String(
+                        pontuacaoUtilizador,
+                    );
+        }
+
+        const contentorInteracoes =
+            this.botaoAcionador.closest(
+                '[data-contentor-interacoes]',
+            );
+
+        const apresentacaoAvaliacoes =
+            contentorInteracoes?.querySelector(
+                '.apresentacao-avaliacoes',
+            );
 
         if (
-            !(
-                apresentacaoAvaliacao
-                instanceof HTMLElement
+            apresentacaoAvaliacoes
+            instanceof HTMLElement
+        ) {
+            const elementoMedia =
+                apresentacaoAvaliacoes
+                    .querySelector(
+                        '.media-avaliacoes',
+                    );
+
+            const elementoTotal =
+                apresentacaoAvaliacoes
+                    .querySelector(
+                        '.quantidade-avaliacoes',
+                    );
+
+            if (
+                elementoMedia instanceof HTMLElement
+                && Number.isFinite(
+                    mediaAvaliacoes,
+                )
+            ) {
+                elementoMedia.textContent =
+                    this.formatarPontuacao(
+                        mediaAvaliacoes,
+                    );
+            }
+
+            if (
+                elementoTotal instanceof HTMLElement
+                && Number.isInteger(
+                    numeroAvaliacoes,
+                )
+                && numeroAvaliacoes >= 0
+            ) {
+                elementoTotal.textContent =
+                    String(
+                        numeroAvaliacoes,
+                    );
+            }
+
+            if (
+                typeof conteudoIndicador
+                === 'string'
+            ) {
+                this.atualizarTooltip(
+                    apresentacaoAvaliacoes,
+                    conteudoIndicador,
+                );
+            }
+        }
+
+        Modal
+            .getOrCreateInstance(
+                this.modal,
             )
-        ) {
-            return;
-        }
+            .hide();
+    }
 
-        const elementoMedia =
-            apresentacaoAvaliacao.querySelector(
-                '.average-rating',
+    /**
+     * Formata uma pontuação para apresentação em português.
+     *
+     * @param {number} pontuacao Pontuação recebida.
+     * @returns {string}
+     *
+     * @since 3.0.0
+     * @version 1.0.0
+     */
+    formatarPontuacao(pontuacao) {
+        return pontuacao
+            .toFixed(1)
+            .replace(
+                '.',
+                ',',
             );
-
-        const elementoTotal =
-            apresentacaoAvaliacao.querySelector(
-                '.ratings-count',
-            );
-
-        if (
-            elementoMedia
-            instanceof HTMLElement
-            && avaliacaoMedia !== undefined
-            && avaliacaoMedia !== null
-        ) {
-            elementoMedia.textContent =
-                String(
-                    avaliacaoMedia,
-                );
-        }
-
-        if (
-            elementoTotal
-            instanceof HTMLElement
-            && totalAvaliacoes !== undefined
-            && totalAvaliacoes !== null
-        ) {
-            elementoTotal.textContent =
-                String(
-                    totalAvaliacoes,
-                );
-        }
-
-        if (
-            typeof conteudoTooltip
-            === 'string'
-        ) {
-            this.atualizarTooltip(
-                apresentacaoAvaliacao,
-                conteudoTooltip,
-            );
-        }
     }
 
     /**
@@ -609,11 +699,11 @@ class GestorModalAvaliacao {
      * @version 1.0.0
      */
     apresentarErroAvaliacao(mensagem) {
-        this.campoAvaliacao.classList.add(
+        this.campoPontuacao.classList.add(
             'is-invalid',
         );
 
-        this.campoAvaliacao.setAttribute(
+        this.campoPontuacao.setAttribute(
             'aria-invalid',
             'true',
         );
@@ -638,11 +728,11 @@ class GestorModalAvaliacao {
      * @version 1.0.0
      */
     limparErroAvaliacao() {
-        this.campoAvaliacao.classList.remove(
+        this.campoPontuacao.classList.remove(
             'is-invalid',
         );
 
-        this.campoAvaliacao.removeAttribute(
+        this.campoPontuacao.removeAttribute(
             'aria-invalid',
         );
 
@@ -693,15 +783,23 @@ class GestorModalAvaliacao {
      * Repõe o estado interno quando a janela modal é fechada.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     reporEstado() {
         this.formulario.reset();
 
-        this.avaliacaoAtual = 0;
-        this.avaliacaoSelecionada = 0;
+        this.pontuacaoAtual = 0;
+        this.pontuacaoSelecionada = 0;
         this.botaoAcionador = null;
-        this.campoAvaliacao.value = '0';
+        this.campoPontuacao.value = '0';
+
+        delete this.formulario
+            .dataset
+            .tipoAvaliavel;
+
+        delete this.formulario
+            .dataset
+            .identificadorAvaliavel;
 
         this.atualizarEstrelas(0);
         this.limparErroAvaliacao();

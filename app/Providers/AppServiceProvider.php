@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use App\Models\MetalThursday\MetalThursday;
-use App\Models\MetalThursday\SeccaoMetalThursday;
+use App\Enumeracoes\Interacoes\TipoEntidadeInteracao;
 use App\Regras\Autenticacao\RequisitosPalavraPasse;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\ServiceProvider;
@@ -21,31 +19,10 @@ use Illuminate\Validation\Rules\Password;
  *
  * @since 1.0.0
  *
- * @version 2.2.0
+ * @version 2.3.0
  */
 final class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Mapa dos aliases utilizados nas relações polimórficas.
-     *
-     * Estes aliases são persistidos nas colunas:
-     *
-     * - `tipo_comentavel`;
-     * - `tipo_avaliavel`;
-     * - `tipo_audivel`.
-     *
-     * @var array<string, class-string<Model>>
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const MAPA_TIPOS_POLIMORFICOS = [
-        'metal_thursday' => MetalThursday::class,
-
-        'seccao_metal_thursday' => SeccaoMetalThursday::class,
-    ];
-
     /**
      * Inicia os serviços e as configurações gerais da aplicação.
      *
@@ -54,7 +31,7 @@ final class AppServiceProvider extends ServiceProvider
      *
      * @since 1.0.0
      *
-     * @version 2.2.0
+     * @version 2.3.0
      */
     public function boot(): void
     {
@@ -71,12 +48,12 @@ final class AppServiceProvider extends ServiceProvider
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function configurarMapaPolimorfico(): void
     {
         Relation::enforceMorphMap(
-            self::MAPA_TIPOS_POLIMORFICOS,
+            TipoEntidadeInteracao::obterMapaPolimorfico(),
         );
     }
 

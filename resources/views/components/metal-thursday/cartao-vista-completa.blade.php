@@ -6,7 +6,7 @@
     App\View\Components\MetalThursday\CartaoVistaCompleta.
 
     @since 1.0.0
-    @version 3.0.0
+    @version 3.1.0
 --}}
 
 <article
@@ -152,6 +152,7 @@
 
                     <div
                         class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3 mt-3"
+                        data-contentor-interacoes
                     >
                         <div
                             class="d-flex align-items-center flex-wrap gap-2"
@@ -185,7 +186,7 @@
                                 type="button"
                                 data-bs-toggle="modal"
                                 data-bs-target="#modal-avaliacao"
-                                data-tipo-avaliavel="seccao"
+                                data-tipo-avaliavel="seccao-metal-thursday"
                                 data-identificador-avaliavel="{{
                                     $seccaoPreparada['identificador']
                                 }}"
@@ -195,13 +196,25 @@
                                 data-pontuacao-utilizador="{{
                                     $seccaoPreparada['interacoes']['pontuacaoUtilizador']
                                 }}"
+                                data-endereco-avaliacao="{{
+                                    route(
+                                        'avaliacoes.guardar',
+                                        [
+                                            'tipoAvaliavel' =>
+                                                'seccao-metal-thursday',
+
+                                            'identificadorAvaliavel' =>
+                                                $seccaoPreparada['identificador'],
+                                        ],
+                                    )
+                                }}"
                             >
                                 <i
                                     class="bi bi-star-fill"
                                     aria-hidden="true"
                                 ></i>
 
-                                <span>
+                                <span data-texto-avaliacao>
                                     {{
                                         $seccaoPreparada['interacoes']['textoAvaliacao']
                                     }}
@@ -212,13 +225,13 @@
                                 class="btn btn-sm btn-success"
                                 type="button"
                                 data-tipo-interacao="alternar-audicao"
-                                data-tipo-audivel="seccao"
+                                data-tipo-audivel="seccao-metal-thursday"
                                 data-endereco="{{
                                     route(
                                         'audicoes.alternar',
                                         [
                                             'tipoAudivel' =>
-                                                'seccao',
+                                                'seccao-metal-thursday',
 
                                             'identificadorAudivel' =>
                                                 $seccaoPreparada['identificador'],
@@ -231,7 +244,7 @@
                                     aria-hidden="true"
                                 ></i>
 
-                                <span>
+                                <span data-texto-interacao>
                                     {{
                                         $seccaoPreparada['interacoes']['textoAudicao']
                                     }}
@@ -299,7 +312,6 @@
                     >
                         <x-seccao-comentarios
                             :comentavel="$seccaoPreparada['modelo']"
-                            tipo-comentavel="seccao_metal_thursday"
                         />
                     </div>
                 @endif
@@ -318,6 +330,7 @@
     <footer class="card-footer bg-dark text-muted">
         <div
             class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3"
+            data-contentor-interacoes
         >
             <div
                 class="d-flex align-items-center flex-wrap gap-2"
@@ -347,7 +360,7 @@
                     type="button"
                     data-bs-toggle="modal"
                     data-bs-target="#modal-avaliacao"
-                    data-tipo-avaliavel="metal_thursday"
+                    data-tipo-avaliavel="metal-thursday"
                     data-identificador-avaliavel="{{
                         $identificadorMetalThursday
                     }}"
@@ -355,13 +368,25 @@
                     data-pontuacao-utilizador="{{
                         $interacoesMetalThursday['pontuacaoUtilizador']
                     }}"
+                    data-endereco-avaliacao="{{
+                        route(
+                            'avaliacoes.guardar',
+                            [
+                                'tipoAvaliavel' =>
+                                    'metal-thursday',
+
+                                'identificadorAvaliavel' =>
+                                    $identificadorMetalThursday,
+                            ],
+                        )
+                    }}"
                 >
                     <i
                         class="bi bi-star-fill"
                         aria-hidden="true"
                     ></i>
 
-                    <span>
+                    <span data-texto-avaliacao>
                         {{ $interacoesMetalThursday['textoAvaliacao'] }}
                     </span>
                 </button>
@@ -370,13 +395,13 @@
                     class="btn btn-sm btn-success"
                     type="button"
                     data-tipo-interacao="alternar-audicao"
-                    data-tipo-audivel="metal_thursday"
+                    data-tipo-audivel="metal-thursday"
                     data-endereco="{{
                         route(
                             'audicoes.alternar',
                             [
                                 'tipoAudivel' =>
-                                    'metal_thursday',
+                                    'metal-thursday',
 
                                 'identificadorAudivel' =>
                                     $identificadorMetalThursday,
@@ -389,7 +414,7 @@
                         aria-hidden="true"
                     ></i>
 
-                    <span>
+                    <span data-texto-interacao>
                         {{ $interacoesMetalThursday['textoAudicao'] }}
                     </span>
                 </button>
@@ -448,7 +473,6 @@
     >
         <x-seccao-comentarios
             :comentavel="$registoMetalThursday"
-            tipo-comentavel="metal_thursday"
         />
     </div>
 </article>

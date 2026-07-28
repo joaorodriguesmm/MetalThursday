@@ -15,21 +15,22 @@ use Illuminate\View\View;
  *
  * @since 1.0.0
  *
- * @version 2.1.0
+ * @version 3.1.0
  */
 final class ControladorLigacaoRedefinicaoPalavraPasse extends Controller
 {
     /**
      * Mensagem genérica apresentada depois do pedido.
      *
-     * A mesma mensagem é utilizada para endereços existentes e inexistentes,
-     * impedindo a enumeração de contas.
+     * A mesma mensagem é utilizada independentemente da existência da conta,
+     * do envio da ligação ou da aplicação de uma limitação temporária,
+     * impedindo a enumeração de utilizadores.
      *
      * @var string
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private const MENSAGEM_PEDIDO_RECEBIDO =
         'Se existir uma conta associada ao endereço indicado, será enviada uma ligação para redefinir a palavra-passe.';
@@ -41,53 +42,52 @@ final class ControladorLigacaoRedefinicaoPalavraPasse extends Controller
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function apresentar(): View
     {
         return view(
-            'auth.forgot-password',
+            'autenticacao.recuperar-palavra-passe',
         );
     }
 
     /**
      * Solicita o envio da ligação de redefinição da palavra-passe.
      *
-     * Apenas um bloqueio temporário por excesso de pedidos é apresentado como
-     * erro. Os restantes estados recebem a mesma resposta genérica.
+     * A resposta apresentada ao visitante é sempre igual,
+     * independentemente do resultado devolvido pelo gestor de
+     * palavras-passe.
      *
      * @param  SolicitarRedefinicaoPalavraPasseRequest  $pedido  Pedido validado.
      * @return RedirectResponse Redirecionamento para o formulário.
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.1.0
      */
     public function enviar(
         SolicitarRedefinicaoPalavraPasseRequest $pedido,
     ): RedirectResponse {
-        $dados = $pedido->validated();
+        $email =
+            $pedido->email();
 
-        /** @var string $email */
-        $email = $dados['email'];
-
-        $estado = Password::sendResetLink([
+        /*
+         * A chave `email` pertence ao contrato interno do gestor de
+         * palavras-passe do Laravel.
+         */
+        Password::sendResetLink([
             'email' => $email,
         ]);
 
-        if ($estado === Password::RESET_THROTTLED) {
-            return back()
-                ->withInput([
-                    'email' => $email,
-                ])
-                ->withErrors([
-                    'email' => __($estado),
-                ]);
-        }
-
-        return back()->with(
-            'estado',
-            self::MENSAGEM_PEDIDO_RECEBIDO,
-        );
+        return to_route(
+            'password.request',
+        )
+            ->withInput([
+                'email' => $email,
+            ])
+            ->with(
+                'informacao',
+                self::MENSAGEM_PEDIDO_RECEBIDO,
+            );
     }
 }

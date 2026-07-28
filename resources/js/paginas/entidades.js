@@ -1,135 +1,158 @@
-import InicializadorTomSelect from '../modulos/InicializadorTomSelect';
-import ValidadorFormulario from '../modulos/ValidadorFormulario';
+import InicializadorTomSelect
+    from '../modulos/InicializadorTomSelect';
+
+import ValidadorFormulario
+    from '../modulos/ValidadorFormulario';
 
 /**
- * Configura os validadores dos formulários de entidades.
+ * Script específico das páginas de gestão de entidades.
  *
- * Os identificadores dos formulários e os nomes dos campos permanecem
- * temporariamente em inglês por corresponderem aos contratos atuais das
- * views e do servidor.
- *
- * @returns {void}
+ * Inicializa os campos Tom Select e a validação de apoio dos
+ * formulários de bandas, géneros e edições.
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 2.3.0
  */
-function inicializarValidadoresEntidades() {
-    const configuracoes = [
-        {
-            idFormulario: 'band-form',
 
-            regras: {
-                name: [
-                    'obrigatorio',
-                    'maximo:255',
-                ],
+/**
+ * Configurações dos formulários geridos pelo script.
+ *
+ * @type {ReadonlyArray<Object>}
+ *
+ * @since 2.1.0
+ * @version 1.2.0
+ */
+const CONFIGURACOES_FORMULARIOS = Object.freeze([
+    {
+        identificadorFormulario:
+            'formulario-banda',
 
-                country_id: [
-                    'obrigatorio',
-                ],
+        regras: {
+            nome: [
+                'obrigatorio',
+                'maximo:255',
+            ],
 
-                'genres[]': [
-                    'obrigatorio',
-                ],
+            pais_id: [
+                'obrigatorio',
+            ],
+
+            'generos[]': [
+                'obrigatorio',
+            ],
+        },
+
+        mensagens: {
+            nome: {
+                obrigatorio:
+                    'Por favor, insere o nome da banda.',
+
+                maximo:
+                    'O nome da banda não pode ter mais de 255 caracteres.',
             },
 
-            mensagens: {
-                name: {
-                    obrigatorio:
-                        'Por favor, insere o nome.',
+            pais_id: {
+                obrigatorio:
+                    'Por favor, seleciona o país da banda.',
+            },
 
-                    maximo:
-                        'O nome não pode ter mais de 255 caracteres.',
-                },
-
-                country_id: {
-                    obrigatorio:
-                        'Por favor, seleciona o país.',
-                },
-
-                'genres[]': {
-                    obrigatorio:
-                        'Por favor, seleciona, pelo menos, um género.',
-                },
+            'generos[]': {
+                obrigatorio:
+                    'Por favor, seleciona pelo menos um género.',
             },
         },
-        {
-            idFormulario: 'genre-form',
+    },
 
-            regras: {
-                name: [
-                    'obrigatorio',
-                    'maximo:255',
-                ],
-            },
+    {
+        identificadorFormulario:
+            'formulario-genero',
 
-            mensagens: {
-                name: {
-                    obrigatorio:
-                        'Por favor, insere o nome.',
+        regras: {
+            nome: [
+                'obrigatorio',
+                'maximo:255',
+            ],
+        },
 
-                    maximo:
-                        'O nome não pode ter mais de 255 caracteres.',
-                },
+        mensagens: {
+            nome: {
+                obrigatorio:
+                    'Por favor, insere o nome do género.',
+
+                maximo:
+                    'O nome do género não pode ter mais de 255 caracteres.',
             },
         },
-        {
-            idFormulario: 'edition-form',
+    },
 
-            regras: {
-                name: [
-                    'obrigatorio',
-                    'maximo:255',
-                ],
+    {
+        identificadorFormulario:
+            'formulario-edicao',
 
-                start_date: [
-                    'obrigatorio',
-                    'data',
-                ],
+        regras: {
+            nome: [
+                'obrigatorio',
+                'maximo:255',
+            ],
 
-                end_date: [
-                    'data',
-                    'posterior_ou_igual:start_date',
-                ],
+            data_inicio: [
+                'obrigatorio',
+                'data',
+            ],
+
+            data_fim: [
+                'data',
+                'posterior_ou_igual:data_inicio',
+            ],
+        },
+
+        mensagens: {
+            nome: {
+                obrigatorio:
+                    'Por favor, insere o nome da edição.',
+
+                maximo:
+                    'O nome da edição não pode ter mais de 255 caracteres.',
             },
 
-            mensagens: {
-                name: {
-                    obrigatorio:
-                        'Por favor, insere o nome.',
+            data_inicio: {
+                obrigatorio:
+                    'Por favor, insere a data de início da edição.',
 
-                    maximo:
-                        'O nome não pode ter mais de 255 caracteres.',
-                },
+                data:
+                    'A data de início deve ser válida.',
+            },
 
-                start_date: {
-                    obrigatorio:
-                        'A data de início é obrigatória.',
+            data_fim: {
+                data:
+                    'A data de fim deve ser válida.',
 
-                    data:
-                        'A data de início deve ser válida.',
-                },
-
-                end_date: {
-                    data:
-                        'A data de fim deve ser válida.',
-
-                    posterior_ou_igual:
-                        'A data de fim não pode ser anterior à data de início.',
-                },
+                posterior_ou_igual:
+                    'A data de fim não pode ser anterior à data de início.',
             },
         },
-    ];
+    },
+]);
 
-    configuracoes.forEach(
+/**
+ * Inicia os validadores dos formulários disponíveis.
+ *
+ * @return {void}
+ *
+ * @since 1.0.0
+ * @version 2.3.0
+ */
+function iniciarValidadoresEntidades() {
+    CONFIGURACOES_FORMULARIOS.forEach(
         ({
-            idFormulario,
+            identificadorFormulario,
             regras,
             mensagens,
         }) => {
-            const formulario = document.getElementById(
-                idFormulario,
-            );
+            const formulario =
+                document.getElementById(
+                    identificadorFormulario,
+                );
 
             if (!(formulario instanceof HTMLFormElement)) {
                 return;
@@ -147,23 +170,27 @@ function inicializarValidadoresEntidades() {
 }
 
 /**
- * Inicializa os componentes da página de entidades.
+ * Inicia os comportamentos das páginas de gestão de entidades.
  *
- * @returns {void}
+ * @return {void}
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 2.3.0
  */
-function inicializarPaginaEntidades() {
+function iniciarPaginaEntidades() {
     new InicializadorTomSelect();
 
-    inicializarValidadoresEntidades();
+    iniciarValidadoresEntidades();
 }
 
-document.addEventListener(
-    'DOMContentLoaded',
-    inicializarPaginaEntidades,
-    {
-        once: true,
-    },
-);
+if (document.readyState === 'loading') {
+    document.addEventListener(
+        'DOMContentLoaded',
+        iniciarPaginaEntidades,
+        {
+            once: true,
+        },
+    );
+} else {
+    iniciarPaginaEntidades();
+}

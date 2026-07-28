@@ -17,21 +17,21 @@ use LogicException;
  *
  * @since 2.0.0
  *
- * @version 1.1.0
+ * @version 1.3.0
  */
 final class ControladorPermissoesEmail extends Controller
 {
     /**
-     * Estado enviado após a atualização das permissões.
+     * Mensagem apresentada após a atualização das permissões.
      *
      * @var string
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    private const ESTADO_PERMISSOES_ATUALIZADAS =
-        'permissoes-email-atualizadas';
+    private const MENSAGEM_SUCESSO =
+        'Permissões de e-mail atualizadas com sucesso.';
 
     /**
      * Cria o controlador.
@@ -56,11 +56,12 @@ final class ControladorPermissoesEmail extends Controller
      * @return RedirectResponse Redirecionamento para o perfil.
      *
      * @throws AuthenticationException Quando não existe autenticação válida.
-     * @throws LogicException Quando os dados validados não contêm uma lista.
+     * @throws LogicException Quando os dados validados não contêm uma lista
+     *                        válida.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 1.3.0
      */
     public function atualizar(
         AtualizarPermissoesEmailRequest $pedido,
@@ -70,28 +71,21 @@ final class ControladorPermissoesEmail extends Controller
                 $pedido,
             );
 
-        $dados = $pedido->validated();
-
         $identificadoresPermissoes =
-            $dados['permissoes_email']
-            ?? [];
+            $pedido->obterIdentificadoresPermissoes();
 
-        if (! is_array($identificadoresPermissoes)) {
-            throw new LogicException(
-                'As permissões de e-mail validadas não formam uma lista.',
+        $this
+            ->servicoPermissoesEmail
+            ->sincronizar(
+                $utilizador,
+                $identificadoresPermissoes,
             );
-        }
-
-        $this->servicoPermissoesEmail->sincronizar(
-            $utilizador,
-            $identificadoresPermissoes,
-        );
 
         return to_route(
             'perfil.editar',
         )->with(
-            'estado',
-            self::ESTADO_PERMISSOES_ATUALIZADAS,
+            'sucesso',
+            self::MENSAGEM_SUCESSO,
         );
     }
 
@@ -110,7 +104,8 @@ final class ControladorPermissoesEmail extends Controller
     private function obterUtilizadorAutenticado(
         AtualizarPermissoesEmailRequest $pedido,
     ): Utilizador {
-        $utilizador = $pedido->user();
+        $utilizador =
+            $pedido->user();
 
         if (! $utilizador instanceof Utilizador) {
             throw new AuthenticationException(
