@@ -1,31 +1,45 @@
 import js from '@eslint/js';
 import globals from 'globals';
-import { defineConfig } from 'eslint/config';
+import {
+    defineConfig,
+    globalIgnores,
+} from 'eslint/config';
 
 /**
- * Configuração estática do ESLint para o JavaScript da aplicação.
+ * Ficheiros JavaScript controlados pelo projeto.
+ *
+ * @type {ReadonlyArray<string>}
  *
  * @since 2.0.0
  * @version 1.0.0
  */
+const FICHEIROS_JAVASCRIPT = Object.freeze([
+    'eslint.config.js',
+    'vite.config.js',
+    'resources/js/**/*.js',
+]);
+
+/**
+ * Configuração estática do ESLint para o JavaScript do projeto.
+ *
+ * @since 2.0.0
+ * @version 2.0.0
+ */
 export default defineConfig([
-    {
-        name: 'metal-thursday/ficheiros-ignorados',
-
-        ignores: [
-            'node_modules/**',
-            'public/build/**',
-            'storage/**',
-            'vendor/**',
+    globalIgnores(
+        [
+            'node_modules/',
+            'public/build/',
+            'storage/',
+            'vendor/',
         ],
-    },
+        'metal-thursday/ficheiros-ignorados',
+    ),
 
     {
-        name: 'metal-thursday/javascript-navegador',
+        name: 'metal-thursday/javascript',
 
-        files: [
-            'resources/js/**/*.js',
-        ],
+        files: FICHEIROS_JAVASCRIPT,
 
         plugins: {
             js,
@@ -38,10 +52,6 @@ export default defineConfig([
         languageOptions: {
             ecmaVersion: 'latest',
             sourceType: 'module',
-
-            globals: {
-                ...globals.browser,
-            },
         },
 
         linterOptions: {
@@ -50,11 +60,6 @@ export default defineConfig([
         },
 
         rules: {
-            /*
-             * Impede variáveis declaradas mas nunca utilizadas. Nomes
-             * iniciados por underscore podem ser usados para indicar
-             * parâmetros intencionalmente ignorados.
-             */
             'no-unused-vars': [
                 'error',
                 {
@@ -66,10 +71,6 @@ export default defineConfig([
                 },
             ],
 
-            /*
-             * Evita mensagens de depuração esquecidas em produção, mantendo
-             * apenas avisos e erros deliberados.
-             */
             'no-console': [
                 'error',
                 {
@@ -80,10 +81,6 @@ export default defineConfig([
                 },
             ],
 
-            /*
-             * Regras adicionais orientadas para correção e consistência
-             * sem introduzir um formatador paralelo ao projeto.
-             */
             curly: [
                 'error',
                 'all',
@@ -106,6 +103,35 @@ export default defineConfig([
 
             'prefer-const': 'error',
             radix: 'error',
+        },
+    },
+
+    {
+        name: 'metal-thursday/javascript-node',
+
+        files: [
+            'eslint.config.js',
+            'vite.config.js',
+        ],
+
+        languageOptions: {
+            globals: {
+                ...globals.node,
+            },
+        },
+    },
+
+    {
+        name: 'metal-thursday/javascript-navegador',
+
+        files: [
+            'resources/js/**/*.js',
+        ],
+
+        languageOptions: {
+            globals: {
+                ...globals.browser,
+            },
         },
     },
 ]);

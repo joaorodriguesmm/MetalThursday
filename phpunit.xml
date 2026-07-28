@@ -2,34 +2,33 @@
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
          bootstrap="vendor/autoload.php"
+         cacheDirectory=".phpunit.cache"
          colors="true"
 >
     <testsuites>
-        <testsuite name="Unit">
+        <testsuite name="Unidade">
             <directory>tests/Unit</directory>
         </testsuite>
-        <testsuite name="Feature">
+        <testsuite name="Funcionais">
             <directory>tests/Feature</directory>
         </testsuite>
     </testsuites>
+
     <source>
         <include>
             <directory>app</directory>
         </include>
     </source>
+
     <php>
-        <env name="APP_ENV" value="testing"/>
-        <env name="APP_KEY" value="base64:MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE="/>
-        <env name="APP_MAINTENANCE_DRIVER" value="file"/>
-        <env name="BCRYPT_ROUNDS" value="4"/>
-        <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="mysql"/>
-        <env name="DB_DATABASE" value="metalthursday_testes"/>
-        <env name="MAIL_MAILER" value="array"/>
-        <env name="QUEUE_CONNECTION" value="sync"/>
-        <env name="SESSION_DRIVER" value="array"/>
-        <env name="PULSE_ENABLED" value="false"/>
-        <env name="TELESCOPE_ENABLED" value="false"/>
-        <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="APP_ENV" value="testing" force="true"/>
+        <env name="APP_MAINTENANCE_DRIVER" value="file" force="true"/>
+        <env name="BCRYPT_ROUNDS" value="4" force="true"/>
+        <env name="CACHE_STORE" value="array" force="true"/>
+        <env name="DB_CONNECTION" value="mysql" force="true"/>
+        <env name="DB_DATABASE" value="metalthursday_testes" force="true"/>
+        <env name="MAIL_MAILER" value="array" force="true"/>
+        <env name="QUEUE_CONNECTION" value="sync" force="true"/>
+        <env name="SESSION_DRIVER" value="array" force="true"/>
     </php>
 </phpunit>
