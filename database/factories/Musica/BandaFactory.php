@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories\Musica;
 
-use App\Models\Geografia\Pais;
+use App\Models\Geografia\OrigemGeografica;
 use App\Models\Musica\Banda;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -20,21 +20,18 @@ use InvalidArgumentException;
  *
  * @since 2.0.0
  *
- * @version 1.1.0
+ * @version 2.0.0
  */
 final class BandaFactory extends Factory
 {
     /**
      * Comprimento máximo do nome da banda.
      *
-     * Corresponde ao limite definido na base de dados.
-     *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    private const COMPRIMENTO_MAXIMO_NOME =
-        255;
+    private const COMPRIMENTO_MAXIMO_NOME = 255;
 
     /**
      * Modelo associado à factory.
@@ -45,8 +42,7 @@ final class BandaFactory extends Factory
      *
      * @version 1.0.0
      */
-    protected $model =
-        Banda::class;
+    protected $model = Banda::class;
 
     /**
      * Define os atributos predefinidos de uma banda.
@@ -58,33 +54,29 @@ final class BandaFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function definition(): array
     {
-        $nome =
-            $this
-                ->faker
-                ->unique()
-                ->words(
-                    2,
-                    true,
-                );
+        $nome = $this
+            ->faker
+            ->unique()
+            ->words(
+                2,
+                true,
+            );
 
         return [
             'nome' => Str::ucfirst(
                 $nome,
             ),
 
-            'pais_id' => Pais::factory(),
+            'origem_geografica_id' => OrigemGeografica::factory(),
         ];
     }
 
     /**
      * Define um nome conhecido para a banda.
-     *
-     * O nome é normalizado, removendo espaços exteriores e espaços
-     * consecutivos.
      *
      * @param  string  $nome  Nome da banda.
      * @return static Factory configurada.
@@ -94,15 +86,14 @@ final class BandaFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function comNome(
         string $nome,
     ): static {
-        $nomeNormalizado =
-            Str::squish(
-                $nome,
-            );
+        $nomeNormalizado = Str::squish(
+            $nome,
+        );
 
         if ($nomeNormalizado === '') {
             throw new InvalidArgumentException(
@@ -131,32 +122,33 @@ final class BandaFactory extends Factory
     }
 
     /**
-     * Associa a banda a um país existente.
+     * Associa a banda a uma origem geográfica existente.
      *
-     * @param  Pais  $pais  País de origem da banda.
+     * @param  OrigemGeografica  $origemGeografica  Origem da banda.
      * @return static Factory configurada.
      *
-     * @throws InvalidArgumentException Quando o país não está persistido.
+     * @throws InvalidArgumentException Quando a origem geográfica não está
+     *                                  persistida.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
-    public function dePais(
-        Pais $pais,
+    public function deOrigemGeografica(
+        OrigemGeografica $origemGeografica,
     ): static {
         if (
-            ! $pais->exists
-            || $pais->getKey() === null
+            ! $origemGeografica->exists
+            || $origemGeografica->getKey() === null
         ) {
             throw new InvalidArgumentException(
-                'O país associado à banda deve estar persistido.',
+                'A origem geográfica associada à banda deve estar persistida.',
             );
         }
 
         return $this->for(
-            $pais,
-            'pais',
+            $origemGeografica,
+            'origemGeografica',
         );
     }
 }
