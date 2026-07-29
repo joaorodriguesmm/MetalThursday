@@ -1578,13 +1578,15 @@ final class ControladorMetalThursday extends Controller
      * à MetalThursday.
      *
      * @param  Request  $pedido  Pedido HTTP atual.
-     * @param  MetalThursday  $metalThursday  MetalThursday editada.
+     * @param  MetalThursday  $metalThursday  Metal
+     *                                        à MetalThursday.
+     * @param  Request  $pedido  Thursday editada.
      * @return array<int, SeccaoMetalThursday|array<string, mixed>>
      *                                                              Secções utilizadas pelo formulário.
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterSeccoesFormulario(
         Request $pedido,
@@ -1593,8 +1595,8 @@ final class ControladorMetalThursday extends Controller
         if (
             ! $pedido
                 ->session()
-                ->hasOldInput(
-                    'seccoes',
+                ->exists(
+                    '_old_input.seccoes',
                 )
         ) {
             return $metalThursday
