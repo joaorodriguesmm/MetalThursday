@@ -14,17 +14,20 @@ use LogicException;
  * Valida a atualização das permissões de e-mail do utilizador autenticado.
  *
  * Uma lista vazia representa a remoção de todas as permissões de e-mail.
+ * Quando o navegador não envia o campo por não existir qualquer checkbox
+ * selecionado, o pedido cria explicitamente essa lista vazia.
  *
  * @since 1.0.0
  *
- * @version 2.2.0
+ * @version 3.0.0
  */
 final class AtualizarPermissoesEmailRequest extends FormRequest
 {
     /**
      * Saco de erros utilizado pelo formulário das permissões de e-mail.
      *
-     * Esta propriedade não deve ser tipada, porque é herdada do FormRequest.
+     * Esta propriedade não deve ser tipada, porque é herdada do
+     * {@see FormRequest}.
      *
      * @var string
      *
@@ -40,7 +43,7 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
      * Apenas o modelo principal de utilizador autenticado pode atualizar as
      * respetivas permissões de e-mail.
      *
-     * @return bool Verdadeiro quando existe um utilizador autenticado.
+     * @return bool Verdadeiro quando existe um utilizador autenticado válido.
      *
      * @since 1.0.0
      *
@@ -58,14 +61,15 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
      * valor está selecionado. Nesse caso, é criada uma lista vazia.
      *
      * Os identificadores numéricos recebidos como strings são convertidos
-     * para inteiros.
+     * para inteiros. Os restantes valores são preservados para que a
+     * validação os rejeite.
      *
-     * As chaves da lista são preservadas para permitir que a regra `list`
-     * rejeite estruturas associativas ou com índices inválidos.
+     * As chaves originais são mantidas para permitir que a regra `list`
+     * rejeite estruturas associativas ou listas com índices em falta.
      *
      * @since 2.0.0
      *
-     * @version 1.2.0
+     * @version 2.0.0
      */
     protected function prepareForValidation(): void
     {
@@ -83,22 +87,17 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
             return;
         }
 
-        $this->merge([
-            'permissoes_email' => array_map(
-                static function (
-                    mixed $identificador,
-                ): mixed {
-                    if (
-                        is_string($identificador)
-                        && ctype_digit($identificador)
-                    ) {
-                        return (int) $identificador;
-                    }
+        $identificadores = [];
 
-                    return $identificador;
-                },
-                $permissoes,
-            ),
+        foreach ($permissoes as $indice => $identificador) {
+            $identificadores[$indice] =
+                $this->normalizarIdentificador(
+                    $identificador,
+                );
+        }
+
+        $this->merge([
+            'permissoes_email' => $identificadores,
         ]);
     }
 
@@ -106,23 +105,28 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
      * Obtém as regras de validação.
      *
      * Uma lista vazia é válida e representa a remoção de todas as permissões.
+     * Cada elemento deve corresponder a um identificador inteiro, positivo,
+     * único e existente.
      *
-     * @return array<string, array<int, mixed>> Regras de validação.
+     * @return array<string, list<mixed>> Regras de validação.
      *
      * @since 1.0.0
      *
-     * @version 2.2.0
+     * @version 3.0.0
      */
     public function rules(): array
     {
         return [
             'permissoes_email' => [
+                'bail',
+                'present',
                 'array',
                 'list',
             ],
 
             'permissoes_email.*' => [
                 'bail',
+                'required',
                 'integer',
                 'min:1',
                 'distinct:strict',
@@ -142,14 +146,18 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
      *
      * @since 1.0.0
      *
-     * @version 2.2.0
+     * @version 3.0.0
      */
     public function messages(): array
     {
         return [
+            'permissoes_email.present' => 'Não foi recebida a lista de permissões de e-mail.',
+
             'permissoes_email.array' => 'As permissões de e-mail devem ser apresentadas numa lista.',
 
             'permissoes_email.list' => 'A lista de permissões de e-mail não tem um formato válido.',
+
+            'permissoes_email.*.required' => 'Cada permissão de e-mail deve possuir um identificador válido.',
 
             'permissoes_email.*.integer' => 'Cada permissão de e-mail deve possuir um identificador válido.',
 
@@ -182,14 +190,14 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
     /**
      * Obtém os identificadores validados das permissões de e-mail.
      *
-     * @return array<int, int> Identificadores das permissões.
+     * @return list<int> Identificadores das permissões.
      *
-     * @throws LogicException Quando o pedido validado não contém uma lista
-     *                        válida.
+     * @throws LogicException Quando o pedido validado não contém uma lista de
+     *                        identificadores inteiros, positivos e distintos.
      *
      * @since 2.0.0
      *
-     * @version 1.2.0
+     * @version 2.0.0
      */
     public function obterIdentificadoresPermissoes(): array
     {
@@ -198,19 +206,67 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
                 'permissoes_email',
             );
 
-        if (! is_array($identificadores)) {
+        if (
+            ! is_array($identificadores)
+            || ! array_is_list($identificadores)
+        ) {
             throw new LogicException(
-                'O pedido validado não contém uma lista de permissões de e-mail.',
+                'O pedido validado não contém uma lista válida de permissões de e-mail.',
             );
         }
 
-        return array_values(
-            array_map(
-                static fn (
-                    mixed $identificador,
-                ): int => (int) $identificador,
-                $identificadores,
-            ),
-        );
+        $identificadoresEncontrados = [];
+
+        foreach ($identificadores as $identificador) {
+            if (
+                ! is_int($identificador)
+                || $identificador < 1
+            ) {
+                throw new LogicException(
+                    'Uma permissão de e-mail validada possui um identificador inesperado.',
+                );
+            }
+
+            if (isset($identificadoresEncontrados[$identificador])) {
+                throw new LogicException(
+                    'O pedido validado contém uma permissão de e-mail repetida.',
+                );
+            }
+
+            $identificadoresEncontrados[$identificador] =
+                true;
+        }
+
+        /** @var list<int> $identificadores */
+        return $identificadores;
+    }
+
+    /**
+     * Normaliza um identificador de permissão de e-mail.
+     *
+     * Uma string composta exclusivamente por algarismos é convertida para
+     * inteiro. Os restantes valores são preservados para que a validação os
+     * rejeite.
+     *
+     * @param  mixed  $valor  Valor recebido.
+     * @return mixed Identificador normalizado ou valor original.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function normalizarIdentificador(
+        mixed $valor,
+    ): mixed {
+        if (
+            is_string($valor)
+            && ctype_digit(
+                $valor,
+            )
+        ) {
+            return (int) $valor;
+        }
+
+        return $valor;
     }
 }
