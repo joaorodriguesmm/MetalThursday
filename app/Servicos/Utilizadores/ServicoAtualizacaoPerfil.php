@@ -21,19 +21,18 @@ use Throwable;
  * Gere a atualização dos dados gerais do perfil.
  *
  * A atualização da base de dados é transacional. O armazenamento da
- * fotografia é coordenado com a transação através de operações compensatórias,
- * uma vez que o sistema de ficheiros não participa nas transações SQL.
+ * fotografia é coordenado com a transação através de operações
+ * compensatórias, uma vez que o sistema de ficheiros não participa nas
+ * transações SQL.
  *
  * @since 2.0.0
  *
- * @version 1.2.0
+ * @version 2.0.0
  */
 final class ServicoAtualizacaoPerfil
 {
     /**
      * Número máximo de tentativas perante conflitos transitórios.
-     *
-     * @var int
      *
      * @since 2.0.0
      *
@@ -51,7 +50,7 @@ final class ServicoAtualizacaoPerfil
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function __construct(
         private readonly ServicoFotografiasUtilizador $servicoFotografias,
@@ -80,7 +79,7 @@ final class ServicoAtualizacaoPerfil
      *
      * @since 2.0.0
      *
-     * @version 1.2.0
+     * @version 2.0.0
      */
     public function atualizar(
         Utilizador $utilizador,
@@ -105,79 +104,76 @@ final class ServicoAtualizacaoPerfil
 
         $caminhoFotografiaNova =
             $fotografia instanceof UploadedFile
-            ? $this
-                ->servicoFotografias
-                ->guardar(
-                    $fotografia,
-                )
+            ? $this->servicoFotografias->guardar(
+                $fotografia,
+            )
             : null;
 
-        $caminhoFotografiaAnterior =
-            null;
+        $caminhoFotografiaAnterior = null;
 
         try {
-            $resultado =
-                DB::transaction(
-                    function () use (
-                        $identificadorUtilizador,
-                        $nomeUtilizador,
-                        $enderecoEmail,
-                        $caminhoFotografiaNova,
-                        &$caminhoFotografiaAnterior,
-                    ): PerfilAtualizado {
-                        $utilizadorBloqueado =
-                            Utilizador::query()
-                                ->whereKey(
-                                    $identificadorUtilizador,
-                                )
-                                ->lockForUpdate()
-                                ->firstOrFail();
-
-                        $caminhoFotografiaAnterior =
-                            $this->normalizarCaminhoPersistido(
-                                $utilizadorBloqueado->fotografia,
-                            );
-
-                        $emailAlterado =
-                            $this->emailFoiAlterado(
-                                $utilizadorBloqueado,
-                                $enderecoEmail,
-                            );
-
-                        if ($emailAlterado) {
-                            $this->garantirEmailDisponivel(
-                                $enderecoEmail,
+            $resultado = DB::transaction(
+                function () use (
+                    $identificadorUtilizador,
+                    $nomeUtilizador,
+                    $enderecoEmail,
+                    $caminhoFotografiaNova,
+                    &$caminhoFotografiaAnterior,
+                ): PerfilAtualizado {
+                    $utilizadorBloqueado =
+                        Utilizador::query()
+                            ->whereKey(
                                 $identificadorUtilizador,
-                            );
-                        }
+                            )
+                            ->lockForUpdate()
+                            ->firstOrFail();
 
-                        $utilizadorBloqueado->nome =
-                            $nomeUtilizador->valor();
-
-                        $utilizadorBloqueado->email =
-                            $enderecoEmail->valor();
-
-                        if ($caminhoFotografiaNova !== null) {
-                            $utilizadorBloqueado->fotografia =
-                                $caminhoFotografiaNova;
-                        }
-
-                        if ($emailAlterado) {
-                            $utilizadorBloqueado->email_verified_at =
-                                null;
-                        }
-
-                        $utilizadorBloqueado->saveOrFail();
-
-                        return new PerfilAtualizado(
-                            utilizador: $utilizadorBloqueado,
-
-                            emailAlterado: $emailAlterado,
+                    $caminhoFotografiaAnterior =
+                        $this->normalizarCaminhoPersistido(
+                            $utilizadorBloqueado->fotografia,
                         );
-                    },
-                    self::TENTATIVAS_TRANSACAO,
-                );
-        } catch (UniqueConstraintViolationException $excecao) {
+
+                    $emailAlterado =
+                        $this->emailFoiAlterado(
+                            $utilizadorBloqueado,
+                            $enderecoEmail,
+                        );
+
+                    if ($emailAlterado) {
+                        $this->garantirEmailDisponivel(
+                            $enderecoEmail,
+                            $identificadorUtilizador,
+                        );
+                    }
+
+                    $utilizadorBloqueado->nome =
+                        $nomeUtilizador->valor();
+
+                    $utilizadorBloqueado->email =
+                        $enderecoEmail->valor();
+
+                    if ($caminhoFotografiaNova !== null) {
+                        $utilizadorBloqueado->fotografia =
+                            $caminhoFotografiaNova;
+                    }
+
+                    if ($emailAlterado) {
+                        $utilizadorBloqueado->email_verified_at =
+                            null;
+                    }
+
+                    $utilizadorBloqueado->saveOrFail();
+
+                    return new PerfilAtualizado(
+                        utilizador: $utilizadorBloqueado,
+                        emailAlterado: $emailAlterado,
+                    );
+                },
+                self::TENTATIVAS_TRANSACAO,
+            );
+        } catch (
+            UniqueConstraintViolationException $excecao
+        ) {
             $this->eliminarFotografiaNovaAposFalha(
                 $caminhoFotografiaNova,
                 $excecao,
@@ -195,6 +191,10 @@ final class ServicoAtualizacaoPerfil
                 );
             }
 
+            /*
+             * A restrição violada não corresponde ao endereço de e-mail.
+             * Preserva-se a exceção original para não esconder o erro real.
+             */
             throw $excecao;
         } catch (Throwable $excecao) {
             $this->eliminarFotografiaNovaAposFalha(
@@ -208,7 +208,8 @@ final class ServicoAtualizacaoPerfil
         if (
             $caminhoFotografiaNova !== null
             && $caminhoFotografiaAnterior !== null
-            && $caminhoFotografiaAnterior !== $caminhoFotografiaNova
+            && $caminhoFotografiaAnterior
+            !== $caminhoFotografiaNova
         ) {
             $this->eliminarFotografiaAnterior(
                 $caminhoFotografiaAnterior,
@@ -229,25 +230,49 @@ final class ServicoAtualizacaoPerfil
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterIdentificadorUtilizador(
         Utilizador $utilizador,
     ): int {
-        $identificador =
-            $utilizador->getKey();
-
-        if (
-            ! $utilizador->exists
-            || ! is_numeric($identificador)
-            || (int) $identificador < 1
-        ) {
+        if (! $utilizador->exists) {
             throw new InvalidArgumentException(
                 'O utilizador deve estar persistido para atualizar o perfil.',
             );
         }
 
-        return (int) $identificador;
+        $identificador = $utilizador->getKey();
+
+        if (
+            is_int($identificador)
+            && $identificador > 0
+        ) {
+            return $identificador;
+        }
+
+        if (! is_string($identificador)) {
+            throw new InvalidArgumentException(
+                'O utilizador deve possuir um identificador válido.',
+            );
+        }
+
+        $identificadorNormalizado = trim(
+            $identificador,
+        );
+
+        if (
+            $identificadorNormalizado === ''
+            || ! ctype_digit(
+                $identificadorNormalizado,
+            )
+            || (int) $identificadorNormalizado < 1
+        ) {
+            throw new InvalidArgumentException(
+                'O utilizador deve possuir um identificador válido.',
+            );
+        }
+
+        return (int) $identificadorNormalizado;
     }
 
     /**
@@ -265,8 +290,7 @@ final class ServicoAtualizacaoPerfil
         Utilizador $utilizador,
         EnderecoEmail $novoEmail,
     ): bool {
-        $emailAtual =
-            $utilizador->email;
+        $emailAtual = $utilizador->email;
 
         if (
             ! is_string($emailAtual)
@@ -335,9 +359,7 @@ final class ServicoAtualizacaoPerfil
                 'email',
                 $email->valor(),
             )
-            ->where(
-                'id',
-                '!=',
+            ->whereKeyNot(
                 $identificadorUtilizador,
             )
             ->exists();
@@ -346,12 +368,15 @@ final class ServicoAtualizacaoPerfil
     /**
      * Normaliza um caminho de fotografia persistido.
      *
+     * A validação de segurança definitiva é realizada pelo serviço de
+     * fotografias no momento da eliminação.
+     *
      * @param  mixed  $caminho  Valor persistido.
      * @return string|null Caminho normalizado ou nulo.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function normalizarCaminhoPersistido(
         mixed $caminho,
@@ -360,10 +385,9 @@ final class ServicoAtualizacaoPerfil
             return null;
         }
 
-        $caminhoNormalizado =
-            trim(
-                $caminho,
-            );
+        $caminhoNormalizado = trim(
+            $caminho,
+        );
 
         return $caminhoNormalizado !== ''
             ? $caminhoNormalizado
@@ -381,7 +405,7 @@ final class ServicoAtualizacaoPerfil
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     private function eliminarFotografiaNovaAposFalha(
         ?string $caminho,
@@ -423,7 +447,7 @@ final class ServicoAtualizacaoPerfil
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     private function eliminarFotografiaAnterior(
         string $caminho,
