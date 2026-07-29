@@ -5,19 +5,25 @@
     classe App\View\Components\EstadoSessao.
 
     @since 1.0.0
-    @version 3.0.0
+    @version 4.0.0
 --}}
 
 @if ($temMensagem)
     <div
         {{
-            $attributes->class([
-                'alert',
-                $classeAlerta,
-                'alert-dismissible',
-                'fade',
-                'show',
-            ])
+            $attributes
+                ->except([
+                    'role',
+                    'aria-live',
+                    'aria-atomic',
+                ])
+                ->class([
+                    'alert',
+                    $classeAlerta,
+                    'alert-dismissible',
+                    'fade',
+                    'show',
+                ])
         }}
         role="{{ $funcaoAcessivel }}"
         aria-live="{{ $prioridadeAnuncio }}"

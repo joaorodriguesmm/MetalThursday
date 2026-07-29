@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\View\Components;
 
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Session;
 use Illuminate\View\Component;
 use Stringable;
 
@@ -16,7 +17,7 @@ use Stringable;
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 4.0.0
  */
 final class EstadoSessao extends Component
 {
@@ -26,46 +27,35 @@ final class EstadoSessao extends Component
      * A ordem dos elementos define a prioridade de apresentação.
      *
      * @var array<string, array{
-     *     classe_alerta: string,
-     *     funcao_acessivel: string,
-     *     prioridade_anuncio: string
+     *     classeAlerta: string,
+     *     funcaoAcessivel: string,
+     *     prioridadeAnuncio: string
      * }>
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private const CONFIGURACOES_MENSAGENS = [
         'erro' => [
-            'classe_alerta' => 'alert-danger',
-
-            'funcao_acessivel' => 'alert',
-
-            'prioridade_anuncio' => 'assertive',
+            'classeAlerta' => 'alert-danger',
+            'funcaoAcessivel' => 'alert',
+            'prioridadeAnuncio' => 'assertive',
         ],
-
         'aviso' => [
-            'classe_alerta' => 'alert-warning',
-
-            'funcao_acessivel' => 'status',
-
-            'prioridade_anuncio' => 'polite',
+            'classeAlerta' => 'alert-warning',
+            'funcaoAcessivel' => 'status',
+            'prioridadeAnuncio' => 'polite',
         ],
-
         'sucesso' => [
-            'classe_alerta' => 'alert-success',
-
-            'funcao_acessivel' => 'status',
-
-            'prioridade_anuncio' => 'polite',
+            'classeAlerta' => 'alert-success',
+            'funcaoAcessivel' => 'status',
+            'prioridadeAnuncio' => 'polite',
         ],
-
         'informacao' => [
-            'classe_alerta' => 'alert-info',
-
-            'funcao_acessivel' => 'status',
-
-            'prioridade_anuncio' => 'polite',
+            'classeAlerta' => 'alert-info',
+            'funcaoAcessivel' => 'status',
+            'prioridadeAnuncio' => 'polite',
         ],
     ];
 
@@ -75,7 +65,7 @@ final class EstadoSessao extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly bool $temMensagem;
 
@@ -85,7 +75,7 @@ final class EstadoSessao extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly ?string $mensagem;
 
@@ -95,7 +85,7 @@ final class EstadoSessao extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly ?string $classeAlerta;
 
@@ -105,7 +95,7 @@ final class EstadoSessao extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly ?string $funcaoAcessivel;
 
@@ -115,7 +105,7 @@ final class EstadoSessao extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly ?string $prioridadeAnuncio;
 
@@ -124,60 +114,41 @@ final class EstadoSessao extends Component
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
     public function __construct()
     {
-        $mensagemSelecionada = null;
-        $configuracaoSelecionada = null;
-
-        foreach (
-            self::CONFIGURACOES_MENSAGENS as $tipoMensagem => $configuracao
-        ) {
-            $mensagem = $this->normalizarMensagem(
-                session()->get(
-                    $tipoMensagem,
-                ),
-            );
-
-            if ($mensagem === null) {
-                continue;
-            }
-
-            $mensagemSelecionada = $mensagem;
-            $configuracaoSelecionada = $configuracao;
-
-            break;
-        }
+        $configuracaoMensagem =
+            $this->obterConfiguracaoMensagem();
 
         $this->temMensagem =
-            $mensagemSelecionada !== null
-            && $configuracaoSelecionada !== null;
+            $configuracaoMensagem !== null;
 
         $this->mensagem =
-            $mensagemSelecionada;
+            $configuracaoMensagem['mensagem']
+            ?? null;
 
         $this->classeAlerta =
-            $configuracaoSelecionada['classe_alerta']
+            $configuracaoMensagem['classeAlerta']
             ?? null;
 
         $this->funcaoAcessivel =
-            $configuracaoSelecionada['funcao_acessivel']
+            $configuracaoMensagem['funcaoAcessivel']
             ?? null;
 
         $this->prioridadeAnuncio =
-            $configuracaoSelecionada['prioridade_anuncio']
+            $configuracaoMensagem['prioridadeAnuncio']
             ?? null;
     }
 
     /**
-     * Obtém a view do componente.
+     * Obtém a vista do componente.
      *
-     * @return View View da mensagem de sessão.
+     * @return View Vista da mensagem de sessão.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function render(): View
     {
@@ -187,10 +158,50 @@ final class EstadoSessao extends Component
     }
 
     /**
+     * Obtém a primeira mensagem válida disponível na sessão.
+     *
+     * @return array{
+     *     mensagem: string,
+     *     classeAlerta: string,
+     *     funcaoAcessivel: string,
+     *     prioridadeAnuncio: string
+     * }|null Configuração da mensagem selecionada ou nulo.
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private function obterConfiguracaoMensagem(): ?array
+    {
+        foreach (
+            self::CONFIGURACOES_MENSAGENS as $tipoMensagem => $configuracao
+        ) {
+            $mensagem = $this->normalizarMensagem(
+                Session::get(
+                    $tipoMensagem,
+                ),
+            );
+
+            if ($mensagem === null) {
+                continue;
+            }
+
+            return [
+                'mensagem' => $mensagem,
+                'classeAlerta' => $configuracao['classeAlerta'],
+                'funcaoAcessivel' => $configuracao['funcaoAcessivel'],
+                'prioridadeAnuncio' => $configuracao['prioridadeAnuncio'],
+            ];
+        }
+
+        return null;
+    }
+
+    /**
      * Normaliza uma mensagem obtida da sessão.
      *
      * Apenas são aceites textos ou objetos convertíveis em texto. A mensagem
-     * será escapada normalmente pela view, mesmo quando tiver origem num
+     * será escapada normalmente pela vista, mesmo quando tiver origem num
      * objeto convertível.
      *
      * @param  mixed  $valor  Valor obtido da sessão.
@@ -198,7 +209,7 @@ final class EstadoSessao extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function normalizarMensagem(
         mixed $valor,
