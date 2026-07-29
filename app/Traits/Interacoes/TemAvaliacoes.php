@@ -16,13 +16,13 @@ use Illuminate\Support\Facades\Auth;
  * Adiciona suporte a avaliações polimórficas a um modelo Eloquent.
  *
  * Disponibiliza a relação com todas as avaliações e a pontuação atribuída pelo
- * utilizador atualmente autenticado.
+ * utilizador autenticado através da guarda `sessao`.
  *
  * @mixin Model
  *
  * @since 2.0.0
  *
- * @version 1.1.0
+ * @version 2.0.0
  */
 trait TemAvaliacoes
 {
@@ -51,35 +51,34 @@ trait TemAvaliacoes
      * A restrição única da tabela `avaliacoes` garante que existe, no máximo,
      * uma avaliação do mesmo utilizador para a mesma entidade.
      *
-     * Quando não existe um utilizador autenticado válido, a relação recebe uma
-     * condição impossível e nunca devolve um registo.
+     * Quando não existe um utilizador autenticado e persistido, a relação
+     * recebe uma condição impossível e não devolve qualquer registo.
      *
      * @return MorphOne<Avaliacao, $this> Relação com a avaliação.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function avaliacaoUtilizadorAutenticado(): MorphOne
     {
-        $relacao =
-            $this->morphOne(
-                Avaliacao::class,
-                'avaliavel',
-                'tipo_avaliavel',
-                'avaliavel_id',
-            );
+        $relacaoAvaliacao = $this->morphOne(
+            Avaliacao::class,
+            'avaliavel',
+            'tipo_avaliavel',
+            'avaliavel_id',
+        );
 
         $identificadorUtilizador =
             $this->obterIdentificadorUtilizadorParaAvaliacoes();
 
         if ($identificadorUtilizador === null) {
-            return $relacao->whereRaw(
-                '0 = 1',
+            return $relacaoAvaliacao->whereRaw(
+                '1 = 0',
             );
         }
 
-        return $relacao->where(
+        return $relacaoAvaliacao->where(
             'utilizador_id',
             $identificadorUtilizador,
         );
@@ -88,8 +87,8 @@ trait TemAvaliacoes
     /**
      * Obtém a pontuação atribuída pelo utilizador autenticado.
      *
-     * Quando não existe um utilizador autenticado ou uma avaliação associada,
-     * é devolvida a pontuação zero.
+     * Quando não existe autenticação válida ou uma avaliação associada, é
+     * devolvida a pontuação zero.
      *
      * Quando a relação já está carregada, o valor é obtido sem executar uma
      * nova consulta.
@@ -98,7 +97,7 @@ trait TemAvaliacoes
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     protected function pontuacaoUtilizadorAutenticado(): Attribute
     {
@@ -111,34 +110,25 @@ trait TemAvaliacoes
                     return 0.0;
                 }
 
-                if (
-                    $this->relationLoaded(
+                $avaliacao = $this->relationLoaded(
+                    'avaliacaoUtilizadorAutenticado',
+                )
+                    ? $this->getRelation(
                         'avaliacaoUtilizadorAutenticado',
                     )
-                ) {
-                    $avaliacao =
-                        $this->getRelation(
-                            'avaliacaoUtilizadorAutenticado',
-                        );
-                } else {
-                    $avaliacao =
-                        $this
-                            ->avaliacaoUtilizadorAutenticado()
-                            ->first();
-                }
+                    : $this
+                        ->avaliacaoUtilizadorAutenticado()
+                        ->first();
 
                 if (
                     ! $avaliacao instanceof Avaliacao
-                    || (int) $avaliacao->utilizador_id
+                    || $avaliacao->utilizador_id
                     !== $identificadorUtilizador
-                    || ! is_numeric(
-                        $avaliacao->pontuacao,
-                    )
                 ) {
                     return 0.0;
                 }
 
-                return (float) $avaliacao->pontuacao;
+                return $avaliacao->pontuacao;
             },
         );
     }
@@ -146,8 +136,9 @@ trait TemAvaliacoes
     /**
      * Obtém o identificador do utilizador autenticado para as avaliações.
      *
-     * O método confirma que o objeto autenticado corresponde ao modelo
-     * Utilizador, está persistido e possui um identificador inteiro positivo.
+     * O método confirma que o objeto autenticado através da guarda `sessao`
+     * corresponde a um utilizador persistido e possui um identificador inteiro
+     * positivo.
      *
      * O nome inclui a referência às avaliações para evitar colisões com
      * métodos privados declarados por outros traits de interações.
@@ -156,12 +147,13 @@ trait TemAvaliacoes
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterIdentificadorUtilizadorParaAvaliacoes(): ?int
     {
-        $utilizador =
-            Auth::user();
+        $utilizador = Auth::guard(
+            'sessao',
+        )->user();
 
         if (
             ! $utilizador instanceof Utilizador
@@ -170,8 +162,7 @@ trait TemAvaliacoes
             return null;
         }
 
-        $identificador =
-            $utilizador->getKey();
+        $identificador = $utilizador->getKey();
 
         if (
             is_int($identificador)
@@ -180,23 +171,28 @@ trait TemAvaliacoes
             return $identificador;
         }
 
-        if (is_string($identificador)) {
-            $identificadorNormalizado =
-                trim(
-                    $identificador,
-                );
-
-            if (
-                $identificadorNormalizado !== ''
-                && ctype_digit(
-                    $identificadorNormalizado,
-                )
-                && (int) $identificadorNormalizado > 0
-            ) {
-                return (int) $identificadorNormalizado;
-            }
+        if (! is_string($identificador)) {
+            return null;
         }
 
-        return null;
+        $identificadorNormalizado = trim(
+            $identificador,
+        );
+
+        if (
+            $identificadorNormalizado === ''
+            || ! ctype_digit(
+                $identificadorNormalizado,
+            )
+        ) {
+            return null;
+        }
+
+        $identificadorInteiro =
+            (int) $identificadorNormalizado;
+
+        return $identificadorInteiro > 0
+            ? $identificadorInteiro
+            : null;
     }
 }

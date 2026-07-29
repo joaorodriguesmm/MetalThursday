@@ -16,13 +16,13 @@ use Illuminate\Support\Facades\Auth;
  * Adiciona suporte a audições polimórficas a um modelo Eloquent.
  *
  * Disponibiliza a relação com todas as audições e o estado correspondente ao
- * utilizador atualmente autenticado.
+ * utilizador autenticado através da guarda `sessao`.
  *
  * @mixin Model
  *
  * @since 2.0.0
  *
- * @version 1.1.0
+ * @version 2.0.0
  */
 trait TemAudicoes
 {
@@ -51,35 +51,34 @@ trait TemAudicoes
      * A restrição única da tabela `audicoes` garante que existe, no máximo,
      * um registo do mesmo utilizador para a mesma entidade.
      *
-     * Quando não existe um utilizador autenticado válido, a relação recebe uma
-     * condição impossível e nunca devolve um registo.
+     * Quando não existe um utilizador autenticado e persistido, a relação
+     * recebe uma condição impossível e não devolve qualquer registo.
      *
      * @return MorphOne<Audicao, $this> Relação com a audição do utilizador.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function audicaoUtilizadorAutenticado(): MorphOne
     {
-        $relacao =
-            $this->morphOne(
-                Audicao::class,
-                'audivel',
-                'tipo_audivel',
-                'audivel_id',
-            );
+        $relacaoAudicao = $this->morphOne(
+            Audicao::class,
+            'audivel',
+            'tipo_audivel',
+            'audivel_id',
+        );
 
         $identificadorUtilizador =
             $this->obterIdentificadorUtilizadorParaAudicoes();
 
         if ($identificadorUtilizador === null) {
-            return $relacao->whereRaw(
-                '0 = 1',
+            return $relacaoAudicao->whereRaw(
+                '1 = 0',
             );
         }
 
-        return $relacao->where(
+        return $relacaoAudicao->where(
             'utilizador_id',
             $identificadorUtilizador,
         );
@@ -96,7 +95,7 @@ trait TemAudicoes
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     protected function ouvidoPeloUtilizadorAutenticado(): Attribute
     {
@@ -114,13 +113,12 @@ trait TemAudicoes
                         'audicaoUtilizadorAutenticado',
                     )
                 ) {
-                    $audicao =
-                        $this->getRelation(
-                            'audicaoUtilizadorAutenticado',
-                        );
+                    $audicao = $this->getRelation(
+                        'audicaoUtilizadorAutenticado',
+                    );
 
                     return $audicao instanceof Audicao
-                        && (int) $audicao->utilizador_id
+                        && $audicao->utilizador_id
                         === $identificadorUtilizador;
                 }
 
@@ -134,22 +132,24 @@ trait TemAudicoes
     /**
      * Obtém o identificador do utilizador autenticado para as audições.
      *
-     * O método confirma que o objeto autenticado corresponde ao modelo
-     * Utilizador e que possui um identificador inteiro positivo.
+     * O método confirma que o objeto autenticado através da guarda `sessao`
+     * corresponde a um utilizador persistido e possui um identificador inteiro
+     * positivo.
      *
      * O nome inclui a referência às audições para evitar colisões com métodos
-     * privados de outros traits de interações.
+     * privados declarados por outros traits de interações.
      *
      * @return int|null Identificador do utilizador ou nulo.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterIdentificadorUtilizadorParaAudicoes(): ?int
     {
-        $utilizador =
-            Auth::user();
+        $utilizador = Auth::guard(
+            'sessao',
+        )->user();
 
         if (
             ! $utilizador instanceof Utilizador
@@ -158,8 +158,7 @@ trait TemAudicoes
             return null;
         }
 
-        $identificador =
-            $utilizador->getKey();
+        $identificador = $utilizador->getKey();
 
         if (
             is_int($identificador)
@@ -168,23 +167,28 @@ trait TemAudicoes
             return $identificador;
         }
 
-        if (is_string($identificador)) {
-            $identificadorNormalizado =
-                trim(
-                    $identificador,
-                );
-
-            if (
-                $identificadorNormalizado !== ''
-                && ctype_digit(
-                    $identificadorNormalizado,
-                )
-                && (int) $identificadorNormalizado > 0
-            ) {
-                return (int) $identificadorNormalizado;
-            }
+        if (! is_string($identificador)) {
+            return null;
         }
 
-        return null;
+        $identificadorNormalizado = trim(
+            $identificador,
+        );
+
+        if (
+            $identificadorNormalizado === ''
+            || ! ctype_digit(
+                $identificadorNormalizado,
+            )
+        ) {
+            return null;
+        }
+
+        $identificadorInteiro =
+            (int) $identificadorNormalizado;
+
+        return $identificadorInteiro > 0
+            ? $identificadorInteiro
+            : null;
     }
 }
