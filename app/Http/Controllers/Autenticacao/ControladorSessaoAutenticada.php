@@ -18,9 +18,12 @@ use Illuminate\View\View;
 /**
  * Gere a criação e o encerramento da sessão autenticada.
  *
+ * A autenticação e o encerramento utilizam exclusivamente o guard `sessao`,
+ * definido como guard principal da aplicação.
+ *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 4.0.0
  */
 final class ControladorSessaoAutenticada extends Controller
 {
@@ -57,7 +60,7 @@ final class ControladorSessaoAutenticada extends Controller
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
     public function autenticar(
         AutenticarUtilizadorRequest $pedido,
@@ -68,7 +71,10 @@ final class ControladorSessaoAutenticada extends Controller
             ->session()
             ->regenerate();
 
-        $utilizador = $pedido->user();
+        $utilizador =
+            Auth::guard(
+                'sessao',
+            )->user();
 
         if (! $utilizador instanceof Utilizador) {
             $this->terminarSessao(
@@ -84,7 +90,8 @@ final class ControladorSessaoAutenticada extends Controller
             $utilizador instanceof MustVerifyEmail
             && ! $utilizador->hasVerifiedEmail()
         ) {
-            $email = $utilizador->email;
+            $email =
+                $utilizador->email;
 
             $this->terminarSessao(
                 $pedido,
@@ -129,20 +136,23 @@ final class ControladorSessaoAutenticada extends Controller
     }
 
     /**
-     * Termina a sessão autenticada, invalida a sessão atual e regenera
-     * o token CSRF.
+     * Termina a sessão autenticada, invalida a sessão atual e regenera o
+     * token CSRF.
+     *
+     * A invalidação elimina todos os dados da sessão anterior e gera um novo
+     * identificador, impedindo a reutilização da sessão encerrada.
      *
      * @param  Request  $pedido  Pedido HTTP.
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     private function terminarSessao(
         Request $pedido,
     ): void {
         Auth::guard(
-            'web',
+            'sessao',
         )->logout();
 
         $pedido
