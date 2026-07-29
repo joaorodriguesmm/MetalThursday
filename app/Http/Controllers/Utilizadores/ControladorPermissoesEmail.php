@@ -10,14 +10,22 @@ use App\Models\Autenticacao\Utilizador;
 use App\Servicos\Comunicacoes\ServicoPermissoesEmail;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
 use LogicException;
 
 /**
  * Gere a atualização das permissões de e-mail do utilizador autenticado.
  *
+ * O controlador coordena exclusivamente o fluxo HTTP. A validação dos
+ * identificadores pertence ao Form Request e a sincronização das relações é
+ * integralmente delegada ao serviço de permissões de e-mail.
+ *
+ * Uma lista vazia representa a remoção de todas as permissões atualmente
+ * atribuídas ao utilizador.
+ *
  * @since 2.0.0
  *
- * @version 1.3.0
+ * @version 2.0.0
  */
 final class ControladorPermissoesEmail extends Controller
 {
@@ -52,6 +60,10 @@ final class ControladorPermissoesEmail extends Controller
     /**
      * Atualiza as permissões de e-mail do utilizador autenticado.
      *
+     * A lista recebida contém apenas identificadores inteiros, positivos,
+     * distintos e existentes. Quando a lista está vazia, o serviço remove
+     * todas as permissões atribuídas.
+     *
      * @param  AtualizarPermissoesEmailRequest  $pedido  Pedido validado.
      * @return RedirectResponse Redirecionamento para o perfil.
      *
@@ -61,15 +73,13 @@ final class ControladorPermissoesEmail extends Controller
      *
      * @since 2.0.0
      *
-     * @version 1.3.0
+     * @version 2.0.0
      */
     public function atualizar(
         AtualizarPermissoesEmailRequest $pedido,
     ): RedirectResponse {
         $utilizador =
-            $this->obterUtilizadorAutenticado(
-                $pedido,
-            );
+            $this->obterUtilizadorAutenticado();
 
         $identificadoresPermissoes =
             $pedido->obterIdentificadoresPermissoes();
@@ -90,22 +100,22 @@ final class ControladorPermissoesEmail extends Controller
     }
 
     /**
-     * Obtém o utilizador autenticado.
+     * Obtém o utilizador autenticado através do guard da aplicação.
      *
-     * @param  AtualizarPermissoesEmailRequest  $pedido  Pedido autenticado.
      * @return Utilizador Utilizador autenticado.
      *
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    private function obterUtilizadorAutenticado(
-        AtualizarPermissoesEmailRequest $pedido,
-    ): Utilizador {
+    private function obterUtilizadorAutenticado(): Utilizador
+    {
         $utilizador =
-            $pedido->user();
+            Auth::guard(
+                'sessao',
+            )->user();
 
         if (! $utilizador instanceof Utilizador) {
             throw new AuthenticationException(
