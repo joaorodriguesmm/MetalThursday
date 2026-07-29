@@ -25,18 +25,17 @@ use Throwable;
  * ocorridas entre a validação HTTP e a persistência.
  *
  * Depois da alteração, o token de autenticação persistente é renovado para
- * invalidar sessões baseadas na funcionalidade «lembrar-me».
+ * invalidar autenticações anteriores baseadas na funcionalidade
+ * «lembrar-me».
  *
  * @since 2.0.0
  *
- * @version 1.2.0
+ * @version 2.0.0
  */
 final class ServicoAtualizacaoPalavraPasse
 {
     /**
      * Número máximo de tentativas perante conflitos transitórios da transação.
-     *
-     * @var int
      *
      * @since 2.0.0
      *
@@ -47,7 +46,8 @@ final class ServicoAtualizacaoPalavraPasse
     /**
      * Comprimento do novo token de autenticação persistente.
      *
-     * @var int
+     * O valor coincide com o comprimento utilizado pelo Laravel ao renovar
+     * tokens da funcionalidade «lembrar-me».
      *
      * @since 2.0.0
      *
@@ -57,6 +57,14 @@ final class ServicoAtualizacaoPalavraPasse
 
     /**
      * Atualiza a palavra-passe do utilizador.
+     *
+     * A política da nova palavra-passe é validada antes da abertura da
+     * transação. Dentro da transação, o utilizador é novamente obtido com
+     * bloqueio exclusivo e a palavra-passe atual é confirmada contra o valor
+     * persistido nesse momento.
+     *
+     * A nova palavra-passe é atribuída em texto simples ao modelo. O cast
+     * `hashed` de {@see Utilizador} aplica o hash antes da persistência.
      *
      * @param  Utilizador  $utilizador  Utilizador autenticado.
      * @param  string  $palavraPasseAtual  Palavra-passe atual em texto simples.
@@ -74,7 +82,7 @@ final class ServicoAtualizacaoPalavraPasse
      *
      * @since 2.0.0
      *
-     * @version 1.2.0
+     * @version 2.0.0
      */
     public function atualizar(
         Utilizador $utilizador,
@@ -122,13 +130,12 @@ final class ServicoAtualizacaoPalavraPasse
                 );
 
                 /*
-                 * A hash é aplicada explicitamente pelo serviço. O cast
-                 * `hashed` do modelo permanece como proteção adicional.
+                 * O cast `hashed` do modelo aplica o hash antes da
+                 * persistência. A palavra-passe em texto simples não é
+                 * guardada na base de dados.
                  */
                 $utilizadorBloqueado->password =
-                    Hash::make(
-                        $novaPalavraPasse,
-                    );
+                    $novaPalavraPasse;
 
                 /*
                  * A renovação invalida os cookies persistentes anteriormente
@@ -155,29 +162,54 @@ final class ServicoAtualizacaoPalavraPasse
      * @return int Identificador do utilizador.
      *
      * @throws InvalidArgumentException Quando o utilizador não está
-     *                                  persistido.
+     *                                  persistido ou não possui um
+     *                                  identificador inteiro positivo.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterIdentificadorUtilizador(
         Utilizador $utilizador,
     ): int {
-        $identificador =
-            $utilizador->getKey();
-
-        if (
-            ! $utilizador->exists
-            || ! is_numeric($identificador)
-            || (int) $identificador < 1
-        ) {
+        if (! $utilizador->exists) {
             throw new InvalidArgumentException(
                 'O utilizador deve estar persistido para alterar a palavra-passe.',
             );
         }
 
-        return (int) $identificador;
+        $identificador = $utilizador->getKey();
+
+        if (
+            is_int($identificador)
+            && $identificador > 0
+        ) {
+            return $identificador;
+        }
+
+        if (! is_string($identificador)) {
+            throw new InvalidArgumentException(
+                'O utilizador deve possuir um identificador válido.',
+            );
+        }
+
+        $identificadorNormalizado = trim(
+            $identificador,
+        );
+
+        if (
+            $identificadorNormalizado === ''
+            || ! ctype_digit(
+                $identificadorNormalizado,
+            )
+            || (int) $identificadorNormalizado < 1
+        ) {
+            throw new InvalidArgumentException(
+                'O utilizador deve possuir um identificador válido.',
+            );
+        }
+
+        return (int) $identificadorNormalizado;
     }
 
     /**
@@ -187,11 +219,11 @@ final class ServicoAtualizacaoPalavraPasse
      * @return string Hash persistido.
      *
      * @throws PalavraPasseAtualIncorreta Quando o utilizador não possui um
-     *                                    hash válido.
+     *                                    hash utilizável.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterHashPalavraPasseAtual(
         Utilizador $utilizador,
@@ -201,7 +233,7 @@ final class ServicoAtualizacaoPalavraPasse
 
         if (
             ! is_string($hashAtual)
-            || $hashAtual === ''
+            || trim($hashAtual) === ''
         ) {
             throw new PalavraPasseAtualIncorreta(
                 'A palavra-passe atual não está correta.',
@@ -222,7 +254,7 @@ final class ServicoAtualizacaoPalavraPasse
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     private function validarPalavraPasseAtual(
         #[SensitiveParameter]
@@ -254,7 +286,7 @@ final class ServicoAtualizacaoPalavraPasse
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function validarNovaPalavraPasseDiferente(
         #[SensitiveParameter]
