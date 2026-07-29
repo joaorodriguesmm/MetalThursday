@@ -14,25 +14,23 @@ use Throwable;
 /**
  * Gere a validação e a sincronização das permissões de e-mail.
  *
- * Este serviço pode ser utilizado no registo, no perfil e na administração
- * dos utilizadores.
+ * O serviço pode ser utilizado durante o registo, a atualização do perfil ou
+ * a administração dos utilizadores.
  *
- * Quando já existe uma transação ativa, o serviço participa nessa transação.
- * Caso contrário, inicia uma transação própria.
+ * Quando já existe uma transação ativa, participa nessa transação. Caso
+ * contrário, inicia uma transação própria.
  *
  * @since 2.0.0
  *
- * @version 1.3.0
+ * @version 2.0.0
  */
 final class ServicoPermissoesEmail
 {
     /**
      * Número máximo de tentativas perante conflitos transitórios.
      *
-     * Esta repetição é utilizada apenas quando o serviço inicia a própria
+     * As tentativas são aplicadas apenas quando o serviço inicia a sua própria
      * transação.
-     *
-     * @var int
      *
      * @since 2.0.0
      *
@@ -44,12 +42,9 @@ final class ServicoPermissoesEmail
      * Normaliza identificadores de permissões.
      *
      * Os valores são convertidos para inteiros positivos, deduplicados e
-     * ordenados de forma crescente.
+     * ordenados numericamente.
      *
-     * O tipo `mixed` é aceite defensivamente para que valores inválidos
-     * provoquem uma exceção de domínio controlada em vez de um erro de tipo.
-     *
-     * @param  array<int, mixed>  $identificadores  Valores recebidos.
+     * @param  array<array-key, mixed>  $identificadores  Valores recebidos.
      * @return list<int> Identificadores normalizados.
      *
      * @throws InvalidArgumentException Quando algum identificador não é
@@ -57,12 +52,13 @@ final class ServicoPermissoesEmail
      *
      * @since 2.0.0
      *
-     * @version 1.2.0
+     * @version 2.0.0
      */
     public function normalizarIdentificadores(
         array $identificadores,
     ): array {
-        $normalizados = [];
+        /** @var array<int, int> $identificadoresNormalizados */
+        $identificadoresNormalizados = [];
 
         foreach ($identificadores as $identificador) {
             $identificadorNormalizado =
@@ -70,21 +66,19 @@ final class ServicoPermissoesEmail
                     $identificador,
                 );
 
-            $normalizados[$identificadorNormalizado] =
-                $identificadorNormalizado;
+            $identificadoresNormalizados[$identificadorNormalizado] = $identificadorNormalizado;
         }
 
-        $normalizados =
-            array_values(
-                $normalizados,
-            );
+        $resultado = array_values(
+            $identificadoresNormalizados,
+        );
 
         sort(
-            $normalizados,
+            $resultado,
             SORT_NUMERIC,
         );
 
-        return $normalizados;
+        return $resultado;
     }
 
     /**
@@ -92,8 +86,12 @@ final class ServicoPermissoesEmail
      *
      * Uma lista vazia remove todas as permissões atualmente atribuídas.
      *
+     * Os valores recebidos representam os identificadores numéricos das
+     * permissões. O identificador textual estável e a ordem de apresentação
+     * pertencem ao modelo {@see PermissaoEmail}.
+     *
      * @param  Utilizador  $utilizador  Utilizador persistido.
-     * @param  array<int, mixed>  $identificadores  Permissões recebidas.
+     * @param  array<array-key, mixed>  $identificadores  Permissões recebidas.
      * @return list<int> Identificadores efetivamente sincronizados.
      *
      * @throws InvalidArgumentException Quando o utilizador ou alguma permissão
@@ -103,7 +101,7 @@ final class ServicoPermissoesEmail
      *
      * @since 2.0.0
      *
-     * @version 1.3.0
+     * @version 2.0.0
      */
     public function sincronizar(
         Utilizador $utilizador,
@@ -120,26 +118,42 @@ final class ServicoPermissoesEmail
             );
 
         if (DB::transactionLevel() > 0) {
-            return $this->sincronizarDentroDaTransacao(
-                $identificadorUtilizador,
-                $identificadoresNormalizados,
+            $resultado =
+                $this->sincronizarDentroDaTransacao(
+                    $identificadorUtilizador,
+                    $identificadoresNormalizados,
+                );
+        } else {
+            $resultado = DB::transaction(
+                fn (): array => $this->sincronizarDentroDaTransacao(
+                    $identificadorUtilizador,
+                    $identificadoresNormalizados,
+                ),
+                self::TENTATIVAS_TRANSACAO,
             );
         }
 
-        return DB::transaction(
-            fn (): array => $this->sincronizarDentroDaTransacao(
-                $identificadorUtilizador,
-                $identificadoresNormalizados,
-            ),
-            self::TENTATIVAS_TRANSACAO,
+        /*
+         * O objeto originalmente recebido pode possuir a relação carregada.
+         * Essa coleção deixou de representar o estado atual depois da
+         * sincronização.
+         */
+        $utilizador->unsetRelation(
+            'permissoesEmail',
         );
+
+        return $resultado;
     }
 
     /**
      * Sincroniza as permissões dentro de uma transação ativa.
      *
-     * O utilizador é novamente obtido e bloqueado para impedir sincronizações
-     * concorrentes sobre a mesma associação.
+     * O utilizador é novamente obtido e bloqueado para serializar
+     * sincronizações concorrentes sobre as mesmas associações.
+     *
+     * As permissões selecionadas também são bloqueadas enquanto a sua
+     * existência é validada, impedindo que sejam eliminadas antes da escrita
+     * na tabela intermédia.
      *
      * @param  int  $identificadorUtilizador  Identificador do utilizador.
      * @param  list<int>  $identificadores  Identificadores normalizados.
@@ -150,16 +164,12 @@ final class ServicoPermissoesEmail
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     private function sincronizarDentroDaTransacao(
         int $identificadorUtilizador,
         array $identificadores,
     ): array {
-        $this->validarExistencia(
-            $identificadores,
-        );
-
         $utilizadorBloqueado =
             Utilizador::query()
                 ->whereKey(
@@ -168,16 +178,16 @@ final class ServicoPermissoesEmail
                 ->lockForUpdate()
                 ->firstOrFail();
 
+        $this->validarExistencia(
+            $identificadores,
+        );
+
         $utilizadorBloqueado
             ->permissoesEmail()
             ->sync(
                 $identificadores,
             );
 
-        /*
-         * Evita que uma relação anteriormente carregada continue a apresentar
-         * dados desatualizados depois da sincronização.
-         */
         $utilizadorBloqueado->unsetRelation(
             'permissoesEmail',
         );
@@ -188,13 +198,16 @@ final class ServicoPermissoesEmail
     /**
      * Confirma que todas as permissões recebidas existem.
      *
+     * Os registos encontrados ficam bloqueados até ao final da transação
+     * atual.
+     *
      * @param  list<int>  $identificadores  Identificadores normalizados.
      *
      * @throws InvalidArgumentException Quando alguma permissão não existe.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     private function validarExistencia(
         array $identificadores,
@@ -208,6 +221,7 @@ final class ServicoPermissoesEmail
                 ->whereKey(
                     $identificadores,
                 )
+                ->lockForUpdate()
                 ->pluck(
                     'id',
                 )
@@ -244,6 +258,9 @@ final class ServicoPermissoesEmail
     /**
      * Normaliza um identificador individual.
      *
+     * São aceites inteiros positivos e representações textuais compostas
+     * exclusivamente por algarismos.
+     *
      * @param  mixed  $identificador  Identificador recebido.
      * @return int Identificador normalizado.
      *
@@ -252,7 +269,7 @@ final class ServicoPermissoesEmail
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     private function normalizarIdentificador(
         mixed $identificador,
@@ -265,10 +282,9 @@ final class ServicoPermissoesEmail
         }
 
         if (is_string($identificador)) {
-            $identificadorNormalizado =
-                trim(
-                    $identificador,
-                );
+            $identificadorNormalizado = trim(
+                $identificador,
+            );
 
             if (
                 $identificadorNormalizado !== ''
@@ -293,45 +309,53 @@ final class ServicoPermissoesEmail
      * @return int Identificador do utilizador.
      *
      * @throws InvalidArgumentException Quando o utilizador ainda não foi
-     *                                  persistido.
+     *                                  persistido ou não possui um
+     *                                  identificador válido.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterIdentificadorUtilizador(
         Utilizador $utilizador,
     ): int {
-        $identificador =
-            $utilizador->getKey();
+        if (! $utilizador->exists) {
+            throw new InvalidArgumentException(
+                'O utilizador deve estar persistido antes de sincronizar as permissões.',
+            );
+        }
+
+        $identificador = $utilizador->getKey();
 
         if (
-            ! $utilizador->exists
-            || ! is_int($identificador)
-            && ! is_string($identificador)
+            is_int($identificador)
+            && $identificador > 0
+        ) {
+            return $identificador;
+        }
+
+        if (! is_string($identificador)) {
+            throw new InvalidArgumentException(
+                'O utilizador deve possuir um identificador válido.',
+            );
+        }
+
+        $identificadorNormalizado = trim(
+            $identificador,
+        );
+
+        if (
+            $identificadorNormalizado === ''
+            || ! ctype_digit(
+                $identificadorNormalizado,
+            )
+            || (int) $identificadorNormalizado < 1
         ) {
             throw new InvalidArgumentException(
-                'O utilizador deve estar persistido antes de sincronizar as permissões.',
+                'O utilizador deve possuir um identificador válido.',
             );
         }
 
-        $identificadorNormalizado =
-            is_int($identificador)
-            ? $identificador
-            : (
-                ctype_digit(
-                    $identificador,
-                )
-                ? (int) $identificador
-                : 0
-            );
-
-        if ($identificadorNormalizado < 1) {
-            throw new InvalidArgumentException(
-                'O utilizador deve estar persistido antes de sincronizar as permissões.',
-            );
-        }
-
-        return $identificadorNormalizado;
+        return (int) $identificadorNormalizado;
     }
 }
