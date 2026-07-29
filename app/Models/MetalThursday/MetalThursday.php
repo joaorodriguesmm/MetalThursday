@@ -22,13 +22,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use InvalidArgumentException;
 
 /**
  * Representa uma MetalThursday.
  *
- * Cada MetalThursday pertence a uma edição, pode possuir um autor, um próximo
- * nomeado e várias secções. Também suporta comentários, avaliações e registos
- * de audição através de relações polimórficas.
+ * Cada MetalThursday pertence a uma edição, pode possuir um autor e um
+ * próximo utilizador nomeado, contém várias secções e suporta comentários,
+ * avaliações e registos de audição através de relações polimórficas.
+ *
+ * A data é única em toda a aplicação, conforme garantido pela base de dados.
  *
  * @property int $id
  * @property string|null $nome
@@ -56,7 +59,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  *
  * @since 1.0.0
  *
- * @version 2.1.0
+ * @version 3.0.0
  */
 class MetalThursday extends Model
 {
@@ -68,6 +71,15 @@ class MetalThursday extends Model
     use TemAudicoes;
     use TemAvaliacoes;
     use TemComentarios;
+
+    /**
+     * Comprimento máximo permitido para o nome.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public const COMPRIMENTO_MAXIMO_NOME = 255;
 
     /**
      * Nome físico da tabela associada ao modelo.
@@ -83,14 +95,17 @@ class MetalThursday extends Model
     /**
      * Atributos permitidos em operações de atribuição em massa.
      *
+     * Os identificadores relacionais são recebidos exclusivamente através de
+     * dados validados e aplicados pelo serviço responsável pela persistência.
+     *
      * Os identificadores de auditoria são preenchidos automaticamente pelo
      * trait {@see RegistaAutoria}.
      *
-     * @var array<int, string>
+     * @var list<string>
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     protected $fillable = [
         'nome',
@@ -107,25 +122,27 @@ class MetalThursday extends Model
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     protected function casts(): array
     {
         return [
             'data' => 'immutable_date',
+
             'edicao_id' => 'integer',
+
             'autor_id' => 'integer',
+
             'proximo_nomeado_id' => 'integer',
+
             'criado_por_id' => 'integer',
+
             'atualizado_por_id' => 'integer',
         ];
     }
 
     /**
      * Cria a factory associada ao modelo.
-     *
-     * A associação é explícita porque o modelo e a factory se encontram em
-     * namespaces próprios.
      *
      * @return MetalThursdayFactory Factory das MetalThursdays.
      *
@@ -139,11 +156,15 @@ class MetalThursday extends Model
     }
 
     /**
-     * Normaliza o nome da MetalThursday antes da persistência.
+     * Normaliza e valida o nome opcional da MetalThursday.
      *
-     * Um nome vazio é convertido em nulo porque a coluna é opcional.
+     * Um valor nulo ou vazio representa a ausência de um nome específico.
+     * Espaços exteriores e consecutivos são normalizados. Caracteres de
+     * controlo, incluindo tabulações e quebras de linha, não são aceites.
      *
      * @return Attribute<string|null, string|null> Atributo do nome.
+     *
+     * @throws InvalidArgumentException Quando o nome não é válido.
      *
      * @since 2.0.0
      *
@@ -155,17 +176,72 @@ class MetalThursday extends Model
             set: static function (
                 mixed $valor,
             ): ?string {
-                if (! is_string($valor)) {
+                if ($valor === null) {
                     return null;
                 }
 
-                $nomeNormalizado = trim(
+                if (! is_string($valor)) {
+                    throw new InvalidArgumentException(
+                        'O nome da MetalThursday deve ser uma sequência de caracteres.',
+                    );
+                }
+
+                if (
+                    preg_match(
+                        '//u',
+                        $valor,
+                    ) !== 1
+                ) {
+                    throw new InvalidArgumentException(
+                        'O nome da MetalThursday contém texto inválido.',
+                    );
+                }
+
+                if (
+                    preg_match(
+                        '/[\x00-\x1F\x7F]/',
+                        $valor,
+                    ) === 1
+                ) {
+                    throw new InvalidArgumentException(
+                        'O nome da MetalThursday contém caracteres inválidos.',
+                    );
+                }
+
+                $nomeNormalizado = preg_replace(
+                    '/\s+/u',
+                    ' ',
                     $valor,
                 );
 
-                return $nomeNormalizado !== ''
-                    ? $nomeNormalizado
-                    : null;
+                if (! is_string($nomeNormalizado)) {
+                    throw new InvalidArgumentException(
+                        'Não foi possível normalizar o nome da MetalThursday.',
+                    );
+                }
+
+                $nomeNormalizado = trim(
+                    $nomeNormalizado,
+                );
+
+                if ($nomeNormalizado === '') {
+                    return null;
+                }
+
+                if (
+                    mb_strlen(
+                        $nomeNormalizado,
+                    ) > self::COMPRIMENTO_MAXIMO_NOME
+                ) {
+                    throw new InvalidArgumentException(
+                        sprintf(
+                            'O nome da MetalThursday não pode ter mais de %d caracteres.',
+                            self::COMPRIMENTO_MAXIMO_NOME,
+                        ),
+                    );
+                }
+
+                return $nomeNormalizado;
             },
         );
     }
@@ -173,28 +249,36 @@ class MetalThursday extends Model
     /**
      * Obtém a edição à qual pertence a MetalThursday.
      *
+     * A edição continua acessível quando foi eliminada logicamente,
+     * preservando o contexto histórico da MetalThursday.
+     *
      * @return BelongsTo<Edicao, $this> Relação com a edição.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function edicao(): BelongsTo
     {
-        return $this->belongsTo(
-            Edicao::class,
-            'edicao_id',
-        );
+        return $this
+            ->belongsTo(
+                Edicao::class,
+                'edicao_id',
+            )
+            ->withTrashed();
     }
 
     /**
      * Obtém o autor da MetalThursday.
      *
+     * A relação pode ser nula quando não foi definido um autor ou quando o
+     * utilizador foi posteriormente eliminado.
+     *
      * @return BelongsTo<Utilizador, $this> Relação com o autor.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function autor(): BelongsTo
     {
@@ -207,11 +291,14 @@ class MetalThursday extends Model
     /**
      * Obtém o próximo utilizador nomeado.
      *
+     * A relação pode ser nula quando ainda não existe uma nomeação ou quando
+     * o utilizador nomeado foi posteriormente eliminado.
+     *
      * @return BelongsTo<Utilizador, $this> Relação com o próximo nomeado.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function proximoNomeado(): BelongsTo
     {
@@ -225,14 +312,15 @@ class MetalThursday extends Model
      * Obtém as secções da MetalThursday pela ordem definida.
      *
      * O identificador é utilizado como segundo critério para garantir uma
-     * ordenação determinística caso existam temporariamente posições
-     * repetidas.
+     * ordenação determinística.
+     *
+     * As secções eliminadas logicamente não são incluídas.
      *
      * @return HasMany<SeccaoMetalThursday, $this> Relação com as secções.
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
     public function seccoes(): HasMany
     {
@@ -241,21 +329,28 @@ class MetalThursday extends Model
                 SeccaoMetalThursday::class,
                 'metal_thursday_id',
             )
-            ->orderBy('ordem')
-            ->orderBy('id');
+            ->orderBy(
+                'ordem',
+            )
+            ->orderBy(
+                'id',
+            );
     }
 
     /**
      * Obtém o número sequencial da MetalThursday dentro da edição.
      *
-     * A posição é determinada pela data, considerando apenas MetalThursdays
-     * não eliminadas logicamente.
+     * A posição é determinada pela data e considera apenas MetalThursdays não
+     * eliminadas logicamente da mesma edição.
+     *
+     * O valor é nulo para modelos ainda não persistidos, eliminados
+     * logicamente ou sem os atributos relacionais necessários.
      *
      * @return Attribute<int|null, never> Número da semana na edição.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     protected function numeroSemanaNaEdicao(): Attribute
     {
@@ -263,8 +358,12 @@ class MetalThursday extends Model
             function (): ?int {
                 if (
                     ! $this->exists
-                    || $this->edicao_id === null
-                    || $this->data === null
+                    || $this->trashed()
+                    || ! is_int(
+                        $this->edicao_id,
+                    )
+                    || $this->edicao_id < 1
+                    || ! $this->data instanceof CarbonInterface
                 ) {
                     return null;
                 }
@@ -277,7 +376,7 @@ class MetalThursday extends Model
                     ->whereDate(
                         'data',
                         '<=',
-                        $this->data,
+                        $this->data->toDateString(),
                     )
                     ->count();
 
