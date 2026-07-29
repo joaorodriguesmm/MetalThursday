@@ -4,24 +4,31 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Autenticacao;
 
+use App\ObjetosValor\Utilizadores\EnderecoEmail;
 use App\Regras\Autenticacao\RequisitosPalavraPasse;
+use Closure;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 use LogicException;
 
 /**
  * Valida e processa um pedido de autenticação.
  *
- * A limitação de tentativas combina o endereço de e-mail normalizado com
- * o endereço IP do pedido, sem armazenar diretamente esses dados na chave
- * da cache.
+ * A limitação de tentativas combina o endereço de e-mail normalizado com o
+ * endereço IP do pedido. Esses valores são transformados num hash antes de
+ * serem utilizados como chave da cache.
+ *
+ * O nome `password` utilizado nas credenciais pertence ao contrato técnico
+ * de autenticação do Laravel. O campo recebido pelo formulário mantém o nome
+ * português `palavra_passe`.
  *
  * @since 1.0.0
  *
- * @version 3.1.0
+ * @version 4.0.0
  */
 final class AutenticarUtilizadorRequest extends FormRequest
 {
@@ -64,12 +71,15 @@ final class AutenticarUtilizadorRequest extends FormRequest
     /**
      * Normaliza o endereço de e-mail antes da validação.
      *
-     * A palavra-passe não é alterada, porque os espaços podem fazer parte
-     * do respetivo valor.
+     * A palavra-passe não é alterada, porque os espaços podem fazer parte do
+     * respetivo valor.
+     *
+     * A normalização definitiva e a validação do endereço são posteriormente
+     * realizadas pelo objeto de valor {@see EnderecoEmail}.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     protected function prepareForValidation(): void
     {
@@ -94,15 +104,18 @@ final class AutenticarUtilizadorRequest extends FormRequest
     /**
      * Obtém as regras de validação.
      *
-     * Não são aplicados os requisitos mínimos atuais de complexidade, porque
-     * uma conta existente pode ainda utilizar uma palavra-passe criada sob
-     * regras anteriores.
+     * Não são aplicados à autenticação os requisitos mínimos atuais de
+     * complexidade, porque uma conta existente pode utilizar uma
+     * palavra-passe criada sob regras anteriores.
      *
-     * @return array<string, array<int, string>> Regras de validação.
+     * O comprimento máximo continua a ser aplicado para limitar o custo do
+     * processamento de valores maliciosamente extensos.
+     *
+     * @return array<string, list<string|Closure>> Regras de validação.
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
     public function rules(): array
     {
@@ -111,8 +124,37 @@ final class AutenticarUtilizadorRequest extends FormRequest
                 'bail',
                 'required',
                 'string',
-                'email:rfc',
-                'max:255',
+
+                /**
+                 * Valida o endereço através do objeto de valor do domínio.
+                 *
+                 * @param  string  $atributo  Nome do atributo.
+                 * @param  mixed  $valor  Valor recebido.
+                 * @param  Closure(string): void  $falhar  Função de erro.
+                 *
+                 * @since 2.0.0
+                 *
+                 * @version 1.0.0
+                 */
+                static function (
+                    string $atributo,
+                    mixed $valor,
+                    Closure $falhar,
+                ): void {
+                    if (! is_string($valor)) {
+                        return;
+                    }
+
+                    try {
+                        EnderecoEmail::deTexto(
+                            $valor,
+                        );
+                    } catch (InvalidArgumentException) {
+                        $falhar(
+                            'Por favor, insere um endereço de e-mail válido.',
+                        );
+                    }
+                },
             ],
 
             'palavra_passe' => [
@@ -136,7 +178,7 @@ final class AutenticarUtilizadorRequest extends FormRequest
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
     public function messages(): array
     {
@@ -144,10 +186,6 @@ final class AutenticarUtilizadorRequest extends FormRequest
             'email.required' => 'Por favor, insere o teu endereço de e-mail.',
 
             'email.string' => 'O endereço de e-mail deve ser uma sequência de caracteres.',
-
-            'email.email' => 'Por favor, insere um endereço de e-mail válido.',
-
-            'email.max' => 'O endereço de e-mail não pode ter mais de 255 caracteres.',
 
             'palavra_passe.required' => 'Por favor, insere a palavra-passe.',
 
@@ -180,14 +218,14 @@ final class AutenticarUtilizadorRequest extends FormRequest
     }
 
     /**
-     * Autentica o utilizador através do guard web.
+     * Autentica o utilizador através do guard da sessão.
      *
      * @throws ValidationException Quando as credenciais são inválidas ou o
      *                             limite de tentativas foi excedido.
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
     public function autenticar(): void
     {
@@ -195,17 +233,9 @@ final class AutenticarUtilizadorRequest extends FormRequest
 
         $autenticado =
             Auth::guard(
-                'web',
+                'sessao',
             )->attempt(
-                [
-                    'email' => $this->email(),
-
-                    /*
-                     * `password` é uma chave interna obrigatória do contrato
-                     * de autenticação do Laravel.
-                     */
-                    'password' => $this->palavraPasse(),
-                ],
+                $this->obterCredenciais(),
                 $this->manterSessaoIniciada(),
             );
 
@@ -228,19 +258,34 @@ final class AutenticarUtilizadorRequest extends FormRequest
     }
 
     /**
-     * Obtém o endereço de e-mail validado.
+     * Obtém o endereço de e-mail validado e normalizado.
      *
      * @return string Endereço de e-mail.
      *
+     * @throws LogicException Quando o resultado validado deixa de cumprir o
+     *                        contrato do objeto de valor.
+     *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function email(): string
     {
-        return $this->obterTextoValidado(
-            'email',
-        );
+        $email =
+            $this->obterTextoValidado(
+                'email',
+            );
+
+        try {
+            return EnderecoEmail::deTexto(
+                $email,
+            )->valor();
+        } catch (InvalidArgumentException $excecao) {
+            throw new LogicException(
+                'O pedido validado não contém um endereço de e-mail válido.',
+                previous: $excecao,
+            );
+        }
     }
 
     /**
@@ -273,6 +318,31 @@ final class AutenticarUtilizadorRequest extends FormRequest
         return $this->boolean(
             'manter_sessao_iniciada',
         );
+    }
+
+    /**
+     * Obtém as credenciais no formato técnico exigido pelo Laravel.
+     *
+     * A chave `password` pertence ao contrato interno do sistema de
+     * autenticação e não corresponde ao nome do campo recebido pelo
+     * formulário.
+     *
+     * @return array{
+     *     email: string,
+     *     password: string
+     * } Credenciais de autenticação.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function obterCredenciais(): array
+    {
+        return [
+            'email' => $this->email(),
+
+            'password' => $this->palavraPasse(),
+        ];
     }
 
     /**
@@ -327,14 +397,18 @@ final class AutenticarUtilizadorRequest extends FormRequest
     /**
      * Obtém a chave utilizada na limitação de tentativas.
      *
-     * O endereço de e-mail e o IP são transformados num hash para não serem
-     * armazenados diretamente como identificador da cache.
+     * O endereço de e-mail normalizado e o endereço IP são transformados num
+     * hash para não serem armazenados diretamente como identificador da
+     * cache.
+     *
+     * Este método é executado apenas depois da validação bem-sucedida do
+     * pedido.
      *
      * @return string Chave da limitação.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     private function obterChaveLimitacao(): string
     {
@@ -344,39 +418,10 @@ final class AutenticarUtilizadorRequest extends FormRequest
 
         return 'autenticacao:'.hash(
             'sha256',
-            $this->emailParaLimitacao()
+            $this->email()
                 .'|'
                 .$enderecoIp,
         );
-    }
-
-    /**
-     * Obtém o endereço de e-mail utilizado na chave de limitação.
-     *
-     * Este método pode ser executado antes da conclusão da validação, pelo
-     * que trabalha diretamente com a entrada normalizada do pedido.
-     *
-     * @return string Endereço normalizado ou texto vazio.
-     *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
-     */
-    private function emailParaLimitacao(): string
-    {
-        $email =
-            $this->input(
-                'email',
-                '',
-            );
-
-        return is_string($email)
-            ? mb_strtolower(
-                trim(
-                    $email,
-                ),
-            )
-            : '';
     }
 
     /**
