@@ -20,18 +20,22 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use LogicException;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Gere a consulta, criação, atualização e eliminação de edições.
  *
  * Gere também as músicas favoritas e a ligação da compilação associadas a
- * cada edição.
+ * cada edição. As alterações a edições existentes são executadas sob bloqueio
+ * transacional para manter a consistência perante pedidos concorrentes.
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 4.0.0
  */
 final class ControladorEdicao extends Controller
 {
@@ -44,9 +48,32 @@ final class ControladorEdicao extends Controller
      *
      * @since 2.0.0
      *
+     * @version 2.0.0
+     */
+    private const REGISTOS_POR_PAGINA = 20;
+
+    /**
+     * Número máximo de tentativas perante conflitos transitórios.
+     *
+     * @var int
+     *
+     * @since 4.0.0
+     *
      * @version 1.0.0
      */
-    private const ITENS_POR_PAGINA = 20;
+    private const TENTATIVAS_TRANSACAO = 3;
+
+    /**
+     * Mensagem apresentada quando uma edição ainda possui MetalThursdays.
+     *
+     * @var string
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private const MENSAGEM_EDICAO_COM_METAL_THURSDAYS =
+        'A edição não pode ser eliminada enquanto possuir MetalThursdays.';
 
     /**
      * Cria o controlador.
@@ -55,7 +82,7 @@ final class ControladorEdicao extends Controller
      *                                                                  das músicas
      *                                                                  favoritas.
      * @param  ServicoApresentacaoDetalhesEdicao  $servicoApresentacaoDetalhes
-     *                                                     Serviço de apresentação.
+     *                                                                          Serviço de apresentação.
      *
      * @since 2.0.0
      *
@@ -73,9 +100,9 @@ final class ControladorEdicao extends Controller
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
-    public function index(): View
+    public function indice(): View
     {
         $this->authorize(
             'viewAny',
@@ -90,7 +117,7 @@ final class ControladorEdicao extends Controller
                 'id',
             )
             ->paginate(
-                self::ITENS_POR_PAGINA,
+                self::REGISTOS_POR_PAGINA,
             )
             ->withQueryString();
 
@@ -103,15 +130,15 @@ final class ControladorEdicao extends Controller
     }
 
     /**
-     * Apresenta o formulário de criação.
+     * Apresenta o formulário de criação de uma edição.
      *
      * @return View Formulário de criação.
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
-    public function create(): View
+    public function criar(): View
     {
         $this->authorize(
             'create',
@@ -132,9 +159,9 @@ final class ControladorEdicao extends Controller
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
-    public function store(
+    public function guardar(
         CriarEdicaoRequest $pedido,
     ): JsonResponse|RedirectResponse {
         $this->authorize(
@@ -153,11 +180,9 @@ final class ControladorEdicao extends Controller
         if ($pedido->expectsJson()) {
             return response()->json(
                 [
-                    'mensagem' =>
-                    'Edição criada com sucesso.',
+                    'mensagem' => 'Edição criada com sucesso.',
 
-                    'edicao' =>
-                    $this->serializarEdicao(
+                    'edicao' => $this->serializarEdicao(
                         $edicao,
                     ),
                 ],
@@ -165,14 +190,12 @@ final class ControladorEdicao extends Controller
             );
         }
 
-        return redirect()
-            ->route(
-                'edicoes.indice',
-            )
-            ->with(
-                'sucesso',
-                'Edição criada com sucesso.',
-            );
+        return to_route(
+            'edicoes.indice',
+        )->with(
+            'sucesso',
+            'Edição criada com sucesso.',
+        );
     }
 
     /**
@@ -183,9 +206,9 @@ final class ControladorEdicao extends Controller
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
-    public function show(
+    public function detalhes(
         Edicao $edicao,
     ): View {
         $this->authorize(
@@ -196,8 +219,7 @@ final class ControladorEdicao extends Controller
         return view(
             'metal-thursday.edicoes.detalhes',
             [
-                'edicao' =>
-                $edicao,
+                'edicao' => $edicao,
 
                 ...$this
                     ->servicoApresentacaoDetalhes
@@ -209,16 +231,16 @@ final class ControladorEdicao extends Controller
     }
 
     /**
-     * Apresenta o formulário de edição.
+     * Apresenta o formulário de edição de uma edição.
      *
      * @param  Edicao  $edicao  Edição editada.
      * @return View Formulário de edição.
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
-    public function edit(
+    public function editar(
         Edicao $edicao,
     ): View {
         $this->authorize(
@@ -229,8 +251,7 @@ final class ControladorEdicao extends Controller
         return view(
             'metal-thursday.edicoes.editar',
             [
-                'edicao' =>
-                $edicao,
+                'edicao' => $edicao,
 
                 ...$this->obterDadosFormulario(
                     $edicao,
@@ -240,7 +261,7 @@ final class ControladorEdicao extends Controller
     }
 
     /**
-     * Atualiza uma edição.
+     * Atualiza uma edição sob bloqueio transacional.
      *
      * @param  AtualizarEdicaoRequest  $pedido  Pedido validado.
      * @param  Edicao  $edicao  Edição atualizada.
@@ -248,51 +269,70 @@ final class ControladorEdicao extends Controller
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
-    public function update(
+    public function atualizar(
         AtualizarEdicaoRequest $pedido,
         Edicao $edicao,
     ): JsonResponse|RedirectResponse {
-        $this->authorize(
-            'update',
-            $edicao,
-        );
-
-        $edicao->updateOrFail(
+        $dados =
             $pedido->safe()->only([
                 'nome',
                 'data_inicio',
                 'data_fim',
-            ]),
+            ]);
+
+        $edicaoAtualizada = DB::transaction(
+            function () use (
+                $edicao,
+                $dados,
+            ): Edicao {
+                $edicaoBloqueada =
+                    $this->bloquearEdicao(
+                        $edicao,
+                    );
+
+                $this->authorize(
+                    'update',
+                    $edicaoBloqueada,
+                );
+
+                $edicaoBloqueada->updateOrFail(
+                    $dados,
+                );
+
+                return $edicaoBloqueada;
+            },
+            self::TENTATIVAS_TRANSACAO,
         );
 
-        $edicao->refresh();
+        $edicaoAtualizada->refresh();
 
         if ($pedido->expectsJson()) {
             return response()->json([
-                'mensagem' =>
-                'Edição atualizada com sucesso.',
+                'mensagem' => 'Edição atualizada com sucesso.',
 
-                'edicao' =>
-                $this->serializarEdicao(
-                    $edicao,
+                'edicao' => $this->serializarEdicao(
+                    $edicaoAtualizada,
                 ),
             ]);
         }
 
-        return redirect()
-            ->route(
-                'edicoes.indice',
-            )
-            ->with(
-                'sucesso',
-                'Edição atualizada com sucesso.',
-            );
+        return to_route(
+            'edicoes.indice',
+        )->with(
+            'sucesso',
+            'Edição atualizada com sucesso.',
+        );
     }
 
     /**
-     * Elimina uma edição sem MetalThursdays associadas.
+     * Elimina logicamente uma edição sem MetalThursdays associadas.
+     *
+     * A edição é bloqueada antes da verificação das associações. O serviço de
+     * persistência das MetalThursdays bloqueia a mesma edição durante a
+     * criação, impedindo uma associação concorrente entre a verificação e a
+     * eliminação.
      *
      * @param  Request  $pedido  Pedido HTTP.
      * @param  Edicao  $edicao  Edição eliminada.
@@ -300,45 +340,59 @@ final class ControladorEdicao extends Controller
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
-    public function destroy(
+    public function eliminar(
         Request $pedido,
         Edicao $edicao,
     ): JsonResponse|RedirectResponse {
-        $this->authorize(
-            'delete',
-            $edicao,
+        $foiEliminada = DB::transaction(
+            function () use (
+                $edicao,
+            ): bool {
+                $edicaoBloqueada =
+                    $this->bloquearEdicao(
+                        $edicao,
+                    );
+
+                $this->authorize(
+                    'delete',
+                    $edicaoBloqueada,
+                );
+
+                $possuiMetalThursdays =
+                    MetalThursday::query()
+                        ->where(
+                            'edicao_id',
+                            $edicaoBloqueada->getKey(),
+                        )
+                        ->exists();
+
+                if ($possuiMetalThursdays) {
+                    return false;
+                }
+
+                $edicaoBloqueada->deleteOrFail();
+
+                return true;
+            },
+            self::TENTATIVAS_TRANSACAO,
         );
 
-        $possuiMetalThursdays = MetalThursday::query()
-            ->where(
-                'edicao_id',
-                $edicao->getKey(),
-            )
-            ->exists();
-
-        if ($possuiMetalThursdays) {
-            $mensagem =
-                'A edição não pode ser eliminada enquanto possuir MetalThursdays.';
-
+        if (! $foiEliminada) {
             if ($pedido->expectsJson()) {
                 return response()->json(
                     [
-                        'mensagem' =>
-                        $mensagem,
+                        'mensagem' => self::MENSAGEM_EDICAO_COM_METAL_THURSDAYS,
                     ],
                     Response::HTTP_CONFLICT,
                 );
             }
 
             return back()->withErrors([
-                'edicao' =>
-                $mensagem,
+                'edicao' => self::MENSAGEM_EDICAO_COM_METAL_THURSDAYS,
             ]);
         }
-
-        $edicao->deleteOrFail();
 
         if ($pedido->expectsJson()) {
             return response()->json(
@@ -347,14 +401,12 @@ final class ControladorEdicao extends Controller
             );
         }
 
-        return redirect()
-            ->route(
-                'edicoes.indice',
-            )
-            ->with(
-                'sucesso',
-                'Edição eliminada com sucesso.',
-            );
+        return to_route(
+            'edicoes.indice',
+        )->with(
+            'sucesso',
+            'Edição eliminada com sucesso.',
+        );
     }
 
     /**
@@ -369,7 +421,7 @@ final class ControladorEdicao extends Controller
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
     public function guardarMusicasFavoritas(
         GuardarMusicasFavoritasEdicaoRequest $pedido,
@@ -380,22 +432,20 @@ final class ControladorEdicao extends Controller
             $edicao,
         );
 
-        $identificadorRegistador =
-            $this->obterIdentificadorUtilizador(
-                $pedido,
-            );
+        $registador =
+            $this->obterUtilizadorAutenticado();
 
-        $this->servicoMusicasFavoritas
+        $this
+            ->servicoMusicasFavoritas
             ->sincronizar(
-                $edicao,
-                $pedido->obterClassificacoes(),
-                $identificadorRegistador,
+                edicao: $edicao,
+                musicasFavoritas: $pedido->obterMusicasFavoritas(),
+                registador: $registador,
             );
 
         if ($pedido->expectsJson()) {
             return response()->json([
-                'mensagem' =>
-                'Músicas favoritas guardadas com sucesso.',
+                'mensagem' => 'Músicas favoritas guardadas com sucesso.',
             ]);
         }
 
@@ -406,7 +456,7 @@ final class ControladorEdicao extends Controller
     }
 
     /**
-     * Atualiza a ligação da compilação.
+     * Atualiza a ligação da compilação sob bloqueio transacional.
      *
      * @param  AtualizarLigacaoCompilacaoEdicaoRequest  $pedido  Pedido validado.
      * @param  Edicao  $edicao  Edição atualizada.
@@ -414,29 +464,46 @@ final class ControladorEdicao extends Controller
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
     public function atualizarLigacaoCompilacao(
         AtualizarLigacaoCompilacaoEdicaoRequest $pedido,
         Edicao $edicao,
     ): JsonResponse|RedirectResponse {
-        $this->authorize(
-            'update',
-            $edicao,
+        $ligacaoCompilacao =
+            $pedido->obterLigacaoCompilacao();
+
+        $edicaoAtualizada = DB::transaction(
+            function () use (
+                $edicao,
+                $ligacaoCompilacao,
+            ): Edicao {
+                $edicaoBloqueada =
+                    $this->bloquearEdicao(
+                        $edicao,
+                    );
+
+                $this->authorize(
+                    'update',
+                    $edicaoBloqueada,
+                );
+
+                $edicaoBloqueada->updateOrFail([
+                    'ligacao_compilacao' => $ligacaoCompilacao,
+                ]);
+
+                return $edicaoBloqueada;
+            },
+            self::TENTATIVAS_TRANSACAO,
         );
 
-        $edicao->updateOrFail([
-            'ligacao_compilacao' =>
-            $pedido->obterLigacaoCompilacao(),
-        ]);
+        $edicaoAtualizada->refresh();
 
         if ($pedido->expectsJson()) {
             return response()->json([
-                'mensagem' =>
-                'Ligação da compilação atualizada com sucesso.',
+                'mensagem' => 'Ligação da compilação atualizada com sucesso.',
 
-                'ligacao_compilacao' =>
-                $edicao->ligacao_compilacao,
+                'ligacao_compilacao' => $edicaoAtualizada->ligacao_compilacao,
             ]);
         }
 
@@ -470,11 +537,9 @@ final class ControladorEdicao extends Controller
             $edicao instanceof Edicao;
 
         return [
-            'emEdicao' =>
-            $emEdicao,
+            'emEdicao' => $emEdicao,
 
-            'enderecoFormulario' =>
-            $emEdicao
+            'enderecoFormulario' => $emEdicao
                 ? route(
                     'edicoes.atualizar',
                     $edicao,
@@ -483,26 +548,45 @@ final class ControladorEdicao extends Controller
                     'edicoes.guardar',
                 ),
 
-            'nomeEdicao' =>
-            $edicao instanceof Edicao
-                ? (string) $edicao->nome
+            'nomeEdicao' => $edicao instanceof Edicao
+                ? $this->obterNomeEdicao(
+                    $edicao,
+                )
                 : '',
 
-            'dataInicioEdicao' =>
-            $this->formatarDataFormulario(
+            'dataInicioEdicao' => $this->formatarDataFormulario(
                 $edicao?->data_inicio,
             ),
 
-            'dataFimEdicao' =>
-            $this->formatarDataFormulario(
+            'dataFimEdicao' => $this->formatarDataFormulario(
                 $edicao?->data_fim,
             ),
 
-            'textoBotaoSubmissao' =>
-            $emEdicao
+            'textoBotaoSubmissao' => $emEdicao
                 ? 'Guardar alterações'
                 : 'Criar edição',
         ];
+    }
+
+    /**
+     * Bloqueia uma edição existente dentro da transação atual.
+     *
+     * @param  Edicao  $edicao  Edição original.
+     * @return Edicao Edição novamente obtida e bloqueada.
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private function bloquearEdicao(
+        Edicao $edicao,
+    ): Edicao {
+        return Edicao::query()
+            ->whereKey(
+                $edicao->getKey(),
+            )
+            ->lockForUpdate()
+            ->firstOrFail();
     }
 
     /**
@@ -528,22 +612,22 @@ final class ControladorEdicao extends Controller
     }
 
     /**
-     * Obtém o identificador do utilizador autenticado.
+     * Obtém o utilizador autenticado através do guard da aplicação.
      *
-     * @param  Request  $pedido  Pedido HTTP.
-     * @return int Identificador do utilizador.
+     * @return Utilizador Utilizador autenticado e persistido.
      *
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
-     * @since 2.0.0
+     * @since 4.0.0
      *
-     * @version 1.1.0
+     * @version 1.0.0
      */
-    private function obterIdentificadorUtilizador(
-        Request $pedido,
-    ): int {
+    private function obterUtilizadorAutenticado(): Utilizador
+    {
         $utilizador =
-            $pedido->user();
+            Auth::guard(
+                'sessao',
+            )->user();
 
         if (! $utilizador instanceof Utilizador) {
             throw new AuthenticationException(
@@ -563,7 +647,7 @@ final class ControladorEdicao extends Controller
             );
         }
 
-        return (int) $identificador;
+        return $utilizador;
     }
 
     /**
@@ -579,52 +663,120 @@ final class ControladorEdicao extends Controller
      *     texto_apresentacao: string
      * } Dados da edição.
      *
+     * @throws LogicException Quando a edição contém dados persistidos
+     *                        inválidos.
+     *
      * @since 2.1.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function serializarEdicao(
         Edicao $edicao,
     ): array {
+        $identificador =
+            $edicao->getKey();
+
+        if (
+            ! is_numeric($identificador)
+            || (int) $identificador < 1
+        ) {
+            throw new LogicException(
+                'A edição não possui um identificador persistido válido.',
+            );
+        }
+
         $dataInicio =
             $edicao->data_inicio;
+
+        if (! $dataInicio instanceof CarbonInterface) {
+            throw new LogicException(
+                'A edição não possui uma data de início válida.',
+            );
+        }
 
         $dataFim =
             $edicao->data_fim;
 
+        if (
+            $dataFim !== null
+            && ! $dataFim instanceof CarbonInterface
+        ) {
+            throw new LogicException(
+                'A edição não possui uma data de fim válida.',
+            );
+        }
+
+        $ligacaoCompilacao =
+            $edicao->ligacao_compilacao;
+
+        if (
+            $ligacaoCompilacao !== null
+            && ! is_string($ligacaoCompilacao)
+        ) {
+            throw new LogicException(
+                'A edição não possui uma ligação de compilação válida.',
+            );
+        }
+
         return [
-            'id' =>
-            (int) $edicao->getKey(),
+            'id' => (int) $identificador,
 
-            'nome' =>
-            (string) $edicao->nome,
+            'nome' => $this->obterNomeEdicao(
+                $edicao,
+            ),
 
-            'data_inicio' =>
-            $dataInicio instanceof CarbonInterface
-                ? $dataInicio->format(
-                    'Y-m-d',
-                )
-                : (string) $dataInicio,
+            'data_inicio' => $dataInicio->format(
+                'Y-m-d',
+            ),
 
-            'data_fim' =>
-            $dataFim instanceof CarbonInterface
-                ? $dataFim->format(
-                    'Y-m-d',
-                )
-                : null,
+            'data_fim' => $dataFim?->format(
+                'Y-m-d',
+            ),
 
-            'ligacao_compilacao' =>
-            is_string(
-                $edicao->ligacao_compilacao,
-            )
-                ? $edicao->ligacao_compilacao
-                : null,
+            'ligacao_compilacao' => $ligacaoCompilacao,
 
-            'texto_apresentacao' =>
-            $this->obterTextoApresentacao(
+            'texto_apresentacao' => $this->obterTextoApresentacao(
                 $edicao,
             ),
         ];
+    }
+
+    /**
+     * Obtém o nome persistido de uma edição.
+     *
+     * @param  Edicao  $edicao  Edição consultada.
+     * @return string Nome normalizado.
+     *
+     * @throws LogicException Quando o nome persistido não é válido.
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private function obterNomeEdicao(
+        Edicao $edicao,
+    ): string {
+        $nome =
+            $edicao->nome;
+
+        if (! is_string($nome)) {
+            throw new LogicException(
+                'A edição não possui um nome válido.',
+            );
+        }
+
+        $nomeNormalizado =
+            trim(
+                $nome,
+            );
+
+        if ($nomeNormalizado === '') {
+            throw new LogicException(
+                'A edição não possui um nome válido.',
+            );
+        }
+
+        return $nomeNormalizado;
     }
 
     /**
@@ -633,9 +785,11 @@ final class ControladorEdicao extends Controller
      * @param  Edicao  $edicao  Edição apresentada.
      * @return string Texto da edição.
      *
+     * @throws LogicException Quando as datas persistidas não são válidas.
+     *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     private function obterTextoApresentacao(
         Edicao $edicao,
@@ -643,27 +797,42 @@ final class ControladorEdicao extends Controller
         $dataInicio =
             $edicao->data_inicio;
 
+        if (! $dataInicio instanceof CarbonInterface) {
+            throw new LogicException(
+                'A edição não possui uma data de início válida.',
+            );
+        }
+
+        $nome =
+            $this->obterNomeEdicao(
+                $edicao,
+            );
+
         $inicio =
-            $dataInicio instanceof CarbonInterface
-            ? $dataInicio->format(
+            $dataInicio->format(
                 'd/m/Y',
-            )
-            : (string) $dataInicio;
+            );
 
         $dataFim =
             $edicao->data_fim;
 
-        if (! $dataFim instanceof CarbonInterface) {
+        if ($dataFim === null) {
             return sprintf(
                 '%s — %s',
-                $edicao->nome,
+                $nome,
                 $inicio,
+            );
+        }
+
+        if (! $dataFim instanceof CarbonInterface) {
+            throw new LogicException(
+                'A edição não possui uma data de fim válida.',
             );
         }
 
         return sprintf(
             '%s — %s a %s',
-            $edicao->nome,
+            $nome,
             $inicio,
             $dataFim->format(
                 'd/m/Y',
