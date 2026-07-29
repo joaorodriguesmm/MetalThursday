@@ -4,17 +4,20 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Interacoes;
 
+use App\Models\Interacoes\Avaliacao;
 use Illuminate\Foundation\Http\FormRequest;
+use LogicException;
 
 /**
  * Valida os dados necessários para guardar uma avaliação.
  *
- * A pontuação deve estar compreendida entre 0,5 e 10 e utilizar incrementos
- * de 0,5.
+ * A pontuação deve respeitar a escala e o incremento definidos pelo modelo
+ * {@see Avaliacao}. A validação nesta camada produz mensagens adequadas para
+ * o pedido HTTP, enquanto o modelo volta a proteger a persistência.
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 3.0.0
  */
 final class GuardarAvaliacaoRequest extends FormRequest
 {
@@ -39,15 +42,17 @@ final class GuardarAvaliacaoRequest extends FormRequest
      * Normaliza a pontuação antes da validação.
      *
      * É aceite uma vírgula como separador decimal, convertendo-a para o ponto
-     * esperado pelo sistema.
+     * utilizado internamente pelo sistema.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     protected function prepareForValidation(): void
     {
-        $pontuacao = $this->input('pontuacao');
+        $pontuacao = $this->input(
+            'pontuacao',
+        );
 
         if (! is_string($pontuacao)) {
             return;
@@ -57,7 +62,9 @@ final class GuardarAvaliacaoRequest extends FormRequest
             'pontuacao' => str_replace(
                 ',',
                 '.',
-                trim($pontuacao),
+                trim(
+                    $pontuacao,
+                ),
             ),
         ]);
     }
@@ -65,11 +72,14 @@ final class GuardarAvaliacaoRequest extends FormRequest
     /**
      * Obtém as regras de validação.
      *
-     * @return array<string, array<int, string>> Regras de validação.
+     * Os limites e o incremento pertencem exclusivamente ao modelo
+     * {@see Avaliacao}.
+     *
+     * @return array<string, list<string>> Regras de validação.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function rules(): array
     {
@@ -78,8 +88,14 @@ final class GuardarAvaliacaoRequest extends FormRequest
                 'bail',
                 'required',
                 'numeric',
-                'between:0.5,10',
-                'multiple_of:0.5',
+
+                'between:'
+                    .Avaliacao::PONTUACAO_MINIMA
+                    .','
+                    .Avaliacao::PONTUACAO_MAXIMA,
+
+                'multiple_of:'
+                    .Avaliacao::INCREMENTO_PONTUACAO,
             ],
         ];
     }
@@ -91,7 +107,7 @@ final class GuardarAvaliacaoRequest extends FormRequest
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function messages(): array
     {
@@ -100,9 +116,22 @@ final class GuardarAvaliacaoRequest extends FormRequest
 
             'pontuacao.numeric' => 'A pontuação selecionada não é válida.',
 
-            'pontuacao.between' => 'A pontuação deve estar compreendida entre 0,5 e 10.',
+            'pontuacao.between' => sprintf(
+                'A pontuação deve estar compreendida entre %s e %s.',
+                $this->formatarPontuacao(
+                    Avaliacao::PONTUACAO_MINIMA,
+                ),
+                $this->formatarPontuacao(
+                    Avaliacao::PONTUACAO_MAXIMA,
+                ),
+            ),
 
-            'pontuacao.multiple_of' => 'A pontuação deve utilizar intervalos de 0,5.',
+            'pontuacao.multiple_of' => sprintf(
+                'A pontuação deve utilizar intervalos de %s.',
+                $this->formatarPontuacao(
+                    Avaliacao::INCREMENTO_PONTUACAO,
+                ),
+            ),
         ];
     }
 
@@ -127,14 +156,69 @@ final class GuardarAvaliacaoRequest extends FormRequest
      *
      * @return float Pontuação normalizada.
      *
+     * @throws LogicException Quando o resultado validado não contém um valor
+     *                        numérico.
+     *
+     * @since 2.0.0
+     *
+     * @version 2.0.0
+     */
+    public function obterPontuacao(): float
+    {
+        $pontuacao = $this->validated(
+            'pontuacao',
+        );
+
+        if (
+            (
+                ! is_int($pontuacao)
+                && ! is_float($pontuacao)
+                && ! is_string($pontuacao)
+            )
+            || ! is_numeric($pontuacao)
+        ) {
+            throw new LogicException(
+                'O pedido validado não contém uma pontuação válida.',
+            );
+        }
+
+        return round(
+            (float) $pontuacao,
+            1,
+        );
+    }
+
+    /**
+     * Formata uma pontuação para apresentação em português.
+     *
+     * A parte decimal é omitida quando o valor representa um número inteiro.
+     *
+     * @param  float  $pontuacao  Pontuação recebida.
+     * @return string Pontuação formatada.
+     *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    public function obterPontuacao(): float
-    {
-        return (float) $this->validated(
-            'pontuacao',
+    private function formatarPontuacao(
+        float $pontuacao,
+    ): string {
+        $pontuacaoFormatada = number_format(
+            $pontuacao,
+            1,
+            ',',
+            '',
         );
+
+        return str_ends_with(
+            $pontuacaoFormatada,
+            ',0',
+        )
+            ? substr(
+                $pontuacaoFormatada,
+                0,
+                -2,
+            )
+            : $pontuacaoFormatada;
     }
 }
