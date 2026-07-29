@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Autenticacao;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Autenticacao\AceitarConviteRequest;
 use App\Models\Comunicacao\PermissaoEmail;
+use App\ObjetosValor\Utilizadores\NomeUtilizador;
 use App\Regras\Autenticacao\RequisitosPalavraPasse;
 use App\Servicos\Autenticacao\ServicoConvites;
 use App\Servicos\Autenticacao\ServicoRegistoPorConvite;
@@ -15,8 +16,9 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
+use InvalidArgumentException;
+use LogicException;
 use SensitiveParameter;
 use Throwable;
 
@@ -24,12 +26,15 @@ use Throwable;
  * Gere a apresentação e o processamento do registo por convite.
  *
  * O controlador coordena exclusivamente o fluxo HTTP, delegando a consulta
- * e utilização dos convites e o registo do utilizador nos respetivos
- * serviços de aplicação.
+ * dos convites e o registo transacional do utilizador nos respetivos serviços
+ * de aplicação.
+ *
+ * O registo não inicia automaticamente uma sessão. O novo utilizador deve
+ * confirmar o endereço de e-mail antes de se poder autenticar.
  *
  * @since 1.0.0
  *
- * @version 3.2.0
+ * @version 4.0.0
  */
 final class ControladorRegistoConvite extends Controller
 {
@@ -44,6 +49,36 @@ final class ControladorRegistoConvite extends Controller
      */
     private const IDENTIFICADOR_PERMISSAO_TODAS =
         'todas';
+
+    /**
+     * Mensagem apresentada para qualquer convite indisponível.
+     *
+     * A mensagem não distingue convites inexistentes, utilizados, revogados
+     * ou expirados.
+     *
+     * @var string
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private const MENSAGEM_CONVITE_INDISPONIVEL =
+        'Este convite é inválido ou já não está disponível.';
+
+    /**
+     * Mensagem apresentada quando o registo não pode ser concluído.
+     *
+     * Os detalhes internos da exceção de domínio nunca são expostos ao
+     * visitante.
+     *
+     * @var string
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private const MENSAGEM_REGISTO_NAO_CONCLUIDO =
+        'Não foi possível concluir o registo. Confirma os dados e verifica se o convite continua disponível.';
 
     /**
      * Cria uma nova instância do controlador.
@@ -76,7 +111,7 @@ final class ControladorRegistoConvite extends Controller
      *
      * @since 1.0.0
      *
-     * @version 3.2.0
+     * @version 4.0.0
      */
     public function apresentar(
         Request $pedido,
@@ -84,7 +119,8 @@ final class ControladorRegistoConvite extends Controller
         string $codigoConvite,
     ): View|RedirectResponse {
         $convite =
-            $this->servicoConvites
+            $this
+                ->servicoConvites
                 ->encontrarDisponivelPorCodigo(
                     $codigoConvite,
                 );
@@ -94,7 +130,7 @@ final class ControladorRegistoConvite extends Controller
                 'login',
             )->with(
                 'erro',
-                'Este convite é inválido ou já não está disponível.',
+                self::MENSAGEM_CONVITE_INDISPONIVEL,
             );
         }
 
@@ -105,9 +141,13 @@ final class ControladorRegistoConvite extends Controller
                     'identificador',
                     'nome',
                     'descricao',
+                    'ordem',
                 ])
                 ->orderBy(
-                    'nome',
+                    'ordem',
+                )
+                ->orderBy(
+                    'id',
                 )
                 ->get();
 
@@ -127,13 +167,13 @@ final class ControladorRegistoConvite extends Controller
                 )
                 ->values();
 
+        /*
+         * O atributo do modelo já devolve o endereço normalizado ou nulo
+         * através do objeto de valor EnderecoEmail.
+         */
         $emailConvite =
-            trim(
-                (string) (
-                    $convite->email_destino
-                    ?? ''
-                ),
-            );
+            $convite->email_destino
+            ?? '';
 
         return view(
             'autenticacao.aceitar-convite',
@@ -175,6 +215,9 @@ final class ControladorRegistoConvite extends Controller
      * As falhas de domínio esperadas são convertidas numa resposta segura,
      * sem apresentar ao visitante os detalhes internos da exceção.
      *
+     * Falhas técnicas inesperadas não são ocultadas e permanecem entregues ao
+     * tratamento global de exceções.
+     *
      * @param  AceitarConviteRequest  $pedido  Pedido validado.
      * @return RedirectResponse Redirecionamento após a tentativa de registo.
      *
@@ -182,45 +225,58 @@ final class ControladorRegistoConvite extends Controller
      *
      * @since 1.0.0
      *
-     * @version 3.2.0
+     * @version 4.0.0
      */
     public function registar(
         AceitarConviteRequest $pedido,
     ): RedirectResponse {
+        $codigoConvite =
+            $pedido->codigoConvite();
+
+        $nome =
+            $pedido->nome();
+
+        $email =
+            $pedido->email();
+
+        $palavraPasse =
+            $pedido->palavraPasse();
+
+        $fotografia =
+            $pedido->fotografia();
+
+        $identificadoresPermissoesEmail =
+            $pedido->identificadoresPermissoesEmail();
+
         try {
             $utilizador =
                 $this
                     ->servicoRegistoPorConvite
                     ->registar(
-                        codigoConvite: $pedido->codigoConvite(),
-
-                        nome: $pedido->nome(),
-
-                        email: $pedido->email(),
-
-                        palavraPasse: $pedido->palavraPasse(),
-
-                        fotografia: $pedido->fotografia(),
-
-                        identificadoresPermissoesEmail: $pedido->identificadoresPermissoesEmail(),
+                        codigoConvite: $codigoConvite,
+                        nome: $nome,
+                        email: $email,
+                        palavraPasse: $palavraPasse,
+                        fotografia: $fotografia,
+                        identificadoresPermissoesEmail: $identificadoresPermissoesEmail,
                     );
         } catch (DomainException) {
             return to_route(
                 'convites.aceitar',
                 [
-                    'codigoConvite' => $pedido->codigoConvite(),
+                    'codigoConvite' => $codigoConvite,
                 ],
             )
                 ->withInput([
-                    'nome' => $pedido->nome(),
+                    'nome' => $nome,
 
-                    'email' => $pedido->email(),
+                    'email' => $email,
 
-                    'permissoes_email' => $pedido->identificadoresPermissoesEmail(),
+                    'permissoes_email' => $identificadoresPermissoesEmail,
                 ])
                 ->with(
                     'erro',
-                    'Não foi possível concluir o registo. Confirma os dados e verifica se o convite continua disponível.',
+                    self::MENSAGEM_REGISTO_NAO_CONCLUIDO,
                 );
         }
 
@@ -241,15 +297,18 @@ final class ControladorRegistoConvite extends Controller
     /**
      * Obtém as permissões de e-mail anteriormente submetidas.
      *
-     * Os identificadores são normalizados para texto para permitir uma
-     * comparação consistente com os identificadores apresentados na view.
+     * Os identificadores são convertidos para texto canónico para permitir
+     * uma comparação consistente com os valores dos checkboxes da vista.
+     *
+     * Valores inválidos são ignorados apenas durante a reconstrução visual do
+     * formulário. A validação definitiva pertence ao Form Request.
      *
      * @param  Request  $pedido  Pedido HTTP atual.
      * @return Collection<int, string> Identificadores selecionados.
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterPermissoesSelecionadas(
         Request $pedido,
@@ -277,63 +336,49 @@ final class ControladorRegistoConvite extends Controller
                     ),
             )
             ->map(
-                static fn (int|string $identificador): string => (string) $identificador,
+                static fn (int|string $identificador): int => (int) $identificador,
             )
-            ->unique()
+            ->filter(
+                static fn (int $identificador): bool => $identificador > 0,
+            )
+            ->map(
+                static fn (int $identificador): string => (string) $identificador,
+            )
+            ->unique(
+                strict: true,
+            )
             ->values();
     }
 
     /**
      * Obtém as iniciais de um nome.
      *
-     * Para nomes compostos são utilizadas a primeira e a última palavras.
-     * Quando o nome está vazio, é devolvido um ponto de interrogação.
+     * A criação das iniciais pertence ao objeto de valor do nome do
+     * utilizador. Um nome inválido neste ponto representa uma violação dos
+     * invariantes do modelo persistido.
      *
      * @param  string  $nome  Nome a abreviar.
      * @return string Iniciais do nome.
      *
+     * @throws LogicException Quando o nome persistido viola o contrato do
+     *                        objeto de valor.
+     *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterIniciais(
         string $nome,
     ): string {
-        $partesNome =
-            Str::of(
+        try {
+            return NomeUtilizador::deTexto(
                 $nome,
-            )
-                ->squish()
-                ->explode(
-                    ' ',
-                )
-                ->filter()
-                ->values();
-
-        if ($partesNome->isEmpty()) {
-            return '?';
-        }
-
-        $partesSelecionadas =
-            $partesNome->count() > 1
-            ? collect([
-                $partesNome->first(),
-                $partesNome->last(),
-            ])
-            : $partesNome;
-
-        return $partesSelecionadas
-            ->map(
-                static fn (string $parte): string => Str::upper(
-                    Str::substr(
-                        $parte,
-                        0,
-                        1,
-                    ),
-                ),
-            )
-            ->implode(
-                '',
+            )->iniciais();
+        } catch (InvalidArgumentException $excecao) {
+            throw new LogicException(
+                'O convite disponível contém um nome de convidado inválido.',
+                previous: $excecao,
             );
+        }
     }
 }
