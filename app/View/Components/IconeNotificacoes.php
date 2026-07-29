@@ -17,7 +17,7 @@ use Illuminate\View\Component;
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 4.0.0
  */
 final class IconeNotificacoes extends Component
 {
@@ -33,22 +33,12 @@ final class IconeNotificacoes extends Component
     private const LIMITE_QUANTIDADE_VISIVEL = 99;
 
     /**
-     * Quantidade normalizada de notificações por ler.
-     *
-     *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
-     */
-    public readonly int $quantidade;
-
-    /**
      * Quantidade apresentada visualmente.
      *
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly string $quantidadeVisivel;
 
@@ -58,7 +48,7 @@ final class IconeNotificacoes extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly string $descricao;
 
@@ -68,7 +58,7 @@ final class IconeNotificacoes extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly bool $paginaAtiva;
 
@@ -78,7 +68,7 @@ final class IconeNotificacoes extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly bool $temNotificacoesPorLer;
 
@@ -86,45 +76,49 @@ final class IconeNotificacoes extends Component
      * Cria uma nova instância do componente.
      *
      * @param  Request  $pedido  Pedido HTTP atual.
-     * @param  mixed  $quantidade  Quantidade recebida.
+     * @param  int|string|null  $quantidade  Quantidade recebida.
+     *
+     * @since 1.0.0
+     *
+     * @version 4.0.0
+     */
+    public function __construct(
+        Request $pedido,
+        int|string|null $quantidade = 0,
+    ) {
+        $quantidadeNormalizada =
+            $this->normalizarQuantidade(
+                $quantidade,
+            );
+
+        $this->quantidadeVisivel =
+            $quantidadeNormalizada
+            > self::LIMITE_QUANTIDADE_VISIVEL
+            ? self::LIMITE_QUANTIDADE_VISIVEL.'+'
+            : (string) $quantidadeNormalizada;
+
+        $this->descricao =
+            $this->criarDescricao(
+                $quantidadeNormalizada,
+            );
+
+        $this->paginaAtiva =
+            $pedido->routeIs(
+                'notificacoes.*',
+            );
+
+        $this->temNotificacoesPorLer =
+            $quantidadeNormalizada > 0;
+    }
+
+    /**
+     * Obtém a vista do componente.
+     *
+     * @return View Vista do ícone de notificações.
      *
      * @since 1.0.0
      *
      * @version 3.0.0
-     */
-    public function __construct(
-        Request $pedido,
-        mixed $quantidade = 0,
-    ) {
-        $this->quantidade = $this->normalizarQuantidade(
-            $quantidade,
-        );
-
-        $this->quantidadeVisivel =
-            $this->quantidade > self::LIMITE_QUANTIDADE_VISIVEL
-            ? self::LIMITE_QUANTIDADE_VISIVEL.'+'
-            : (string) $this->quantidade;
-
-        $this->descricao = $this->criarDescricao(
-            $this->quantidade,
-        );
-
-        $this->paginaAtiva = $pedido->routeIs(
-            'notificacoes.*',
-        );
-
-        $this->temNotificacoesPorLer =
-            $this->quantidade > 0;
-    }
-
-    /**
-     * Obtém a view do componente.
-     *
-     * @return View View do ícone de notificações.
-     *
-     * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function render(): View
     {
@@ -136,26 +130,45 @@ final class IconeNotificacoes extends Component
     /**
      * Normaliza a quantidade recebida.
      *
-     * Valores não numéricos ou negativos são convertidos para zero.
+     * Valores que não representem números inteiros ou que sejam negativos
+     * são convertidos para zero.
      *
-     * @param  mixed  $quantidade  Quantidade recebida.
+     * @param  int|string|null  $quantidade  Quantidade recebida.
      * @return int Quantidade normalizada.
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function normalizarQuantidade(
-        mixed $quantidade,
+        int|string|null $quantidade,
     ): int {
-        if (! is_numeric($quantidade)) {
+        if (is_string($quantidade)) {
+            $quantidade = trim(
+                $quantidade,
+            );
+        }
+
+        if (
+            $quantidade === null
+            || $quantidade === ''
+        ) {
             return 0;
         }
 
-        return max(
-            0,
-            (int) $quantidade,
+        $quantidadeValidada = filter_var(
+            $quantidade,
+            FILTER_VALIDATE_INT,
         );
+
+        if (
+            $quantidadeValidada === false
+            || $quantidadeValidada < 0
+        ) {
+            return 0;
+        }
+
+        return $quantidadeValidada;
     }
 
     /**
@@ -166,7 +179,7 @@ final class IconeNotificacoes extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function criarDescricao(
         int $quantidade,
