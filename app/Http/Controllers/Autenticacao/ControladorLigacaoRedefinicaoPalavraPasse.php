@@ -13,9 +13,12 @@ use Illuminate\View\View;
 /**
  * Gere o pedido de envio da ligação de redefinição da palavra-passe.
  *
+ * O resultado devolvido pelo broker de palavras-passe nunca é apresentado ao
+ * visitante, impedindo a enumeração de contas registadas.
+ *
  * @since 1.0.0
  *
- * @version 3.1.0
+ * @version 4.0.0
  */
 final class ControladorLigacaoRedefinicaoPalavraPasse extends Controller
 {
@@ -23,8 +26,7 @@ final class ControladorLigacaoRedefinicaoPalavraPasse extends Controller
      * Mensagem genérica apresentada depois do pedido.
      *
      * A mesma mensagem é utilizada independentemente da existência da conta,
-     * do envio da ligação ou da aplicação de uma limitação temporária,
-     * impedindo a enumeração de utilizadores.
+     * do envio efetivo da ligação ou da aplicação de uma limitação temporária.
      *
      * @var string
      *
@@ -54,16 +56,20 @@ final class ControladorLigacaoRedefinicaoPalavraPasse extends Controller
     /**
      * Solicita o envio da ligação de redefinição da palavra-passe.
      *
-     * A resposta apresentada ao visitante é sempre igual,
-     * independentemente do resultado devolvido pelo gestor de
-     * palavras-passe.
+     * O resultado normal devolvido pelo broker é deliberadamente ignorado.
+     * Assim, a resposta não permite distinguir entre um endereço existente,
+     * um endereço desconhecido ou um pedido temporariamente limitado.
      *
-     * @param  SolicitarRedefinicaoPalavraPasseRequest  $pedido  Pedido validado.
+     * Exceções operacionais, como falhas do transporte de correio, não são
+     * ocultadas e permanecem entregues ao tratamento global de exceções.
+     *
+     * @param  SolicitarRedefinicaoPalavraPasseRequest  $pedido  Pedido
+     *                                                           validado.
      * @return RedirectResponse Redirecionamento para o formulário.
      *
      * @since 1.0.0
      *
-     * @version 3.1.0
+     * @version 4.0.0
      */
     public function enviar(
         SolicitarRedefinicaoPalavraPasseRequest $pedido,
@@ -72,12 +78,13 @@ final class ControladorLigacaoRedefinicaoPalavraPasse extends Controller
             $pedido->email();
 
         /*
-         * A chave `email` pertence ao contrato interno do gestor de
+         * A chave `email` pertence ao contrato técnico do broker de
          * palavras-passe do Laravel.
          */
-        Password::sendResetLink([
-            'email' => $email,
-        ]);
+        Password::broker()
+            ->sendResetLink([
+                'email' => $email,
+            ]);
 
         return to_route(
             'password.request',
