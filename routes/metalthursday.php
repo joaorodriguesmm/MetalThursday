@@ -17,15 +17,15 @@ use Illuminate\Support\Facades\Route;
 /**
  * Define as rotas principais da aplicação MetalThursday.
  *
- * Todas as rotas deste ficheiro exigem autenticação, uma sessão autenticada
- * válida e um endereço de e-mail verificado.
+ * Todas as rotas deste ficheiro exigem autenticação através do guard
+ * `sessao`, uma sessão autenticada válida e um endereço de e-mail verificado.
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 4.0.0
  */
 Route::middleware([
-    'auth',
+    'auth:sessao',
     'auth.session',
     'verified',
 ])->group(
@@ -40,7 +40,7 @@ Route::middleware([
             '/',
             [
                 ControladorMetalThursday::class,
-                'index',
+                'indice',
             ],
         )->name(
             'inicio',
@@ -65,21 +65,21 @@ Route::middleware([
                 static function (): void {
                     Route::get(
                         'criar',
-                        'create',
+                        'criar',
                     )->name(
                         'criar',
                     );
 
                     Route::post(
                         '/',
-                        'store',
+                        'guardar',
                     )->name(
                         'guardar',
                     );
 
                     Route::get(
                         '{metalThursday}',
-                        'show',
+                        'detalhes',
                     )
                         ->whereNumber(
                             'metalThursday',
@@ -90,7 +90,7 @@ Route::middleware([
 
                     Route::get(
                         '{metalThursday}/editar',
-                        'edit',
+                        'editar',
                     )
                         ->whereNumber(
                             'metalThursday',
@@ -101,7 +101,7 @@ Route::middleware([
 
                     Route::patch(
                         '{metalThursday}',
-                        'update',
+                        'atualizar',
                     )
                         ->whereNumber(
                             'metalThursday',
@@ -112,7 +112,7 @@ Route::middleware([
 
                     Route::delete(
                         '{metalThursday}',
-                        'destroy',
+                        'eliminar',
                     )
                         ->whereNumber(
                             'metalThursday',
@@ -152,28 +152,28 @@ Route::middleware([
                 static function (): void {
                     Route::get(
                         '/',
-                        'index',
+                        'indice',
                     )->name(
                         'indice',
                     );
 
                     Route::get(
                         'criar',
-                        'create',
+                        'criar',
                     )->name(
                         'criar',
                     );
 
                     Route::post(
                         '/',
-                        'store',
+                        'guardar',
                     )->name(
                         'guardar',
                     );
 
                     Route::get(
                         '{banda}',
-                        'show',
+                        'detalhes',
                     )
                         ->whereNumber(
                             'banda',
@@ -184,7 +184,7 @@ Route::middleware([
 
                     Route::get(
                         '{banda}/editar',
-                        'edit',
+                        'editar',
                     )
                         ->whereNumber(
                             'banda',
@@ -195,7 +195,7 @@ Route::middleware([
 
                     Route::patch(
                         '{banda}',
-                        'update',
+                        'atualizar',
                     )
                         ->whereNumber(
                             'banda',
@@ -206,7 +206,7 @@ Route::middleware([
 
                     Route::delete(
                         '{banda}',
-                        'destroy',
+                        'eliminar',
                     )
                         ->whereNumber(
                             'banda',
@@ -236,21 +236,21 @@ Route::middleware([
                 static function (): void {
                     Route::get(
                         '/',
-                        'index',
+                        'indice',
                     )->name(
                         'indice',
                     );
 
                     Route::get(
                         'criar',
-                        'create',
+                        'criar',
                     )->name(
                         'criar',
                     );
 
                     Route::post(
                         '/',
-                        'store',
+                        'guardar',
                     )->name(
                         'guardar',
                     );
@@ -279,7 +279,7 @@ Route::middleware([
 
                     Route::get(
                         '{edicao}',
-                        'show',
+                        'detalhes',
                     )
                         ->whereNumber(
                             'edicao',
@@ -290,7 +290,7 @@ Route::middleware([
 
                     Route::get(
                         '{edicao}/editar',
-                        'edit',
+                        'editar',
                     )
                         ->whereNumber(
                             'edicao',
@@ -301,7 +301,7 @@ Route::middleware([
 
                     Route::patch(
                         '{edicao}',
-                        'update',
+                        'atualizar',
                     )
                         ->whereNumber(
                             'edicao',
@@ -312,7 +312,7 @@ Route::middleware([
 
                     Route::delete(
                         '{edicao}',
-                        'destroy',
+                        'eliminar',
                     )
                         ->whereNumber(
                             'edicao',
@@ -342,28 +342,28 @@ Route::middleware([
                 static function (): void {
                     Route::get(
                         '/',
-                        'index',
+                        'indice',
                     )->name(
                         'indice',
                     );
 
                     Route::get(
                         'criar',
-                        'create',
+                        'criar',
                     )->name(
                         'criar',
                     );
 
                     Route::post(
                         '/',
-                        'store',
+                        'guardar',
                     )->name(
                         'guardar',
                     );
 
                     Route::get(
                         '{genero}',
-                        'show',
+                        'detalhes',
                     )
                         ->whereNumber(
                             'genero',
@@ -374,7 +374,7 @@ Route::middleware([
 
                     Route::get(
                         '{genero}/editar',
-                        'edit',
+                        'editar',
                     )
                         ->whereNumber(
                             'genero',
@@ -385,7 +385,7 @@ Route::middleware([
 
                     Route::patch(
                         '{genero}',
-                        'update',
+                        'atualizar',
                     )
                         ->whereNumber(
                             'genero',
@@ -396,7 +396,7 @@ Route::middleware([
 
                     Route::delete(
                         '{genero}',
-                        'destroy',
+                        'eliminar',
                     )
                         ->whereNumber(
                             'genero',
@@ -577,7 +577,7 @@ Route::middleware([
                 static function (): void {
                     Route::get(
                         '/',
-                        'index',
+                        'indice',
                     )->name(
                         'indice',
                     );
