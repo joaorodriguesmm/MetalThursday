@@ -17,7 +17,7 @@ use Illuminate\View\Component;
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 4.0.0
  */
 final class Avatar extends Component
 {
@@ -55,34 +55,14 @@ final class Avatar extends Component
     private const TAMANHO_MAXIMO = 256;
 
     /**
-     * Utilizador representado pelo avatar.
-     *
-     *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
-     */
-    public readonly ?Utilizador $utilizador;
-
-    /**
      * Tamanho normalizado do avatar, em píxeis.
      *
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly int $tamanho;
-
-    /**
-     * Nome normalizado do utilizador.
-     *
-     *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
-     */
-    public readonly string $nomeUtilizador;
 
     /**
      * URL normalizada da fotografia.
@@ -90,7 +70,7 @@ final class Avatar extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly string $urlFotografia;
 
@@ -100,7 +80,7 @@ final class Avatar extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly string $iniciais;
 
@@ -110,7 +90,7 @@ final class Avatar extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly bool $temFotografia;
 
@@ -120,7 +100,7 @@ final class Avatar extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly bool $avatarDecorativo;
 
@@ -130,7 +110,7 @@ final class Avatar extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly string $descricaoAvatar;
 
@@ -141,25 +121,23 @@ final class Avatar extends Component
      * descrição vazia transforma o avatar num elemento decorativo.
      *
      * @param  Utilizador|null  $utilizador  Utilizador representado.
-     * @param  mixed  $tamanho  Tamanho pretendido do avatar.
-     * @param  mixed  $descricao  Descrição acessível pretendida.
+     * @param  int|string|null  $tamanho  Tamanho pretendido do avatar.
+     * @param  string|null  $descricao  Descrição acessível pretendida.
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
     public function __construct(
         ?Utilizador $utilizador = null,
-        mixed $tamanho = self::TAMANHO_PREDEFINIDO,
-        mixed $descricao = null,
+        int|string|null $tamanho = self::TAMANHO_PREDEFINIDO,
+        ?string $descricao = null,
     ) {
-        $this->utilizador = $utilizador;
-
         $this->tamanho = $this->normalizarTamanho(
             $tamanho,
         );
 
-        $this->nomeUtilizador = trim(
+        $nomeUtilizador = trim(
             (string) (
                 $utilizador?->nome
                 ?? ''
@@ -180,7 +158,8 @@ final class Avatar extends Component
         $this->temFotografia =
             $this->urlFotografia !== '';
 
-        $descricaoNormalizada = is_string($descricao)
+        $descricaoNormalizada =
+            $descricao !== null
             ? trim(
                 $descricao,
             )
@@ -192,20 +171,20 @@ final class Avatar extends Component
         $this->descricaoAvatar =
             $descricaoNormalizada
             ?? (
-                $this->nomeUtilizador !== ''
-                ? "Avatar de {$this->nomeUtilizador}"
+                $nomeUtilizador !== ''
+                ? "Avatar de {$nomeUtilizador}"
                 : 'Utilizador não identificado'
             );
     }
 
     /**
-     * Obtém a view do componente.
+     * Obtém a vista do componente.
      *
-     * @return View View do avatar.
+     * @return View Vista do avatar.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function render(): View
     {
@@ -217,20 +196,38 @@ final class Avatar extends Component
     /**
      * Normaliza o tamanho pretendido.
      *
-     * Valores não numéricos utilizam o tamanho predefinido. Os restantes
-     * são limitados ao intervalo permitido pelo componente.
+     * Valores que não representem números inteiros utilizam o tamanho
+     * predefinido. Os restantes são limitados ao intervalo permitido.
      *
-     * @param  mixed  $tamanho  Tamanho recebido.
+     * @param  int|string|null  $tamanho  Tamanho recebido.
      * @return int Tamanho normalizado.
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function normalizarTamanho(
-        mixed $tamanho,
+        int|string|null $tamanho,
     ): int {
-        if (! is_numeric($tamanho)) {
+        if (is_string($tamanho)) {
+            $tamanho = trim(
+                $tamanho,
+            );
+        }
+
+        if (
+            $tamanho === null
+            || $tamanho === ''
+        ) {
+            return self::TAMANHO_PREDEFINIDO;
+        }
+
+        $tamanhoValidado = filter_var(
+            $tamanho,
+            FILTER_VALIDATE_INT,
+        );
+
+        if ($tamanhoValidado === false) {
             return self::TAMANHO_PREDEFINIDO;
         }
 
@@ -238,7 +235,7 @@ final class Avatar extends Component
             self::TAMANHO_MINIMO,
             min(
                 self::TAMANHO_MAXIMO,
-                (int) $tamanho,
+                $tamanhoValidado,
             ),
         );
     }
@@ -249,17 +246,17 @@ final class Avatar extends Component
      * O modelo é a fonte responsável pelo cálculo das iniciais. O componente
      * limita-se a normalizar a capitalização e o comprimento apresentado.
      *
-     * @param  mixed  $iniciais  Iniciais recebidas.
+     * @param  string|null  $iniciais  Iniciais recebidas.
      * @return string Iniciais normalizadas ou ponto de interrogação.
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function normalizarIniciais(
-        mixed $iniciais,
+        ?string $iniciais,
     ): string {
-        if (! is_string($iniciais)) {
+        if ($iniciais === null) {
             return '?';
         }
 
