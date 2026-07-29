@@ -9,34 +9,37 @@ use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use LogicException;
+use InvalidArgumentException;
 
 /**
- * Representa um comentário publicado numa entidade comentável.
+ * Representa um comentário publicado numa entidade da aplicação.
  *
- * Os comentários podem pertencer diretamente a diferentes entidades através
- * de uma relação polimórfica. Também podem responder a outro comentário,
- * formando uma estrutura hierárquica.
+ * Um comentário pode pertencer a uma MetalThursday ou a uma das respetivas
+ * secções. Pode também responder a outro comentário da mesma entidade.
+ *
+ * A aplicação limita a apresentação a dois níveis. As respostas a respostas
+ * são associadas ao comentário principal pelo fluxo de escrita.
  *
  * @property int $id
  * @property int|null $utilizador_id
  * @property string $conteudo
- * @property string $tipo_comentavel
+ * @property 'metal_thursday'|'seccao_metal_thursday' $tipo_comentavel
  * @property int $comentavel_id
  * @property int|null $comentario_pai_id
- * @property int $quantidade_gostos
- * @property bool $gostado_pelo_utilizador_autenticado
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
  * @property CarbonInterface|null $deleted_at
+ * @property int $quantidade_gostos
+ * @property bool $gostado_pelo_utilizador_autenticado
  * @property-read Utilizador|null $utilizador
- * @property-read Model|null $comentavel
+ * @property-read MetalThursday|SeccaoMetalThursday $comentavel
  * @property-read Comentario|null $comentarioPai
  * @property-read Collection<int, Comentario> $respostas
  * @property-read Collection<int, Gosto> $gostos
@@ -48,6 +51,26 @@ use LogicException;
 class Comentario extends Model
 {
     use SoftDeletes;
+
+    /**
+     * Comprimento mínimo permitido para o conteúdo.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public const COMPRIMENTO_MINIMO_CONTEUDO = 1;
+
+    /**
+     * Comprimento máximo permitido para o conteúdo.
+     *
+     * Este valor coincide com a restrição definida na base de dados.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public const COMPRIMENTO_MAXIMO_CONTEUDO = 2000;
 
     /**
      * Nome físico da tabela associada ao modelo.
@@ -63,17 +86,18 @@ class Comentario extends Model
     /**
      * Atributos permitidos em operações de atribuição em massa.
      *
-     * O utilizador e a entidade comentada devem ser associados explicitamente
-     * através das relações, evitando aceitar identificadores provenientes
-     * diretamente do pedido HTTP.
+     * O tipo e o identificador da entidade comentada são preenchidos pela
+     * relação polimórfica e não podem ser atribuídos diretamente através de
+     * dados externos.
      *
-     * @var array<int, string>
+     * @var list<string>
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     protected $fillable = [
+        'utilizador_id',
         'conteudo',
         'comentario_pai_id',
     ];
@@ -81,9 +105,8 @@ class Comentario extends Model
     /**
      * Define as conversões automáticas dos atributos.
      *
-     * Os atributos `quantidade_gostos` e
-     * `gostado_pelo_utilizador_autenticado` são adicionados pelas consultas
-     * de apresentação e não correspondem a colunas físicas da tabela.
+     * Os dois últimos atributos são calculados pelas consultas de
+     * apresentação e não correspondem a colunas físicas da tabela.
      *
      * @return array<string, string> Conversões dos atributos.
      *
@@ -94,28 +117,114 @@ class Comentario extends Model
     protected function casts(): array
     {
         return [
-            'utilizador_id' =>
-            'integer',
+            'utilizador_id' => 'integer',
 
-            'comentavel_id' =>
-            'integer',
+            'comentavel_id' => 'integer',
 
-            'comentario_pai_id' =>
-            'integer',
+            'comentario_pai_id' => 'integer',
 
-            'quantidade_gostos' =>
-            'integer',
+            'quantidade_gostos' => 'integer',
 
-            'gostado_pelo_utilizador_autenticado' =>
-            'boolean',
+            'gostado_pelo_utilizador_autenticado' => 'boolean',
         ];
     }
 
     /**
-     * Obtém o utilizador responsável pelo comentário.
+     * Normaliza e valida o conteúdo do comentário.
      *
-     * A relação pode ser nula quando a conta do utilizador tiver sido
-     * eliminada, uma vez que o histórico do comentário é preservado.
+     * As quebras de linha são preservadas num formato uniforme. Os espaços
+     * exteriores são removidos, mas o conteúdo interior não é comprimido para
+     * permitir parágrafos e formatação textual simples.
+     *
+     * @return Attribute<string, string> Atributo do conteúdo.
+     *
+     * @throws InvalidArgumentException Quando o conteúdo não é válido.
+     *
+     * @since 2.0.0
+     *
+     * @version 2.0.0
+     */
+    protected function conteudo(): Attribute
+    {
+        return Attribute::make(
+            set: static function (
+                mixed $valor,
+            ): string {
+                if (! is_string($valor)) {
+                    throw new InvalidArgumentException(
+                        'O conteúdo do comentário deve ser uma sequência de caracteres.',
+                    );
+                }
+
+                if (
+                    preg_match(
+                        '//u',
+                        $valor,
+                    ) !== 1
+                ) {
+                    throw new InvalidArgumentException(
+                        'O conteúdo do comentário contém texto inválido.',
+                    );
+                }
+
+                if (
+                    preg_match(
+                        '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/',
+                        $valor,
+                    ) === 1
+                ) {
+                    throw new InvalidArgumentException(
+                        'O conteúdo do comentário contém caracteres inválidos.',
+                    );
+                }
+
+                $conteudoNormalizado = str_replace(
+                    [
+                        "\r\n",
+                        "\r",
+                    ],
+                    "\n",
+                    $valor,
+                );
+
+                $conteudoNormalizado = trim(
+                    $conteudoNormalizado,
+                );
+
+                $comprimento = mb_strlen(
+                    $conteudoNormalizado,
+                );
+
+                if (
+                    $comprimento < self::COMPRIMENTO_MINIMO_CONTEUDO
+                ) {
+                    throw new InvalidArgumentException(
+                        'O conteúdo do comentário é obrigatório.',
+                    );
+                }
+
+                if (
+                    $comprimento
+                    > self::COMPRIMENTO_MAXIMO_CONTEUDO
+                ) {
+                    throw new InvalidArgumentException(
+                        sprintf(
+                            'O comentário não pode ter mais de %d caracteres.',
+                            self::COMPRIMENTO_MAXIMO_CONTEUDO,
+                        ),
+                    );
+                }
+
+                return $conteudoNormalizado;
+            },
+        );
+    }
+
+    /**
+     * Obtém o utilizador que publicou o comentário.
+     *
+     * A relação pode ser nula quando o utilizador foi posteriormente
+     * eliminado.
      *
      * @return BelongsTo<Utilizador, $this> Relação com o utilizador.
      *
@@ -132,16 +241,18 @@ class Comentario extends Model
     }
 
     /**
-     * Obtém a entidade à qual o comentário pertence.
+     * Obtém a entidade associada ao comentário.
      *
-     * Os nomes das colunas são indicados explicitamente porque utilizam
-     * nomenclatura portuguesa.
+     * Os aliases polimórficos permitidos são:
+     *
+     * - `metal_thursday`;
+     * - `seccao_metal_thursday`.
      *
      * @return MorphTo<Model, $this> Relação com a entidade comentada.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function comentavel(): MorphTo
     {
@@ -153,7 +264,46 @@ class Comentario extends Model
     }
 
     /**
-     * Obtém os gostos associados ao comentário.
+     * Obtém o comentário ao qual este comentário responde.
+     *
+     * O comentário pai pode já ter sido eliminado logicamente, pelo que a
+     * relação inclui registos eliminados.
+     *
+     * @return BelongsTo<Comentario, $this> Relação com o comentário pai.
+     *
+     * @since 1.0.0
+     *
+     * @version 2.0.0
+     */
+    public function comentarioPai(): BelongsTo
+    {
+        return $this
+            ->belongsTo(
+                self::class,
+                'comentario_pai_id',
+            )
+            ->withTrashed();
+    }
+
+    /**
+     * Obtém as respostas diretas ao comentário.
+     *
+     * @return HasMany<Comentario, $this> Relação com as respostas.
+     *
+     * @since 1.0.0
+     *
+     * @version 2.0.0
+     */
+    public function respostas(): HasMany
+    {
+        return $this->hasMany(
+            self::class,
+            'comentario_pai_id',
+        );
+    }
+
+    /**
+     * Obtém os gostos atribuídos ao comentário.
      *
      * @return HasMany<Gosto, $this> Relação com os gostos.
      *
@@ -170,113 +320,14 @@ class Comentario extends Model
     }
 
     /**
-     * Obtém o comentário ao qual este comentário responde.
-     *
-     * O comentário pai continua acessível mesmo quando tiver sido eliminado
-     * logicamente, preservando a estrutura da conversa.
-     *
-     * @return BelongsTo<Comentario, $this> Relação com o comentário pai.
-     *
-     * @since 1.0.0
-     *
-     * @version 2.1.0
-     */
-    public function comentarioPai(): BelongsTo
-    {
-        return $this
-            ->belongsTo(
-                self::class,
-                'comentario_pai_id',
-            )
-            ->withTrashed();
-    }
-
-    /**
-     * Obtém as respostas diretas ao comentário.
-     *
-     * As respostas eliminadas logicamente não são incluídas.
-     *
-     * @return HasMany<Comentario, $this> Relação com as respostas.
-     *
-     * @since 1.0.0
-     *
-     * @version 2.0.0
-     */
-    public function respostas(): HasMany
-    {
-        return $this
-            ->hasMany(
-                self::class,
-                'comentario_pai_id',
-            )
-            ->orderBy(
-                'created_at',
-            )
-            ->orderBy(
-                'id',
-            );
-    }
-
-    /**
-     * Adiciona os dados necessários à apresentação de comentários.
-     *
-     * A consulta carrega o autor, calcula a quantidade total de gostos e,
-     * quando existe um utilizador autenticado, determina se esse utilizador
-     * atribuiu gosto ao comentário.
-     *
-     * Este scope prepara apenas o nível atual da consulta. As respostas
-     * descendentes devem receber o mesmo scope através do serviço ou
-     * controlador responsável por carregar a árvore.
-     *
-     * @param  Builder<Comentario>  $consulta  Consulta dos comentários.
-     * @param  int|null  $identificadorUtilizador  Utilizador autenticado.
-     * @return Builder<Comentario> Consulta preparada.
-     *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
-     */
-    public function scopeComDadosApresentacao(
-        Builder $consulta,
-        ?int $identificadorUtilizador = null,
-    ): Builder {
-        $consulta
-            ->with(
-                'utilizador',
-            )
-            ->withCount([
-                'gostos as quantidade_gostos',
-            ]);
-
-        if (
-            $identificadorUtilizador === null
-            || $identificadorUtilizador < 1
-        ) {
-            return $consulta;
-        }
-
-        return $consulta->withCount([
-            'gostos as gostado_pelo_utilizador_autenticado' =>
-            static function (
-                Builder $consultaGostos,
-            ) use (
-                $identificadorUtilizador,
-            ): void {
-                $consultaGostos->where(
-                    'utilizador_id',
-                    $identificadorUtilizador,
-                );
-            },
-        ]);
-    }
-
-    /**
      * Limita a consulta aos comentários principais.
      *
-     * @param  Builder<Comentario>  $consulta  Consulta dos comentários.
-     * @return Builder<Comentario> Consulta limitada.
+     * Um comentário principal não responde a qualquer outro comentário.
      *
-     * @since 3.0.0
+     * @param  Builder<Comentario>  $consulta  Consulta dos comentários.
+     * @return Builder<Comentario> Consulta filtrada.
+     *
+     * @since 2.0.0
      *
      * @version 1.0.0
      */
@@ -291,14 +342,13 @@ class Comentario extends Model
     /**
      * Ordena os comentários cronologicamente.
      *
-     * O identificador é utilizado como segundo critério para garantir uma
-     * ordenação determinística quando dois comentários possuem o mesmo
-     * momento de criação.
+     * O identificador é utilizado como segundo critério para manter a ordem
+     * estável quando vários comentários possuem a mesma data de criação.
      *
      * @param  Builder<Comentario>  $consulta  Consulta dos comentários.
      * @return Builder<Comentario> Consulta ordenada.
      *
-     * @since 3.0.0
+     * @since 2.0.0
      *
      * @version 1.0.0
      */
@@ -315,62 +365,51 @@ class Comentario extends Model
     }
 
     /**
-     * Obtém a MetalThursday associada ao comentário.
+     * Carrega os dados necessários para apresentar os comentários.
      *
-     * Um comentário pode pertencer diretamente a uma MetalThursday ou a uma
-     * secção pertencente a uma MetalThursday.
+     * A consulta inclui o utilizador, a quantidade total de gostos e, quando
+     * existe autenticação, a indicação de que o utilizador atual atribuiu
+     * gosto ao comentário.
      *
-     * As relações necessárias devem ser previamente carregadas para impedir
-     * consultas implícitas durante a utilização deste auxiliar.
+     * @param  Builder<Comentario>  $consulta  Consulta dos comentários.
+     * @param  int|null  $identificadorUtilizador  Utilizador autenticado.
+     * @return Builder<Comentario> Consulta preparada.
      *
-     * @return MetalThursday|null MetalThursday associada ou nula.
+     * @throws InvalidArgumentException Quando o identificador não é positivo.
      *
-     * @throws LogicException Quando uma relação necessária não está carregada
-     *                        ou possui um tipo inesperado.
+     * @since 3.0.0
      *
-     * @since 1.0.0
-     *
-     * @version 3.0.0
+     * @version 1.0.0
      */
-    public function metalThursdayAssociado(): ?MetalThursday
-    {
-        if (! $this->relationLoaded('comentavel')) {
-            throw new LogicException(
-                'A relação "comentavel" deve estar carregada antes de obter a MetalThursday associada.',
+    public function scopeComDadosApresentacao(
+        Builder $consulta,
+        ?int $identificadorUtilizador,
+    ): Builder {
+        $consulta
+            ->with([
+                'utilizador:id,nome,fotografia',
+            ])
+            ->withCount([
+                'gostos as quantidade_gostos',
+            ]);
+
+        if ($identificadorUtilizador === null) {
+            return $consulta;
+        }
+
+        if ($identificadorUtilizador < 1) {
+            throw new InvalidArgumentException(
+                'O identificador do utilizador deve ser positivo.',
             );
         }
 
-        $comentavel = $this->getRelation(
-            'comentavel',
-        );
-
-        if ($comentavel instanceof MetalThursday) {
-            return $comentavel;
-        }
-
-        if (! $comentavel instanceof SeccaoMetalThursday) {
-            return null;
-        }
-
-        if (! $comentavel->relationLoaded('metalThursday')) {
-            throw new LogicException(
-                'A relação "metalThursday" da secção deve estar carregada.',
-            );
-        }
-
-        $metalThursday = $comentavel->getRelation(
-            'metalThursday',
-        );
-
-        if (
-            $metalThursday !== null
-            && ! $metalThursday instanceof MetalThursday
-        ) {
-            throw new LogicException(
-                'A relação "metalThursday" da secção possui um tipo inesperado.',
-            );
-        }
-
-        return $metalThursday;
+        return $consulta->withExists([
+            'gostos as gostado_pelo_utilizador_autenticado' => static fn (
+                Builder $consultaGostos,
+            ): Builder => $consultaGostos->where(
+                'utilizador_id',
+                $identificadorUtilizador,
+            ),
+        ]);
     }
 }
