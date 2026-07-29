@@ -16,7 +16,7 @@ use App\Servicos\Notificacoes\NotificadorInteracoes;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -27,13 +27,53 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * Os comentários podem estar associados a uma MetalThursday ou a uma das
  * respetivas secções através de uma relação polimórfica.
  *
+ * As operações de escrita bloqueiam os registos envolvidos, impedindo que
+ * pedidos concorrentes alterem a mesma conversa com base num estado
+ * desatualizado.
+ *
  * @since 1.0.0
  *
- * @version 2.1.0
+ * @version 3.0.0
  */
 final class ControladorComentario extends Controller
 {
     use AuthorizesRequests;
+
+    /**
+     * Número máximo de tentativas de uma transação em caso de bloqueio mútuo.
+     *
+     * @var int
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    private const TENTATIVAS_TRANSACAO =
+        3;
+
+    /**
+     * Ação utilizada ao notificar a publicação de um comentário.
+     *
+     * @var string
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    private const ACAO_COMENTOU =
+        'comentou';
+
+    /**
+     * Ação utilizada ao notificar a publicação de uma resposta.
+     *
+     * @var string
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    private const ACAO_RESPONDEU =
+        'respondeu';
 
     /**
      * Cria o controlador.
@@ -52,16 +92,22 @@ final class ControladorComentario extends Controller
     /**
      * Publica um comentário numa MetalThursday ou numa secção.
      *
+     * A entidade comentada é bloqueada durante a criação, impedindo que seja
+     * eliminada ou alterada concorrentemente enquanto o comentário é
+     * associado.
+     *
      * @param  GuardarComentarioRequest  $pedido  Pedido validado.
      * @param  string  $tipoComentavel  Tipo da entidade comentada.
-     * @param  int  $identificadorComentavel  Identificador da entidade comentada.
+     * @param  int  $identificadorComentavel  Identificador da entidade.
      * @return JsonResponse Comentário criado.
      *
      * @throws AuthenticationException Quando não existe autenticação válida.
+     * @throws NotFoundHttpException Quando o tipo ou o identificador não são
+     *                               válidos.
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
     public function guardar(
         GuardarComentarioRequest $pedido,
@@ -69,9 +115,13 @@ final class ControladorComentario extends Controller
         int $identificadorComentavel,
     ): JsonResponse {
         $utilizador =
-            $this->obterUtilizadorAutenticado(
-                $pedido,
-            );
+            $this->obterUtilizadorAutenticado();
+
+        $identificadorUtilizador =
+            (int) $utilizador->getKey();
+
+        $conteudo =
+            $pedido->obterConteudo();
 
         $comentavel =
             $this->resolverComentavel(
@@ -84,26 +134,60 @@ final class ControladorComentario extends Controller
             Comentario::class,
         );
 
-        $comentario = DB::transaction(
-            static fn (): Comentario => $comentavel
-                ->comentarios()
-                ->create([
-                    'utilizador_id' => $utilizador->getKey(),
+        /**
+         * @var array{
+         *     comentario: Comentario,
+         *     comentavel: MetalThursday|SeccaoMetalThursday
+         * } $resultado
+         */
+        $resultado =
+            DB::transaction(
+                function () use (
+                    $comentavel,
+                    $identificadorUtilizador,
+                    $conteudo,
+                ): array {
+                    $comentavelBloqueado =
+                        $this->bloquearComentavel(
+                            $comentavel,
+                        );
 
-                    'conteudo' => $pedido->obterConteudo(),
+                    $comentario =
+                        $comentavelBloqueado
+                            ->comentarios()
+                            ->create([
+                                'utilizador_id' => $identificadorUtilizador,
 
-                    'comentario_pai_id' => null,
-                ]),
-        );
+                                'conteudo' => $conteudo,
+
+                                'comentario_pai_id' => null,
+                            ]);
+
+                    return [
+                        'comentario' => $comentario,
+
+                        'comentavel' => $comentavelBloqueado,
+                    ];
+                },
+                self::TENTATIVAS_TRANSACAO,
+            );
+
+        $comentario =
+            $resultado['comentario'];
+
+        $comentavelAtualizado =
+            $resultado['comentavel'];
 
         $this->carregarComentario(
             $comentario,
         );
 
-        $this->notificadorInteracoes
+        $this
+            ->notificadorInteracoes
             ->notificarOutrosUtilizadores(
-                $comentavel,
-                'comentou',
+                sujeito: $comentavelAtualizado,
+                causador: $utilizador,
+                acao: self::ACAO_COMENTOU,
             );
 
         return response()->json(
@@ -124,78 +208,100 @@ final class ControladorComentario extends Controller
      * As respostas a outras respostas são associadas ao comentário principal,
      * mantendo apenas dois níveis de apresentação.
      *
+     * O comentário principal é utilizado como sujeito da notificação,
+     * permitindo identificar corretamente o autor da conversa respondida.
+     *
      * @param  GuardarComentarioRequest  $pedido  Pedido validado.
      * @param  Comentario  $comentario  Comentário respondido.
      * @return JsonResponse Resposta criada.
      *
      * @throws AuthenticationException Quando não existe autenticação válida.
+     * @throws NotFoundHttpException Quando a conversa ou a entidade comentada
+     *                               já não estão disponíveis.
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
     public function responder(
         GuardarComentarioRequest $pedido,
         Comentario $comentario,
     ): JsonResponse {
         $utilizador =
-            $this->obterUtilizadorAutenticado(
-                $pedido,
-            );
+            $this->obterUtilizadorAutenticado();
+
+        $identificadorUtilizador =
+            (int) $utilizador->getKey();
+
+        $conteudo =
+            $pedido->obterConteudo();
 
         $this->authorize(
             'create',
             Comentario::class,
         );
 
-        $resultado = DB::transaction(
-            function () use (
-                $comentario,
-                $pedido,
-                $utilizador,
-            ): array {
-                $comentarioBloqueado = Comentario::query()
-                    ->whereKey(
-                        $comentario->getKey(),
-                    )
-                    ->lockForUpdate()
-                    ->firstOrFail();
+        /**
+         * @var array{
+         *     resposta: Comentario,
+         *     comentario_principal: Comentario
+         * } $resultado
+         */
+        $resultado =
+            DB::transaction(
+                function () use (
+                    $comentario,
+                    $identificadorUtilizador,
+                    $conteudo,
+                ): array {
+                    $comentarioBloqueado =
+                        Comentario::query()
+                            ->whereKey(
+                                $comentario->getKey(),
+                            )
+                            ->lockForUpdate()
+                            ->firstOrFail();
 
-                $comentarioPai =
-                    $this->obterComentarioPrincipal(
-                        $comentarioBloqueado,
-                    );
+                    $comentarioPrincipal =
+                        $this->obterComentarioPrincipal(
+                            $comentarioBloqueado,
+                        );
 
-                $comentavel =
-                    $this->obterComentavelDoComentario(
-                        $comentarioPai,
-                    );
+                    $comentavel =
+                        $this->obterComentavelDoComentario(
+                            $comentarioPrincipal,
+                        );
 
-                $resposta = $comentavel
-                    ->comentarios()
-                    ->create([
-                        'utilizador_id' => $utilizador->getKey(),
+                    $comentavelBloqueado =
+                        $this->bloquearComentavel(
+                            $comentavel,
+                        );
 
-                        'conteudo' => $pedido->obterConteudo(),
+                    $resposta =
+                        $comentavelBloqueado
+                            ->comentarios()
+                            ->create([
+                                'utilizador_id' => $identificadorUtilizador,
 
-                        'comentario_pai_id' => $comentarioPai->getKey(),
-                    ]);
+                                'conteudo' => $conteudo,
 
-                return [
-                    'comentario' => $resposta,
+                                'comentario_pai_id' => (int) $comentarioPrincipal->getKey(),
+                            ]);
 
-                    'comentavel' => $comentavel,
-                ];
-            },
-        );
+                    return [
+                        'resposta' => $resposta,
 
-        /** @var Comentario $resposta */
+                        'comentario_principal' => $comentarioPrincipal,
+                    ];
+                },
+                self::TENTATIVAS_TRANSACAO,
+            );
+
         $resposta =
-            $resultado['comentario'];
+            $resultado['resposta'];
 
-        /** @var MetalThursday|SeccaoMetalThursday $comentavel */
-        $comentavel =
-            $resultado['comentavel'];
+        $comentarioPrincipal =
+            $resultado['comentario_principal'];
 
         $this->carregarComentario(
             $resposta,
@@ -204,8 +310,9 @@ final class ControladorComentario extends Controller
         $this
             ->notificadorInteracoes
             ->notificarOutrosUtilizadores(
-                $comentavel,
-                'respondeu',
+                sujeito: $comentarioPrincipal,
+                causador: $utilizador,
+                acao: self::ACAO_RESPONDEU,
             );
 
         return response()->json(
@@ -223,38 +330,66 @@ final class ControladorComentario extends Controller
     /**
      * Atualiza o conteúdo de um comentário.
      *
+     * O comentário é novamente obtido e bloqueado dentro da transação. A
+     * autorização é aplicada ao modelo bloqueado, garantindo que a decisão
+     * utiliza o estado persistido atual.
+     *
      * @param  AtualizarComentarioRequest  $pedido  Pedido validado.
      * @param  Comentario  $comentario  Comentário atualizado.
      * @return JsonResponse Comentário atualizado.
      *
+     * @throws AuthenticationException Quando não existe autenticação válida.
+     *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
     public function atualizar(
         AtualizarComentarioRequest $pedido,
         Comentario $comentario,
     ): JsonResponse {
-        $this->authorize(
-            'update',
-            $comentario,
-        );
+        $this->obterUtilizadorAutenticado();
 
-        $comentario->updateOrFail([
-            'conteudo' => $pedido->obterConteudo(),
-        ]);
+        $conteudo =
+            $pedido->obterConteudo();
 
-        $comentario->refresh();
+        $comentarioAtualizado =
+            DB::transaction(
+                function () use (
+                    $comentario,
+                    $conteudo,
+                ): Comentario {
+                    $comentarioBloqueado =
+                        Comentario::query()
+                            ->whereKey(
+                                $comentario->getKey(),
+                            )
+                            ->lockForUpdate()
+                            ->firstOrFail();
+
+                    $this->authorize(
+                        'update',
+                        $comentarioBloqueado,
+                    );
+
+                    $comentarioBloqueado->updateOrFail([
+                        'conteudo' => $conteudo,
+                    ]);
+
+                    return $comentarioBloqueado;
+                },
+                self::TENTATIVAS_TRANSACAO,
+            );
 
         $this->carregarComentario(
-            $comentario,
+            $comentarioAtualizado,
         );
 
         return response()->json([
             'mensagem' => 'Comentário atualizado com sucesso.',
 
             'comentario' => $this->serializarComentario(
-                $comentario,
+                $comentarioAtualizado,
             ),
         ]);
     }
@@ -265,28 +400,42 @@ final class ControladorComentario extends Controller
      * A eliminação lógica preserva a estrutura da conversa quando existem
      * respostas associadas.
      *
-     * @param  Request  $pedido  Pedido HTTP.
+     * O comentário é bloqueado antes da autorização e da eliminação,
+     * impedindo alterações concorrentes durante a operação.
+     *
      * @param  Comentario  $comentario  Comentário eliminado.
      * @return JsonResponse Resposta sem conteúdo.
      *
+     * @throws AuthenticationException Quando não existe autenticação válida.
+     *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
     public function eliminar(
-        Request $pedido,
         Comentario $comentario,
     ): JsonResponse {
-        $this->obterUtilizadorAutenticado(
-            $pedido,
-        );
+        $this->obterUtilizadorAutenticado();
 
-        $this->authorize(
-            'delete',
-            $comentario,
-        );
+        DB::transaction(
+            function () use ($comentario): void {
+                $comentarioBloqueado =
+                    Comentario::query()
+                        ->whereKey(
+                            $comentario->getKey(),
+                        )
+                        ->lockForUpdate()
+                        ->firstOrFail();
 
-        $comentario->deleteOrFail();
+                $this->authorize(
+                    'delete',
+                    $comentarioBloqueado,
+                );
+
+                $comentarioBloqueado->deleteOrFail();
+            },
+            self::TENTATIVAS_TRANSACAO,
+        );
 
         return response()->json(
             null,
@@ -301,7 +450,7 @@ final class ControladorComentario extends Controller
      * @param  int  $identificador  Identificador da entidade.
      * @return MetalThursday|SeccaoMetalThursday Entidade encontrada.
      *
-     * @throws NotFoundHttpException Quando o tipo ou identificador não são
+     * @throws NotFoundHttpException Quando o tipo ou o identificador não são
      *                               válidos.
      *
      * @since 2.0.0
@@ -335,14 +484,48 @@ final class ControladorComentario extends Controller
     }
 
     /**
+     * Bloqueia a entidade comentada durante uma operação de escrita.
+     *
+     * @param  MetalThursday|SeccaoMetalThursday  $comentavel  Entidade
+     *                                                         comentada.
+     * @return MetalThursday|SeccaoMetalThursday Entidade bloqueada.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    private function bloquearComentavel(
+        MetalThursday|SeccaoMetalThursday $comentavel,
+    ): MetalThursday|SeccaoMetalThursday {
+        if ($comentavel instanceof MetalThursday) {
+            return MetalThursday::query()
+                ->whereKey(
+                    $comentavel->getKey(),
+                )
+                ->lockForUpdate()
+                ->firstOrFail();
+        }
+
+        return SeccaoMetalThursday::query()
+            ->whereKey(
+                $comentavel->getKey(),
+            )
+            ->lockForUpdate()
+            ->firstOrFail();
+    }
+
+    /**
      * Obtém o comentário principal de uma conversa.
      *
+     * Quando o comentário recebido já é principal, o próprio modelo
+     * bloqueado é devolvido.
+     *
      * @param  Comentario  $comentario  Comentário recebido.
-     * @return Comentario Comentário principal.
+     * @return Comentario Comentário principal bloqueado.
      *
      * @since 2.1.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterComentarioPrincipal(
         Comentario $comentario,
@@ -350,16 +533,13 @@ final class ControladorComentario extends Controller
         $identificadorPai =
             $comentario->comentario_pai_id;
 
-        if (
-            ! is_numeric($identificadorPai)
-            || (int) $identificadorPai < 1
-        ) {
+        if ($identificadorPai === null) {
             return $comentario;
         }
 
         return Comentario::query()
             ->whereKey(
-                (int) $identificadorPai,
+                $identificadorPai,
             )
             ->where(
                 'tipo_comentavel',
@@ -379,11 +559,12 @@ final class ControladorComentario extends Controller
      * @param  Comentario  $comentario  Comentário consultado.
      * @return MetalThursday|SeccaoMetalThursday Entidade comentada.
      *
-     * @throws NotFoundHttpException Quando a entidade não é suportada.
+     * @throws NotFoundHttpException Quando a entidade não é suportada ou já
+     *                               não está disponível.
      *
      * @since 2.1.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterComentavelDoComentario(
         Comentario $comentario,
@@ -404,7 +585,7 @@ final class ControladorComentario extends Controller
     }
 
     /**
-     * Carrega as relações necessárias para a resposta.
+     * Carrega as relações necessárias para a resposta HTTP.
      *
      * @param  Comentario  $comentario  Comentário carregado.
      *
@@ -459,11 +640,7 @@ final class ControladorComentario extends Controller
 
             'conteudo' => (string) $comentario->conteudo,
 
-            'comentario_pai_id' => is_numeric(
-                $comentario->comentario_pai_id,
-            )
-                ? (int) $comentario->comentario_pai_id
-                : null,
+            'comentario_pai_id' => $comentario->comentario_pai_id,
 
             'numero_gostos' => (int) (
                 $comentario->gostos_count
@@ -496,22 +673,22 @@ final class ControladorComentario extends Controller
     }
 
     /**
-     * Obtém o utilizador autenticado.
+     * Obtém o utilizador autenticado através do guard da aplicação.
      *
-     * @param  Request  $pedido  Pedido HTTP.
-     * @return Utilizador Utilizador autenticado.
+     * @return Utilizador Utilizador autenticado e persistido.
      *
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
-    private function obterUtilizadorAutenticado(
-        Request $pedido,
-    ): Utilizador {
+    private function obterUtilizadorAutenticado(): Utilizador
+    {
         $utilizador =
-            $pedido->user();
+            Auth::guard(
+                'sessao',
+            )->user();
 
         if (! $utilizador instanceof Utilizador) {
             throw new AuthenticationException(
