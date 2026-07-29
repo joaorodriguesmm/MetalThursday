@@ -10,7 +10,7 @@ use App\Filtros\FiltrosMetalThursday;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\MetalThursday\GuardarMetalThursdayRequest;
 use App\Models\Autenticacao\Utilizador;
-use App\Models\Geografia\Pais;
+use App\Models\Geografia\OrigemGeografica;
 use App\Models\Interacoes\Comentario;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
@@ -32,6 +32,8 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\View\View;
 use LogicException;
@@ -43,7 +45,7 @@ use Throwable;
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 4.0.0
  */
 final class ControladorMetalThursday extends Controller
 {
@@ -132,6 +134,17 @@ final class ControladorMetalThursday extends Controller
     private const UTILIZADORES_POR_BLOCO = 100;
 
     /**
+     * Número máximo de tentativas perante conflitos transitórios.
+     *
+     * @var int
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private const TENTATIVAS_TRANSACAO = 3;
+
+    /**
      * Cria o controlador.
      *
      * @param  ServicoPersistenciaMetalThursday  $servicoPersistencia  Serviço
@@ -161,9 +174,9 @@ final class ControladorMetalThursday extends Controller
      *
      * @since 1.0.0
      *
-     * @version 3.1.0
+     * @version 4.0.0
      */
-    public function index(
+    public function indice(
         Request $pedido,
         FiltrosMetalThursday $filtros,
     ): View {
@@ -183,9 +196,7 @@ final class ControladorMetalThursday extends Controller
             );
 
         $identificadorUtilizador =
-            $this->obterIdentificadorUtilizadorOpcional(
-                $pedido,
-            );
+            $this->obterIdentificadorUtilizadorOpcional();
 
         $registosMetalThursday = null;
         $seccoesSimplificadas = null;
@@ -193,25 +204,25 @@ final class ControladorMetalThursday extends Controller
         if ($tipoVista === self::VISTA_SIMPLIFICADA) {
             $seccoesSimplificadas =
                 $filtros
-                ->aplicar(
-                    $this->criarConsultaSimplificada(),
-                )
-                ->paginate(
-                    $porPagina,
-                )
-                ->withQueryString();
+                    ->aplicar(
+                        $this->criarConsultaSimplificada(),
+                    )
+                    ->paginate(
+                        $porPagina,
+                    )
+                    ->withQueryString();
         } else {
             $registosMetalThursday =
                 $filtros
-                ->aplicar(
-                    $this->criarConsultaCompleta(
-                        $identificadorUtilizador,
-                    ),
-                )
-                ->paginate(
-                    $porPagina,
-                )
-                ->withQueryString();
+                    ->aplicar(
+                        $this->criarConsultaCompleta(
+                            $identificadorUtilizador,
+                        ),
+                    )
+                    ->paginate(
+                        $porPagina,
+                    )
+                    ->withQueryString();
         }
 
         $dadosControlosListagem =
@@ -224,14 +235,11 @@ final class ControladorMetalThursday extends Controller
         return view(
             'metal-thursday.indice',
             [
-                'registosMetalThursday' =>
-                $registosMetalThursday,
+                'registosMetalThursday' => $registosMetalThursday,
 
-                'seccoesSimplificadas' =>
-                $seccoesSimplificadas,
+                'seccoesSimplificadas' => $seccoesSimplificadas,
 
-                'configuracaoListagemMetalThursday' =>
-                $this->obterConfiguracaoListagemMetalThursday(
+                'configuracaoListagemMetalThursday' => $this->obterConfiguracaoListagemMetalThursday(
                     $dadosControlosListagem['gruposFiltrosDisponiveis'],
                 ),
 
@@ -250,9 +258,9 @@ final class ControladorMetalThursday extends Controller
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
-    public function create(
+    public function criar(
         Request $pedido,
     ): View {
         $this->authorize(
@@ -265,13 +273,11 @@ final class ControladorMetalThursday extends Controller
             [
                 ...$this->obterDadosFormulario(),
 
-                'seccoesFormulario' =>
-                $this->obterSeccoesAnteriores(
+                'seccoesFormulario' => $this->obterSeccoesAnteriores(
                     $pedido,
                 ),
 
-                'configuracaoFormularioMetalThursday' =>
-                $this->obterConfiguracaoFormulario(),
+                'configuracaoFormularioMetalThursday' => $this->obterConfiguracaoFormulario(),
             ],
         );
     }
@@ -286,9 +292,9 @@ final class ControladorMetalThursday extends Controller
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
-    public function store(
+    public function guardar(
         GuardarMetalThursdayRequest $pedido,
     ): JsonResponse|RedirectResponse {
         $this->authorize(
@@ -297,15 +303,13 @@ final class ControladorMetalThursday extends Controller
         );
 
         $identificadorCriador =
-            $this->obterIdentificadorUtilizador(
-                $pedido,
-            );
+            $this->obterIdentificadorUtilizador();
 
         $metalThursday =
             $this->servicoPersistencia
-            ->criar(
-                $pedido->validated(),
-            );
+                ->criar(
+                    $pedido->validated(),
+                );
 
         $this->notificarCriacao(
             $metalThursday,
@@ -315,11 +319,9 @@ final class ControladorMetalThursday extends Controller
         if ($pedido->expectsJson()) {
             return response()->json(
                 [
-                    'mensagem' =>
-                    'MetalThursday criada com sucesso.',
+                    'mensagem' => 'MetalThursday criada com sucesso.',
 
-                    'metal_thursday' =>
-                    $this->serializarMetalThursday(
+                    'metal_thursday' => $this->serializarMetalThursday(
                         $metalThursday,
                     ),
                 ],
@@ -327,29 +329,25 @@ final class ControladorMetalThursday extends Controller
             );
         }
 
-        return redirect()
-            ->route(
-                'inicio',
-            )
-            ->with(
-                'sucesso',
-                'MetalThursday criada com sucesso.',
-            );
+        return to_route(
+            'inicio',
+        )->with(
+            'sucesso',
+            'MetalThursday criada com sucesso.',
+        );
     }
 
     /**
      * Apresenta os detalhes de uma MetalThursday.
      *
-     * @param  Request  $pedido  Pedido HTTP atual.
      * @param  MetalThursday  $metalThursday  MetalThursday apresentada.
      * @return View Página de detalhes.
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
-    public function show(
-        Request $pedido,
+    public function detalhes(
         MetalThursday $metalThursday,
     ): View {
         $this->authorize(
@@ -359,16 +357,13 @@ final class ControladorMetalThursday extends Controller
 
         $this->carregarDetalhes(
             $metalThursday,
-            $this->obterIdentificadorUtilizadorOpcional(
-                $pedido,
-            ),
+            $this->obterIdentificadorUtilizadorOpcional(),
         );
 
         return view(
             'metal-thursday.detalhes',
             [
-                'metalThursday' =>
-                $metalThursday,
+                'metalThursday' => $metalThursday,
 
                 ...$this->obterDadosAvaliacao(),
             ],
@@ -384,9 +379,9 @@ final class ControladorMetalThursday extends Controller
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
-    public function edit(
+    public function editar(
         Request $pedido,
         MetalThursday $metalThursday,
     ): View {
@@ -406,20 +401,21 @@ final class ControladorMetalThursday extends Controller
                     $metalThursday,
                 ),
 
-                'seccoesFormulario' =>
-                $this->obterSeccoesFormulario(
+                'seccoesFormulario' => $this->obterSeccoesFormulario(
                     $pedido,
                     $metalThursday,
                 ),
 
-                'configuracaoFormularioMetalThursday' =>
-                $this->obterConfiguracaoFormulario(),
+                'configuracaoFormularioMetalThursday' => $this->obterConfiguracaoFormulario(),
             ],
         );
     }
 
     /**
-     * Atualiza uma MetalThursday.
+     * Atualiza uma MetalThursday através do serviço de persistência.
+     *
+     * O serviço bloqueia a MetalThursday e as respetivas secções dentro da
+     * transação e devolve a instância final persistida.
      *
      * @param  GuardarMetalThursdayRequest  $pedido  Pedido validado.
      * @param  MetalThursday  $metalThursday  MetalThursday atualizada.
@@ -427,9 +423,9 @@ final class ControladorMetalThursday extends Controller
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
-    public function update(
+    public function atualizar(
         GuardarMetalThursdayRequest $pedido,
         MetalThursday $metalThursday,
     ): JsonResponse|RedirectResponse {
@@ -438,38 +434,36 @@ final class ControladorMetalThursday extends Controller
             $metalThursday,
         );
 
-        $this->servicoPersistencia
-            ->atualizar(
-                $metalThursday,
-                $pedido->validated(),
-            );
-
-        $metalThursday->refresh();
+        $metalThursdayAtualizada =
+            $this->servicoPersistencia
+                ->atualizar(
+                    $metalThursday,
+                    $pedido->validated(),
+                );
 
         if ($pedido->expectsJson()) {
             return response()->json([
-                'mensagem' =>
-                'MetalThursday atualizada com sucesso.',
+                'mensagem' => 'MetalThursday atualizada com sucesso.',
 
-                'metal_thursday' =>
-                $this->serializarMetalThursday(
-                    $metalThursday,
+                'metal_thursday' => $this->serializarMetalThursday(
+                    $metalThursdayAtualizada,
                 ),
             ]);
         }
 
-        return redirect()
-            ->route(
-                'inicio',
-            )
-            ->with(
-                'sucesso',
-                'MetalThursday atualizada com sucesso.',
-            );
+        return to_route(
+            'inicio',
+        )->with(
+            'sucesso',
+            'MetalThursday atualizada com sucesso.',
+        );
     }
 
     /**
-     * Elimina uma MetalThursday.
+     * Elimina logicamente uma MetalThursday.
+     *
+     * O registo é novamente obtido e bloqueado dentro da transação antes da
+     * autorização e da eliminação.
      *
      * @param  Request  $pedido  Pedido HTTP.
      * @param  MetalThursday  $metalThursday  MetalThursday eliminada.
@@ -477,18 +471,33 @@ final class ControladorMetalThursday extends Controller
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
-    public function destroy(
+    public function eliminar(
         Request $pedido,
         MetalThursday $metalThursday,
     ): JsonResponse|RedirectResponse {
-        $this->authorize(
-            'delete',
-            $metalThursday,
-        );
+        DB::transaction(
+            function () use (
+                $metalThursday,
+            ): void {
+                $metalThursdayBloqueada =
+                    MetalThursday::query()
+                        ->whereKey(
+                            $metalThursday->getKey(),
+                        )
+                        ->lockForUpdate()
+                        ->firstOrFail();
 
-        $metalThursday->deleteOrFail();
+                $this->authorize(
+                    'delete',
+                    $metalThursdayBloqueada,
+                );
+
+                $metalThursdayBloqueada->deleteOrFail();
+            },
+            self::TENTATIVAS_TRANSACAO,
+        );
 
         if ($pedido->expectsJson()) {
             return response()->json(
@@ -497,14 +506,12 @@ final class ControladorMetalThursday extends Controller
             );
         }
 
-        return redirect()
-            ->route(
-                'inicio',
-            )
-            ->with(
-                'sucesso',
-                'MetalThursday eliminada com sucesso.',
-            );
+        return to_route(
+            'inicio',
+        )->with(
+            'sucesso',
+            'MetalThursday eliminada com sucesso.',
+        );
     }
 
     /**
@@ -526,7 +533,7 @@ final class ControladorMetalThursday extends Controller
             MetalThursday::class,
         );
 
-        $ultimasNomeacoes = MetalThursday::query()
+        $construtorUltimasNomeacoes = MetalThursday::query()
             ->selectRaw(
                 'proximo_nomeado_id, MAX(data) AS ultima_nomeacao_em',
             )
@@ -540,7 +547,7 @@ final class ControladorMetalThursday extends Controller
         $utilizador = Utilizador::query()
             ->selecionaveis()
             ->leftJoinSub(
-                $ultimasNomeacoes,
+                $construtorUltimasNomeacoes,
                 'ultimas_nomeacoes',
                 static function (
                     JoinClause $juncao,
@@ -555,8 +562,8 @@ final class ControladorMetalThursday extends Controller
             ->reorder()
             ->orderByRaw(
                 'CASE '
-                    . 'WHEN ultimas_nomeacoes.ultima_nomeacao_em IS NULL '
-                    . 'THEN 0 ELSE 1 END ASC',
+                    .'WHEN ultimas_nomeacoes.ultima_nomeacao_em IS NULL '
+                    .'THEN 0 ELSE 1 END ASC',
             )
             ->orderBy(
                 'ultimas_nomeacoes.ultima_nomeacao_em',
@@ -573,8 +580,7 @@ final class ControladorMetalThursday extends Controller
             ->first();
 
         return response()->json([
-            'identificador' =>
-            is_numeric(
+            'identificador' => is_numeric(
                 $utilizador?->getKey(),
             )
                 ? (int) $utilizador->getKey()
@@ -615,22 +621,22 @@ final class ControladorMetalThursday extends Controller
                 'audicaoUtilizadorAutenticado',
 
                 'comentarios' => function (
-                    Builder $consulta,
+                    Builder $construtor,
                 ) use (
                     $identificadorUtilizador,
                 ): void {
                     $this->configurarComentariosParaApresentacao(
-                        $consulta,
+                        $construtor,
                         $identificadorUtilizador,
                     );
                 },
 
                 'seccoes' => function (
-                    Builder $consulta,
+                    Builder $construtor,
                 ) use (
                     $identificadorUtilizador,
                 ): void {
-                    $consulta
+                    $construtor
                         ->withCount([
                             'comentarios',
                             'avaliacoes',
@@ -642,7 +648,7 @@ final class ControladorMetalThursday extends Controller
                         )
                         ->with([
                             'tipoSeccao',
-                            'banda.pais',
+                            'banda.origemGeografica',
                             'banda.generos',
                             'avaliacoes.utilizador',
                             'audicoes.utilizador',
@@ -650,12 +656,12 @@ final class ControladorMetalThursday extends Controller
                             'audicaoUtilizadorAutenticado',
 
                             'comentarios' => function (
-                                Builder $consultaComentarios,
+                                Builder $construtorComentarios,
                             ) use (
                                 $identificadorUtilizador,
                             ): void {
                                 $this->configurarComentariosParaApresentacao(
-                                    $consultaComentarios,
+                                    $construtorComentarios,
                                     $identificadorUtilizador,
                                 );
                             },
@@ -686,7 +692,7 @@ final class ControladorMetalThursday extends Controller
             )
             ->with([
                 'metalThursday.autor',
-                'banda.pais',
+                'banda.origemGeografica',
                 'banda.generos',
                 'tipoSeccao',
                 'avaliacoes.utilizador',
@@ -694,10 +700,10 @@ final class ControladorMetalThursday extends Controller
             ])
             ->whereHas(
                 'tipoSeccao',
-                static fn(
-                    Builder $consulta,
-                ): Builder => $consulta->where(
-                    'tem_detalhes',
+                static fn (
+                    Builder $construtor,
+                ): Builder => $construtor->where(
+                    'exige_detalhes',
                     true,
                 ),
             );
@@ -738,22 +744,22 @@ final class ControladorMetalThursday extends Controller
                 'audicaoUtilizadorAutenticado',
 
                 'comentarios' => function (
-                    Builder $consulta,
+                    Builder $construtor,
                 ) use (
                     $identificadorUtilizador,
                 ): void {
                     $this->configurarComentariosParaApresentacao(
-                        $consulta,
+                        $construtor,
                         $identificadorUtilizador,
                     );
                 },
 
                 'seccoes' => function (
-                    Builder $consulta,
+                    Builder $construtor,
                 ) use (
                     $identificadorUtilizador,
                 ): void {
-                    $consulta
+                    $construtor
                         ->withCount([
                             'comentarios',
                             'avaliacoes',
@@ -765,7 +771,7 @@ final class ControladorMetalThursday extends Controller
                         )
                         ->with([
                             'tipoSeccao',
-                            'banda.pais',
+                            'banda.origemGeografica',
                             'banda.generos',
                             'avaliacoes.utilizador',
                             'audicoes.utilizador',
@@ -773,12 +779,12 @@ final class ControladorMetalThursday extends Controller
                             'audicaoUtilizadorAutenticado',
 
                             'comentarios' => function (
-                                Builder $consultaComentarios,
+                                Builder $construtorComentarios,
                             ) use (
                                 $identificadorUtilizador,
                             ): void {
                                 $this->configurarComentariosParaApresentacao(
-                                    $consultaComentarios,
+                                    $construtorComentarios,
                                     $identificadorUtilizador,
                                 );
                             },
@@ -791,7 +797,7 @@ final class ControladorMetalThursday extends Controller
      * Obtém os dados comuns aos formulários.
      *
      * @param  MetalThursday|null  $metalThursday  Registo editado ou nulo
-     *                                               durante a criação.
+     *                                             durante a criação.
      * @return array<string, mixed> Dados dos formulários.
      *
      * @since 2.0.0
@@ -802,22 +808,18 @@ final class ControladorMetalThursday extends Controller
         ?MetalThursday $metalThursday = null,
     ): array {
         return [
-            'metalThursday' =>
-            $metalThursday,
+            'metalThursday' => $metalThursday,
 
-            'edicoes' =>
-            $this->obterEdicoesParaSelecao(),
+            'edicoes' => $this->obterEdicoesParaSelecao(),
 
-            'utilizadores' =>
-            $this->obterUtilizadoresParaSelecao(),
+            'utilizadores' => $this->obterUtilizadoresParaSelecao(),
 
-            'tiposSeccao' =>
-            TipoSeccao::query()
+            'tiposSeccao' => TipoSeccao::query()
                 ->select([
                     'id',
                     'nome',
                     'descricao',
-                    'tem_detalhes',
+                    'exige_detalhes',
                 ])
                 ->orderBy(
                     'nome',
@@ -827,15 +829,12 @@ final class ControladorMetalThursday extends Controller
                 )
                 ->get(),
 
-            'bandas' =>
-            $this->obterBandasParaSelecao(),
+            'bandas' => $this->obterBandasParaSelecao(),
 
-            'paises' =>
-            Pais::query()
+            'origensGeograficas' => OrigemGeografica::query()
                 ->select([
                     'id',
                     'nome',
-                    'codigo_iso',
                 ])
                 ->orderBy(
                     'nome',
@@ -845,8 +844,7 @@ final class ControladorMetalThursday extends Controller
                 )
                 ->get(),
 
-            'generos' =>
-            $this->obterGenerosParaSelecao(),
+            'generos' => $this->obterGenerosParaSelecao(),
         ];
     }
 
@@ -866,14 +864,11 @@ final class ControladorMetalThursday extends Controller
     private function obterDadosAvaliacao(): array
     {
         return [
-            'pontuacaoMinima' =>
-            self::PONTUACAO_MINIMA,
+            'pontuacaoMinima' => self::PONTUACAO_MINIMA,
 
-            'pontuacaoMaxima' =>
-            self::PONTUACAO_MAXIMA,
+            'pontuacaoMaxima' => self::PONTUACAO_MAXIMA,
 
-            'pontuacoesDisponiveis' =>
-            range(
+            'pontuacoesDisponiveis' => range(
                 self::PONTUACAO_MINIMA,
                 self::PONTUACAO_MAXIMA,
             ),
@@ -948,7 +943,7 @@ final class ControladorMetalThursday extends Controller
             ->select([
                 'id',
                 'nome',
-                'pais_id',
+                'origem_geografica_id',
             ])
             ->orderBy(
                 'nome',
@@ -1046,31 +1041,29 @@ final class ControladorMetalThursday extends Controller
                 $valor,
             ),
         )) {
-            self::VISTA_SIMPLIFICADA =>
-            self::VISTA_SIMPLIFICADA,
+            self::VISTA_SIMPLIFICADA => self::VISTA_SIMPLIFICADA,
 
-            default =>
-            self::VISTA_COMPLETA,
+            default => self::VISTA_COMPLETA,
         };
     }
 
     /**
      * Obtém o identificador do utilizador autenticado.
      *
-     * @param  Request  $pedido  Pedido HTTP.
      * @return int Identificador do utilizador.
      *
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 2.1.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
-    private function obterIdentificadorUtilizador(
-        Request $pedido,
-    ): int {
+    private function obterIdentificadorUtilizador(): int
+    {
         $utilizador =
-            $pedido->user();
+            Auth::guard(
+                'sessao',
+            )->user();
 
         if (! $utilizador instanceof Utilizador) {
             throw new AuthenticationException(
@@ -1078,25 +1071,14 @@ final class ControladorMetalThursday extends Controller
             );
         }
 
-        $identificador =
-            $utilizador->getKey();
-
-        if (
-            ! is_numeric($identificador)
-            || (int) $identificador < 1
-        ) {
-            throw new AuthenticationException(
-                'Não foi possível identificar o utilizador autenticado.',
-            );
-        }
-
-        return (int) $identificador;
+        return $this->obterIdentificadorUtilizadorValido(
+            $utilizador,
+        );
     }
 
     /**
      * Obtém o identificador do utilizador autenticado, quando existente.
      *
-     * @param  Request  $pedido  Pedido HTTP.
      * @return int|null Identificador ou nulo.
      *
      * @throws AuthenticationException Quando o guard devolve um utilizador
@@ -1104,13 +1086,14 @@ final class ControladorMetalThursday extends Controller
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    private function obterIdentificadorUtilizadorOpcional(
-        Request $pedido,
-    ): ?int {
+    private function obterIdentificadorUtilizadorOpcional(): ?int
+    {
         $utilizador =
-            $pedido->user();
+            Auth::guard(
+                'sessao',
+            )->user();
 
         if ($utilizador === null) {
             return null;
@@ -1122,6 +1105,26 @@ final class ControladorMetalThursday extends Controller
             );
         }
 
+        return $this->obterIdentificadorUtilizadorValido(
+            $utilizador,
+        );
+    }
+
+    /**
+     * Obtém e valida o identificador de um utilizador autenticado.
+     *
+     * @param  Utilizador  $utilizador  Utilizador devolvido pelo guard.
+     * @return int Identificador validado.
+     *
+     * @throws AuthenticationException Quando o identificador não é válido.
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private function obterIdentificadorUtilizadorValido(
+        Utilizador $utilizador,
+    ): int {
         $identificador =
             $utilizador->getKey();
 
@@ -1158,16 +1161,13 @@ final class ControladorMetalThursday extends Controller
             $metalThursday->data;
 
         return [
-            'id' =>
-            (int) $metalThursday->getKey(),
+            'id' => (int) $metalThursday->getKey(),
 
-            'nome' =>
-            is_string($metalThursday->nome)
+            'nome' => is_string($metalThursday->nome)
                 ? $metalThursday->nome
                 : null,
 
-            'data' =>
-            $data instanceof CarbonInterface
+            'data' => $data instanceof CarbonInterface
                 ? $data->format(
                     'Y-m-d',
                 )
@@ -1215,7 +1215,7 @@ final class ControladorMetalThursday extends Controller
         }
 
         try {
-            $consulta = Utilizador::query()
+            $construtor = Utilizador::query()
                 ->selecionaveis()
                 ->where(
                     'utilizadores.id',
@@ -1224,14 +1224,14 @@ final class ControladorMetalThursday extends Controller
                 );
 
             if ($nomeado instanceof Utilizador) {
-                $consulta->where(
+                $construtor->where(
                     'utilizadores.id',
                     '!=',
                     $nomeado->getKey(),
                 );
             }
 
-            $consulta
+            $construtor
                 ->reorder(
                     'utilizadores.id',
                 )
@@ -1267,7 +1267,7 @@ final class ControladorMetalThursday extends Controller
      * A relação `respostas` é carregada nas respostas para satisfazer o
      * contrato do componente de comentário.
      *
-     * @param  Builder<Comentario>  $consulta  Consulta dos comentários.
+     * @param  Builder<Comentario>  $construtor  Consulta dos comentários.
      * @param  int|null  $identificadorUtilizador  Utilizador autenticado.
      *
      * @since 3.0.0
@@ -1275,10 +1275,10 @@ final class ControladorMetalThursday extends Controller
      * @version 1.0.0
      */
     private function configurarComentariosParaApresentacao(
-        Builder $consulta,
+        Builder $construtor,
         ?int $identificadorUtilizador,
     ): void {
-        $consulta
+        $construtor
             ->principais()
             ->comDadosApresentacao(
                 $identificadorUtilizador,
@@ -1286,11 +1286,11 @@ final class ControladorMetalThursday extends Controller
             ->ordenadosCronologicamente()
             ->with([
                 'respostas' => static function (
-                    Builder $consultaRespostas,
+                    Builder $construtorRespostas,
                 ) use (
                     $identificadorUtilizador,
                 ): void {
-                    $consultaRespostas
+                    $construtorRespostas
                         ->comDadosApresentacao(
                             $identificadorUtilizador,
                         )
@@ -1370,94 +1370,69 @@ final class ControladorMetalThursday extends Controller
             : self::VISTA_COMPLETA;
 
         return [
-            'gruposFiltrosDisponiveis' =>
-            $this->obterGruposFiltrosDisponiveis(),
+            'gruposFiltrosDisponiveis' => $this->obterGruposFiltrosDisponiveis(),
 
-            'opcoesPorPagina' =>
-            self::OPCOES_POR_PAGINA,
+            'opcoesPorPagina' => self::OPCOES_POR_PAGINA,
 
-            'porPagina' =>
-            $porPagina,
+            'porPagina' => $porPagina,
 
-            'nomeParametroVista' =>
-            'vista',
+            'nomeParametroVista' => 'vista',
 
-            'vistaAtual' =>
-            $vistaAtual,
+            'vistaAtual' => $vistaAtual,
 
-            'vistaCompleta' =>
-            self::VISTA_COMPLETA,
+            'vistaCompleta' => self::VISTA_COMPLETA,
 
-            'vistaSimplificada' =>
-            self::VISTA_SIMPLIFICADA,
+            'vistaSimplificada' => self::VISTA_SIMPLIFICADA,
 
-            'nomeParametroPorPagina' =>
-            'por_pagina',
+            'nomeParametroPorPagina' => 'por_pagina',
 
-            'nomeParametroOrdenacao' =>
-            'ordenar_por',
+            'nomeParametroOrdenacao' => 'ordenar_por',
 
-            'ordenacaoAtual' =>
-            $ordenacao->value,
+            'ordenacaoAtual' => $ordenacao->value,
 
             'opcoesOrdenacao' => [
                 [
-                    'chave' =>
-                    OrdenacaoMetalThursday::Data->value,
+                    'chave' => OrdenacaoMetalThursday::Data->value,
 
-                    'valor' =>
-                    'Data',
+                    'valor' => 'Data',
                 ],
                 [
-                    'chave' =>
-                    OrdenacaoMetalThursday::Classificacao->value,
+                    'chave' => OrdenacaoMetalThursday::Classificacao->value,
 
-                    'valor' =>
-                    'Avaliação média',
+                    'valor' => 'Avaliação média',
                 ],
                 [
-                    'chave' =>
-                    OrdenacaoMetalThursday::MinhaClassificacao->value,
+                    'chave' => OrdenacaoMetalThursday::MinhaClassificacao->value,
 
-                    'valor' =>
-                    'A minha avaliação',
+                    'valor' => 'A minha avaliação',
                 ],
             ],
 
-            'nomeParametroDirecaoOrdenacao' =>
-            'direcao_ordenacao',
+            'nomeParametroDirecaoOrdenacao' => 'direcao_ordenacao',
 
-            'direcaoOrdenacaoAtual' =>
-            $direcaoOrdenacao->value,
+            'direcaoOrdenacaoAtual' => $direcaoOrdenacao->value,
 
             'opcoesDirecaoOrdenacao' => [
                 [
-                    'chave' =>
-                    DirecaoOrdenacao::Ascendente->value,
+                    'chave' => DirecaoOrdenacao::Ascendente->value,
 
-                    'valor' =>
-                    'Ascendente',
+                    'valor' => 'Ascendente',
                 ],
                 [
-                    'chave' =>
-                    DirecaoOrdenacao::Descendente->value,
+                    'chave' => DirecaoOrdenacao::Descendente->value,
 
-                    'valor' =>
-                    'Descendente',
+                    'valor' => 'Descendente',
                 ],
             ],
 
-            'textoBotaoAlternarVista' =>
-            $vistaAtual === self::VISTA_SIMPLIFICADA
+            'textoBotaoAlternarVista' => $vistaAtual === self::VISTA_SIMPLIFICADA
                 ? 'Ver vista completa'
                 : 'Ver vista simplificada',
 
-            'ligacaoLimparFiltros' =>
-            route(
+            'ligacaoLimparFiltros' => route(
                 'inicio',
                 [
-                    'vista' =>
-                    $vistaAtual,
+                    'vista' => $vistaAtual,
                 ],
             ),
         ];
@@ -1552,11 +1527,9 @@ final class ControladorMetalThursday extends Controller
                 }
 
                 $filtrosNormalizados[] = [
-                    'chave' =>
-                    $chave,
+                    'chave' => $chave,
 
-                    'rotulo' =>
-                    $rotulo,
+                    'rotulo' => $rotulo,
                 ];
             }
 
@@ -1565,13 +1538,11 @@ final class ControladorMetalThursday extends Controller
             }
 
             $gruposNormalizados[] = [
-                'rotulo' =>
-                $rotuloGrupo !== ''
+                'rotulo' => $rotuloGrupo !== ''
                     ? $rotuloGrupo
                     : 'Filtros',
 
-                'filtros' =>
-                $filtrosNormalizados,
+                'filtros' => $filtrosNormalizados,
             ];
         }
 
@@ -1609,7 +1580,7 @@ final class ControladorMetalThursday extends Controller
      * @param  Request  $pedido  Pedido HTTP atual.
      * @param  MetalThursday  $metalThursday  MetalThursday editada.
      * @return array<int, SeccaoMetalThursday|array<string, mixed>>
-     *         Secções utilizadas pelo formulário.
+     *                                                              Secções utilizadas pelo formulário.
      *
      * @since 3.0.0
      *
@@ -1720,29 +1691,24 @@ final class ControladorMetalThursday extends Controller
     {
         return [
             'enderecos' => [
-                'guardarEdicao' =>
-                route(
+                'guardarEdicao' => route(
                     'edicoes.guardar',
                 ),
 
-                'guardarBanda' =>
-                route(
+                'guardarBanda' => route(
                     'bandas.guardar',
                 ),
 
-                'guardarGenero' =>
-                route(
+                'guardarGenero' => route(
                     'generos.guardar',
                 ),
 
-                'obterUtilizadorHaMaisTempoSemNomeacao' =>
-                route(
+                'obterUtilizadorHaMaisTempoSemNomeacao' => route(
                     'utilizadores.ha-mais-tempo-sem-nomeacao',
                 ),
             ],
 
-            'fornecedoresIncorporacao' =>
-            $this->renderizadorIncorporacoes
+            'fornecedoresIncorporacao' => $this->renderizadorIncorporacoes
                 ->definicoesParaJavaScript(),
         ];
     }
@@ -1804,36 +1770,29 @@ final class ControladorMetalThursday extends Controller
 
         return [
             'dadosFiltros' => [
-                'edicoes' =>
-                $this->serializarOpcoesSelecao(
+                'edicoes' => $this->serializarOpcoesSelecao(
                     $this->obterEdicoesParaSelecao(),
                 ),
 
-                'utilizadores' =>
-                $this->serializarOpcoesSelecao(
+                'utilizadores' => $this->serializarOpcoesSelecao(
                     $this->obterUtilizadoresParaSelecao(),
                 ),
 
-                'bandas' =>
-                $this->serializarOpcoesSelecao(
+                'bandas' => $this->serializarOpcoesSelecao(
                     $this->obterBandasParaSelecao(),
                 ),
 
-                'generos' =>
-                $this->serializarOpcoesSelecao(
+                'generos' => $this->serializarOpcoesSelecao(
                     $this->obterGenerosParaSelecao(),
                 ),
             ],
 
-            'filtrosDisponiveis' =>
-            $filtrosPorChave,
+            'filtrosDisponiveis' => $filtrosPorChave,
 
             'vistas' => [
-                'completa' =>
-                self::VISTA_COMPLETA,
+                'completa' => self::VISTA_COMPLETA,
 
-                'simplificada' =>
-                self::VISTA_SIMPLIFICADA,
+                'simplificada' => self::VISTA_SIMPLIFICADA,
             ],
         ];
     }
@@ -1893,11 +1852,9 @@ final class ControladorMetalThursday extends Controller
             }
 
             $opcoes[] = [
-                'identificador' =>
-                (int) $identificador,
+                'identificador' => (int) $identificador,
 
-                'nome' =>
-                trim(
+                'nome' => trim(
                     $nome,
                 ),
             ];
