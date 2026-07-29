@@ -17,11 +17,12 @@ use Illuminate\Support\Facades\Route;
  * Define as rotas de autenticação e de gestão do perfil.
  *
  * Os nomes de rota exigidos pelos contratos técnicos do Laravel mantêm
- * a nomenclatura convencional.
+ * a nomenclatura convencional. Todos os middlewares de autenticação indicam
+ * explicitamente o guard `sessao`.
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 4.0.0
  */
 
 /*
@@ -31,7 +32,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::middleware(
-    'guest',
+    'guest:sessao',
 )->group(
     static function (): void {
         /*
@@ -191,7 +192,7 @@ Route::get(
 */
 
 Route::middleware([
-    'auth',
+    'auth:sessao',
     'auth.session',
 ])->group(
     static function (): void {
