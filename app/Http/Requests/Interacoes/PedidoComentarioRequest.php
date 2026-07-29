@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Interacoes;
 
+use App\Models\Interacoes\Comentario;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use LogicException;
 
@@ -13,23 +15,16 @@ use LogicException;
  * É utilizado pelos pedidos de criação, resposta e atualização de
  * comentários.
  *
+ * A normalização efetuada nesta camada melhora a resposta de validação
+ * apresentada ao cliente. O modelo {@see Comentario} volta a validar o
+ * conteúdo antes da persistência, protegendo outros pontos de entrada.
+ *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 abstract class PedidoComentarioRequest extends FormRequest
 {
-    /**
-     * Número máximo de caracteres permitido num comentário.
-     *
-     * @var int
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const LIMITE_CARACTERES = 2000;
-
     /**
      * Determina se o pedido pode ser processado.
      *
@@ -51,11 +46,12 @@ abstract class PedidoComentarioRequest extends FormRequest
      * Normaliza o conteúdo antes da validação.
      *
      * Os finais de linha são convertidos para o formato Unix e os espaços
-     * exteriores são removidos. Os espaços internos são preservados.
+     * exteriores são removidos. Os espaços e as quebras de linha interiores
+     * são preservados.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     protected function prepareForValidation(): void
     {
@@ -77,11 +73,11 @@ abstract class PedidoComentarioRequest extends FormRequest
     /**
      * Obtém as regras de validação.
      *
-     * @return array<string, array<int, string>> Regras de validação.
+     * @return array<string, list<string|Closure>> Regras de validação.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function rules(): array
     {
@@ -90,7 +86,53 @@ abstract class PedidoComentarioRequest extends FormRequest
                 'bail',
                 'required',
                 'string',
-                'max:'.self::LIMITE_CARACTERES,
+                'max:'.Comentario::COMPRIMENTO_MAXIMO_CONTEUDO,
+
+                /**
+                 * Confirma que o conteúdo é texto UTF-8 válido e não contém
+                 * caracteres de controlo incompatíveis com um comentário.
+                 *
+                 * @param  string  $atributo  Nome do atributo.
+                 * @param  mixed  $valor  Valor recebido.
+                 * @param  Closure(string): void  $falhar  Função de erro.
+                 *
+                 * @since 2.0.0
+                 *
+                 * @version 1.0.0
+                 */
+                static function (
+                    string $atributo,
+                    mixed $valor,
+                    Closure $falhar,
+                ): void {
+                    if (! is_string($valor)) {
+                        return;
+                    }
+
+                    if (
+                        preg_match(
+                            '//u',
+                            $valor,
+                        ) !== 1
+                    ) {
+                        $falhar(
+                            'O comentário contém texto inválido.',
+                        );
+
+                        return;
+                    }
+
+                    if (
+                        preg_match(
+                            '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/',
+                            $valor,
+                        ) === 1
+                    ) {
+                        $falhar(
+                            'O comentário contém caracteres inválidos.',
+                        );
+                    }
+                },
             ],
         ];
     }
@@ -102,7 +144,7 @@ abstract class PedidoComentarioRequest extends FormRequest
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function messages(): array
     {
@@ -111,7 +153,10 @@ abstract class PedidoComentarioRequest extends FormRequest
 
             'conteudo.string' => 'O comentário deve ser uma sequência de caracteres.',
 
-            'conteudo.max' => 'O comentário não pode ter mais de 2000 caracteres.',
+            'conteudo.max' => sprintf(
+                'O comentário não pode ter mais de %d caracteres.',
+                Comentario::COMPRIMENTO_MAXIMO_CONTEUDO,
+            ),
         ];
     }
 
@@ -136,11 +181,12 @@ abstract class PedidoComentarioRequest extends FormRequest
      *
      * @return string Conteúdo normalizado.
      *
-     * @throws LogicException Quando o conteúdo validado não é uma string.
+     * @throws LogicException Quando o resultado validado não contém uma
+     *                        string não vazia.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     final public function obterConteudo(): string
     {
@@ -148,7 +194,10 @@ abstract class PedidoComentarioRequest extends FormRequest
             'conteudo',
         );
 
-        if (! is_string($conteudo)) {
+        if (
+            ! is_string($conteudo)
+            || $conteudo === ''
+        ) {
             throw new LogicException(
                 'O pedido validado não contém o texto do comentário.',
             );
@@ -165,7 +214,7 @@ abstract class PedidoComentarioRequest extends FormRequest
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function normalizarConteudo(
         string $conteudo,
