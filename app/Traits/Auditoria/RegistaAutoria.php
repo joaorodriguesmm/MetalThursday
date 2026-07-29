@@ -12,16 +12,18 @@ use Illuminate\Support\Facades\Auth;
 /**
  * Regista automaticamente a autoria da criação e atualização dos modelos.
  *
- * Quando existe um utilizador autenticado, o trait preenche os atributos
- * `criado_por_id` e `atualizado_por_id`. Em execuções sem autenticação,
- * como factories, seeders e comandos Artisan, conserva os valores definidos
- * explicitamente ou mantém os atributos nulos.
+ * Quando existe um utilizador autenticado e persistido na guarda `sessao`, o
+ * trait preenche os atributos `criado_por_id` e `atualizado_por_id`.
+ *
+ * Em factories, seeders, comandos Artisan ou outros contextos sem
+ * autenticação, os valores definidos explicitamente são preservados e os
+ * restantes permanecem nulos.
  *
  * @mixin Model
  *
  * @since 1.0.0
  *
- * @version 2.1.0
+ * @version 3.0.0
  */
 trait RegistaAutoria
 {
@@ -29,8 +31,8 @@ trait RegistaAutoria
      * Regista um callback executado durante a criação do modelo.
      *
      * Este método é fornecido pelo sistema de eventos do Eloquent. A
-     * declaração abstrata permite que a IDE e os analisadores estáticos
-     * reconheçam o contrato utilizado pelo trait.
+     * declaração abstrata permite que o Intelephense e outros analisadores
+     * estáticos reconheçam o contrato utilizado pelo trait.
      *
      * @param  mixed  $callback  Callback do evento.
      *
@@ -44,8 +46,8 @@ trait RegistaAutoria
      * Regista um callback executado durante a atualização do modelo.
      *
      * Este método é fornecido pelo sistema de eventos do Eloquent. A
-     * declaração abstrata permite que a IDE e os analisadores estáticos
-     * reconheçam o contrato utilizado pelo trait.
+     * declaração abstrata permite que o Intelephense e outros analisadores
+     * estáticos reconheçam o contrato utilizado pelo trait.
      *
      * @param  mixed  $callback  Callback do evento.
      *
@@ -56,14 +58,14 @@ trait RegistaAutoria
     abstract public static function updating($callback);
 
     /**
-     * Inicia os eventos responsáveis pelo registo da autoria.
+     * Regista os eventos responsáveis pelo preenchimento da autoria.
      *
      * O nome deste método deve corresponder ao nome do trait para que o
      * Eloquent o execute automaticamente durante o arranque do modelo.
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
     public static function bootRegistaAutoria(): void
     {
@@ -124,8 +126,8 @@ trait RegistaAutoria
     /**
      * Obtém o utilizador responsável pela criação do registo.
      *
-     * A relação pode ser nula quando o registo foi criado sem autenticação
-     * ou quando o respetivo utilizador foi eliminado.
+     * A relação pode ser nula quando o registo foi criado sem autenticação ou
+     * quando o utilizador responsável foi posteriormente eliminado.
      *
      * @return BelongsTo<Utilizador, $this> Relação com o utilizador criador.
      *
@@ -163,21 +165,32 @@ trait RegistaAutoria
     }
 
     /**
-     * Obtém o identificador inteiro do utilizador autenticado.
+     * Obtém o identificador do utilizador autenticado e persistido.
      *
-     * Um identificador ausente, inválido ou não positivo é tratado como
-     * inexistência de autenticação aplicável ao registo de autoria.
+     * Um objeto autenticado de outro tipo, um utilizador não persistido ou um
+     * identificador ausente, inválido ou não positivo são tratados como
+     * inexistência de autenticação aplicável à auditoria.
      *
      * @return int|null Identificador do utilizador ou nulo.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private static function obterIdentificadorUtilizadorAutenticado(): ?int
     {
-        $identificador =
-            Auth::id();
+        $utilizador = Auth::guard(
+            'sessao',
+        )->user();
+
+        if (
+            ! $utilizador instanceof Utilizador
+            || ! $utilizador->exists
+        ) {
+            return null;
+        }
+
+        $identificador = $utilizador->getKey();
 
         if (
             is_int($identificador)
@@ -186,23 +199,27 @@ trait RegistaAutoria
             return $identificador;
         }
 
-        if (is_string($identificador)) {
-            $identificadorNormalizado =
-                trim(
-                    $identificador,
-                );
-
-            if (
-                $identificadorNormalizado !== ''
-                && ctype_digit(
-                    $identificadorNormalizado,
-                )
-                && (int) $identificadorNormalizado > 0
-            ) {
-                return (int) $identificadorNormalizado;
-            }
+        if (! is_string($identificador)) {
+            return null;
         }
 
-        return null;
+        $identificadorNormalizado = trim(
+            $identificador,
+        );
+
+        if (
+            $identificadorNormalizado === ''
+            || ! ctype_digit(
+                $identificadorNormalizado,
+            )
+        ) {
+            return null;
+        }
+
+        $identificadorInteiro = (int) $identificadorNormalizado;
+
+        return $identificadorInteiro > 0
+            ? $identificadorInteiro
+            : null;
     }
 }
