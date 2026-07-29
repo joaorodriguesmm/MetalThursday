@@ -5,32 +5,35 @@ declare(strict_types=1);
 namespace App\Models\Interacoes;
 
 use App\Models\Autenticacao\Utilizador;
+use App\Models\MetalThursday\MetalThursday;
+use App\Models\MetalThursday\SeccaoMetalThursday;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 /**
- * Representa o registo de audição de uma entidade da aplicação.
+ * Representa uma audição registada por um utilizador.
  *
- * A entidade ouvida é associada através de uma relação polimórfica, permitindo
- * registar audições de diferentes tipos de conteúdo.
+ * Uma audição pode pertencer a uma MetalThursday ou a uma das respetivas
+ * secções. Cada utilizador pode marcar cada entidade como ouvida apenas uma
+ * vez.
  *
- * Cada utilizador pode registar apenas uma audição para a mesma entidade,
- * conforme a restrição única definida na tabela `audicoes`.
+ * A unicidade é garantida pela base de dados através do conjunto
+ * `utilizador_id`, `tipo_audivel` e `audivel_id`.
  *
  * @property int $id
  * @property int $utilizador_id
- * @property string $tipo_audivel
+ * @property 'metal_thursday'|'seccao_metal_thursday' $tipo_audivel
  * @property int $audivel_id
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
  * @property-read Utilizador $utilizador
- * @property-read Model|null $audivel
+ * @property-read MetalThursday|SeccaoMetalThursday|null $audivel
  *
  * @since 1.0.0
  *
- * @version 2.1.0
+ * @version 3.0.0
  */
 class Audicao extends Model
 {
@@ -48,59 +51,40 @@ class Audicao extends Model
     /**
      * Atributos permitidos em operações de atribuição em massa.
      *
-     * As colunas da relação polimórfica devem ser atribuídas através da
-     * relação Eloquent da entidade ouvida.
+     * O tipo e o identificador da entidade ouvida são preenchidos pela
+     * relação polimórfica e não podem ser atribuídos diretamente através de
+     * dados externos.
      *
-     * @var array<int, string>
+     * @var list<string>
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     protected $fillable = [
         'utilizador_id',
     ];
 
     /**
-     * Define as conversões automáticas dos atributos.
+     * Define as conversões automáticas dos identificadores.
      *
      * @return array<string, string> Conversões dos atributos.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     protected function casts(): array
     {
         return [
             'utilizador_id' => 'integer',
+
             'audivel_id' => 'integer',
         ];
     }
 
     /**
-     * Obtém a entidade que foi ouvida.
-     *
-     * Os nomes das colunas são indicados explicitamente porque utilizam
-     * nomenclatura portuguesa.
-     *
-     * @return MorphTo<Model, $this> Relação com a entidade ouvida.
-     *
-     * @since 1.0.0
-     *
-     * @version 2.0.0
-     */
-    public function audivel(): MorphTo
-    {
-        return $this->morphTo(
-            name: 'audivel',
-            type: 'tipo_audivel',
-            id: 'audivel_id',
-        );
-    }
-
-    /**
-     * Obtém o utilizador responsável pela audição.
+     * Obtém o utilizador que registou a audição.
      *
      * @return BelongsTo<Utilizador, $this> Relação com o utilizador.
      *
@@ -113,6 +97,32 @@ class Audicao extends Model
         return $this->belongsTo(
             Utilizador::class,
             'utilizador_id',
+        );
+    }
+
+    /**
+     * Obtém a entidade associada à audição.
+     *
+     * Os aliases polimórficos permitidos são:
+     *
+     * - `metal_thursday`;
+     * - `seccao_metal_thursday`.
+     *
+     * A relação pode devolver nulo quando a entidade foi eliminada
+     * logicamente e não foi incluída explicitamente na consulta.
+     *
+     * @return MorphTo<Model, $this> Relação com a entidade ouvida.
+     *
+     * @since 1.0.0
+     *
+     * @version 3.0.0
+     */
+    public function audivel(): MorphTo
+    {
+        return $this->morphTo(
+            name: 'audivel',
+            type: 'tipo_audivel',
+            id: 'audivel_id',
         );
     }
 }
