@@ -4,28 +4,50 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Autenticacao;
 
+use App\ObjetosValor\Utilizadores\EnderecoEmail;
 use App\Regras\Autenticacao\RequisitosPalavraPasse;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
+use InvalidArgumentException;
 use LogicException;
 
 /**
  * Valida um pedido de redefinição da palavra-passe.
  *
  * A validade do código, a correspondência com o endereço de e-mail e a
- * existência do utilizador são verificadas pelo gestor de palavras-passe.
+ * existência do utilizador são verificadas pelo gestor de palavras-passe do
+ * Laravel.
+ *
+ * Os campos recebidos pelo formulário mantêm nomes portugueses. As chaves
+ * técnicas `password`, `password_confirmation` e `token` apenas são
+ * construídas pelo controlador ao invocar o gestor de palavras-passe.
  *
  * @since 1.0.0
  *
- * @version 3.1.0
+ * @version 4.0.0
  */
 final class RedefinirPalavraPasseRequest extends FormRequest
 {
     /**
+     * Comprimento máximo aceite para o código de redefinição.
+     *
+     * Este é um limite técnico do pedido e protege o processamento de valores
+     * anormalmente extensos.
+     *
+     * @var int
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    private const COMPRIMENTO_MAXIMO_CODIGO_REDEFINICAO = 255;
+
+    /**
      * Mensagem apresentada quando os dados da ligação não são válidos.
      *
      * A mesma mensagem é utilizada para o código e para o endereço de e-mail,
-     * evitando expor detalhes internos do processo de redefinição.
+     * evitando expor qual dos valores falhou ou se existe uma conta associada.
      *
      * @var string
      *
@@ -58,7 +80,7 @@ final class RedefinirPalavraPasseRequest extends FormRequest
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     protected function prepareForValidation(): void
     {
@@ -93,13 +115,15 @@ final class RedefinirPalavraPasseRequest extends FormRequest
      * Obtém as regras de validação.
      *
      * Os requisitos da nova palavra-passe são obtidos através da respetiva
-     * fonte central, garantindo consistência com os restantes fluxos.
+     * fonte central. A sintaxe, o comprimento e a normalização definitiva do
+     * endereço de e-mail pertencem ao objeto de valor
+     * {@see EnderecoEmail}.
      *
-     * @return array<string, array<int, mixed>> Regras de validação.
+     * @return array<string, list<mixed>> Regras de validação.
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
     public function rules(): array
     {
@@ -108,15 +132,15 @@ final class RedefinirPalavraPasseRequest extends FormRequest
                 'bail',
                 'required',
                 'string',
-                'max:255',
+                'max:'.self::COMPRIMENTO_MAXIMO_CODIGO_REDEFINICAO,
+                $this->criarRegraCodigoRedefinicao(),
             ],
 
             'email' => [
                 'bail',
                 'required',
                 'string',
-                'email:rfc',
-                'max:255',
+                $this->criarRegraEnderecoEmail(),
             ],
 
             'palavra_passe' => RequisitosPalavraPasse::regrasObrigatorias(),
@@ -132,38 +156,32 @@ final class RedefinirPalavraPasseRequest extends FormRequest
     }
 
     /**
-     * Adiciona um erro único para dados inválidos da ligação.
+     * Obtém as validações executadas depois das regras principais.
      *
-     * Os erros associados ao código ou ao endereço de e-mail pertencem a
+     * Os erros associados ao código e ao endereço de e-mail pertencem a
      * campos ocultos. A chave `ligacao_redefinicao` permite apresentar uma
-     * única mensagem segura e visível na view.
+     * única mensagem segura e visível na vista.
      *
-     * @param  Validator  $validador  Validador do pedido.
+     * @return list<callable(Validator): void> Validações adicionais.
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    protected function withValidator(
-        Validator $validador,
-    ): void {
-        $validador->after(
+    public function after(): array
+    {
+        return [
             static function (
                 Validator $validador,
             ): void {
-                $temErroNaLigacao =
-                    $validador
+                if (
+                    ! $validador
                         ->errors()
-                        ->has(
+                        ->hasAny([
                             'codigo_redefinicao',
-                        )
-                    || $validador
-                        ->errors()
-                        ->has(
                             'email',
-                        );
-
-                if (! $temErroNaLigacao) {
+                        ])
+                ) {
                     return;
                 }
 
@@ -174,7 +192,7 @@ final class RedefinirPalavraPasseRequest extends FormRequest
                         self::MENSAGEM_LIGACAO_INVALIDA,
                     );
             },
-        );
+        ];
     }
 
     /**
@@ -184,7 +202,7 @@ final class RedefinirPalavraPasseRequest extends FormRequest
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
     public function messages(): array
     {
@@ -198,10 +216,6 @@ final class RedefinirPalavraPasseRequest extends FormRequest
             'email.required' => self::MENSAGEM_LIGACAO_INVALIDA,
 
             'email.string' => self::MENSAGEM_LIGACAO_INVALIDA,
-
-            'email.email' => self::MENSAGEM_LIGACAO_INVALIDA,
-
-            'email.max' => self::MENSAGEM_LIGACAO_INVALIDA,
 
             'palavra_passe.required' => 'Por favor, insere a nova palavra-passe.',
 
@@ -258,19 +272,34 @@ final class RedefinirPalavraPasseRequest extends FormRequest
     }
 
     /**
-     * Obtém o endereço de e-mail validado.
+     * Obtém o endereço de e-mail validado e normalizado.
      *
      * @return string Endereço de e-mail normalizado.
      *
+     * @throws LogicException Quando o resultado validado deixa de cumprir o
+     *                        contrato do objeto de valor.
+     *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function email(): string
     {
-        return $this->obterTextoValidado(
-            'email',
-        );
+        $email =
+            $this->obterTextoValidado(
+                'email',
+            );
+
+        try {
+            return EnderecoEmail::deTexto(
+                $email,
+            )->valor();
+        } catch (InvalidArgumentException $excecao) {
+            throw new LogicException(
+                'O pedido validado não contém um endereço de e-mail válido.',
+                previous: $excecao,
+            );
+        }
     }
 
     /**
@@ -303,6 +332,81 @@ final class RedefinirPalavraPasseRequest extends FormRequest
         return $this->obterTextoValidado(
             'confirmacao_palavra_passe',
         );
+    }
+
+    /**
+     * Cria a regra de validação do código de redefinição.
+     *
+     * O código não pode conter texto UTF-8 inválido, espaços ou caracteres de
+     * controlo.
+     *
+     * @return Closure(string, mixed, Closure(string): void): void Regra.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    private function criarRegraCodigoRedefinicao(): Closure
+    {
+        return static function (
+            string $atributo,
+            mixed $valor,
+            Closure $falhar,
+        ): void {
+            if (! is_string($valor)) {
+                return;
+            }
+
+            if (
+                preg_match(
+                    '//u',
+                    $valor,
+                ) !== 1
+                || preg_match(
+                    '/[\x00-\x20\x7F]/',
+                    $valor,
+                ) === 1
+            ) {
+                $falhar(
+                    self::MENSAGEM_LIGACAO_INVALIDA,
+                );
+            }
+        };
+    }
+
+    /**
+     * Cria a regra de validação do endereço de e-mail.
+     *
+     * A sintaxe, o comprimento e a normalização definitiva pertencem ao
+     * objeto de valor {@see EnderecoEmail}.
+     *
+     * @return Closure(string, mixed, Closure(string): void): void Regra.
+     *
+     * @since 3.0.0
+     *
+     * @version 1.0.0
+     */
+    private function criarRegraEnderecoEmail(): Closure
+    {
+        return static function (
+            string $atributo,
+            mixed $valor,
+            Closure $falhar,
+        ): void {
+            if (! is_string($valor)) {
+                return;
+            }
+
+            try {
+                EnderecoEmail::deTexto(
+                    $valor,
+                );
+            } catch (InvalidArgumentException) {
+                $falhar(
+                    self::MENSAGEM_LIGACAO_INVALIDA,
+                );
+            }
+        };
     }
 
     /**
