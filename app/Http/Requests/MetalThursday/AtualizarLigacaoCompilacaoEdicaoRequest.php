@@ -4,26 +4,38 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\MetalThursday;
 
+use App\Models\MetalThursday\Edicao;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use LogicException;
 
 /**
  * Valida a ligação da compilação associada a uma edição.
  *
+ * Uma ligação vazia representa a remoção da ligação atualmente persistida.
+ * Quando existe uma ligação, apenas são aceites endereços absolutos HTTP ou
+ * HTTPS sem credenciais incorporadas.
+ *
+ * A validação HTTP produz mensagens adequadas para o utilizador. O modelo
+ * {@see Edicao} volta a validar o valor antes da persistência.
+ *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 final class AtualizarLigacaoCompilacaoEdicaoRequest extends FormRequest
 {
     /**
      * Determina se o pedido pode ser processado.
      *
+     * A autorização da atualização é realizada pelo controlador através da
+     * política da edição.
+     *
      * @return bool Verdadeiro para permitir a validação.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function authorize(): bool
     {
@@ -36,9 +48,12 @@ final class AtualizarLigacaoCompilacaoEdicaoRequest extends FormRequest
      * Uma string vazia é convertida para nulo, permitindo remover a ligação
      * atualmente associada à edição.
      *
+     * Valores que não sejam strings permanecem inalterados para que as regras
+     * de tipo produzam a mensagem de validação correspondente.
+     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     protected function prepareForValidation(): void
     {
@@ -50,13 +65,13 @@ final class AtualizarLigacaoCompilacaoEdicaoRequest extends FormRequest
             return;
         }
 
-        $ligacao = trim(
+        $ligacaoNormalizada = trim(
             $ligacao,
         );
 
         $this->merge([
-            'ligacao_compilacao' => $ligacao !== ''
-                ? $ligacao
+            'ligacao_compilacao' => $ligacaoNormalizada !== ''
+                ? $ligacaoNormalizada
                 : null,
         ]);
     }
@@ -64,21 +79,106 @@ final class AtualizarLigacaoCompilacaoEdicaoRequest extends FormRequest
     /**
      * Obtém as regras de validação.
      *
-     * @return array<string, array<int, string>> Regras de validação.
+     * A regra personalizada confirma as restrições adicionais aplicadas pelo
+     * modelo: texto UTF-8 válido, ausência de caracteres de controlo,
+     * credenciais, barras invertidas e espaços interiores.
+     *
+     * @return array<string, list<string|Closure>> Regras de validação.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function rules(): array
     {
         return [
             'ligacao_compilacao' => [
+                'bail',
                 'present',
                 'nullable',
                 'string',
                 'url:http,https',
-                'max:2048',
+                'max:'.Edicao::COMPRIMENTO_MAXIMO_LIGACAO_COMPILACAO,
+
+                /**
+                 * Confirma as restrições adicionais da ligação.
+                 *
+                 * @param  string  $atributo  Nome do atributo.
+                 * @param  mixed  $valor  Valor recebido.
+                 * @param  Closure(string): void  $falhar  Função de erro.
+                 *
+                 * @since 2.0.0
+                 *
+                 * @version 1.0.0
+                 */
+                static function (
+                    string $atributo,
+                    mixed $valor,
+                    Closure $falhar,
+                ): void {
+                    if ($valor === null) {
+                        return;
+                    }
+
+                    if (! is_string($valor)) {
+                        return;
+                    }
+
+                    if (
+                        preg_match(
+                            '//u',
+                            $valor,
+                        ) !== 1
+                    ) {
+                        $falhar(
+                            'A ligação da compilação contém texto inválido.',
+                        );
+
+                        return;
+                    }
+
+                    if (
+                        str_contains(
+                            $valor,
+                            '\\',
+                        )
+                        || preg_match(
+                            '/[\x00-\x20\x7F]/',
+                            $valor,
+                        ) === 1
+                    ) {
+                        $falhar(
+                            'A ligação da compilação contém caracteres inválidos.',
+                        );
+
+                        return;
+                    }
+
+                    $componentes = parse_url(
+                        $valor,
+                    );
+
+                    if (
+                        ! is_array($componentes)
+                        || ! isset(
+                            $componentes['scheme'],
+                            $componentes['host'],
+                        )
+                        || trim(
+                            (string) $componentes['host'],
+                        ) === ''
+                        || isset(
+                            $componentes['user'],
+                        )
+                        || isset(
+                            $componentes['pass'],
+                        )
+                    ) {
+                        $falhar(
+                            'A ligação da compilação deve ser um endereço HTTP ou HTTPS válido.',
+                        );
+                    }
+                },
             ],
         ];
     }
@@ -90,7 +190,7 @@ final class AtualizarLigacaoCompilacaoEdicaoRequest extends FormRequest
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function messages(): array
     {
@@ -101,7 +201,10 @@ final class AtualizarLigacaoCompilacaoEdicaoRequest extends FormRequest
 
             'ligacao_compilacao.url' => 'A ligação da compilação deve ser um endereço HTTP ou HTTPS válido.',
 
-            'ligacao_compilacao.max' => 'A ligação da compilação não pode ter mais de 2048 caracteres.',
+            'ligacao_compilacao.max' => sprintf(
+                'A ligação da compilação não pode ter mais de %d caracteres.',
+                Edicao::COMPRIMENTO_MAXIMO_LIGACAO_COMPILACAO,
+            ),
         ];
     }
 
@@ -124,13 +227,16 @@ final class AtualizarLigacaoCompilacaoEdicaoRequest extends FormRequest
     /**
      * Obtém a ligação validada.
      *
+     * O valor nulo representa a remoção da ligação atualmente persistida.
+     *
      * @return string|null Ligação normalizada ou nulo.
      *
-     * @throws LogicException Quando o valor validado não é válido.
+     * @throws LogicException Quando o resultado validado não contém uma
+     *                        ligação válida nem o valor nulo esperado.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function obterLigacaoCompilacao(): ?string
     {
@@ -142,9 +248,12 @@ final class AtualizarLigacaoCompilacaoEdicaoRequest extends FormRequest
             return null;
         }
 
-        if (! is_string($ligacao)) {
+        if (
+            ! is_string($ligacao)
+            || $ligacao === ''
+        ) {
             throw new LogicException(
-                'O pedido validado não contém uma ligação válida.',
+                'O pedido validado não contém uma ligação da compilação válida.',
             );
         }
 
