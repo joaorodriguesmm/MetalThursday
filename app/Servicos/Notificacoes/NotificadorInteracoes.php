@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Servicos\Notificacoes;
 
 use App\Models\Autenticacao\Utilizador;
+use App\Models\Interacoes\Comentario;
+use App\Models\MetalThursday\MetalThursday;
+use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Notifications\NotificacaoInteracaoUtilizador;
-use Illuminate\Contracts\Auth\Factory as FabricaAutenticacao;
 use Illuminate\Contracts\Notifications\Dispatcher as DespachanteNotificacoes;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Collection as ColecaoEloquent;
 use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
 
@@ -19,19 +21,18 @@ use InvalidArgumentException;
  * restantes destinatários por lotes, evitando carregar todos os utilizadores
  * simultaneamente em memória.
  *
- * Quando não existe um utilizador autenticado válido, nenhuma notificação é
- * enviada.
+ * O sujeito e o utilizador responsável são recebidos explicitamente,
+ * mantendo o serviço independente do contexto HTTP e do estado global da
+ * autenticação.
  *
  * @since 2.0.0
  *
- * @version 1.1.0
+ * @version 2.0.0
  */
 final class NotificadorInteracoes
 {
     /**
      * Quantidade máxima de destinatários processados em cada lote.
-     *
-     * @var int
      *
      * @since 2.0.0
      *
@@ -40,28 +41,17 @@ final class NotificadorInteracoes
     private const TAMANHO_LOTE = 200;
 
     /**
-     * Comprimento máximo da descrição textual da interação.
-     *
-     * @var int
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const COMPRIMENTO_MAXIMO_DESCRICAO = 255;
-
-    /**
      * Cria o serviço de notificações de interações.
      *
-     * @param  FabricaAutenticacao  $autenticacao  Serviço de autenticação.
-     * @param  DespachanteNotificacoes  $notificacoes  Serviço de notificações.
+     * @param  DespachanteNotificacoes  $notificacoes  Serviço responsável
+     *                                                 pelo envio das
+     *                                                 notificações.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function __construct(
-        private readonly FabricaAutenticacao $autenticacao,
         private readonly DespachanteNotificacoes $notificacoes,
     ) {}
 
@@ -69,57 +59,70 @@ final class NotificadorInteracoes
      * Notifica os restantes utilizadores sobre uma interação.
      *
      * O utilizador responsável pela interação é excluído dos destinatários.
-     * Quando não existe um utilizador autenticado válido, nenhuma notificação
-     * é enviada.
+     * Apenas utilizadores pertencentes ao âmbito `selecionaveis` recebem a
+     * notificação.
      *
-     * @param  Model  $entidade  Entidade que recebeu a interação.
-     * @param  string  $descricaoAcao  Descrição textual da ação realizada.
+     * A notificação é construída antes da consulta dos destinatários, fazendo
+     * com que eventuais dados inválidos sejam rejeitados mesmo quando não
+     * existem outros utilizadores a notificar.
      *
-     * @throws InvalidArgumentException Quando a entidade ou a descrição não
-     *                                  são válidas.
+     * @param  MetalThursday|SeccaoMetalThursday|Comentario  $sujeito  Entidade
+     *                                                                 que
+     *                                                                 recebeu
+     *                                                                 a
+     *                                                                 interação.
+     * @param  Utilizador  $causador  Utilizador responsável pela interação.
+     * @param  string  $acao  Ação realizada.
+     *
+     * @throws InvalidArgumentException Quando o sujeito, o utilizador ou a
+     *                                  ação não são válidos.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function notificarOutrosUtilizadores(
-        Model $entidade,
-        string $descricaoAcao,
+        MetalThursday|SeccaoMetalThursday|Comentario $sujeito,
+        Utilizador $causador,
+        string $acao,
     ): void {
-        $utilizadorAutenticado =
-            $this->obterUtilizadorAutenticado();
-
-        if ($utilizadorAutenticado === null) {
-            return;
-        }
-
-        $identificadorUtilizador =
-            $this->obterIdentificadorUtilizador(
-                $utilizadorAutenticado,
-            );
-
-        $this->validarEntidadePersistida(
-            $entidade,
+        $this->obterIdentificadorPersistido(
+            $sujeito,
+            'O sujeito da interação',
         );
 
-        $descricaoNormalizada =
-            $this->normalizarDescricaoAcao(
-                $descricaoAcao,
+        $identificadorCausador =
+            $this->obterIdentificadorPersistido(
+                $causador,
+                'O utilizador responsável pela interação',
+            );
+
+        $acaoNormalizada =
+            $this->normalizarAcao(
+                $acao,
+            );
+
+        $notificacao =
+            new NotificacaoInteracaoUtilizador(
+                $sujeito,
+                $causador,
+                $acaoNormalizada,
             );
 
         Utilizador::query()
             ->selecionaveis()
             ->whereKeyNot(
-                $identificadorUtilizador,
+                $identificadorCausador,
+            )
+            ->reorder(
+                'utilizadores.id',
             )
             ->chunkById(
                 self::TAMANHO_LOTE,
                 function (
-                    Collection $destinatarios,
+                    ColecaoEloquent $destinatarios,
                 ) use (
-                    $entidade,
-                    $utilizadorAutenticado,
-                    $descricaoNormalizada,
+                    $notificacao,
                 ): void {
                     if ($destinatarios->isEmpty()) {
                         return;
@@ -127,158 +130,152 @@ final class NotificadorInteracoes
 
                     $this->notificacoes->send(
                         $destinatarios,
-                        new NotificacaoInteracaoUtilizador(
-                            $entidade,
-                            $utilizadorAutenticado,
-                            $descricaoNormalizada,
-                        ),
+                        $notificacao,
                     );
                 },
-                'id',
+                'utilizadores.id',
                 'id',
             );
     }
 
     /**
-     * Obtém o utilizador autenticado.
+     * Obtém o identificador de um modelo persistido.
      *
-     * @return Utilizador|null Utilizador autenticado ou nulo.
+     * Apenas são aceites identificadores inteiros positivos ou
+     * representações textuais compostas exclusivamente por algarismos.
      *
-     * @since 2.0.0
+     * @param  Model  $modelo  Modelo recebido.
+     * @param  string  $designacao  Designação utilizada na mensagem.
+     * @return int Identificador persistido.
      *
-     * @version 1.0.0
-     */
-    private function obterUtilizadorAutenticado(): ?Utilizador
-    {
-        $utilizador =
-            $this
-                ->autenticacao
-                ->guard()
-                ->user();
-
-        return $utilizador instanceof Utilizador
-            ? $utilizador
-            : null;
-    }
-
-    /**
-     * Obtém o identificador de um utilizador persistido.
-     *
-     * @param  Utilizador  $utilizador  Utilizador recebido.
-     * @return int Identificador do utilizador.
-     *
-     * @throws InvalidArgumentException Quando o utilizador não está
-     *                                  persistido.
+     * @throws InvalidArgumentException Quando o modelo não está persistido ou
+     *                                  não possui um identificador válido.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    private function obterIdentificadorUtilizador(
-        Utilizador $utilizador,
+    private function obterIdentificadorPersistido(
+        Model $modelo,
+        string $designacao,
     ): int {
-        $identificador =
-            $utilizador->getKey();
-
-        if (
-            ! $utilizador->exists
-            || ! is_numeric($identificador)
-            || (int) $identificador < 1
-        ) {
+        if (! $modelo->exists) {
             throw new InvalidArgumentException(
-                'O utilizador responsável pela interação deve estar persistido.',
-            );
-        }
-
-        return (int) $identificador;
-    }
-
-    /**
-     * Confirma que a entidade da interação está persistida.
-     *
-     * @param  Model  $entidade  Entidade recebida.
-     *
-     * @throws InvalidArgumentException Quando a entidade não está persistida.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private function validarEntidadePersistida(
-        Model $entidade,
-    ): void {
-        if (
-            $entidade->exists
-            && $entidade->getKey() !== null
-        ) {
-            return;
-        }
-
-        throw new InvalidArgumentException(
-            'A entidade da interação deve estar persistida antes da notificação.',
-        );
-    }
-
-    /**
-     * Normaliza e valida a descrição textual da ação.
-     *
-     * Espaços consecutivos, tabulações e quebras de linha são convertidos num
-     * único espaço.
-     *
-     * @param  string  $descricao  Descrição recebida.
-     * @return string Descrição normalizada.
-     *
-     * @throws InvalidArgumentException Quando a descrição não é válida.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private function normalizarDescricaoAcao(
-        string $descricao,
-    ): string {
-        if (
-            preg_match(
-                '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/',
-                $descricao,
-            ) === 1
-        ) {
-            throw new InvalidArgumentException(
-                'A descrição da interação contém caracteres inválidos.',
-            );
-        }
-
-        $descricaoNormalizada =
-            preg_replace(
-                '/\s+/u',
-                ' ',
-                trim(
-                    $descricao,
+                sprintf(
+                    '%s deve estar persistido.',
+                    $designacao,
                 ),
             );
+        }
+
+        $identificador =
+            $modelo->getKey();
 
         if (
-            ! is_string($descricaoNormalizada)
-            || $descricaoNormalizada === ''
+            is_int($identificador)
+            && $identificador > 0
         ) {
+            return $identificador;
+        }
+
+        if (! is_string($identificador)) {
             throw new InvalidArgumentException(
-                'A descrição da ação da interação não pode estar vazia.',
+                sprintf(
+                    '%s deve possuir um identificador válido.',
+                    $designacao,
+                ),
             );
         }
 
+        $identificadorNormalizado =
+            trim(
+                $identificador,
+            );
+
         if (
-            mb_strlen(
-                $descricaoNormalizada,
-            ) > self::COMPRIMENTO_MAXIMO_DESCRICAO
+            $identificadorNormalizado === ''
+            || ! ctype_digit(
+                $identificadorNormalizado,
+            )
+            || (int) $identificadorNormalizado < 1
         ) {
             throw new InvalidArgumentException(
                 sprintf(
-                    'A descrição da interação não pode exceder %d caracteres.',
-                    self::COMPRIMENTO_MAXIMO_DESCRICAO,
+                    '%s deve possuir um identificador válido.',
+                    $designacao,
                 ),
             );
         }
 
-        return $descricaoNormalizada;
+        return (int) $identificadorNormalizado;
+    }
+
+    /**
+     * Normaliza a ação realizada.
+     *
+     * Espaços consecutivos, tabulações e quebras de linha são convertidos num
+     * único espaço. A ação é convertida para minúsculas para corresponder ao
+     * contrato utilizado pelas notificações.
+     *
+     * O limite máximo definitivo continua a ser validado pela própria
+     * notificação, evitando duplicar esse contrato neste serviço.
+     *
+     * @param  string  $acao  Ação recebida.
+     * @return string Ação normalizada.
+     *
+     * @throws InvalidArgumentException Quando a ação não contém texto UTF-8
+     *                                  válido, possui caracteres de controlo
+     *                                  ou fica vazia depois da normalização.
+     *
+     * @since 2.0.0
+     *
+     * @version 2.0.0
+     */
+    private function normalizarAcao(
+        string $acao,
+    ): string {
+        if (
+            preg_match(
+                '//u',
+                $acao,
+            ) !== 1
+        ) {
+            throw new InvalidArgumentException(
+                'A ação da interação contém texto inválido.',
+            );
+        }
+
+        if (
+            preg_match(
+                '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/',
+                $acao,
+            ) === 1
+        ) {
+            throw new InvalidArgumentException(
+                'A ação da interação contém caracteres inválidos.',
+            );
+        }
+
+        $acaoNormalizada =
+            preg_replace(
+                '/\s+/u',
+                ' ',
+                mb_strtolower(
+                    trim(
+                        $acao,
+                    ),
+                ),
+            );
+
+        if (
+            ! is_string($acaoNormalizada)
+            || $acaoNormalizada === ''
+        ) {
+            throw new InvalidArgumentException(
+                'A ação da interação não pode estar vazia.',
+            );
+        }
+
+        return $acaoNormalizada;
     }
 }
