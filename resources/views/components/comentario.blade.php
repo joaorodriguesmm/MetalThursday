@@ -6,7 +6,7 @@
     App\View\Components\Comentario.
 
     @since 1.0.0
-    @version 3.0.0
+    @version 4.0.0
 --}}
 
 <article
@@ -161,7 +161,7 @@
                     }}"
                     data-endereco-utilizadores-gosto="{{
                         route(
-                            'comentarios.utilizadores-com-gosto',
+                            'comentarios.utilizadores-gosto',
                             $comentario,
                         )
                     }}"
@@ -171,11 +171,7 @@
                     data-bs-toggle="tooltip"
                     data-bs-html="true"
                     data-bs-title="A carregar..."
-                    aria-label="{{
-                        $temGosto
-                            ? "Remover gosto. {$quantidadeGostos} gostos."
-                            : "Adicionar gosto. {$quantidadeGostos} gostos."
-                    }}"
+                    aria-label="{{ $descricaoAcaoGosto }}"
                     aria-pressed="{{ $temGosto ? 'true' : 'false' }}"
                 >
                     <i

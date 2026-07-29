@@ -16,13 +16,16 @@ use LogicException;
 /**
  * Prepara a apresentação de um comentário e das respetivas respostas.
  *
- * O componente exige que as relações `utilizador` e `respostas` tenham sido
+ * O componente exige que as relações `utilizador` e `respostas` tenham**
+ * Prepara a apresentação de um comentário e das respetivas respostas.
+ *
+ * O componente exige que as relações sido
  * previamente carregadas, impedindo consultas implícitas durante a
  * renderização recursiva da árvore de comentários.
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 4.0.0
  */
 final class Comentario extends Component
 {
@@ -32,7 +35,7 @@ final class Comentario extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly ModeloComentario $comentario;
 
@@ -42,7 +45,7 @@ final class Comentario extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly int $identificadorComentario;
 
@@ -52,7 +55,7 @@ final class Comentario extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly int $identificadorPrincipal;
 
@@ -64,7 +67,7 @@ final class Comentario extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly ?Utilizador $utilizador;
 
@@ -74,7 +77,7 @@ final class Comentario extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly ?Utilizador $utilizadorAutenticado;
 
@@ -84,7 +87,7 @@ final class Comentario extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly string $nomeUtilizador;
 
@@ -94,7 +97,7 @@ final class Comentario extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly int $quantidadeGostos;
 
@@ -104,9 +107,19 @@ final class Comentario extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly bool $temGosto;
+
+    /**
+     * Descrição acessível da ação de gosto.
+     *
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    public readonly string $descricaoAcaoGosto;
 
     /**
      * Momento de criação do comentário.
@@ -114,7 +127,7 @@ final class Comentario extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly ?CarbonInterface $momentoCriacao;
 
@@ -125,7 +138,7 @@ final class Comentario extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly Collection $respostas;
 
@@ -136,12 +149,13 @@ final class Comentario extends Component
      * @param  int|string|null  $identificadorComentarioPrincipal  Identificador
      *                                                             da raiz.
      *
-     * @throws LogicException Quando o comentário não está persistido ou as
-     *                        relações necessárias não estão carregadas.
+     * @throws LogicException Quando o comentário não está persistido, um
+     *                        identificador é inválido, uma relação necessária
+     *                        não está carregada ou possui um tipo inesperado.
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
     public function __construct(
         ModeloComentario $comentario,
@@ -190,6 +204,19 @@ final class Comentario extends Component
             ?? false
         );
 
+        $descricaoQuantidadeGostos =
+            $this->quantidadeGostos === 1
+            ? '1 gosto'
+            : "{$this->quantidadeGostos} gostos";
+
+        $this->descricaoAcaoGosto = sprintf(
+            '%s. %s.',
+            $this->temGosto
+                ? 'Remover gosto'
+                : 'Adicionar gosto',
+            $descricaoQuantidadeGostos,
+        );
+
         $this->momentoCriacao =
             $this->obterMomentoCriacao(
                 $comentario,
@@ -205,13 +232,13 @@ final class Comentario extends Component
     }
 
     /**
-     * Obtém a view do componente.
+     * Obtém a vista do componente.
      *
-     * @return View View responsável pela apresentação.
+     * @return View Vista responsável pela apresentação.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function render(): View
     {
@@ -226,48 +253,24 @@ final class Comentario extends Component
      * @param  ModeloComentario  $comentario  Comentário recebido.
      * @return int Identificador do comentário.
      *
-     * @throws LogicException Quando o comentário não está persistido.
+     * @throws LogicException Quando o comentário não está persistido ou o
+     *                        identificador não é um inteiro positivo.
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterIdentificadorComentario(
         ModeloComentario $comentario,
     ): int {
-        $identificador = $comentario->getKey();
-
-        if (
-            ! $comentario->exists
-            || ! is_numeric($identificador)
-            || (int) $identificador < 1
-        ) {
+        if (! $comentario->exists) {
             throw new LogicException(
                 'O comentário deve estar persistido antes de ser apresentado.',
             );
         }
 
-        return (int) $identificador;
-    }
+        $identificador = $comentario->getKey();
 
-    /**
-     * Normaliza o identificador do comentário principal.
-     *
-     * Um valor ausente ou inválido é substituído pelo identificador do
-     * comentário atual.
-     *
-     * @param  int|string|null  $identificador  Identificador recebido.
-     * @param  int  $identificadorPredefinido  Identificador alternativo.
-     * @return int Identificador normalizado.
-     *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
-     */
-    private function normalizarIdentificadorPrincipal(
-        int|string|null $identificador,
-        int $identificadorPredefinido,
-    ): int {
         if (
             is_int($identificador)
             && $identificador > 0
@@ -283,7 +286,54 @@ final class Comentario extends Component
             return (int) $identificador;
         }
 
-        return $identificadorPredefinido;
+        throw new LogicException(
+            'O comentário possui um identificador persistido inválido.',
+        );
+    }
+
+    /**
+     * Normaliza o identificador do comentário principal.
+     *
+     * Quando o identificador não é fornecido, é utilizado o identificador do
+     * comentário atual. Qualquer valor fornecido deve representar um inteiro
+     * positivo.
+     *
+     * @param  int|string|null  $identificador  Identificador recebido.
+     * @param  int  $identificadorPredefinido  Identificador alternativo.
+     * @return int Identificador normalizado.
+     *
+     * @throws LogicException Quando o identificador fornecido é inválido.
+     *
+     * @since 3.0.0
+     *
+     * @version 2.0.0
+     */
+    private function normalizarIdentificadorPrincipal(
+        int|string|null $identificador,
+        int $identificadorPredefinido,
+    ): int {
+        if ($identificador === null) {
+            return $identificadorPredefinido;
+        }
+
+        if (
+            is_int($identificador)
+            && $identificador > 0
+        ) {
+            return $identificador;
+        }
+
+        if (
+            is_string($identificador)
+            && ctype_digit($identificador)
+            && (int) $identificador > 0
+        ) {
+            return (int) $identificador;
+        }
+
+        throw new LogicException(
+            'O identificador do comentário principal deve ser um inteiro positivo.',
+        );
     }
 
     /**
@@ -297,7 +347,7 @@ final class Comentario extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterUtilizadorComentario(
         ModeloComentario $comentario,
@@ -335,7 +385,7 @@ final class Comentario extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterRespostas(
         ModeloComentario $comentario,
@@ -378,7 +428,7 @@ final class Comentario extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterMomentoCriacao(
         ModeloComentario $comentario,
@@ -398,7 +448,7 @@ final class Comentario extends Component
     }
 
     /**
-     * Obtém o utilizador autenticado através do guard web.
+     * Obtém o utilizador autenticado através do guard da aplicação.
      *
      * @return Utilizador|null Utilizador autenticado ou nulo.
      *
@@ -406,12 +456,12 @@ final class Comentario extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterUtilizadorAutenticado(): ?Utilizador
     {
         $utilizador = Auth::guard(
-            'web',
+            'sessao',
         )->user();
 
         if (
@@ -419,7 +469,7 @@ final class Comentario extends Component
             && ! $utilizador instanceof Utilizador
         ) {
             throw new LogicException(
-                'O guard web devolveu um utilizador de tipo inesperado.',
+                'O guard sessao devolveu um utilizador de tipo inesperado.',
             );
         }
 
