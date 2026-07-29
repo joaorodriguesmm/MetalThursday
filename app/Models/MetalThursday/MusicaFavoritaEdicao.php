@@ -19,29 +19,65 @@ use InvalidArgumentException;
  * Cada utilizador pode escolher até três músicas favoritas por edição,
  * atribuindo-lhes uma posição de preferência entre um e três.
  *
- * A música permanece temporariamente guardada como texto livre enquanto
- * não existir uma entidade própria para representar músicas.
+ * A música permanece guardada como texto livre enquanto não existir uma
+ * entidade própria para representar músicas.
  *
  * @property int $id
  * @property int $edicao_id
- * @property int|null $utilizador_id
+ * @property int $utilizador_id
  * @property int $posicao
  * @property string $musica
  * @property int|null $registado_por_id
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
  * @property-read Edicao $edicao
- * @property-read Utilizador|null $utilizador
+ * @property-read Utilizador $utilizador
  * @property-read Utilizador|null $registadoPor
  *
  * @since 1.0.0
  *
- * @version 2.1.0
+ * @version 3.0.0
  */
 class MusicaFavoritaEdicao extends Model
 {
     /** @use HasFactory<MusicaFavoritaEdicaoFactory> */
     use HasFactory;
+
+    /**
+     * Posição mínima permitida.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public const POSICAO_MINIMA = 1;
+
+    /**
+     * Posição máxima permitida.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public const POSICAO_MAXIMA = 3;
+
+    /**
+     * Número total de posições disponíveis.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public const NUMERO_POSICOES = 3;
+
+    /**
+     * Comprimento máximo da identificação da música.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public const COMPRIMENTO_MAXIMO_MUSICA = 255;
 
     /**
      * Nome físico da tabela associada ao modelo.
@@ -58,14 +94,15 @@ class MusicaFavoritaEdicao extends Model
     /**
      * Atributos permitidos em operações de atribuição em massa.
      *
-     * As relações com a edição e com os utilizadores devem ser estabelecidas
-     * explicitamente através dos respetivos métodos Eloquent.
+     * As relações com a edição, o proprietário e o utilizador responsável
+     * pelo registo devem ser estabelecidas explicitamente através dos
+     * respetivos métodos Eloquent.
      *
-     * @var array<int, string>
+     * @var list<string>
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
     protected $fillable = [
         'posicao',
@@ -73,29 +110,30 @@ class MusicaFavoritaEdicao extends Model
     ];
 
     /**
-     * Define as conversões automáticas dos atributos.
+     * Define as conversões automáticas dos identificadores.
+     *
+     * A posição é tratada pelo atributo {@see posicao()} para ser validada
+     * antes da persistência.
      *
      * @return array<string, string> Conversões dos atributos.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     protected function casts(): array
     {
         return [
             'edicao_id' => 'integer',
+
             'utilizador_id' => 'integer',
-            'posicao' => 'integer',
+
             'registado_por_id' => 'integer',
         ];
     }
 
     /**
      * Cria a factory associada ao modelo.
-     *
-     * A associação é explícita porque o modelo e a factory se encontram em
-     * namespaces próprios.
      *
      * @return MusicaFavoritaEdicaoFactory Factory das músicas favoritas.
      *
@@ -109,48 +147,63 @@ class MusicaFavoritaEdicao extends Model
     }
 
     /**
-     * Valida a posição da música favorita.
+     * Normaliza e valida a posição da música favorita.
      *
-     * Cada utilizador pode definir três músicas, com posições entre um e três.
+     * Apenas valores inteiros compreendidos entre um e três são aceites.
+     * Representações textuais ou valores decimais não são convertidos
+     * implicitamente.
      *
      * @return Attribute<int, int> Atributo da posição.
      *
-     * @throws InvalidArgumentException Quando a posição não está compreendida
-     *                                  entre um e três.
+     * @throws InvalidArgumentException Quando a posição não é válida.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     protected function posicao(): Attribute
     {
         return Attribute::make(
+            get: static fn (
+                mixed $valor,
+            ): int => (int) $valor,
+
             set: static function (
                 mixed $valor,
             ): int {
-                $posicao = (int) $valor;
-
-                if ($posicao < 1 || $posicao > 3) {
+                if (
+                    ! is_int($valor)
+                    || $valor < self::POSICAO_MINIMA
+                    || $valor > self::POSICAO_MAXIMA
+                ) {
                     throw new InvalidArgumentException(
-                        'A posição da música favorita deve estar compreendida entre um e três.',
+                        sprintf(
+                            'A posição da música favorita deve estar compreendida entre %d e %d.',
+                            self::POSICAO_MINIMA,
+                            self::POSICAO_MAXIMA,
+                        ),
                     );
                 }
 
-                return $posicao;
+                return $valor;
             },
         );
     }
 
     /**
-     * Normaliza o nome da música antes da persistência.
+     * Normaliza e valida a identificação da música.
+     *
+     * Tabulações, quebras de linha e sequências de espaços Unicode são
+     * convertidas num único espaço. Os restantes caracteres de controlo não
+     * são aceites.
      *
      * @return Attribute<string, string> Atributo da música.
      *
-     * @throws InvalidArgumentException Quando o nome está vazio.
+     * @throws InvalidArgumentException Quando a identificação não é válida.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     protected function musica(): Attribute
     {
@@ -158,13 +211,66 @@ class MusicaFavoritaEdicao extends Model
             set: static function (
                 mixed $valor,
             ): string {
+                if (! is_string($valor)) {
+                    throw new InvalidArgumentException(
+                        'A identificação da música favorita deve ser uma sequência de caracteres.',
+                    );
+                }
+
+                if (
+                    preg_match(
+                        '//u',
+                        $valor,
+                    ) !== 1
+                ) {
+                    throw new InvalidArgumentException(
+                        'A identificação da música favorita contém texto inválido.',
+                    );
+                }
+
+                if (
+                    preg_match(
+                        '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/',
+                        $valor,
+                    ) === 1
+                ) {
+                    throw new InvalidArgumentException(
+                        'A identificação da música favorita contém caracteres inválidos.',
+                    );
+                }
+
+                $musicaNormalizada = preg_replace(
+                    '/\s+/u',
+                    ' ',
+                    $valor,
+                );
+
+                if (! is_string($musicaNormalizada)) {
+                    throw new InvalidArgumentException(
+                        'Não foi possível normalizar a identificação da música favorita.',
+                    );
+                }
+
                 $musicaNormalizada = trim(
-                    (string) $valor,
+                    $musicaNormalizada,
                 );
 
                 if ($musicaNormalizada === '') {
                     throw new InvalidArgumentException(
-                        'A música favorita não pode estar vazia.',
+                        'A identificação da música favorita é obrigatória.',
+                    );
+                }
+
+                if (
+                    mb_strlen(
+                        $musicaNormalizada,
+                    ) > self::COMPRIMENTO_MAXIMO_MUSICA
+                ) {
+                    throw new InvalidArgumentException(
+                        sprintf(
+                            'A identificação da música favorita não pode ter mais de %d caracteres.',
+                            self::COMPRIMENTO_MAXIMO_MUSICA,
+                        ),
                     );
                 }
 
@@ -177,13 +283,14 @@ class MusicaFavoritaEdicao extends Model
      * Obtém a edição à qual pertence a escolha.
      *
      * A edição continua acessível caso tenha sido eliminada logicamente,
-     * preservando o histórico das escolhas.
+     * preservando o histórico das escolhas enquanto o registo permanecer na
+     * base de dados.
      *
      * @return BelongsTo<Edicao, $this> Relação com a edição.
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
     public function edicao(): BelongsTo
     {
@@ -196,16 +303,16 @@ class MusicaFavoritaEdicao extends Model
     }
 
     /**
-     * Obtém o utilizador a quem pertence a escolha.
+     * Obtém o utilizador proprietário da escolha.
      *
-     * A relação pode ser nula para preservar o histórico caso o utilizador
-     * seja eliminado fisicamente.
+     * O proprietário é obrigatório e a base de dados impede a sua eliminação
+     * física enquanto existirem músicas favoritas associadas.
      *
-     * @return BelongsTo<Utilizador, $this> Relação com o utilizador.
+     * @return BelongsTo<Utilizador, $this> Relação com o proprietário.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function utilizador(): BelongsTo
     {
@@ -218,15 +325,18 @@ class MusicaFavoritaEdicao extends Model
     /**
      * Obtém o utilizador que registou a escolha.
      *
-     * Este utilizador pode ser diferente do proprietário da escolha quando
-     * um administrador regista as músicas em nome de outra pessoa.
+     * Este utilizador pode ser diferente do proprietário quando um
+     * administrador regista as músicas em nome de outra pessoa.
      *
-     * @return BelongsTo<Utilizador, $this> Relação com o utilizador que
-     *                                      registou a escolha.
+     * A relação pode ser nula quando o registo não identificou um responsável
+     * ou quando esse utilizador foi posteriormente eliminado.
+     *
+     * @return BelongsTo<Utilizador, $this> Relação com o responsável pelo
+     *                                      registo.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function registadoPor(): BelongsTo
     {
