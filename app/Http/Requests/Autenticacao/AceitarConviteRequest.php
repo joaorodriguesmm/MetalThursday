@@ -7,27 +7,38 @@ namespace App\Http\Requests\Autenticacao;
 use App\Models\Autenticacao\Convite;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\Comunicacao\PermissaoEmail;
+use App\ObjetosValor\Utilizadores\EnderecoEmail;
+use App\ObjetosValor\Utilizadores\NomeUtilizador;
 use App\Regras\Autenticacao\RequisitosPalavraPasse;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\File;
+use InvalidArgumentException;
 use LogicException;
 
 /**
  * Valida e normaliza os dados necessários para aceitar um convite.
  *
- * A disponibilidade, expiração e utilização do convite são verificadas pelo
- * serviço de registo dentro da respetiva transação.
+ * A disponibilidade, expiração, utilização e correspondência do destinatário
+ * do convite são verificadas pelo serviço de registo dentro da respetiva
+ * transação.
+ *
+ * O nome e o endereço de e-mail são validados através dos objetos de valor do
+ * domínio. O código original do convite nunca é procurado diretamente na base
+ * de dados, porque apenas o respetivo hash é persistido.
  *
  * @since 1.0.0
  *
- * @version 3.1.0
+ * @version 4.0.0
  */
 final class AceitarConviteRequest extends FormRequest
 {
     /**
      * Tamanho máximo permitido para a fotografia, em kilobytes.
+     *
+     * Dez megabytes correspondem a 10 240 kilobytes.
      *
      * @var int
      *
@@ -61,9 +72,12 @@ final class AceitarConviteRequest extends FormRequest
      * O código do convite mantém a capitalização por ser sensível a
      * maiúsculas e minúsculas.
      *
+     * Quando nenhuma permissão de e-mail é enviada, é criada deliberadamente
+     * uma lista vazia. A ausência de seleção é válida neste formulário.
+     *
      * @since 2.0.0
      *
-     * @version 2.2.0
+     * @version 3.0.0
      */
     protected function prepareForValidation(): void
     {
@@ -104,13 +118,14 @@ final class AceitarConviteRequest extends FormRequest
      * Obtém as regras de validação.
      *
      * O código do convite não utiliza a regra `exists`, porque apenas o hash
-     * do código é guardado na base de dados.
+     * do código é guardado na base de dados. A confirmação definitiva do
+     * convite é realizada pelo serviço dentro de uma transação.
      *
-     * @return array<string, array<int, mixed>> Regras de validação.
+     * @return array<string, list<mixed>> Regras de validação.
      *
      * @since 1.0.0
      *
-     * @version 3.1.0
+     * @version 4.0.0
      */
     public function rules(): array
     {
@@ -128,16 +143,14 @@ final class AceitarConviteRequest extends FormRequest
                 'bail',
                 'required',
                 'string',
-                'min:3',
-                'max:255',
+                $this->criarRegraNome(),
             ],
 
             'email' => [
                 'bail',
                 'required',
                 'string',
-                'email:rfc',
-                'max:255',
+                $this->criarRegraEnderecoEmail(),
 
                 Rule::unique(
                     Utilizador::class,
@@ -172,11 +185,14 @@ final class AceitarConviteRequest extends FormRequest
             ],
 
             'permissoes_email' => [
+                'bail',
                 'array',
+                'list',
             ],
 
             'permissoes_email.*' => [
                 'bail',
+                'required',
                 'integer',
                 'distinct:strict',
 
@@ -195,7 +211,7 @@ final class AceitarConviteRequest extends FormRequest
      *
      * @since 1.0.0
      *
-     * @version 3.1.0
+     * @version 4.0.0
      */
     public function messages(): array
     {
@@ -214,17 +230,9 @@ final class AceitarConviteRequest extends FormRequest
 
             'nome.string' => 'O nome deve ser uma sequência de caracteres.',
 
-            'nome.min' => 'O nome deve ter, pelo menos, 3 caracteres.',
-
-            'nome.max' => 'O nome não pode ter mais de 255 caracteres.',
-
             'email.required' => 'Por favor, insere o teu endereço de e-mail.',
 
             'email.string' => 'O endereço de e-mail deve ser uma sequência de caracteres.',
-
-            'email.email' => 'Por favor, insere um endereço de e-mail válido.',
-
-            'email.max' => 'O endereço de e-mail não pode ter mais de 255 caracteres.',
 
             'email.unique' => 'O endereço de e-mail já está associado a outro utilizador.',
 
@@ -250,6 +258,10 @@ final class AceitarConviteRequest extends FormRequest
 
             'permissoes_email.array' => 'As permissões de e-mail recebidas não são válidas.',
 
+            'permissoes_email.list' => 'A lista de permissões de e-mail não tem um formato válido.',
+
+            'permissoes_email.*.required' => 'Uma das permissões de e-mail não é válida.',
+
             'permissoes_email.*.integer' => 'Uma das permissões de e-mail não é válida.',
 
             'permissoes_email.*.distinct' => 'A mesma permissão de e-mail foi selecionada mais do que uma vez.',
@@ -265,7 +277,7 @@ final class AceitarConviteRequest extends FormRequest
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function attributes(): array
     {
@@ -305,35 +317,65 @@ final class AceitarConviteRequest extends FormRequest
     }
 
     /**
-     * Obtém o nome validado.
+     * Obtém o nome validado e normalizado.
      *
      * @return string Nome do utilizador.
      *
+     * @throws LogicException Quando o resultado validado deixa de cumprir o
+     *                        contrato do objeto de valor.
+     *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function nome(): string
     {
-        return $this->obterTextoValidado(
-            'nome',
-        );
+        $nome =
+            $this->obterTextoValidado(
+                'nome',
+            );
+
+        try {
+            return NomeUtilizador::deTexto(
+                $nome,
+            )->valor();
+        } catch (InvalidArgumentException $excecao) {
+            throw new LogicException(
+                'O pedido validado não contém um nome de utilizador válido.',
+                previous: $excecao,
+            );
+        }
     }
 
     /**
-     * Obtém o endereço de e-mail validado.
+     * Obtém o endereço de e-mail validado e normalizado.
      *
      * @return string Endereço de e-mail.
      *
+     * @throws LogicException Quando o resultado validado deixa de cumprir o
+     *                        contrato do objeto de valor.
+     *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function email(): string
     {
-        return $this->obterTextoValidado(
-            'email',
-        );
+        $email =
+            $this->obterTextoValidado(
+                'email',
+            );
+
+        try {
+            return EnderecoEmail::deTexto(
+                $email,
+            )->valor();
+        } catch (InvalidArgumentException $excecao) {
+            throw new LogicException(
+                'O pedido validado não contém um endereço de e-mail válido.',
+                previous: $excecao,
+            );
+        }
     }
 
     /**
@@ -357,9 +399,12 @@ final class AceitarConviteRequest extends FormRequest
      *
      * @return UploadedFile|null Fotografia enviada ou nulo.
      *
+     * @throws LogicException Quando o ficheiro validado possui um tipo
+     *                        inesperado.
+     *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function fotografia(): ?UploadedFile
     {
@@ -384,11 +429,14 @@ final class AceitarConviteRequest extends FormRequest
     /**
      * Obtém os identificadores validados das permissões de e-mail.
      *
-     * @return array<int, int> Identificadores das permissões.
+     * @return list<int> Identificadores das permissões.
+     *
+     * @throws LogicException Quando a lista validada possui uma estrutura ou
+     *                        um tipo inesperado.
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function identificadoresPermissoesEmail(): array
     {
@@ -398,9 +446,12 @@ final class AceitarConviteRequest extends FormRequest
                 [],
             );
 
-        if (! is_array($identificadores)) {
+        if (
+            ! is_array($identificadores)
+            || ! array_is_list($identificadores)
+        ) {
             throw new LogicException(
-                'As permissões de e-mail validadas possuem um tipo inesperado.',
+                'As permissões de e-mail validadas não formam uma lista válida.',
             );
         }
 
@@ -412,10 +463,78 @@ final class AceitarConviteRequest extends FormRequest
             }
         }
 
-        /** @var array<int, int> $identificadores */
-        return array_values(
-            $identificadores,
-        );
+        /** @var list<int> $identificadores */
+        return $identificadores;
+    }
+
+    /**
+     * Cria a regra de validação do nome do utilizador.
+     *
+     * A normalização, o comprimento e os caracteres permitidos pertencem ao
+     * objeto de valor {@see NomeUtilizador}.
+     *
+     * @return Closure(string, mixed, Closure(string): void): void Regra.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function criarRegraNome(): Closure
+    {
+        return static function (
+            string $atributo,
+            mixed $valor,
+            Closure $falhar,
+        ): void {
+            if (! is_string($valor)) {
+                return;
+            }
+
+            try {
+                NomeUtilizador::deTexto(
+                    $valor,
+                );
+            } catch (InvalidArgumentException) {
+                $falhar(
+                    'Por favor, insere um nome válido.',
+                );
+            }
+        };
+    }
+
+    /**
+     * Cria a regra de validação do endereço de e-mail.
+     *
+     * A sintaxe, o comprimento e a normalização definitiva pertencem ao
+     * objeto de valor {@see EnderecoEmail}.
+     *
+     * @return Closure(string, mixed, Closure(string): void): void Regra.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function criarRegraEnderecoEmail(): Closure
+    {
+        return static function (
+            string $atributo,
+            mixed $valor,
+            Closure $falhar,
+        ): void {
+            if (! is_string($valor)) {
+                return;
+            }
+
+            try {
+                EnderecoEmail::deTexto(
+                    $valor,
+                );
+            } catch (InvalidArgumentException) {
+                $falhar(
+                    'Por favor, insere um endereço de e-mail válido.',
+                );
+            }
+        };
     }
 
     /**
@@ -452,14 +571,20 @@ final class AceitarConviteRequest extends FormRequest
     }
 
     /**
-     * Normaliza o nome recebido.
+     * Normaliza preliminarmente o nome recebido.
+     *
+     * A normalização definitiva é aplicada pelo objeto de valor
+     * {@see NomeUtilizador}.
+     *
+     * Quando o texto não é UTF-8 válido, o valor original é preservado para
+     * que a regra do objeto de valor o rejeite.
      *
      * @param  mixed  $valor  Valor recebido.
      * @return mixed Nome normalizado ou valor original.
      *
      * @since 2.1.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function normalizarNome(
         mixed $valor,
@@ -479,20 +604,18 @@ final class AceitarConviteRequest extends FormRequest
 
         return is_string($nome)
             ? $nome
-            : trim(
-                $valor,
-            );
+            : $valor;
     }
 
     /**
-     * Normaliza o endereço de e-mail.
+     * Normaliza preliminarmente o endereço de e-mail.
      *
      * @param  mixed  $valor  Valor recebido.
      * @return mixed Endereço normalizado ou valor original.
      *
      * @since 2.1.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function normalizarEmail(
         mixed $valor,
@@ -512,12 +635,15 @@ final class AceitarConviteRequest extends FormRequest
      * Os valores numéricos são convertidos para inteiros. Os restantes são
      * preservados para que a validação os rejeite.
      *
+     * A estrutura original é mantida para permitir que a regra `list` rejeite
+     * listas associativas ou com índices em falta.
+     *
      * @param  mixed  $valor  Valor recebido.
      * @return mixed Lista normalizada ou valor original.
      *
      * @since 2.1.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function normalizarPermissoesEmail(
         mixed $valor,
@@ -530,22 +656,40 @@ final class AceitarConviteRequest extends FormRequest
             return $valor;
         }
 
-        return array_map(
-            static function (
-                mixed $identificador,
-            ): mixed {
-                if (
-                    is_string($identificador)
-                    && ctype_digit(
-                        $identificador,
-                    )
-                ) {
-                    return (int) $identificador;
-                }
+        $identificadores = [];
 
-                return $identificador;
-            },
-            $valor,
-        );
+        foreach ($valor as $indice => $identificador) {
+            $identificadores[$indice] =
+                $this->normalizarIdentificador(
+                    $identificador,
+                );
+        }
+
+        return $identificadores;
+    }
+
+    /**
+     * Normaliza um identificador.
+     *
+     * @param  mixed  $valor  Valor recebido.
+     * @return mixed Identificador normalizado ou valor original.
+     *
+     * @since 2.1.0
+     *
+     * @version 1.0.0
+     */
+    private function normalizarIdentificador(
+        mixed $valor,
+    ): mixed {
+        if (
+            is_string($valor)
+            && ctype_digit(
+                $valor,
+            )
+        ) {
+            return (int) $valor;
+        }
+
+        return $valor;
     }
 }
