@@ -14,16 +14,21 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 /**
  * Representa uma edição do MetalThursday.
  *
- * Uma edição delimita um período temporal, agrega várias MetalThursdays
- * e pode possuir uma ligação para a respetiva compilação.
+ * Cada edição define um período temporal, pode possuir uma ligação para uma
+ * compilação e agrupa várias MetalThursdays e escolhas de músicas favoritas.
+ *
+ * A coluna gerada `nome_ativo` garante a unicidade do nome entre edições não
+ * eliminadas logicamente e não constitui um atributo editável da aplicação.
  *
  * @property int $id
  * @property string $nome
+ * @property string|null $nome_ativo
  * @property CarbonImmutable $data_inicio
  * @property CarbonImmutable|null $data_fim
  * @property string|null $ligacao_compilacao
@@ -34,11 +39,10 @@ use InvalidArgumentException;
  * @property CarbonInterface|null $deleted_at
  * @property-read Collection<int, MetalThursday> $metalThursdays
  * @property-read Collection<int, MusicaFavoritaEdicao> $musicasFavoritas
- * @property-read string $texto_apresentacao
  *
  * @since 1.0.0
  *
- * @version 2.1.0
+ * @version 3.0.0
  */
 class Edicao extends Model
 {
@@ -47,6 +51,24 @@ class Edicao extends Model
 
     use RegistaAutoria;
     use SoftDeletes;
+
+    /**
+     * Comprimento máximo permitido para o nome.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public const COMPRIMENTO_MAXIMO_NOME = 255;
+
+    /**
+     * Comprimento máximo permitido para a ligação da compilação.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public const COMPRIMENTO_MAXIMO_LIGACAO_COMPILACAO = 2048;
 
     /**
      * Nome físico da tabela associada ao modelo.
@@ -62,14 +84,15 @@ class Edicao extends Model
     /**
      * Atributos permitidos em operações de atribuição em massa.
      *
-     * Os identificadores de auditoria são preenchidos automaticamente pelo
-     * trait {@see RegistaAutoria}.
+     * Os campos de auditoria são preenchidos automaticamente pelo trait
+     * {@see RegistaAutoria}. A coluna `nome_ativo` é gerada pela base de dados
+     * e não pode ser atribuída pela aplicação.
      *
-     * @var array<int, string>
+     * @var list<string>
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     protected $fillable = [
         'nome',
@@ -79,17 +102,35 @@ class Edicao extends Model
     ];
 
     /**
-     * Atributos calculados incluídos nas representações serializadas.
+     * Atributos internos omitidos das representações serializadas.
      *
-     * @var array<int, string>
+     * @var list<string>
      *
-     * @since 1.0.0
+     * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 1.0.0
      */
-    protected $appends = [
-        'texto_apresentacao',
+    protected $hidden = [
+        'nome_ativo',
     ];
+
+    /**
+     * Regista as validações executadas antes da persistência.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    protected static function booted(): void
+    {
+        static::saving(
+            static function (
+                self $edicao,
+            ): void {
+                $edicao->validarPeriodo();
+            },
+        );
+    }
 
     /**
      * Define as conversões automáticas dos atributos.
@@ -98,23 +139,23 @@ class Edicao extends Model
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     protected function casts(): array
     {
         return [
             'data_inicio' => 'immutable_date',
+
             'data_fim' => 'immutable_date',
+
             'criado_por_id' => 'integer',
+
             'atualizado_por_id' => 'integer',
         ];
     }
 
     /**
      * Cria a factory associada ao modelo.
-     *
-     * A associação é explícita porque o modelo e a factory se encontram
-     * em namespaces próprios.
      *
      * @return EdicaoFactory Factory das edições.
      *
@@ -128,15 +169,18 @@ class Edicao extends Model
     }
 
     /**
-     * Normaliza o nome da edição antes da persistência.
+     * Normaliza e valida o nome da edição.
+     *
+     * Os espaços exteriores e consecutivos são normalizados. Quebras de
+     * linha, tabulações e restantes caracteres de controlo não são aceites.
      *
      * @return Attribute<string, string> Atributo do nome.
      *
-     * @throws InvalidArgumentException Quando o nome está vazio.
+     * @throws InvalidArgumentException Quando o nome não é válido.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     protected function nome(): Attribute
     {
@@ -144,13 +188,54 @@ class Edicao extends Model
             set: static function (
                 mixed $valor,
             ): string {
-                $nomeNormalizado = trim(
-                    (string) $valor,
+                if (! is_string($valor)) {
+                    throw new InvalidArgumentException(
+                        'O nome da edição deve ser uma sequência de caracteres.',
+                    );
+                }
+
+                if (
+                    preg_match(
+                        '//u',
+                        $valor,
+                    ) !== 1
+                ) {
+                    throw new InvalidArgumentException(
+                        'O nome da edição contém texto inválido.',
+                    );
+                }
+
+                if (
+                    preg_match(
+                        '/[\x00-\x1F\x7F]/',
+                        $valor,
+                    ) === 1
+                ) {
+                    throw new InvalidArgumentException(
+                        'O nome da edição contém caracteres inválidos.',
+                    );
+                }
+
+                $nomeNormalizado = Str::squish(
+                    $valor,
                 );
 
                 if ($nomeNormalizado === '') {
                     throw new InvalidArgumentException(
-                        'O nome da edição não pode estar vazio.',
+                        'O nome da edição é obrigatório.',
+                    );
+                }
+
+                if (
+                    mb_strlen(
+                        $nomeNormalizado,
+                    ) > self::COMPRIMENTO_MAXIMO_NOME
+                ) {
+                    throw new InvalidArgumentException(
+                        sprintf(
+                            'O nome da edição não pode ter mais de %d caracteres.',
+                            self::COMPRIMENTO_MAXIMO_NOME,
+                        ),
                     );
                 }
 
@@ -160,16 +245,18 @@ class Edicao extends Model
     }
 
     /**
-     * Normaliza a ligação da compilação antes da persistência.
+     * Normaliza e valida a ligação da compilação.
      *
-     * Uma ligação vazia é convertida em nulo. A validação do formato da
-     * ligação deve ser efetuada no pedido responsável pela edição.
+     * Um valor nulo ou vazio remove a ligação. Apenas endereços absolutos
+     * HTTP ou HTTPS são aceites.
      *
      * @return Attribute<string|null, string|null> Atributo da ligação.
      *
+     * @throws InvalidArgumentException Quando a ligação não é válida.
+     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     protected function ligacaoCompilacao(): Attribute
     {
@@ -177,17 +264,90 @@ class Edicao extends Model
             set: static function (
                 mixed $valor,
             ): ?string {
-                if (! is_string($valor)) {
+                if ($valor === null) {
                     return null;
+                }
+
+                if (! is_string($valor)) {
+                    throw new InvalidArgumentException(
+                        'A ligação da compilação deve ser uma sequência de caracteres.',
+                    );
                 }
 
                 $ligacaoNormalizada = trim(
                     $valor,
                 );
 
-                return $ligacaoNormalizada !== ''
-                    ? $ligacaoNormalizada
-                    : null;
+                if ($ligacaoNormalizada === '') {
+                    return null;
+                }
+
+                if (
+                    mb_strlen(
+                        $ligacaoNormalizada,
+                    ) > self::COMPRIMENTO_MAXIMO_LIGACAO_COMPILACAO
+                ) {
+                    throw new InvalidArgumentException(
+                        sprintf(
+                            'A ligação da compilação não pode ter mais de %d caracteres.',
+                            self::COMPRIMENTO_MAXIMO_LIGACAO_COMPILACAO,
+                        ),
+                    );
+                }
+
+                if (
+                    preg_match(
+                        '/[\x00-\x20\x7F]/',
+                        $ligacaoNormalizada,
+                    ) === 1
+                ) {
+                    throw new InvalidArgumentException(
+                        'A ligação da compilação contém caracteres inválidos.',
+                    );
+                }
+
+                if (
+                    filter_var(
+                        $ligacaoNormalizada,
+                        FILTER_VALIDATE_URL,
+                    ) === false
+                ) {
+                    throw new InvalidArgumentException(
+                        'A ligação da compilação não é válida.',
+                    );
+                }
+
+                $esquema = parse_url(
+                    $ligacaoNormalizada,
+                    PHP_URL_SCHEME,
+                );
+
+                $anfitriao = parse_url(
+                    $ligacaoNormalizada,
+                    PHP_URL_HOST,
+                );
+
+                if (
+                    ! is_string($esquema)
+                    || ! in_array(
+                        mb_strtolower(
+                            $esquema,
+                        ),
+                        [
+                            'http',
+                            'https',
+                        ],
+                        true,
+                    )
+                    || ! is_string($anfitriao)
+                    || trim($anfitriao) === ''
+                ) {
+                    throw new InvalidArgumentException(
+                        'A ligação da compilação deve utilizar HTTP ou HTTPS.',
+                    );
+                }
+
+                return $ligacaoNormalizada;
             },
         );
     }
@@ -195,13 +355,14 @@ class Edicao extends Model
     /**
      * Obtém as MetalThursdays pertencentes à edição.
      *
-     * As MetalThursdays são devolvidas por ordem cronológica.
+     * Os registos são devolvidos cronologicamente, com o identificador como
+     * critério de desempate.
      *
      * @return HasMany<MetalThursday, $this> Relação com as MetalThursdays.
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 2.0.0
      */
     public function metalThursdays(): HasMany
     {
@@ -210,22 +371,25 @@ class Edicao extends Model
                 MetalThursday::class,
                 'edicao_id',
             )
-            ->orderBy('data')
-            ->orderBy('id');
+            ->orderBy(
+                'data',
+            )
+            ->orderBy(
+                'id',
+            );
     }
 
     /**
-     * Obtém as músicas favoritas escolhidas para a edição.
+     * Obtém as músicas favoritas registadas para a edição.
      *
-     * Cada registo representa uma das três escolhas de um utilizador. Os
-     * resultados são agrupados pelo utilizador e ordenados pela posição.
+     * Os registos são ordenados por utilizador, posição e identificador para
+     * manter uma apresentação determinística.
      *
-     * @return HasMany<MusicaFavoritaEdicao, $this> Relação com as músicas
-     *                                              favoritas.
+     * @return HasMany<MusicaFavoritaEdicao, $this> Relação com as músicas.
      *
-     * @since 1.0.0
+     * @since 2.0.0
      *
-     * @version 2.1.0
+     * @version 1.0.0
      */
     public function musicasFavoritas(): HasMany
     {
@@ -234,43 +398,62 @@ class Edicao extends Model
                 MusicaFavoritaEdicao::class,
                 'edicao_id',
             )
-            ->orderBy('utilizador_id')
-            ->orderBy('posicao')
-            ->orderBy('id');
+            ->orderBy(
+                'utilizador_id',
+            )
+            ->orderBy(
+                'posicao',
+            )
+            ->orderBy(
+                'id',
+            );
     }
 
     /**
-     * Obtém o texto formatado de apresentação da edição.
+     * Valida a coerência do período da edição.
      *
-     * Quando a edição ainda não possui uma data de fim, é apresentada como
-     * estando atualmente em curso.
+     * A data final pode ser nula para representar uma edição ainda em curso.
+     * Quando está preenchida, não pode ser anterior à data inicial.
      *
-     * @return Attribute<string, never> Texto de apresentação da edição.
+     * A mesma regra é também garantida pela restrição `CHECK` da base de
+     * dados.
      *
-     * @since 1.0.0
+     * @throws InvalidArgumentException Quando o período não é válido.
      *
-     * @version 2.0.0
+     * @since 2.0.0
+     *
+     * @version 1.0.0
      */
-    protected function textoApresentacao(): Attribute
+    private function validarPeriodo(): void
     {
-        return Attribute::get(
-            function (): string {
-                $dataInicio = $this
-                    ->data_inicio
-                    ->format('d/m/Y');
+        $dataInicio = $this->data_inicio;
 
-                $dataFim = $this
-                    ->data_fim
-                    ?->format('d/m/Y')
-                    ?? 'Atualmente';
+        if (! $dataInicio instanceof CarbonInterface) {
+            throw new InvalidArgumentException(
+                'A data de início da edição é obrigatória.',
+            );
+        }
 
-                return sprintf(
-                    '%s - (%s - %s)',
-                    $this->nome,
-                    $dataInicio,
-                    $dataFim,
-                );
-            },
-        );
+        $dataFim = $this->data_fim;
+
+        if ($dataFim === null) {
+            return;
+        }
+
+        if (! $dataFim instanceof CarbonInterface) {
+            throw new InvalidArgumentException(
+                'A data de fim da edição não é válida.',
+            );
+        }
+
+        if (
+            $dataFim->lessThan(
+                $dataInicio,
+            )
+        ) {
+            throw new InvalidArgumentException(
+                'A data de fim da edição não pode ser anterior à data de início.',
+            );
+        }
     }
 }
