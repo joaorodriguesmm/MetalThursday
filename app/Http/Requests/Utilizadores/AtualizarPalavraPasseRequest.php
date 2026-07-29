@@ -7,7 +7,6 @@ namespace App\Http\Requests\Utilizadores;
 use App\Models\Autenticacao\Utilizador;
 use App\Regras\Autenticacao\RequisitosPalavraPasse;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rules\Password;
 use LogicException;
 
 /**
@@ -16,16 +15,21 @@ use LogicException;
  * As palavras-passe não são normalizadas, porque espaços e outros caracteres
  * podem fazer parte do segredo definido pelo utilizador.
  *
+ * A validação do pedido fornece resposta imediata ao formulário. O serviço de
+ * atualização volta a confirmar a palavra-passe atual e as regras de domínio
+ * dentro da operação definitiva.
+ *
  * @since 1.0.0
  *
- * @version 2.2.0
+ * @version 3.0.0
  */
 final class AtualizarPalavraPasseRequest extends FormRequest
 {
     /**
      * Saco utilizado para os erros da alteração da palavra-passe.
      *
-     * Esta propriedade não deve ser tipada, porque é herdada do FormRequest.
+     * Esta propriedade não deve ser tipada, porque é herdada do
+     * {@see FormRequest}.
      *
      * @var string
      *
@@ -38,7 +42,7 @@ final class AtualizarPalavraPasseRequest extends FormRequest
     /**
      * Determina se o pedido pode ser processado.
      *
-     * @return bool Verdadeiro quando existe um utilizador autenticado.
+     * @return bool Verdadeiro quando existe um utilizador autenticado válido.
      *
      * @since 1.0.0
      *
@@ -52,44 +56,42 @@ final class AtualizarPalavraPasseRequest extends FormRequest
     /**
      * Obtém as regras de validação.
      *
-     * A palavra-passe atual é confirmada através do guard `web`. A nova
-     * palavra-passe utiliza a política global da aplicação, deve ser diferente
-     * da atual e coincidir com o campo de confirmação.
+     * A palavra-passe atual é confirmada através do guard `sessao`. A nova
+     * palavra-passe utiliza a política central da aplicação, deve ser
+     * diferente da atual e coincidir com a confirmação explícita.
      *
-     * @return array<string, array<int, mixed>> Regras de validação.
+     * O limite aplicado à palavra-passe atual protege o processamento de
+     * valores anormalmente extensos, sem exigir que uma palavra-passe antiga
+     * cumpra a política de complexidade atual.
+     *
+     * @return array<string, list<mixed>> Regras de validação.
      *
      * @since 1.0.0
      *
-     * @version 2.2.0
+     * @version 3.0.0
      */
     public function rules(): array
     {
-        $comprimentoMaximo =
-            RequisitosPalavraPasse::comprimentoMaximo();
-
         return [
             'palavra_passe_atual' => [
                 'bail',
                 'required',
                 'string',
-                'max:'.$comprimentoMaximo,
-                'current_password:web',
+                'max:'.RequisitosPalavraPasse::comprimentoMaximo(),
+                'current_password:sessao',
             ],
 
             'nova_palavra_passe' => [
-                'bail',
-                'required',
-                'string',
+                ...RequisitosPalavraPasse::regrasObrigatorias(),
                 'different:palavra_passe_atual',
-                'confirmed:confirmacao_nova_palavra_passe',
-                Password::defaults(),
             ],
 
             'confirmacao_nova_palavra_passe' => [
                 'bail',
                 'required',
                 'string',
-                'max:'.$comprimentoMaximo,
+                'max:'.RequisitosPalavraPasse::comprimentoMaximo(),
+                'same:nova_palavra_passe',
             ],
         ];
     }
@@ -101,7 +103,7 @@ final class AtualizarPalavraPasseRequest extends FormRequest
      *
      * @since 1.0.0
      *
-     * @version 2.2.0
+     * @version 3.0.0
      */
     public function messages(): array
     {
@@ -118,15 +120,17 @@ final class AtualizarPalavraPasseRequest extends FormRequest
 
             'nova_palavra_passe.string' => 'A nova palavra-passe não é válida.',
 
-            'nova_palavra_passe.different' => 'A nova palavra-passe deve ser diferente da palavra-passe atual.',
+            'nova_palavra_passe.max' => 'A nova palavra-passe é demasiado longa.',
 
-            'nova_palavra_passe.confirmed' => 'A nova palavra-passe e a confirmação não coincidem.',
+            'nova_palavra_passe.different' => 'A nova palavra-passe deve ser diferente da palavra-passe atual.',
 
             'confirmacao_nova_palavra_passe.required' => 'Por favor, confirma a nova palavra-passe.',
 
             'confirmacao_nova_palavra_passe.string' => 'A confirmação da nova palavra-passe não é válida.',
 
             'confirmacao_nova_palavra_passe.max' => 'A confirmação da nova palavra-passe não é válida.',
+
+            'confirmacao_nova_palavra_passe.same' => 'A nova palavra-passe e a confirmação não coincidem.',
         ];
     }
 
@@ -155,27 +159,18 @@ final class AtualizarPalavraPasseRequest extends FormRequest
      *
      * @return string Palavra-passe atual.
      *
-     * @throws LogicException Quando o pedido validado não contém a
-     *                        palavra-passe atual.
+     * @throws LogicException Quando o valor validado possui um tipo
+     *                        inesperado.
      *
      * @since 2.2.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function obterPalavraPasseAtual(): string
     {
-        $palavraPasseAtual =
-            $this->validated(
-                'palavra_passe_atual',
-            );
-
-        if (! is_string($palavraPasseAtual)) {
-            throw new LogicException(
-                'O pedido validado não contém a palavra-passe atual.',
-            );
-        }
-
-        return $palavraPasseAtual;
+        return $this->obterTextoValidado(
+            'palavra_passe_atual',
+        );
     }
 
     /**
@@ -183,26 +178,69 @@ final class AtualizarPalavraPasseRequest extends FormRequest
      *
      * @return string Nova palavra-passe.
      *
-     * @throws LogicException Quando o pedido validado não contém a nova
-     *                        palavra-passe.
+     * @throws LogicException Quando o valor validado possui um tipo
+     *                        inesperado.
+     *
+     * @since 2.1.0
+     *
+     * @version 2.0.0
+     */
+    public function obterNovaPalavraPasse(): string
+    {
+        return $this->obterTextoValidado(
+            'nova_palavra_passe',
+        );
+    }
+
+    /**
+     * Obtém a confirmação da nova palavra-passe.
+     *
+     * @return string Confirmação da nova palavra-passe.
+     *
+     * @throws LogicException Quando o valor validado possui um tipo
+     *                        inesperado.
+     *
+     * @since 2.2.0
+     *
+     * @version 1.0.0
+     */
+    public function obterConfirmacaoNovaPalavraPasse(): string
+    {
+        return $this->obterTextoValidado(
+            'confirmacao_nova_palavra_passe',
+        );
+    }
+
+    /**
+     * Obtém um texto validado.
+     *
+     * @param  string  $campo  Nome do campo validado.
+     * @return string Texto validado.
+     *
+     * @throws LogicException Quando o valor validado possui um tipo
+     *                        inesperado.
      *
      * @since 2.1.0
      *
      * @version 1.0.0
      */
-    public function obterNovaPalavraPasse(): string
-    {
-        $novaPalavraPasse =
+    private function obterTextoValidado(
+        string $campo,
+    ): string {
+        $valor =
             $this->validated(
-                'nova_palavra_passe',
+                $campo,
             );
 
-        if (! is_string($novaPalavraPasse)) {
+        if (! is_string($valor)) {
             throw new LogicException(
-                'O pedido validado não contém a nova palavra-passe.',
+                sprintf(
+                    'O campo validado "%s" possui um tipo inesperado.',
+                    $campo,
+                ),
             );
         }
 
-        return $novaPalavraPasse;
+        return $valor;
     }
 }
