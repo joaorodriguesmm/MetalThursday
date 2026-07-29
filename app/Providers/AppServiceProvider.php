@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Enumeracoes\Interacoes\TipoEntidadeInteracao;
+use App\Models\Autenticacao\Utilizador;
 use App\Regras\Autenticacao\RequisitosPalavraPasse;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Pagination\Paginator;
@@ -19,10 +20,20 @@ use Illuminate\Validation\Rules\Password;
  *
  * @since 1.0.0
  *
- * @version 2.3.0
+ * @version 3.0.0
  */
 final class AppServiceProvider extends ServiceProvider
 {
+    /**
+     * Alias polimórfico persistido para os utilizadores notificáveis.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const ALIAS_POLIMORFICO_UTILIZADOR =
+        'utilizador';
+
     /**
      * Inicia os serviços e as configurações gerais da aplicação.
      *
@@ -31,7 +42,7 @@ final class AppServiceProvider extends ServiceProvider
      *
      * @since 1.0.0
      *
-     * @version 2.3.0
+     * @version 3.0.0
      */
     public function boot(): void
     {
@@ -46,15 +57,20 @@ final class AppServiceProvider extends ServiceProvider
      * Os aliases impedem que os valores persistidos dependam diretamente dos
      * namespaces PHP dos modelos.
      *
+     * O alias do utilizador pertence ao mapa geral porque é utilizado pelas
+     * notificações persistidas, mas não representa uma entidade de interação.
+     *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     private function configurarMapaPolimorfico(): void
     {
-        Relation::enforceMorphMap(
-            TipoEntidadeInteracao::obterMapaPolimorfico(),
-        );
+        Relation::enforceMorphMap([
+            ...TipoEntidadeInteracao::obterMapaPolimorfico(),
+
+            self::ALIAS_POLIMORFICO_UTILIZADOR => Utilizador::class,
+        ]);
     }
 
     /**
