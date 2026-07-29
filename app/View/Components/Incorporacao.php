@@ -11,14 +11,14 @@ use Illuminate\Support\HtmlString;
 use Illuminate\View\Component;
 
 /**
- * Apresenta a incorporação associada a uma secção da MetalThursday.
+ * Prepara a incorporação associada a uma secção da MetalThursday.
  *
- * A validação da ligação e a construção do HTML são delegadas ao
- * RenderizadorIncorporacoes.
+ * A validação da ligação e a construção segura do HTML são delegadas ao
+ * serviço RenderizadorIncorporacoes.
  *
  * @since 3.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 final class Incorporacao extends Component
 {
@@ -28,20 +28,22 @@ final class Incorporacao extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly HtmlString $conteudo;
 
     /**
-     * Cria o componente.
+     * Cria uma nova instância do componente.
      *
      * @param  SeccaoMetalThursday  $seccao  Secção apresentada.
-     * @param  RenderizadorIncorporacoes  $renderizadorIncorporacoes
-     *                                                                Serviço responsável pela validação e renderização.
+     * @param  RenderizadorIncorporacoes  $renderizadorIncorporacoes  Serviço
+     *                                                                responsável
+     *                                                                pela validação
+     *                                                                e renderização.
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function __construct(
         SeccaoMetalThursday $seccao,
@@ -54,13 +56,13 @@ final class Incorporacao extends Component
     }
 
     /**
-     * Obtém a view do componente.
+     * Obtém a vista do componente.
      *
-     * @return View View da incorporação.
+     * @return View Vista da incorporação.
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function render(): View
     {
