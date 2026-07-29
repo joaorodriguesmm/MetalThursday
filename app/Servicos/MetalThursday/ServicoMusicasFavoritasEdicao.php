@@ -10,6 +10,7 @@ use App\Models\MetalThursday\MusicaFavoritaEdicao;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 use Throwable;
 
 /**
@@ -18,38 +19,17 @@ use Throwable;
  * Apenas os utilizadores presentes no pedido são alterados. As escolhas
  * anteriores desses utilizadores são substituídas atomicamente.
  *
+ * A edição e todos os utilizadores envolvidos são bloqueados durante a
+ * transação, impedindo alterações concorrentes incompatíveis.
+ *
  * @since 2.0.0
  *
- * @version 1.1.0
+ * @version 2.0.0
  */
 final class ServicoMusicasFavoritasEdicao
 {
     /**
-     * Número de posições disponíveis por utilizador.
-     *
-     * @var int
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    public const NUMERO_POSICOES = 3;
-
-    /**
-     * Comprimento máximo do nome de uma música.
-     *
-     * @var int
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const COMPRIMENTO_MAXIMO_MUSICA = 255;
-
-    /**
      * Número máximo de tentativas perante conflitos transitórios.
-     *
-     * @var int
      *
      * @since 2.0.0
      *
@@ -65,64 +45,64 @@ final class ServicoMusicasFavoritasEdicao
      * respetivas escolhas.
      *
      * @param  Edicao  $edicao  Edição alterada.
-     * @param  array<array-key, mixed>  $classificacoes  Escolhas recebidas,
-     *                                                   agrupadas por
-     *                                                   utilizador.
-     * @param  int  $identificadorRegistador  Identificador do utilizador que
-     *                                        efetuou o registo.
+     * @param  array<array-key, mixed>  $musicasFavoritas  Escolhas recebidas,
+     *                                                     agrupadas por
+     *                                                     utilizador.
+     * @param  Utilizador  $registador  Utilizador responsável pelo registo.
      *
-     * @throws ValidationException Quando algum dado não é válido.
+     * @throws InvalidArgumentException Quando a edição ou o registador não
+     *                                  estão persistidos.
+     * @throws ValidationException Quando algum dado recebido não é válido ou
+     *                             uma entidade deixa de estar disponível.
      * @throws Throwable Quando ocorre outro erro durante a transação.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function sincronizar(
         Edicao $edicao,
-        array $classificacoes,
-        int $identificadorRegistador,
+        array $musicasFavoritas,
+        Utilizador $registador,
     ): void {
         $identificadorEdicao =
             $this->obterIdentificadorEdicao(
                 $edicao,
             );
 
-        $this->validarIdentificadorRegistador(
-            $identificadorRegistador,
-        );
+        $identificadorRegistador =
+            $this->obterIdentificadorRegistador(
+                $registador,
+            );
 
-        $classificacoesNormalizadas =
-            $this->normalizarClassificacoes(
-                $classificacoes,
+        $musicasFavoritasNormalizadas =
+            $this->normalizarMusicasFavoritas(
+                $musicasFavoritas,
             );
 
         DB::transaction(
             function () use (
                 $identificadorEdicao,
-                $classificacoesNormalizadas,
                 $identificadorRegistador,
+                $musicasFavoritasNormalizadas,
             ): void {
                 $this->bloquearEdicao(
                     $identificadorEdicao,
                 );
 
-                $this->garantirRegistadorExistente(
-                    $identificadorRegistador,
-                );
-
                 $identificadoresUtilizadores =
                     array_keys(
-                        $classificacoesNormalizadas,
+                        $musicasFavoritasNormalizadas,
                     );
 
-                $this->garantirUtilizadoresSelecionaveis(
+                $this->bloquearEValidarUtilizadores(
+                    $identificadorRegistador,
                     $identificadoresUtilizadores,
                 );
 
-                $this->substituirClassificacoes(
+                $this->substituirMusicasFavoritas(
                     $identificadorEdicao,
-                    $classificacoesNormalizadas,
+                    $musicasFavoritasNormalizadas,
                     $identificadorRegistador,
                 );
             },
@@ -131,32 +111,31 @@ final class ServicoMusicasFavoritasEdicao
     }
 
     /**
-     * Normaliza as classificações recebidas.
+     * Normaliza as músicas favoritas recebidas.
      *
-     * @param  array<array-key, mixed>  $classificacoes  Classificações
-     *                                                   originais.
-     * @return array<int, array<int, string|null>> Classificações
-     *                                             normalizadas.
+     * @param  array<array-key, mixed>  $musicasFavoritas  Escolhas originais.
+     * @return array<int, array<int, string|null>> Escolhas normalizadas por
+     *                                             utilizador e posição.
      *
      * @throws ValidationException Quando os dados não são válidos.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
-    private function normalizarClassificacoes(
-        array $classificacoes,
+    private function normalizarMusicasFavoritas(
+        array $musicasFavoritas,
     ): array {
-        if ($classificacoes === []) {
+        if ($musicasFavoritas === []) {
             throw ValidationException::withMessages([
-                'classificacoes' => 'Deve ser enviada pelo menos uma classificação.',
+                'musicas_favoritas' => 'Deve ser enviada pelo menos uma escolha de músicas favoritas.',
             ]);
         }
 
         $normalizadas = [];
 
         foreach (
-            $classificacoes as $identificadorRecebido => $entradasRecebidas
+            $musicasFavoritas as $identificadorRecebido => $entradasRecebidas
         ) {
             $identificadorUtilizador =
                 $this->normalizarIdentificadorUtilizador(
@@ -170,7 +149,7 @@ final class ServicoMusicasFavoritasEdicao
                 )
             ) {
                 throw ValidationException::withMessages([
-                    'classificacoes' => 'O mesmo utilizador foi indicado mais do que uma vez.',
+                    'musicas_favoritas' => 'O mesmo utilizador foi indicado mais do que uma vez.',
                 ]);
             }
 
@@ -190,16 +169,17 @@ final class ServicoMusicasFavoritasEdicao
     }
 
     /**
-     * Normaliza o identificador de um utilizador.
+     * Normaliza o identificador de um utilizador selecionado.
      *
      * @param  int|string  $identificador  Identificador recebido.
      * @return int Identificador normalizado.
      *
-     * @throws ValidationException Quando o identificador não é válido.
+     * @throws ValidationException Quando o identificador não é um inteiro
+     *                             positivo.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function normalizarIdentificadorUtilizador(
         int|string $identificador,
@@ -212,10 +192,9 @@ final class ServicoMusicasFavoritasEdicao
         }
 
         if (is_string($identificador)) {
-            $identificadorNormalizado =
-                trim(
-                    $identificador,
-                );
+            $identificadorNormalizado = trim(
+                $identificador,
+            );
 
             if (
                 $identificadorNormalizado !== ''
@@ -229,7 +208,7 @@ final class ServicoMusicasFavoritasEdicao
         }
 
         throw ValidationException::withMessages([
-            'classificacoes' => 'Foi indicado um utilizador inválido.',
+            'musicas_favoritas' => 'Foi indicado um utilizador inválido.',
         ]);
     }
 
@@ -238,13 +217,13 @@ final class ServicoMusicasFavoritasEdicao
      *
      * @param  int  $identificadorUtilizador  Identificador do utilizador.
      * @param  mixed  $entradasRecebidas  Posições recebidas.
-     * @return array<int, string|null> Posições normalizadas.
+     * @return array<int, string|null> Escolhas indexadas pela posição real.
      *
      * @throws ValidationException Quando as posições não são válidas.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function normalizarMusicasUtilizador(
         int $identificadorUtilizador,
@@ -254,15 +233,15 @@ final class ServicoMusicasFavoritasEdicao
             ! is_array($entradasRecebidas)
             || ! array_is_list($entradasRecebidas)
             || count($entradasRecebidas)
-            !== self::NUMERO_POSICOES
+            !== MusicaFavoritaEdicao::NUMERO_POSICOES
         ) {
             throw ValidationException::withMessages([
                 sprintf(
-                    'classificacoes.%d',
+                    'musicas_favoritas.%d',
                     $identificadorUtilizador,
                 ) => sprintf(
                     'Devem ser enviadas exatamente %d posições.',
-                    self::NUMERO_POSICOES,
+                    MusicaFavoritaEdicao::NUMERO_POSICOES,
                 ),
             ]);
         }
@@ -274,7 +253,8 @@ final class ServicoMusicasFavoritasEdicao
             $entradasRecebidas as $indice => $entradaRecebida
         ) {
             $posicao =
-                $indice + 1;
+                MusicaFavoritaEdicao::POSICAO_MINIMA
+                + $indice;
 
             $musica =
                 $this->normalizarMusica(
@@ -289,30 +269,27 @@ final class ServicoMusicasFavoritasEdicao
                 continue;
             }
 
-            $chaveMusica =
-                mb_strtolower(
-                    $musica,
-                );
+            $chaveMusica = mb_strtolower(
+                $musica,
+            );
 
             if (
-                isset(
-                    $musicasUtilizadas[$chaveMusica],
+                array_key_exists(
+                    $chaveMusica,
+                    $musicasUtilizadas,
                 )
             ) {
                 throw ValidationException::withMessages([
                     sprintf(
-                        'classificacoes.%d.%d',
+                        'musicas_favoritas.%d.%d',
                         $identificadorUtilizador,
                         $indice,
                     ) => 'A mesma música não pode ocupar duas posições.',
                 ]);
             }
 
-            $musicasUtilizadas[$chaveMusica] =
-                true;
-
-            $musicas[$posicao] =
-                $musica;
+            $musicasUtilizadas[$chaveMusica] = true;
+            $musicas[$posicao] = $musica;
         }
 
         return $musicas;
@@ -330,7 +307,7 @@ final class ServicoMusicasFavoritasEdicao
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function normalizarMusica(
         mixed $entrada,
@@ -343,8 +320,7 @@ final class ServicoMusicasFavoritasEdicao
 
         if (! is_string($entrada)) {
             throw ValidationException::withMessages([
-                sprintf(
-                    'classificacoes.%d.%d',
+                $this->obterChaveMusica(
                     $identificadorUtilizador,
                     $indice,
                 ) => 'A música indicada não é válida.',
@@ -358,27 +334,24 @@ final class ServicoMusicasFavoritasEdicao
             ) === 1
         ) {
             throw ValidationException::withMessages([
-                sprintf(
-                    'classificacoes.%d.%d',
+                $this->obterChaveMusica(
                     $identificadorUtilizador,
                     $indice,
                 ) => 'A música contém caracteres inválidos.',
             ]);
         }
 
-        $musica =
-            preg_replace(
-                '/\s+/u',
-                ' ',
-                trim(
-                    $entrada,
-                ),
-            );
+        $musica = preg_replace(
+            '/\s+/u',
+            ' ',
+            trim(
+                $entrada,
+            ),
+        );
 
         if (! is_string($musica)) {
             throw ValidationException::withMessages([
-                sprintf(
-                    'classificacoes.%d.%d',
+                $this->obterChaveMusica(
                     $identificadorUtilizador,
                     $indice,
                 ) => 'Não foi possível normalizar a música indicada.',
@@ -392,16 +365,15 @@ final class ServicoMusicasFavoritasEdicao
         if (
             mb_strlen(
                 $musica,
-            ) > self::COMPRIMENTO_MAXIMO_MUSICA
+            ) > MusicaFavoritaEdicao::COMPRIMENTO_MAXIMO_MUSICA
         ) {
             throw ValidationException::withMessages([
-                sprintf(
-                    'classificacoes.%d.%d',
+                $this->obterChaveMusica(
                     $identificadorUtilizador,
                     $indice,
                 ) => sprintf(
                     'A música não pode exceder %d caracteres.',
-                    self::COMPRIMENTO_MAXIMO_MUSICA,
+                    MusicaFavoritaEdicao::COMPRIMENTO_MAXIMO_MUSICA,
                 ),
             ]);
         }
@@ -410,57 +382,138 @@ final class ServicoMusicasFavoritasEdicao
     }
 
     /**
+     * Obtém a chave de validação de uma música.
+     *
+     * @param  int  $identificadorUtilizador  Identificador do utilizador.
+     * @param  int  $indice  Índice da música.
+     * @return string Chave correspondente no pedido.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function obterChaveMusica(
+        int $identificadorUtilizador,
+        int $indice,
+    ): string {
+        return sprintf(
+            'musicas_favoritas.%d.%d',
+            $identificadorUtilizador,
+            $indice,
+        );
+    }
+
+    /**
      * Obtém o identificador de uma edição persistida.
      *
      * @param  Edicao  $edicao  Edição recebida.
      * @return int Identificador da edição.
      *
-     * @throws ValidationException Quando a edição não está persistida.
+     * @throws InvalidArgumentException Quando a edição não está persistida ou
+     *                                  não possui um identificador válido.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterIdentificadorEdicao(
         Edicao $edicao,
     ): int {
-        $identificador =
-            $edicao->getKey();
-
-        if (
-            ! $edicao->exists
-            || ! is_numeric($identificador)
-            || (int) $identificador < 1
-        ) {
-            throw ValidationException::withMessages([
-                'edicao_id' => 'A edição indicada não é válida.',
-            ]);
+        if (! $edicao->exists) {
+            throw new InvalidArgumentException(
+                'A edição deve estar persistida para sincronizar as músicas favoritas.',
+            );
         }
 
-        return (int) $identificador;
+        $identificador = $edicao->getKey();
+
+        if (
+            is_int($identificador)
+            && $identificador > 0
+        ) {
+            return $identificador;
+        }
+
+        if (! is_string($identificador)) {
+            throw new InvalidArgumentException(
+                'A edição deve possuir um identificador válido.',
+            );
+        }
+
+        $identificadorNormalizado = trim(
+            $identificador,
+        );
+
+        if (
+            $identificadorNormalizado === ''
+            || ! ctype_digit(
+                $identificadorNormalizado,
+            )
+            || (int) $identificadorNormalizado < 1
+        ) {
+            throw new InvalidArgumentException(
+                'A edição deve possuir um identificador válido.',
+            );
+        }
+
+        return (int) $identificadorNormalizado;
     }
 
     /**
-     * Valida o identificador do utilizador registador.
+     * Obtém o identificador do utilizador responsável pelo registo.
      *
-     * @param  int  $identificador  Identificador recebido.
+     * @param  Utilizador  $registador  Utilizador recebido.
+     * @return int Identificador do utilizador.
      *
-     * @throws ValidationException Quando o identificador não é válido.
+     * @throws InvalidArgumentException Quando o utilizador não está
+     *                                  persistido ou não possui um
+     *                                  identificador válido.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    private function validarIdentificadorRegistador(
-        int $identificador,
-    ): void {
-        if ($identificador > 0) {
-            return;
+    private function obterIdentificadorRegistador(
+        Utilizador $registador,
+    ): int {
+        if (! $registador->exists) {
+            throw new InvalidArgumentException(
+                'O utilizador responsável pelo registo deve estar persistido.',
+            );
         }
 
-        throw ValidationException::withMessages([
-            'classificacoes' => 'Não foi possível identificar o utilizador autenticado.',
-        ]);
+        $identificador = $registador->getKey();
+
+        if (
+            is_int($identificador)
+            && $identificador > 0
+        ) {
+            return $identificador;
+        }
+
+        if (! is_string($identificador)) {
+            throw new InvalidArgumentException(
+                'O utilizador responsável pelo registo deve possuir um identificador válido.',
+            );
+        }
+
+        $identificadorNormalizado = trim(
+            $identificador,
+        );
+
+        if (
+            $identificadorNormalizado === ''
+            || ! ctype_digit(
+                $identificadorNormalizado,
+            )
+            || (int) $identificadorNormalizado < 1
+        ) {
+            throw new InvalidArgumentException(
+                'O utilizador responsável pelo registo deve possuir um identificador válido.',
+            );
+        }
+
+        return (int) $identificadorNormalizado;
     }
 
     /**
@@ -472,79 +525,97 @@ final class ServicoMusicasFavoritasEdicao
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function bloquearEdicao(
         int $identificadorEdicao,
     ): void {
-        $edicao =
-            Edicao::query()
-                ->whereKey(
-                    $identificadorEdicao,
-                )
-                ->lockForUpdate()
-                ->first();
+        $edicao = Edicao::query()
+            ->whereKey(
+                $identificadorEdicao,
+            )
+            ->lockForUpdate()
+            ->first();
 
         if ($edicao instanceof Edicao) {
             return;
         }
 
         throw ValidationException::withMessages([
-            'edicao_id' => 'A edição indicada deixou de estar disponível.',
+            'edicao' => 'A edição indicada deixou de estar disponível.',
         ]);
     }
 
     /**
-     * Confirma a existência do utilizador que efetuou o registo.
+     * Bloqueia e valida todos os utilizadores envolvidos na operação.
      *
-     * O registador pode ser um administrador ou superadministrador, pelo que
-     * não é aplicado o âmbito `selecionaveis`.
+     * Os registos são bloqueados por ordem crescente de identificador para
+     * reduzir a possibilidade de impasses entre sincronizações concorrentes.
+     * O registador pode possuir qualquer papel, mas os utilizadores cujas
+     * escolhas são alteradas têm de pertencer ao âmbito `selecionaveis`.
      *
-     * @param  int  $identificador  Identificador do utilizador.
+     * @param  int  $identificadorRegistador  Utilizador responsável.
+     * @param  list<int>  $identificadoresUtilizadores  Utilizadores alterados.
      *
-     * @throws ValidationException Quando o utilizador não existe.
+     * @throws ValidationException Quando algum utilizador deixou de existir ou
+     *                             não pode ser selecionado.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    private function garantirRegistadorExistente(
-        int $identificador,
+    private function bloquearEValidarUtilizadores(
+        int $identificadorRegistador,
+        array $identificadoresUtilizadores,
     ): void {
-        if (
+        $identificadoresEnvolvidos = array_values(
+            array_unique([
+                $identificadorRegistador,
+                ...$identificadoresUtilizadores,
+            ]),
+        );
+
+        sort(
+            $identificadoresEnvolvidos,
+            SORT_NUMERIC,
+        );
+
+        $identificadoresExistentes =
             Utilizador::query()
                 ->whereKey(
-                    $identificador,
+                    $identificadoresEnvolvidos,
                 )
-                ->exists()
+                ->orderBy(
+                    'id',
+                )
+                ->lockForUpdate()
+                ->pluck(
+                    'id',
+                )
+                ->map(
+                    static fn (
+                        mixed $identificador,
+                    ): int => (int) $identificador,
+                )
+                ->all();
+
+        if (
+            ! in_array(
+                $identificadorRegistador,
+                $identificadoresExistentes,
+                true,
+            )
         ) {
-            return;
+            throw ValidationException::withMessages([
+                'musicas_favoritas' => 'O utilizador responsável pelo registo deixou de estar disponível.',
+            ]);
         }
 
-        throw ValidationException::withMessages([
-            'classificacoes' => 'O utilizador responsável pelo registo não existe.',
-        ]);
-    }
-
-    /**
-     * Confirma que todos os utilizadores podem ser selecionados.
-     *
-     * @param  list<int>  $identificadores  Identificadores recebidos.
-     *
-     * @throws ValidationException Quando algum utilizador não é selecionável.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.1.0
-     */
-    private function garantirUtilizadoresSelecionaveis(
-        array $identificadores,
-    ): void {
-        $identificadoresExistentes =
+        $identificadoresSelecionaveis =
             Utilizador::query()
                 ->selecionaveis()
                 ->whereKey(
-                    $identificadores,
+                    $identificadoresUtilizadores,
                 )
                 ->pluck(
                     'id',
@@ -559,7 +630,7 @@ final class ServicoMusicasFavoritasEdicao
                 ->all();
 
         $identificadoresEsperados =
-            $identificadores;
+            $identificadoresUtilizadores;
 
         sort(
             $identificadoresEsperados,
@@ -567,39 +638,38 @@ final class ServicoMusicasFavoritasEdicao
         );
 
         if (
-            $identificadoresExistentes
+            $identificadoresSelecionaveis
             === $identificadoresEsperados
         ) {
             return;
         }
 
         throw ValidationException::withMessages([
-            'classificacoes' => 'Foi indicado um utilizador inexistente ou indisponível.',
+            'musicas_favoritas' => 'Foi indicado um utilizador inexistente ou indisponível.',
         ]);
     }
 
     /**
-     * Substitui as classificações dos utilizadores indicados.
+     * Substitui as músicas favoritas dos utilizadores indicados.
      *
      * @param  int  $identificadorEdicao  Identificador da edição.
-     * @param  array<int, array<int, string|null>>  $classificacoes
-     *                                                               Classificações
-     *                                                               normalizadas.
+     * @param  array<int, array<int, string|null>>  $musicasFavoritas  Escolhas
+     *                                                                 normalizadas.
      * @param  int  $identificadorRegistador  Utilizador responsável pelo
      *                                        registo.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    private function substituirClassificacoes(
+    private function substituirMusicasFavoritas(
         int $identificadorEdicao,
-        array $classificacoes,
+        array $musicasFavoritas,
         int $identificadorRegistador,
     ): void {
         $identificadoresUtilizadores =
             array_keys(
-                $classificacoes,
+                $musicasFavoritas,
             );
 
         MusicaFavoritaEdicao::query()
@@ -613,13 +683,11 @@ final class ServicoMusicasFavoritasEdicao
             )
             ->delete();
 
-        $momento =
-            CarbonImmutable::now();
-
+        $momento = CarbonImmutable::now();
         $registos = [];
 
         foreach (
-            $classificacoes as $identificadorUtilizador => $musicas
+            $musicasFavoritas as $identificadorUtilizador => $musicas
         ) {
             foreach ($musicas as $posicao => $musica) {
                 if ($musica === null) {
