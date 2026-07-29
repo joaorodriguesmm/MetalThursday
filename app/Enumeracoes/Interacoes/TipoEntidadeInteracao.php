@@ -18,7 +18,7 @@ use App\Models\MetalThursday\SeccaoMetalThursday;
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 enum TipoEntidadeInteracao: string
 {
@@ -104,6 +104,30 @@ enum TipoEntidadeInteracao: string
     }
 
     /**
+     * Obtém todos os slugs públicos permitidos.
+     *
+     * Este contrato é utilizado pelas restrições das rotas para garantir que
+     * apenas tipos de entidades suportados chegam aos controladores.
+     *
+     * @return non-empty-list<
+     *     'metal-thursday'|'seccao-metal-thursday'
+     * > Slugs públicos permitidos.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public static function obterSlugs(): array
+    {
+        return array_map(
+            static fn (
+                self $tipo,
+            ): string => $tipo->value,
+            self::cases(),
+        );
+    }
+
+    /**
      * Resolve o tipo correspondente a um modelo.
      *
      * @param  MetalThursday|SeccaoMetalThursday  $modelo  Modelo recebido.
@@ -126,7 +150,7 @@ enum TipoEntidadeInteracao: string
     /**
      * Obtém o mapa utilizado pelas relações polimórficas das interações.
      *
-     * O alias `utilizador`, necessário para as notificações persistidas, será
+     * O alias `utilizador`, necessário para as notificações persistidas, é
      * acrescentado pelo provider geral porque não representa uma entidade de
      * interação.
      *
