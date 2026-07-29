@@ -17,21 +17,10 @@ use Illuminate\Support\HtmlString;
  *
  * @since 2.0.0
  *
- * @version 1.1.0
+ * @version 2.0.0
  */
 final class RenderizadorIncorporacoes
 {
-    /**
-     * Comprimento máximo de uma ligação persistida.
-     *
-     * @var int
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const COMPRIMENTO_MAXIMO_LIGACAO = 2048;
-
     /**
      * Hosts reconhecidos como pertencentes ao YouTube.
      *
@@ -68,33 +57,63 @@ final class RenderizadorIncorporacoes
     ];
 
     /**
+     * Comprimento exato de um identificador de vídeo do YouTube.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const COMPRIMENTO_IDENTIFICADOR_VIDEO = 11;
+
+    /**
+     * Comprimento mínimo de um identificador de lista de reprodução.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const COMPRIMENTO_MINIMO_IDENTIFICADOR_LISTA = 10;
+
+    /**
+     * Comprimento máximo de um identificador de lista de reprodução.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const COMPRIMENTO_MAXIMO_IDENTIFICADOR_LISTA = 150;
+
+    /**
      * Renderiza a incorporação e a ligação externa de uma secção.
+     *
+     * Quando a ligação não é válida, não é produzido qualquer conteúdo.
+     *
+     * Quando o tipo específico não corresponde a uma ligação reconhecida do
+     * YouTube, continua a ser apresentada apenas a ligação externa validada.
      *
      * @param  SeccaoMetalThursday  $seccao  Secção apresentada.
      * @return HtmlString Conteúdo HTML validado.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function renderizar(
         SeccaoMetalThursday $seccao,
     ): HtmlString {
-        $ligacao =
-            $this->normalizarLigacao(
-                $seccao->ligacao,
-            );
+        $ligacao = $this->normalizarLigacao(
+            $seccao->ligacao,
+        );
 
         if ($ligacao === null) {
             return new HtmlString('');
         }
 
-        $tipo =
-            $this->obterTipoIncorporacao(
-                $seccao->tipo_incorporacao,
-            );
+        $tipoIncorporacao =
+            $seccao->tipo_incorporacao
+            ?? TipoIncorporacao::Ligacao;
 
-        $incorporacao = match ($tipo) {
+        $incorporacao = match ($tipoIncorporacao) {
             TipoIncorporacao::VideoYouTube => $this->renderizarVideoYouTube(
                 $ligacao,
             ),
@@ -106,19 +125,20 @@ final class RenderizadorIncorporacoes
             TipoIncorporacao::Ligacao => '',
         };
 
-        $ligacaoExterna =
-            $this->renderizarLigacaoExterna(
-                $ligacao,
-            );
-
         return new HtmlString(
             $incorporacao
-                .$ligacaoExterna,
+                .$this->renderizarLigacaoExterna(
+                    $ligacao,
+                ),
         );
     }
 
     /**
      * Obtém as definições utilizadas pela interface para reconhecer ligações.
+     *
+     * Apenas os tipos que possuem uma expressão regular de reconhecimento são
+     * disponibilizados. A ligação externa comum não necessita de deteção no
+     * JavaScript.
      *
      * @return list<array{
      *     tipo: string,
@@ -128,7 +148,7 @@ final class RenderizadorIncorporacoes
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     public function definicoesParaJavaScript(): array
     {
@@ -160,30 +180,6 @@ final class RenderizadorIncorporacoes
         }
 
         return $definicoes;
-    }
-
-    /**
-     * Obtém o tipo de incorporação associado à secção.
-     *
-     * Quando o valor não é reconhecido, é utilizada apenas a ligação externa.
-     *
-     * @param  mixed  $valor  Valor persistido ou enum já convertido.
-     * @return TipoIncorporacao Tipo reconhecido.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private function obterTipoIncorporacao(
-        mixed $valor,
-    ): TipoIncorporacao {
-        if ($valor instanceof TipoIncorporacao) {
-            return $valor;
-        }
-
-        return TipoIncorporacao::tentarCriar(
-            $valor,
-        ) ?? TipoIncorporacao::Ligacao;
     }
 
     /**
@@ -255,13 +251,16 @@ final class RenderizadorIncorporacoes
     /**
      * Renderiza um iframe responsivo.
      *
+     * A origem e o título são escapados antes de serem introduzidos nos
+     * atributos HTML.
+     *
      * @param  string  $origem  Origem previamente validada.
      * @param  string  $titulo  Título acessível.
      * @return string HTML do iframe.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     private function renderizarIframe(
         string $origem,
@@ -327,12 +326,16 @@ HTML;
     /**
      * Valida e normaliza uma ligação HTTP ou HTTPS.
      *
+     * Esta validação é defensiva. A ligação já deve ter sido validada pelo
+     * atributo definitivo do modelo {@see SeccaoMetalThursday}, mas o serviço
+     * nunca produz HTML com base num valor que não tenha confirmado.
+     *
      * @param  mixed  $valor  Valor recebido.
-     * @return string|null Ligação válida ou nulo.
+     * @return string|null Ligação válida ou nula.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     private function normalizarLigacao(
         mixed $valor,
@@ -341,21 +344,30 @@ HTML;
             return null;
         }
 
-        $ligacao =
-            trim(
+        if (
+            preg_match(
+                '//u',
                 $valor,
-            );
+            ) !== 1
+        ) {
+            return null;
+        }
+
+        $ligacao = trim(
+            $valor,
+        );
 
         if (
             $ligacao === ''
-            || mb_strlen($ligacao)
-            > self::COMPRIMENTO_MAXIMO_LIGACAO
+            || mb_strlen(
+                $ligacao,
+            ) > SeccaoMetalThursday::COMPRIMENTO_MAXIMO_LIGACAO
             || str_contains(
                 $ligacao,
                 '\\',
             )
             || preg_match(
-                '/[\x00-\x1F\x7F]/',
+                '/[\x00-\x20\x7F]/',
                 $ligacao,
             ) === 1
             || filter_var(
@@ -366,10 +378,9 @@ HTML;
             return null;
         }
 
-        $componentes =
-            parse_url(
-                $ligacao,
-            );
+        $componentes = parse_url(
+            $ligacao,
+        );
 
         if (
             ! is_array($componentes)
@@ -379,21 +390,21 @@ HTML;
             )
             || isset(
                 $componentes['user'],
+            )
+            || isset(
                 $componentes['pass'],
             )
         ) {
             return null;
         }
 
-        $esquema =
-            mb_strtolower(
-                (string) $componentes['scheme'],
-            );
+        $esquema = mb_strtolower(
+            (string) $componentes['scheme'],
+        );
 
-        $host =
-            trim(
-                (string) $componentes['host'],
-            );
+        $host = trim(
+            (string) $componentes['host'],
+        );
 
         if (
             ! in_array(
@@ -415,12 +426,15 @@ HTML;
     /**
      * Extrai o identificador de um vídeo do YouTube.
      *
+     * São reconhecidas ligações curtas, parâmetros `v` e os caminhos
+     * `embed`, `shorts` e `live`.
+     *
      * @param  string  $ligacao  Ligação validada.
      * @return string|null Identificador ou nulo.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     private function extrairIdentificadorVideoYouTube(
         string $ligacao,
@@ -491,7 +505,7 @@ HTML;
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function extrairIdentificadorListaYouTube(
         string $ligacao,
@@ -509,10 +523,21 @@ HTML;
             $componentes['consulta']['list']
             ?? null;
 
+        if (! is_string($identificador)) {
+            return null;
+        }
+
+        $comprimento = strlen(
+            $identificador,
+        );
+
         if (
-            ! is_string($identificador)
+            $comprimento
+            < self::COMPRIMENTO_MINIMO_IDENTIFICADOR_LISTA
+            || $comprimento
+            > self::COMPRIMENTO_MAXIMO_IDENTIFICADOR_LISTA
             || preg_match(
-                '/^[A-Za-z0-9_-]{10,150}$/D',
+                '/\A[A-Za-z0-9_-]+\z/',
                 $identificador,
             ) !== 1
         ) {
@@ -530,34 +555,34 @@ HTML;
      *     host: string,
      *     segmentos: list<string>,
      *     consulta: array<string, mixed>
-     * }|null Componentes reconhecidos ou nulo.
+     * }|null Componentes reconhecidos ou nulos.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     private function decomporLigacaoYouTube(
         string $ligacao,
     ): ?array {
-        $componentes =
-            parse_url(
-                $ligacao,
-            );
+        $componentes = parse_url(
+            $ligacao,
+        );
 
         if (
             ! is_array($componentes)
-            || ! isset($componentes['host'])
+            || ! isset(
+                $componentes['host'],
+            )
         ) {
             return null;
         }
 
-        $host =
-            mb_strtolower(
-                rtrim(
-                    (string) $componentes['host'],
-                    '.',
-                ),
-            );
+        $host = mb_strtolower(
+            rtrim(
+                (string) $componentes['host'],
+                '.',
+            ),
+        );
 
         if (
             ! in_array(
@@ -569,17 +594,15 @@ HTML;
             return null;
         }
 
-        $caminho =
-            trim(
-                (string) (
-                    $componentes['path']
-                    ?? ''
-                ),
-                '/',
-            );
+        $caminho = trim(
+            (string) (
+                $componentes['path']
+                ?? ''
+            ),
+            '/',
+        );
 
-        $segmentos =
-            $caminho === ''
+        $segmentos = $caminho === ''
             ? []
             : array_values(
                 array_filter(
@@ -620,15 +643,18 @@ HTML;
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function validarIdentificadorVideo(
         mixed $identificador,
     ): ?string {
         if (
             ! is_string($identificador)
+            || strlen(
+                $identificador,
+            ) !== self::COMPRIMENTO_IDENTIFICADOR_VIDEO
             || preg_match(
-                '/^[A-Za-z0-9_-]{11}$/D',
+                '/\A[A-Za-z0-9_-]+\z/',
                 $identificador,
             ) !== 1
         ) {
