@@ -16,17 +16,21 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
+use LogicException;
 use Throwable;
 
 /**
  * Gere a apresentação e a atualização dos dados gerais do perfil.
  *
- * A palavra-passe e as permissões de e-mail são atualizadas por
- * controladores próprios.
+ * A alteração da palavra-passe e das permissões de e-mail pertence aos
+ * respetivos controladores especializados.
+ *
+ * Quando o endereço de e-mail é alterado, a sessão atual é encerrada e o
+ * utilizador tem de confirmar o novo endereço antes de voltar a autenticar-se.
  *
  * @since 1.0.0
  *
- * @version 3.2.0
+ * @version 4.0.0
  */
 final class ControladorPerfil extends Controller
 {
@@ -39,10 +43,11 @@ final class ControladorPerfil extends Controller
      *
      * @version 1.0.0
      */
-    private const SACO_ERROS = 'perfil';
+    private const SACO_ERROS =
+        'perfil';
 
     /**
-     * Identificador da permissão que representa todas as notificações.
+     * Identificador da permissão que representa todas as comunicações.
      *
      * @var string
      *
@@ -50,7 +55,8 @@ final class ControladorPerfil extends Controller
      *
      * @version 2.0.0
      */
-    private const IDENTIFICADOR_PERMISSAO_TODAS = 'todas';
+    private const IDENTIFICADOR_PERMISSAO_TODAS =
+        'todas';
 
     /**
      * Mensagem apresentada depois de atualizar os dados gerais do perfil.
@@ -63,6 +69,42 @@ final class ControladorPerfil extends Controller
      */
     private const MENSAGEM_PERFIL_ATUALIZADO =
         'O perfil foi atualizado com sucesso.';
+
+    /**
+     * Mensagem apresentada quando o endereço já pertence a outra conta.
+     *
+     * @var string
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private const MENSAGEM_EMAIL_INDISPONIVEL =
+        'O endereço de e-mail já está associado a outro utilizador.';
+
+    /**
+     * Mensagem apresentada quando a nova verificação não pode ser enviada.
+     *
+     * @var string
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private const MENSAGEM_VERIFICACAO_NAO_ENVIADA =
+        'O perfil foi atualizado, mas não foi possível enviar a mensagem de verificação do novo endereço de e-mail.';
+
+    /**
+     * Mensagem apresentada depois de alterar o endereço de e-mail.
+     *
+     * @var string
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private const MENSAGEM_EMAIL_ALTERADO =
+        'O perfil foi atualizado. Verifica o novo endereço de e-mail antes de iniciares sessão novamente.';
 
     /**
      * Cria o controlador.
@@ -82,25 +124,25 @@ final class ControladorPerfil extends Controller
     /**
      * Apresenta a página de edição do perfil.
      *
-     * As permissões de e-mail são preparadas para apresentação antes de
-     * serem enviadas para a view.
+     * As permissões de e-mail são apresentadas pela ordem de domínio definida
+     * nos respetivos registos.
      *
      * @param  Request  $pedido  Pedido autenticado.
      * @return View Página de edição do perfil.
      *
      * @throws AuthenticationException Quando não existe autenticação válida.
+     * @throws LogicException Quando uma permissão persistida não possui um
+     *                        identificador válido.
      *
      * @since 1.0.0
      *
-     * @version 3.1.0
+     * @version 4.0.0
      */
     public function editar(
         Request $pedido,
     ): View {
         $utilizador =
-            $this->obterUtilizadorAutenticado(
-                $pedido,
-            );
+            $this->obterUtilizadorAutenticado();
 
         $permissoesEmail =
             PermissaoEmail::query()
@@ -109,7 +151,11 @@ final class ControladorPerfil extends Controller
                     'identificador',
                     'nome',
                     'descricao',
+                    'ordem',
                 ])
+                ->orderBy(
+                    'ordem',
+                )
                 ->orderBy(
                     'id',
                 )
@@ -137,8 +183,12 @@ final class ControladorPerfil extends Controller
     /**
      * Atualiza os dados gerais do perfil.
      *
-     * Quando o endereço de e-mail é alterado, a verificação anterior deixa de
-     * ser válida, é enviada uma nova notificação e a sessão é terminada.
+     * A persistência dos dados e a substituição da fotografia são delegadas
+     * ao serviço de atualização do perfil.
+     *
+     * Quando o endereço de e-mail é alterado, a sessão é terminada antes do
+     * envio da nova notificação de verificação. Uma eventual falha do envio
+     * não reverte os dados já persistidos.
      *
      * @param  AtualizarPerfilRequest  $pedido  Pedido validado.
      * @return RedirectResponse Redirecionamento após a atualização.
@@ -149,15 +199,13 @@ final class ControladorPerfil extends Controller
      *
      * @since 1.0.0
      *
-     * @version 3.1.0
+     * @version 4.0.0
      */
     public function atualizar(
         AtualizarPerfilRequest $pedido,
     ): RedirectResponse {
         $utilizador =
-            $this->obterUtilizadorAutenticado(
-                $pedido,
-            );
+            $this->obterUtilizadorAutenticado();
 
         $nome =
             $pedido->obterNome();
@@ -165,17 +213,20 @@ final class ControladorPerfil extends Controller
         $email =
             $pedido->obterEmail();
 
+        $fotografia =
+            $pedido->obterFotografia();
+
         try {
             $resultado =
                 $this
                     ->servicoPerfil
                     ->atualizar(
-                        $utilizador,
-                        $nome,
-                        $email,
-                        $pedido->obterFotografia(),
+                        utilizador: $utilizador,
+                        nome: $nome,
+                        email: $email,
+                        fotografia: $fotografia,
                     );
-        } catch (DomainException $excecao) {
+        } catch (DomainException) {
             return to_route(
                 'perfil.editar',
             )
@@ -186,7 +237,7 @@ final class ControladorPerfil extends Controller
                 ])
                 ->withErrors(
                     [
-                        'email' => $excecao->getMessage(),
+                        'email' => self::MENSAGEM_EMAIL_INDISPONIVEL,
                     ],
                     self::SACO_ERROS,
                 );
@@ -204,21 +255,24 @@ final class ControladorPerfil extends Controller
         $utilizadorAtualizado =
             $resultado->obterUtilizador();
 
-        $notificacaoEnviada =
-            $this->enviarNotificacaoVerificacao(
-                $utilizadorAtualizado,
-            );
-
+        /*
+         * A sessão deixa de ser válida assim que o endereço anteriormente
+         * verificado é substituído.
+         */
         $this->terminarSessao(
             $pedido,
         );
 
-        if (! $notificacaoEnviada) {
+        if (
+            ! $this->enviarNotificacaoVerificacao(
+                $utilizadorAtualizado,
+            )
+        ) {
             return to_route(
                 'login',
             )->with(
                 'erro',
-                'O perfil foi atualizado, mas não foi possível enviar a mensagem de verificação do novo endereço de e-mail.',
+                self::MENSAGEM_VERIFICACAO_NAO_ENVIADA,
             );
         }
 
@@ -226,7 +280,7 @@ final class ControladorPerfil extends Controller
             'login',
         )->with(
             'sucesso',
-            'O perfil foi atualizado. Verifica o novo endereço de e-mail antes de iniciares sessão novamente.',
+            self::MENSAGEM_EMAIL_ALTERADO,
         );
     }
 
@@ -234,16 +288,16 @@ final class ControladorPerfil extends Controller
      * Obtém os identificadores das permissões de e-mail do utilizador.
      *
      * @param  Utilizador  $utilizador  Utilizador consultado.
-     * @return array<int, int> Identificadores normalizados e ordenados.
+     * @return list<int> Identificadores normalizados e ordenados.
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterIdentificadoresPermissoesEmail(
         Utilizador $utilizador,
     ): array {
-        $identificadores =
+        $valores =
             $utilizador
                 ->permissoesEmail()
                 ->pluck(
@@ -251,31 +305,31 @@ final class ControladorPerfil extends Controller
                 )
                 ->all();
 
-        $identificadoresNormalizados =
+        $identificadores =
             $this->normalizarListaIdentificadores(
-                $identificadores,
+                $valores,
             );
 
         sort(
-            $identificadoresNormalizados,
+            $identificadores,
             SORT_NUMERIC,
         );
 
-        return $identificadoresNormalizados;
+        return $identificadores;
     }
 
     /**
      * Prepara as permissões de e-mail utilizadas pelo formulário.
      *
-     * A permissão global é apresentada primeiro. As restantes permissões são
-     * ordenadas alfabeticamente pelo nome.
+     * A ordem recebida da base de dados é preservada. A permissão global e as
+     * restantes permissões seguem a coluna `ordem` do respetivo modelo.
      *
      * @param  Request  $pedido  Pedido HTTP atual.
      * @param  Collection<int, PermissaoEmail>  $permissoesEmail  Permissões
      *                                                            disponíveis.
-     * @param  array<int, int>  $identificadoresAtuais  Permissões atualmente
-     *                                                  atribuídas.
-     * @return array<int, array{
+     * @param  list<int>  $identificadoresAtuais  Permissões atualmente
+     *                                            atribuídas.
+     * @return list<array{
      *     identificador: int,
      *     nome: string,
      *     descricao: string|null,
@@ -283,9 +337,12 @@ final class ControladorPerfil extends Controller
      *     selecionada: bool
      * }> Permissões preparadas.
      *
+     * @throws LogicException Quando uma permissão persistida não possui um
+     *                        identificador válido.
+     *
      * @since 3.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     private function prepararPermissoesEmailFormulario(
         Request $pedido,
@@ -300,86 +357,20 @@ final class ControladorPerfil extends Controller
                 ),
             );
 
-        $permissoesOrdenadas =
-            $permissoesEmail
-                ->sort(
-                    function (
-                        PermissaoEmail $primeiraPermissao,
-                        PermissaoEmail $segundaPermissao,
-                    ): int {
-                        $primeiraETodas =
-                            $this->ePermissaoTodas(
-                                $primeiraPermissao,
-                            );
-
-                        $segundaETodas =
-                            $this->ePermissaoTodas(
-                                $segundaPermissao,
-                            );
-
-                        if ($primeiraETodas !== $segundaETodas) {
-                            return $primeiraETodas
-                                ? -1
-                                : 1;
-                        }
-
-                        $nomePrimeira =
-                            $this->normalizarTexto(
-                                $primeiraPermissao->nome,
-                            )
-                            ?? '';
-
-                        $nomeSegunda =
-                            $this->normalizarTexto(
-                                $segundaPermissao->nome,
-                            )
-                            ?? '';
-
-                        $comparacaoNomes =
-                            strcasecmp(
-                                $nomePrimeira,
-                                $nomeSegunda,
-                            );
-
-                        if ($comparacaoNomes !== 0) {
-                            return $comparacaoNomes;
-                        }
-
-                        return (int) $primeiraPermissao->getKey()
-                            <=>
-                            (int) $segundaPermissao->getKey();
-                    },
-                )
-                ->values();
-
         $permissoesPreparadas = [];
 
-        foreach ($permissoesOrdenadas as $permissao) {
+        foreach ($permissoesEmail as $permissao) {
             $identificador =
-                $this->normalizarIdentificador(
-                    $permissao->getKey(),
+                $this->obterIdentificadorPermissao(
+                    $permissao,
                 );
-
-            $nome =
-                $this->normalizarTexto(
-                    $permissao->nome,
-                );
-
-            if (
-                $identificador === null
-                || $nome === null
-            ) {
-                continue;
-            }
 
             $permissoesPreparadas[] = [
                 'identificador' => $identificador,
 
-                'nome' => $nome,
+                'nome' => $permissao->nome,
 
-                'descricao' => $this->normalizarTexto(
-                    $permissao->descricao,
-                ),
+                'descricao' => $permissao->descricao,
 
                 'ePermissaoTodas' => $this->ePermissaoTodas(
                     $permissao,
@@ -397,33 +388,56 @@ final class ControladorPerfil extends Controller
     }
 
     /**
-     * Determina se uma permissão representa todas as notificações.
+     * Obtém o identificador persistido de uma permissão.
+     *
+     * @param  PermissaoEmail  $permissao  Permissão consultada.
+     * @return int Identificador positivo.
+     *
+     * @throws LogicException Quando a permissão não possui um identificador
+     *                        persistido válido.
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private function obterIdentificadorPermissao(
+        PermissaoEmail $permissao,
+    ): int {
+        $identificador =
+            $this->normalizarIdentificador(
+                $permissao->getKey(),
+            );
+
+        if ($identificador === null) {
+            throw new LogicException(
+                'Foi encontrada uma permissão de e-mail sem um identificador persistido válido.',
+            );
+        }
+
+        return $identificador;
+    }
+
+    /**
+     * Determina se uma permissão representa todas as comunicações.
      *
      * @param  PermissaoEmail  $permissao  Permissão analisada.
      * @return bool Verdadeiro quando é a permissão global.
      *
      * @since 3.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     private function ePermissaoTodas(
         PermissaoEmail $permissao,
     ): bool {
-        $identificador =
-            $this->normalizarTexto(
-                $permissao->identificador,
-            );
-
-        return $identificador !== null
-            && mb_strtolower(
-                $identificador,
-            ) === self::IDENTIFICADOR_PERMISSAO_TODAS;
+        return $permissao->identificador
+            === self::IDENTIFICADOR_PERMISSAO_TODAS;
     }
 
     /**
      * Envia a notificação de verificação do novo endereço de e-mail.
      *
-     * A atualização do perfil já foi concluída quando este método é chamado.
+     * A atualização do perfil já foi confirmada quando este método é chamado.
      * Uma falha no envio é reportada, mas não tenta reverter os dados.
      *
      * @param  Utilizador  $utilizador  Utilizador atualizado.
@@ -431,7 +445,7 @@ final class ControladorPerfil extends Controller
      *
      * @since 2.1.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function enviarNotificacaoVerificacao(
         Utilizador $utilizador,
@@ -451,19 +465,20 @@ final class ControladorPerfil extends Controller
     }
 
     /**
-     * Termina a sessão autenticada e renova o token CSRF.
+     * Termina a sessão autenticada, invalida os respetivos dados e regenera o
+     * token CSRF.
      *
      * @param  Request  $pedido  Pedido HTTP.
      *
      * @since 2.1.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function terminarSessao(
         Request $pedido,
     ): void {
         Auth::guard(
-            'web',
+            'sessao',
         )->logout();
 
         $pedido
@@ -476,22 +491,22 @@ final class ControladorPerfil extends Controller
     }
 
     /**
-     * Obtém o utilizador autenticado.
+     * Obtém o utilizador autenticado através do guard da aplicação.
      *
-     * @param  Request  $pedido  Pedido autenticado.
      * @return Utilizador Utilizador autenticado.
      *
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
-    private function obterUtilizadorAutenticado(
-        Request $pedido,
-    ): Utilizador {
+    private function obterUtilizadorAutenticado(): Utilizador
+    {
         $utilizador =
-            $pedido->user();
+            Auth::guard(
+                'sessao',
+            )->user();
 
         if (! $utilizador instanceof Utilizador) {
             throw new AuthenticationException(
@@ -503,55 +518,70 @@ final class ControladorPerfil extends Controller
     }
 
     /**
-     * Normaliza um identificador.
+     * Normaliza um identificador positivo.
      *
      * @param  mixed  $valor  Valor recebido.
      * @return int|null Identificador válido ou nulo.
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function normalizarIdentificador(
         mixed $valor,
     ): ?int {
+        if (is_int($valor)) {
+            return $valor >= 1
+                ? $valor
+                : null;
+        }
+
+        if (! is_string($valor)) {
+            return null;
+        }
+
+        $valorNormalizado =
+            trim(
+                $valor,
+            );
+
         if (
-            ! is_int($valor)
-            && ! is_string($valor)
+            $valorNormalizado === ''
+            || ! ctype_digit(
+                $valorNormalizado,
+            )
         ) {
             return null;
         }
 
         $identificador =
-            trim(
-                (string) $valor,
+            filter_var(
+                $valorNormalizado,
+                FILTER_VALIDATE_INT,
+                [
+                    'options' => [
+                        'min_range' => 1,
+                    ],
+                ],
             );
 
-        if (
-            $identificador === ''
-            || ! ctype_digit(
-                $identificador,
-            )
-            || (int) $identificador < 1
-        ) {
-            return null;
-        }
-
-        return (int) $identificador;
+        return $identificador === false
+            ? null
+            : $identificador;
     }
 
     /**
      * Normaliza uma lista de identificadores.
      *
-     * Identificadores inválidos são ignorados e valores repetidos são
-     * removidos.
+     * Identificadores inválidos são ignorados apenas durante a reconstrução
+     * visual do formulário. Valores repetidos são removidos.
      *
      * @param  mixed  $valores  Valores recebidos.
-     * @return array<int, int> Identificadores únicos.
+     * @return list<int> Identificadores positivos e únicos.
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function normalizarListaIdentificadores(
         mixed $valores,
@@ -579,32 +609,5 @@ final class ControladorPerfil extends Controller
         return array_values(
             $identificadores,
         );
-    }
-
-    /**
-     * Normaliza um texto opcional.
-     *
-     * @param  mixed  $valor  Valor recebido.
-     * @return string|null Texto normalizado.
-     *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
-     */
-    private function normalizarTexto(
-        mixed $valor,
-    ): ?string {
-        if (! is_string($valor)) {
-            return null;
-        }
-
-        $texto =
-            trim(
-                $valor,
-            );
-
-        return $texto !== ''
-            ? $texto
-            : null;
     }
 }
