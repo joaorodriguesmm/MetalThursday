@@ -11,15 +11,20 @@ use App\Models\Interacoes\Gosto;
 use App\Servicos\Notificacoes\NotificadorInteracoes;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use LogicException;
 
 /**
  * Gere os gostos associados aos comentários.
  *
+ * A alternância é executada numa transação e bloqueia o comentário, garantindo
+ * que pedidos concorrentes para o mesmo comentário são processados
+ * sequencialmente.
+ *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 4.0.0
  */
 final class ControladorGosto extends Controller
 {
@@ -32,7 +37,56 @@ final class ControladorGosto extends Controller
      *
      * @version 1.0.0
      */
-    private const TENTATIVAS_TRANSACAO = 3;
+    private const TENTATIVAS_TRANSACAO =
+        3;
+
+    /**
+     * Ação utilizada na notificação de um novo gosto.
+     *
+     * @var string
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private const ACAO_GOSTOU =
+        'gostou';
+
+    /**
+     * Mensagem apresentada quando o gosto é adicionado.
+     *
+     * @var string
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private const MENSAGEM_GOSTO_ADICIONADO =
+        'Gosto adicionado.';
+
+    /**
+     * Mensagem apresentada quando o gosto é removido.
+     *
+     * @var string
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private const MENSAGEM_GOSTO_REMOVIDO =
+        'Gosto removido.';
+
+    /**
+     * Texto apresentado quando o comentário ainda não possui gostos.
+     *
+     * @var string
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private const MENSAGEM_SEM_GOSTOS =
+        'Ainda não há gostos.';
 
     /**
      * Cria o controlador.
@@ -51,7 +105,13 @@ final class ControladorGosto extends Controller
     /**
      * Adiciona ou remove o gosto do utilizador autenticado.
      *
-     * @param  Request  $pedido  Pedido HTTP.
+     * O bloqueio do comentário serializa todas as alternâncias associadas ao
+     * mesmo registo. A restrição única da base de dados continua a garantir
+     * que cada utilizador possui, no máximo, um gosto por comentário.
+     *
+     * A notificação só é enviada depois de a transação terminar com sucesso e
+     * apenas quando o gosto foi adicionado.
+     *
      * @param  Comentario  $comentario  Comentário alterado.
      * @return JsonResponse Estado atualizado do gosto.
      *
@@ -59,16 +119,16 @@ final class ControladorGosto extends Controller
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
     public function alternar(
-        Request $pedido,
         Comentario $comentario,
     ): JsonResponse {
+        $utilizador =
+            $this->obterUtilizadorAutenticado();
+
         $identificadorUtilizador =
-            $this->obterIdentificadorUtilizador(
-                $pedido,
-            );
+            (int) $utilizador->getKey();
 
         /**
          * @var array{
@@ -116,14 +176,17 @@ final class ControladorGosto extends Controller
                             true;
                     }
 
+                    $numeroGostos =
+                        $comentarioBloqueado
+                            ->gostos()
+                            ->count();
+
                     return [
                         'comentario' => $comentarioBloqueado,
 
                         'adicionado' => $adicionado,
 
-                        'numero_gostos' => $comentarioBloqueado
-                            ->gostos()
-                            ->count(),
+                        'numero_gostos' => $numeroGostos,
                     ];
                 },
                 self::TENTATIVAS_TRANSACAO,
@@ -139,8 +202,9 @@ final class ControladorGosto extends Controller
             $this
                 ->notificadorInteracoes
                 ->notificarOutrosUtilizadores(
-                    $comentarioAtualizado,
-                    'gostou',
+                    sujeito: $comentarioAtualizado,
+                    causador: $utilizador,
+                    acao: self::ACAO_GOSTOU,
                 );
         }
 
@@ -155,8 +219,8 @@ final class ControladorGosto extends Controller
             'numero_gostos' => $resultado['numero_gostos'],
 
             'mensagem' => $adicionado
-                ? 'Gosto adicionado.'
-                : 'Gosto removido.',
+                ? self::MENSAGEM_GOSTO_ADICIONADO
+                : self::MENSAGEM_GOSTO_REMOVIDO,
 
             'conteudo_indicador_html' => $dadosIndicador['conteudo_html'],
         ]);
@@ -165,12 +229,15 @@ final class ControladorGosto extends Controller
     /**
      * Obtém os utilizadores que gostaram do comentário.
      *
+     * A lista é ordenada pelo nome e pelo identificador do utilizador. Nomes
+     * iguais não são removidos, porque podem pertencer a contas diferentes.
+     *
      * @param  Comentario  $comentario  Comentário consultado.
      * @return JsonResponse Lista de utilizadores.
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
     public function listarUtilizadores(
         Comentario $comentario,
@@ -190,20 +257,26 @@ final class ControladorGosto extends Controller
     /**
      * Obtém os dados utilizados no indicador dos gostos.
      *
+     * Os nomes são escapados antes de serem incluídos no fragmento HTML
+     * devolvido ao cliente.
+     *
      * @param  Comentario  $comentario  Comentário consultado.
      * @return array{
      *     nomes: list<string>,
      *     conteudo_html: string
      * } Dados preparados.
      *
+     * @throws LogicException Quando a consulta devolve um nome persistido com
+     *                        um formato inválido.
+     *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterDadosIndicador(
         Comentario $comentario,
     ): array {
-        $nomes =
+        $nomesObtidos =
             $comentario
                 ->gostos()
                 ->join(
@@ -221,34 +294,31 @@ final class ControladorGosto extends Controller
                 ->pluck(
                     'utilizadores.nome',
                 )
-                ->map(
-                    static function (
-                        mixed $nome,
-                    ): ?string {
-                        if (! is_string($nome)) {
-                            return null;
-                        }
-
-                        $nomeNormalizado =
-                            trim(
-                                $nome,
-                            );
-
-                        return $nomeNormalizado !== ''
-                            ? $nomeNormalizado
-                            : null;
-                    },
-                )
-                ->filter(
-                    static fn (
-                        mixed $nome,
-                    ): bool => is_string(
-                        $nome,
-                    ),
-                )
-                ->unique()
-                ->values()
                 ->all();
+
+        $nomes = [];
+
+        foreach ($nomesObtidos as $nome) {
+            if (! is_string($nome)) {
+                throw new LogicException(
+                    'Foi encontrado um utilizador com um nome persistido inválido.',
+                );
+            }
+
+            $nomeNormalizado =
+                trim(
+                    $nome,
+                );
+
+            if ($nomeNormalizado === '') {
+                throw new LogicException(
+                    'Foi encontrado um utilizador sem um nome persistido válido.',
+                );
+            }
+
+            $nomes[] =
+                $nomeNormalizado;
+        }
 
         $nomesEscapados =
             array_map(
@@ -264,7 +334,7 @@ final class ControladorGosto extends Controller
             'nomes' => $nomes,
 
             'conteudo_html' => $nomesEscapados === []
-                ? 'Ainda não há gostos.'
+                ? self::MENSAGEM_SEM_GOSTOS
                 : implode(
                     '<br>',
                     $nomesEscapados,
@@ -273,22 +343,22 @@ final class ControladorGosto extends Controller
     }
 
     /**
-     * Obtém o identificador do utilizador autenticado.
+     * Obtém o utilizador autenticado através do guard da aplicação.
      *
-     * @param  Request  $pedido  Pedido HTTP.
-     * @return int Identificador do utilizador.
+     * @return Utilizador Utilizador autenticado e persistido.
      *
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
-    private function obterIdentificadorUtilizador(
-        Request $pedido,
-    ): int {
+    private function obterUtilizadorAutenticado(): Utilizador
+    {
         $utilizador =
-            $pedido->user();
+            Auth::guard(
+                'sessao',
+            )->user();
 
         if (! $utilizador instanceof Utilizador) {
             throw new AuthenticationException(
@@ -304,10 +374,10 @@ final class ControladorGosto extends Controller
             || (int) $identificador < 1
         ) {
             throw new AuthenticationException(
-                'É necessário iniciar sessão para adicionar um gosto.',
+                'Não foi possível identificar o utilizador autenticado.',
             );
         }
 
-        return (int) $identificador;
+        return $utilizador;
     }
 }
