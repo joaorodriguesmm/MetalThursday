@@ -1,3 +1,13 @@
+{{--
+    Define o documento principal da área autenticada da aplicação.
+
+    Os dados comuns do documento são preparados pela classe
+    App\View\Components\LayoutAplicacao, através da classe LayoutBase.
+
+    @since 1.0.0
+    @version 4.0.0
+--}}
+
 <!DOCTYPE html>
 
 <html lang="{{ $idiomaDocumento }}">
@@ -62,16 +72,14 @@
             </main>
         </div>
 
-        <footer
-            class="py-3 text-center text-muted small bg-dark"
-        >
+        <footer class="py-3 text-center text-muted small bg-dark">
             &copy;
             {{ $anoAtual }}
             {{ $nomeAplicacao }}.
             Todos os direitos reservados.
         </footer>
 
-        @auth('web')
+        @auth('sessao')
             <form
                 id="formulario-terminar-sessao"
                 class="d-none"
