@@ -3,10 +3,11 @@
     com a MetalThursday.
 
     A identificação das páginas ativas é efetuada pela classe
-    App\View\Components\MetalThursday\AcoesLaterais.
+    App\View\Components\MetalThursday\AcoesLaterais. A visibilidade de cada
+    acesso é determinada pela respetiva política de autorização.
 
     @since 1.0.0
-    @version 3.0.0
+    @version 4.0.0
 --}}
 
 <nav

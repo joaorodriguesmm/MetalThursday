@@ -9,55 +9,55 @@ use Illuminate\Http\Request;
 use Illuminate\View\Component;
 
 /**
- * Prepara os acessos rápidos das áreas de gestão da MetalThursday.
+ * Prepara os acessos rápidos às áreas de gestão da MetalThursday.
  *
  * O componente determina qual das páginas representadas se encontra ativa.
- * A autorização de cada acesso continua a ser aplicada pela respetiva
- * política durante a apresentação da view.
+ * A autorização de cada acesso é aplicada na vista através da respetiva
+ * política.
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 4.0.0
  */
 final class AcoesLaterais extends Component
 {
     /**
-     * Indica se a página de criação de MetalThursdays está ativa.
+     * Indica se a página de criação de uma MetalThursday está ativa.
      *
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly bool $paginaCriacaoMetalThursdayAtiva;
 
     /**
-     * Indica se uma página de bandas está ativa.
+     * Indica se uma página da área de bandas está ativa.
      *
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly bool $paginaBandasAtiva;
 
     /**
-     * Indica se uma página de edições está ativa.
+     * Indica se uma página da área de edições está ativa.
      *
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly bool $paginaEdicoesAtiva;
 
     /**
-     * Indica se uma página de géneros está ativa.
+     * Indica se uma página da área de géneros está ativa.
      *
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly bool $paginaGenerosAtiva;
 
@@ -68,7 +68,7 @@ final class AcoesLaterais extends Component
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
     public function __construct(
         Request $pedido,
@@ -95,13 +95,13 @@ final class AcoesLaterais extends Component
     }
 
     /**
-     * Obtém a view do componente.
+     * Obtém a vista do componente.
      *
-     * @return View View das ações laterais.
+     * @return View Vista das ações laterais.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function render(): View
     {
