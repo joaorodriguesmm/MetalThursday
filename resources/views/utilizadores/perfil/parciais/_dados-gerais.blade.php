@@ -7,7 +7,7 @@
     Os erros de validação são obtidos através do saco de erros "perfil".
 
     @since 1.0.0
-    @version 3.0.0
+    @version 4.0.0
 --}}
 
 <section
@@ -135,7 +135,7 @@
                             Fotografia
 
                             <span class="fw-normal">
-                                (opcional, máximo de 10 MB)
+                                (opcional, máximo de 10 MiB)
                             </span>
                         </label>
 
