@@ -2,30 +2,34 @@ import axios
     from 'axios';
 
 /**
- * Configuração global do cliente HTTP da aplicação.
+ * Configura globalmente a instância partilhada do Axios.
  *
- * Disponibiliza o Axios através do objeto Window para compatibilidade
- * com scripts que ainda não utilizem importações de módulos e identifica
- * os pedidos como assíncronos.
+ * Todos os módulos importam diretamente o cliente HTTP. As predefinições
+ * configuradas neste ponto são partilhadas pela mesma instância do módulo,
+ * sem expor o Axios através do objeto Window.
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 3.0.0
  */
 
 /**
- * Configura o cliente HTTP utilizado pela aplicação.
+ * Configura os cabeçalhos e a proteção contra pedidos entre origens.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 3.0.0
  */
 function configurarClienteHttp() {
     axios.defaults.headers.common[
         'X-Requested-With'
     ] = 'XMLHttpRequest';
 
-    window.axios = axios;
+    axios.defaults.headers.common.Accept =
+        'application/json';
+
+    axios.defaults.withXSRFToken =
+        true;
 }
 
 configurarClienteHttp();
