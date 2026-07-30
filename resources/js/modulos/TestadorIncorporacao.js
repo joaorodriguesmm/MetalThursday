@@ -1,52 +1,117 @@
 /**
  * Gere o teste e a pré-visualização de ligações incorporáveis.
  *
- * Os valores `link`, `youtube_video` e `youtube_playlist` permanecem
- * inalterados por corresponderem aos identificadores utilizados pela
- * aplicação.
- *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 3.0.0
  */
 class TestadorIncorporacao {
+    /**
+     * Tipos de incorporação reconhecidos pela interface.
+     *
+     * @type {Readonly<Record<string, string>>}
+     *
+     * @since 3.0.0
+     * @version 1.0.0
+     */
+    static TIPOS = Object.freeze({
+        ligacao:
+            'ligacao',
+
+        videoYouTube:
+            'video_youtube',
+
+        listaReproducaoYouTube:
+            'lista_reproducao_youtube',
+    });
+
+    /**
+     * Hosts reconhecidos como pertencentes ao YouTube.
+     *
+     * @type {ReadonlyArray<string>}
+     *
+     * @since 3.0.0
+     * @version 1.0.0
+     */
+    static HOSTS_YOUTUBE = Object.freeze([
+        'youtube.com',
+        'www.youtube.com',
+        'm.youtube.com',
+        'music.youtube.com',
+        'youtube-nocookie.com',
+        'www.youtube-nocookie.com',
+        'youtu.be',
+        'www.youtu.be',
+    ]);
+
+    /**
+     * Segmentos que podem anteceder um identificador de vídeo.
+     *
+     * @type {ReadonlyArray<string>}
+     *
+     * @since 3.0.0
+     * @version 1.0.0
+     */
+    static SEGMENTOS_VIDEO_YOUTUBE = Object.freeze([
+        'embed',
+        'shorts',
+        'live',
+    ]);
+
     /**
      * Cria um testador de incorporação para uma secção.
      *
      * @param {HTMLElement} elementoSeccao Elemento principal da secção.
+     * @param {Array<object>} fornecedoresIncorporacao
+     *     Definições de reconhecimento preparadas pelo servidor.
+     *
+     * @throws {TypeError} Quando as definições são inválidas.
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
-    constructor(elementoSeccao) {
+    constructor(
+        elementoSeccao,
+        fornecedoresIncorporacao = [],
+    ) {
         this.seccao =
             elementoSeccao instanceof HTMLElement
                 ? elementoSeccao
                 : null;
 
         this.campoLigacao =
-            this.seccao?.querySelector('.link-input')
+            this.seccao?.querySelector(
+                '.campo-ligacao',
+            )
             ?? null;
 
         this.botaoTestar =
-            this.seccao?.querySelector('.link-test-btn')
+            this.seccao?.querySelector(
+                '.botao-testar-incorporacao',
+            )
             ?? null;
 
         this.contentorResultados =
-            this.seccao?.querySelector('.link-test-results')
+            this.seccao?.querySelector(
+                '.resultados-teste-incorporacao',
+            )
             ?? null;
 
         this.campoTipoIncorporacao =
-            this.seccao?.querySelector('.embed-type-input')
+            this.seccao?.querySelector(
+                '.campo-tipo-incorporacao',
+            )
             ?? null;
 
         this.areaEstado =
-            this.seccao?.querySelector('.test-status')
+            this.seccao?.querySelector(
+                '.estado-teste-incorporacao',
+            )
             ?? null;
 
-        this.provedores =
-            Array.isArray(window.embedProviders)
-                ? window.embedProviders
-                : [];
+        this.fornecedores =
+            this.normalizarFornecedores(
+                fornecedoresIncorporacao,
+            );
 
         this.previsualizacoesApresentadas =
             new Set();
@@ -68,20 +133,23 @@ class TestadorIncorporacao {
     /**
      * Verifica se foram encontrados os elementos obrigatórios.
      *
-     * @returns {boolean}
+     * @returns {boolean} Verdadeiro quando o testador pode funcionar.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     estaAtivo() {
         return this.seccao instanceof HTMLElement
             && this.campoLigacao instanceof HTMLInputElement
             && this.botaoTestar instanceof HTMLButtonElement
-            && this.contentorResultados instanceof HTMLElement;
+            && this.contentorResultados instanceof HTMLElement
+            && this.campoTipoIncorporacao instanceof HTMLInputElement;
     }
 
     /**
      * Inicia os eventos do testador.
+     *
+     * @returns {void}
      *
      * @since 1.0.0
      * @version 2.0.0
@@ -108,8 +176,10 @@ class TestadorIncorporacao {
     /**
      * Testa a ligação indicada pelo utilizador.
      *
+     * @returns {void}
+     *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
     testar() {
         if (!this.estaAtivo()) {
@@ -121,8 +191,8 @@ class TestadorIncorporacao {
 
         this.repor();
 
-        this.contentorResultados.style.display =
-            'block';
+        this.contentorResultados.hidden =
+            false;
 
         if (ligacao === '') {
             this.apresentarEstado(
@@ -138,17 +208,18 @@ class TestadorIncorporacao {
         let encontrouIncorporacao =
             false;
 
-        this.provedores.forEach((provedor) => {
+        this.fornecedores.forEach((fornecedor) => {
             const identificador =
                 this.detetarIdentificador(
-                    provedor,
+                    fornecedor,
                     ligacao,
                 );
 
             if (
                 identificador !== null
                 && this.apresentarPrevisualizacao(
-                    provedor.type,
+                    fornecedor.tipo,
+                    fornecedor.etiqueta,
                     identificador,
                 )
             ) {
@@ -157,26 +228,25 @@ class TestadorIncorporacao {
             }
         });
 
-        const identificadorYoutubeMusic =
-            this.detetarVideoYoutubeMusic(
-                ligacao,
-            );
-
-        if (
-            identificadorYoutubeMusic !== null
-            && this.apresentarPrevisualizacao(
-                'youtube_video',
-                identificadorYoutubeMusic,
-            )
-        ) {
-            encontrouIncorporacao =
-                true;
-        }
+        this.detetarIncorporacoesYouTube(
+            ligacao,
+        ).forEach((incorporacao) => {
+            if (
+                this.apresentarPrevisualizacao(
+                    incorporacao.tipo,
+                    incorporacao.etiqueta,
+                    incorporacao.identificador,
+                )
+            ) {
+                encontrouIncorporacao =
+                    true;
+            }
+        });
 
         this.apresentarEstado(
             encontrouIncorporacao
                 ? 'Teste concluído. Confirma a opção correta.'
-                : 'Não foi detetada nenhuma incorporação automática. A ligação será guardada como uma ligação simples.',
+                : 'Não foi detetada uma incorporação automática. A ligação será guardada como ligação simples.',
             encontrouIncorporacao
                 ? 'sucesso'
                 : 'aviso',
@@ -184,112 +254,270 @@ class TestadorIncorporacao {
     }
 
     /**
-     * Obtém o identificador através da configuração de um provedor.
+     * Normaliza as definições recebidas do servidor.
      *
-     * @param {unknown} provedor Configuração do provedor.
-     * @param {string} ligacao Ligação a testar.
+     * @param {unknown} fornecedores Definições recebidas.
      *
-     * @returns {string|null}
+     * @returns {Array<{
+     *     tipo: string,
+     *     etiqueta: string,
+     *     expressaoRegular: RegExp
+     * }>} Definições normalizadas.
      *
-     * @since 2.0.0
+     * @throws {TypeError} Quando alguma definição é inválida.
+     *
+     * @since 3.0.0
      * @version 1.0.0
      */
+    normalizarFornecedores(fornecedores) {
+        if (!Array.isArray(fornecedores)) {
+            throw new TypeError(
+                'As definições das incorporações devem ser uma lista.',
+            );
+        }
+
+        return fornecedores.map((fornecedor) => {
+            if (
+                typeof fornecedor !== 'object'
+                || fornecedor === null
+                || Array.isArray(fornecedor)
+                || typeof fornecedor.tipo !== 'string'
+                || typeof fornecedor.etiqueta !== 'string'
+                || typeof fornecedor.expressao_regular !== 'string'
+            ) {
+                throw new TypeError(
+                    'Foi recebida uma definição de incorporação inválida.',
+                );
+            }
+
+            const tipo =
+                fornecedor.tipo.trim();
+
+            const etiqueta =
+                fornecedor.etiqueta.trim();
+
+            const expressao =
+                fornecedor.expressao_regular.trim();
+
+            if (
+                ![
+                    TestadorIncorporacao.TIPOS.videoYouTube,
+                    TestadorIncorporacao.TIPOS
+                        .listaReproducaoYouTube,
+                ].includes(tipo)
+                || etiqueta === ''
+                || expressao === ''
+            ) {
+                throw new TypeError(
+                    'Foi recebida uma definição de incorporação não suportada.',
+                );
+            }
+
+            try {
+                return {
+                    tipo,
+                    etiqueta,
+                    expressaoRegular:
+                        new RegExp(expressao),
+                };
+            } catch {
+                throw new TypeError(
+                    `A expressão regular da incorporação "${etiqueta}" é inválida.`,
+                );
+            }
+        });
+    }
+
+    /**
+     * Obtém o identificador externo através de uma definição.
+     *
+     * @param {{expressaoRegular: RegExp}} fornecedor Definição utilizada.
+     * @param {string} ligacao Ligação a testar.
+     *
+     * @returns {string|null} Identificador encontrado ou nulo.
+     *
+     * @since 2.0.0
+     * @version 2.0.0
+     */
     detetarIdentificador(
-        provedor,
+        fornecedor,
         ligacao,
     ) {
+        const correspondencia =
+            fornecedor.expressaoRegular.exec(
+                ligacao,
+            );
+
         if (
-            typeof provedor !== 'object'
-            || provedor === null
-            || typeof provedor.regex !== 'string'
-            || typeof provedor.type !== 'string'
+            correspondencia === null
+            || typeof correspondencia[1] !== 'string'
+            || correspondencia[1].trim() === ''
         ) {
             return null;
         }
 
-        try {
-            const expressao =
-                new RegExp(
-                    provedor.regex,
-                );
-
-            const correspondencia =
-                expressao.exec(
-                    ligacao,
-                );
-
-            if (
-                correspondencia
-                && typeof correspondencia[1] === 'string'
-                && correspondencia[1].trim() !== ''
-            ) {
-                return correspondencia[1].trim();
-            }
-        } catch {
-            return null;
-        }
-
-        return null;
+        return correspondencia[1].trim();
     }
 
     /**
-     * Deteta o identificador de um vídeo numa ligação do YouTube Music.
+     * Deteta incorporações do YouTube através da estrutura do URL.
      *
-     * Uma ligação `music.youtube.com/watch?v=...` representa um vídeo e não
-     * uma lista de reprodução.
+     * Esta deteção complementa as expressões preparadas pelo servidor e cobre
+     * todos os hosts reconhecidos pela aplicação, incluindo o YouTube Music.
      *
-     * @param {string} ligacao Ligação a testar.
+     * @param {string} ligacao Ligação a analisar.
      *
-     * @returns {string|null}
+     * @returns {Array<{
+     *     tipo: string,
+     *     etiqueta: string,
+     *     identificador: string
+     * }>} Incorporações detetadas.
      *
-     * @since 2.0.0
+     * @since 3.0.0
      * @version 1.0.0
      */
-    detetarVideoYoutubeMusic(
-        ligacao,
-    ) {
+    detetarIncorporacoesYouTube(ligacao) {
+        let url;
+
         try {
-            const url =
-                new URL(
-                    ligacao,
+            url = new URL(
+                ligacao,
+            );
+        } catch {
+            return [];
+        }
+
+        const host =
+            url.hostname
+                .toLowerCase()
+                .replace(
+                    /\.$/,
+                    '',
                 );
 
-            if (
-                url.hostname !== 'music.youtube.com'
-                || url.pathname !== '/watch'
-                || url.searchParams.has('list')
-            ) {
-                return null;
-            }
-
-            const identificador =
-                url.searchParams.get('v');
-
-            return identificador?.trim()
-                || null;
-        } catch {
-            return null;
+        if (
+            !['http:', 'https:'].includes(url.protocol)
+            || !TestadorIncorporacao
+                .HOSTS_YOUTUBE
+                .includes(host)
+        ) {
+            return [];
         }
+
+        const incorporacoes =
+            [];
+
+        const identificadorLista =
+            url.searchParams.get(
+                'list',
+            );
+
+        if (
+            typeof identificadorLista === 'string'
+            && identificadorLista.length >= 10
+            && identificadorLista.length <= 150
+            && /^[A-Za-z0-9_-]+$/.test(
+                identificadorLista,
+            )
+        ) {
+            incorporacoes.push({
+                tipo:
+                    TestadorIncorporacao
+                        .TIPOS
+                        .listaReproducaoYouTube,
+
+                etiqueta:
+                    'Lista de reprodução do YouTube',
+
+                identificador:
+                    identificadorLista,
+            });
+        }
+
+        const segmentos =
+            url.pathname
+                .split('/')
+                .filter(
+                    (segmento) =>
+                        segmento !== '',
+                );
+
+        let identificadorVideo;
+
+        if (
+            ['youtu.be', 'www.youtu.be']
+                .includes(host)
+        ) {
+            identificadorVideo =
+                segmentos[0]
+                ?? null;
+        } else {
+            const identificadorParametro =
+                url.searchParams.get(
+                    'v',
+                );
+
+            if (identificadorParametro !== null) {
+                identificadorVideo =
+                    identificadorParametro;
+            } else if (
+                TestadorIncorporacao
+                    .SEGMENTOS_VIDEO_YOUTUBE
+                    .includes(
+                        segmentos[0]
+                        ?? '',
+                    )
+            ) {
+                identificadorVideo =
+                    segmentos[1]
+                    ?? null;
+            } else {
+                identificadorVideo =
+                    null;
+            }
+        }
+
+        if (
+            typeof identificadorVideo === 'string'
+            && /^[A-Za-z0-9_-]{11}$/.test(
+                identificadorVideo,
+            )
+        ) {
+            incorporacoes.push({
+                tipo:
+                    TestadorIncorporacao
+                        .TIPOS
+                        .videoYouTube,
+
+                etiqueta:
+                    'Vídeo do YouTube',
+
+                identificador:
+                    identificadorVideo,
+            });
+        }
+
+        return incorporacoes;
     }
 
     /**
      * Apresenta a pré-visualização de uma incorporação.
      *
      * @param {string} tipo Tipo da incorporação.
+     * @param {string} etiqueta Etiqueta apresentada.
      * @param {string} identificador Identificador externo.
      *
      * @returns {boolean} Indica se a pré-visualização foi apresentada.
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
     apresentarPrevisualizacao(
         tipo,
+        etiqueta,
         identificador,
     ) {
-        if (
-            !(this.seccao instanceof HTMLElement)
-        ) {
+        if (!(this.seccao instanceof HTMLElement)) {
             return false;
         }
 
@@ -300,6 +528,15 @@ class TestadorIncorporacao {
             );
 
         if (urlIncorporacao === null) {
+            return false;
+        }
+
+        const configuracaoVisual =
+            this.obterConfiguracaoVisual(
+                tipo,
+            );
+
+        if (configuracaoVisual === null) {
             return false;
         }
 
@@ -314,20 +551,15 @@ class TestadorIncorporacao {
             return false;
         }
 
-        const nomeBase =
-            tipo.replace(
-                /^youtube_/,
-                '',
-            );
-
         const contentorOpcao =
             this.seccao.querySelector(
-                `.${nomeBase}-option`,
+                configuracaoVisual.seletorOpcao,
             );
 
         const contentorPrevisualizacao =
             this.seccao.querySelector(
-                `.${nomeBase}-preview-container`,
+                configuracaoVisual
+                    .seletorPrevisualizacao,
             );
 
         if (
@@ -341,7 +573,7 @@ class TestadorIncorporacao {
             document.createElement('iframe');
 
         iframe.className =
-            'embed-responsive-item w-100';
+            'w-100 border-0';
 
         iframe.height =
             '200';
@@ -350,7 +582,7 @@ class TestadorIncorporacao {
             urlIncorporacao;
 
         iframe.title =
-            'Pré-visualização da incorporação';
+            `Pré-visualização: ${etiqueta}`;
 
         iframe.loading =
             'lazy';
@@ -361,6 +593,11 @@ class TestadorIncorporacao {
         iframe.allow =
             'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
 
+        iframe.setAttribute(
+            'sandbox',
+            'allow-scripts allow-same-origin allow-presentation allow-popups',
+        );
+
         iframe.allowFullscreen =
             true;
 
@@ -368,8 +605,8 @@ class TestadorIncorporacao {
             iframe,
         );
 
-        contentorOpcao.style.display =
-            'block';
+        contentorOpcao.hidden =
+            false;
 
         this.previsualizacoesApresentadas.add(
             chavePrevisualizacao,
@@ -379,15 +616,54 @@ class TestadorIncorporacao {
     }
 
     /**
+     * Obtém os seletores visuais associados a um tipo.
+     *
+     * @param {string} tipo Tipo da incorporação.
+     *
+     * @returns {{
+     *     seletorOpcao: string,
+     *     seletorPrevisualizacao: string
+     * }|null} Seletores ou nulo.
+     *
+     * @since 3.0.0
+     * @version 1.0.0
+     */
+    obterConfiguracaoVisual(tipo) {
+        switch (tipo) {
+            case TestadorIncorporacao.TIPOS.videoYouTube:
+                return {
+                    seletorOpcao:
+                        '.opcao-incorporacao-video',
+
+                    seletorPrevisualizacao:
+                        '.previsualizacao-video',
+                };
+
+            case TestadorIncorporacao.TIPOS
+                .listaReproducaoYouTube:
+                return {
+                    seletorOpcao:
+                        '.opcao-incorporacao-lista-reproducao',
+
+                    seletorPrevisualizacao:
+                        '.previsualizacao-lista-reproducao',
+                };
+
+            default:
+                return null;
+        }
+    }
+
+    /**
      * Cria o endereço utilizado no elemento de incorporação.
      *
      * @param {string} tipo Tipo da incorporação.
      * @param {string} identificador Identificador externo.
      *
-     * @returns {string|null}
+     * @returns {string|null} Endereço da incorporação ou nulo.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     criarUrlIncorporacao(
         tipo,
@@ -402,16 +678,26 @@ class TestadorIncorporacao {
             return null;
         }
 
-        if (tipo === 'youtube_video') {
-            return `https://www.youtube.com/embed/${encodeURIComponent(
+        if (
+            tipo
+            === TestadorIncorporacao.TIPOS.videoYouTube
+            && identificador.length === 11
+        ) {
+            return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(
                 identificador,
-            )}`;
+            )}?rel=0`;
         }
 
-        if (tipo === 'youtube_playlist') {
+        if (
+            tipo
+            === TestadorIncorporacao.TIPOS
+                .listaReproducaoYouTube
+            && identificador.length >= 10
+            && identificador.length <= 150
+        ) {
             const url =
                 new URL(
-                    'https://www.youtube.com/embed/videoseries',
+                    'https://www.youtube-nocookie.com/embed/videoseries',
                 );
 
             url.searchParams.set(
@@ -430,8 +716,10 @@ class TestadorIncorporacao {
      *
      * @param {Event} evento Evento de alteração.
      *
+     * @returns {void}
+     *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
     atualizarEscolha(
         evento,
@@ -442,7 +730,7 @@ class TestadorIncorporacao {
         if (
             !(campo instanceof HTMLInputElement)
             || !campo.classList.contains(
-                'embed-choice-radio',
+                'escolha-incorporacao',
             )
             || !(this.campoTipoIncorporacao instanceof HTMLInputElement)
         ) {
@@ -456,13 +744,13 @@ class TestadorIncorporacao {
     /**
      * Apresenta o estado de carregamento.
      *
+     * @returns {void}
+     *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     apresentarCarregamento() {
-        if (
-            !(this.areaEstado instanceof HTMLElement)
-        ) {
+        if (!(this.areaEstado instanceof HTMLElement)) {
             return;
         }
 
@@ -483,7 +771,7 @@ class TestadorIncorporacao {
         );
 
         this.areaEstado.className =
-            'test-status small mt-2';
+            'estado-teste-incorporacao small mb-2';
 
         this.areaEstado.replaceChildren(
             indicador,
@@ -499,16 +787,16 @@ class TestadorIncorporacao {
      * @param {string} mensagem Mensagem a apresentar.
      * @param {'sucesso'|'aviso'} tipo Tipo visual da mensagem.
      *
+     * @returns {void}
+     *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     apresentarEstado(
         mensagem,
         tipo,
     ) {
-        if (
-            !(this.areaEstado instanceof HTMLElement)
-        ) {
+        if (!(this.areaEstado instanceof HTMLElement)) {
             return;
         }
 
@@ -516,9 +804,9 @@ class TestadorIncorporacao {
             mensagem;
 
         this.areaEstado.className = [
-            'test-status',
+            'estado-teste-incorporacao',
             'small',
-            'mt-2',
+            'mb-2',
             tipo === 'sucesso'
                 ? 'text-success'
                 : 'text-warning',
@@ -526,80 +814,86 @@ class TestadorIncorporacao {
     }
 
     /**
-     * Limpa as pré-visualizações e repõe a escolha predefinida.
+     * Limpa as pré-visualizações e repõe a ligação simples.
+     *
+     * @returns {void}
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
     repor() {
-        if (
-            !(this.seccao instanceof HTMLElement)
-        ) {
+        if (!(this.seccao instanceof HTMLElement)) {
             return;
         }
 
-        if (
-            this.contentorResultados instanceof HTMLElement
-        ) {
-            this.contentorResultados.style.display =
-                'none';
+        if (this.contentorResultados instanceof HTMLElement) {
+            this.contentorResultados.hidden =
+                true;
         }
 
         [
-            'video',
-            'playlist',
-        ].forEach((nomeBase) => {
+            {
+                seletorOpcao:
+                    '.opcao-incorporacao-video',
+
+                seletorPrevisualizacao:
+                    '.previsualizacao-video',
+            },
+            {
+                seletorOpcao:
+                    '.opcao-incorporacao-lista-reproducao',
+
+                seletorPrevisualizacao:
+                    '.previsualizacao-lista-reproducao',
+            },
+        ].forEach((configuracao) => {
             const contentorOpcao =
                 this.seccao.querySelector(
-                    `.${nomeBase}-option`,
+                    configuracao.seletorOpcao,
                 );
 
             const contentorPrevisualizacao =
                 this.seccao.querySelector(
-                    `.${nomeBase}-preview-container`,
+                    configuracao.seletorPrevisualizacao,
                 );
 
-            if (
-                contentorOpcao instanceof HTMLElement
-            ) {
-                contentorOpcao.style.display =
-                    'none';
+            if (contentorOpcao instanceof HTMLElement) {
+                contentorOpcao.hidden =
+                    true;
             }
 
             if (
-                contentorPrevisualizacao instanceof HTMLElement
+                contentorPrevisualizacao
+                instanceof HTMLElement
             ) {
                 contentorPrevisualizacao.replaceChildren();
             }
         });
 
-        if (
-            this.areaEstado instanceof HTMLElement
-        ) {
+        if (this.areaEstado instanceof HTMLElement) {
             this.areaEstado.textContent =
                 '';
 
             this.areaEstado.className =
-                'test-status small mt-2';
+                'estado-teste-incorporacao small mb-2';
         }
 
         const opcaoLigacao =
             this.seccao.querySelector(
-                '.embed-choice-radio[value="link"], input[value="link"]',
+                `.escolha-incorporacao[value="${TestadorIncorporacao.TIPOS.ligacao}"]`,
             );
 
-        if (
-            opcaoLigacao instanceof HTMLInputElement
-        ) {
+        if (opcaoLigacao instanceof HTMLInputElement) {
             opcaoLigacao.checked =
                 true;
         }
 
         if (
-            this.campoTipoIncorporacao instanceof HTMLInputElement
+            this.campoTipoIncorporacao
+            instanceof HTMLInputElement
         ) {
             this.campoTipoIncorporacao.value =
-                'link';
+                TestadorIncorporacao.TIPOS.ligacao;
         }
 
         this.previsualizacoesApresentadas.clear();
@@ -607,6 +901,8 @@ class TestadorIncorporacao {
 
     /**
      * Remove os eventos associados ao testador.
+     *
+     * @returns {void}
      *
      * @since 2.0.0
      * @version 1.0.0

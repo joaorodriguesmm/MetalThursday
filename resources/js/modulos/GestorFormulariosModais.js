@@ -4,11 +4,11 @@ import ValidadorFormulario from './ValidadorFormulario';
 /**
  * Gere os formulários existentes nas janelas modais.
  *
- * Este gestor associa a validação do lado do cliente à submissão assíncrona
- * de cada formulário configurado.
+ * Associa a validação no navegador à submissão assíncrona de cada formulário
+ * configurado.
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 3.0.0
  */
 class GestorFormulariosModais {
     /**
@@ -24,18 +24,12 @@ class GestorFormulariosModais {
      *
      * @param {Array<object>} configuracoesModais
      *     Configurações dos formulários.
-     * @param {object|null} gestorTomSelect
-     *     Gestor das instâncias do Tom Select.
-     *
      * @throws {TypeError} Quando as configurações não são uma lista.
      *
      * @since 1.0.0
      * @version 2.0.0
      */
-    constructor(
-        configuracoesModais,
-        gestorTomSelect = null,
-    ) {
+    constructor(configuracoesModais) {
         if (!Array.isArray(configuracoesModais)) {
             throw new TypeError(
                 'As configurações dos formulários devem ser uma lista.',
@@ -44,9 +38,6 @@ class GestorFormulariosModais {
 
         this.configuracoesModais =
             configuracoesModais;
-
-        this.gestorTomSelect =
-            gestorTomSelect;
 
         this.registosFormularios =
             new Map();
@@ -59,6 +50,8 @@ class GestorFormulariosModais {
 
     /**
      * Inicia os formulários configurados.
+     *
+     * @returns {void}
      *
      * @since 1.0.0
      * @version 2.0.0
@@ -85,16 +78,18 @@ class GestorFormulariosModais {
      *
      * @param {object} configuracao Configuração do formulário.
      *
+     * @returns {void}
+     *
      * @since 2.0.0
-     * @version      *
-     * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     inicializarFormulario(
         configuracao,
     ) {
         if (!this.eConfiguracaoValida(configuracao)) {
-            return;
+            throw new TypeError(
+                'Foi recebida uma configuração de formulário modal inválida.',
+            );
         }
 
         const formulario =
@@ -126,42 +121,31 @@ class GestorFormulariosModais {
                 },
             );
 
-        const validador = new ValidadorFormulario(
-            `#${CSS.escape(configuracao.idFormulario)}`,
-            {
-                regras:
-                    configuracao.regrasValidacao
-                    ?? {},
+        const validador =
+            new ValidadorFormulario(
+                formulario,
+                {
+                    regras:
+                        configuracao.regrasValidacao
+                        ?? {},
 
-                mensagens:
-                    configuracao.mensagensValidacao
-                    ?? {},
-            },
-        );
+                    mensagens:
+                        configuracao.mensagensValidacao
+                        ?? {},
 
-        const aoSubmeter =
-            async (evento) => {
-                evento.preventDefault();
-
-                if (!validador.validarTudo()) {
-                    return;
-                }
-
-                await tratadorAjax.submeter();
-            };
-
-        formulario.addEventListener(
-            'submit',
-            aoSubmeter,
-        );
+                    aoSucesso: () => {
+                        /*
+                         * A promessa não é devolvida porque o validador exige
+                         * uma função de sucesso síncrona.
+                         */
+                        tratadorAjax.submeter();
+                    },
+                },
+            );
 
         this.registosFormularios.set(
             formulario,
-            {
-                aoSubmeter,
-                tratadorAjax,
-                validador,
-            },
+            validador,
         );
     }
 
@@ -189,7 +173,6 @@ class GestorFormulariosModais {
 
         await configuracao.aoSucesso(
             dadosResposta,
-            this.gestorTomSelect,
         );
     }
 
@@ -198,10 +181,10 @@ class GestorFormulariosModais {
      *
      * @param {unknown} configuracao Configuração a verificar.
      *
-     * @returns {boolean}
+     * @returns {boolean} Verdadeiro quando a configuração é válida.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     eConfiguracaoValida(
         configuracao,
@@ -236,25 +219,45 @@ class GestorFormulariosModais {
             return false;
         }
 
-        return true;
+        return this.eObjetoOpcional(
+            configuracao.regrasValidacao,
+        )
+            && this.eObjetoOpcional(
+                configuracao.mensagensValidacao,
+            );
+    }
+
+    /**
+     * Verifica se um valor opcional é um objeto válido.
+     *
+     * @param {unknown} valor Valor recebido.
+     *
+     * @returns {boolean} Verdadeiro quando o valor é omitido ou é um objeto.
+     *
+     * @since 3.0.0
+     * @version 1.0.0
+     */
+    eObjetoOpcional(valor) {
+        return valor === undefined
+            || valor === null
+            || (
+                typeof valor === 'object'
+                && !Array.isArray(valor)
+            );
     }
 
     /**
      * Remove os eventos associados aos formulários.
      *
+     * @returns {void}
+     *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     destruir() {
         this.registosFormularios.forEach(
-            (
-                registo,
-                formulario,
-            ) => {
-                formulario.removeEventListener(
-                    'submit',
-                    registo.aoSubmeter,
-                );
+            (validador) => {
+                validador.destruir();
             },
         );
 
