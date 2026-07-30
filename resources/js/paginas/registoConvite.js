@@ -17,78 +17,54 @@ import ValidadorFormulario
     from '../modulos/ValidadorFormulario';
 
 /**
- * Script específico da página de registo por convite.
- *
- * Coordena a validação do formulário, a fotografia do perfil, os
- * alternadores de visibilidade das palavras-passe, a seleção das
- * permissões de e-mail e a inicialização dos tooltips.
- *
- * Os seletores e os nomes dos campos permanecem inalterados até à
- * revisão da respetiva vista Blade.
+ * Configura os comportamentos da página de registo por convite.
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 3.0.0
  */
 
 /**
- * Tipos MIME permitidos para a fotografia do utilizador.
+ * Tamanho máximo permitido para a fotografia, em bytes.
  *
- * @type {ReadonlyArray<string>}
- *
- * @since 2.0.0
- * @version 1.0.0
- */
-const TIPOS_FOTOGRAFIA_PERMITIDOS = Object.freeze([
-    'image/jpeg',
-    'image/png',
-    'image/webp',
-]);
-
-/**
- * Tamanho máximo permitido para a fotografia.
- *
- * Corresponde a 10 MiB.
+ * O valor corresponde aos 10 240 KiB aceites pelo servidor.
  *
  * @type {number}
  *
  * @since 2.0.0
- * @version 1.0.0
+ * @version 2.0.0
  */
 const TAMANHO_MAXIMO_FOTOGRAFIA =
-    10 * 1024 * 1024;
+    10 * (1024 ** 2);
 
 /**
- * Seletores utilizados na página de registo por convite.
+ * Seletores utilizados na página.
  *
  * @type {Readonly<Record<string, string>>}
  *
  * @since 2.0.0
- * @version 1.0.0
+ * @version 2.0.0
  */
 const SELETORES = Object.freeze({
     formulario:
-        '#formulario-registo-convite',
+        '#formulario-aceitar-convite',
 
     fotografia:
-        '#fotografia',
+        '#fotografia-perfil',
 
     previsualizacaoFotografia:
-        '#previsualizacao-fotografia',
+        '#previsualizacao-fotografia-perfil',
 
     iniciaisAvatar:
-        '#iniciais-avatar',
+        '#iniciais-avatar-registo',
 
     erroFotografia:
         '#erro-fotografia',
 
-    textoFotografia:
-        '#texto-fotografia',
-
     permissaoTodas:
-        '[data-permissao-todas="true"]',
+        '[data-permissao-email-todas]',
 
-    itemPermissaoEmail:
-        '[data-item-permissao-email]',
+    permissaoIndividual:
+        '[data-permissao-email-individual]',
 
     alternadorPalavraPasse:
         '[data-alvo-palavra-passe]',
@@ -98,15 +74,166 @@ const SELETORES = Object.freeze({
 });
 
 /**
- * Inicia o gestor da fotografia do utilizador.
+ * Obtém um campo de texto através do respetivo nome.
  *
- * @return {GestorFotografiaPerfil|null} Gestor iniciado ou nulo quando os
- * elementos necessários não existem.
+ * @param {HTMLFormElement} formulario Formulário pesquisado.
+ * @param {string} nomeCampo Nome HTML do campo.
  *
- * @since 2.0.0
+ * @returns {HTMLInputElement|null} Campo encontrado ou nulo.
+ *
+ * @since 3.0.0
  * @version 1.0.0
  */
-function iniciarGestorFotografia() {
+function obterCampo(
+    formulario,
+    nomeCampo,
+) {
+    const campo =
+        formulario.elements.namedItem(
+            nomeCampo,
+        );
+
+    return campo instanceof HTMLInputElement
+        ? campo
+        : null;
+}
+
+/**
+ * Obtém o comprimento mínimo declarado num campo.
+ *
+ * @param {HTMLInputElement|null} campo Campo recebido.
+ * @param {number} valorPredefinido Valor utilizado quando não existe limite.
+ *
+ * @returns {number} Comprimento mínimo positivo.
+ *
+ * @since 3.0.0
+ * @version 1.0.0
+ */
+function obterComprimentoMinimo(
+    campo,
+    valorPredefinido,
+) {
+    if (
+        campo instanceof HTMLInputElement
+        && Number.isInteger(campo.minLength)
+        && campo.minLength > 0
+    ) {
+        return campo.minLength;
+    }
+
+    return valorPredefinido;
+}
+
+/**
+ * Obtém o comprimento máximo declarado num campo.
+ *
+ * @param {HTMLInputElement|null} campo Campo recebido.
+ * @param {number} valorPredefinido Valor utilizado quando não existe limite.
+ *
+ * @returns {number} Comprimento máximo positivo.
+ *
+ * @since 3.0.0
+ * @version 1.0.0
+ */
+function obterComprimentoMaximo(
+    campo,
+    valorPredefinido,
+) {
+    if (
+        campo instanceof HTMLInputElement
+        && Number.isInteger(campo.maxLength)
+        && campo.maxLength > 0
+    ) {
+        return campo.maxLength;
+    }
+
+    return valorPredefinido;
+}
+
+/**
+ * Obtém os tipos MIME declarados no campo da fotografia.
+ *
+ * @param {HTMLInputElement} campoFotografia Campo da fotografia.
+ *
+ * @returns {Array<string>} Tipos MIME permitidos.
+ *
+ * @throws {TypeError} Quando o campo não declara tipos MIME válidos.
+ *
+ * @since 3.0.0
+ * @version 1.0.0
+ */
+function obterTiposFotografiaPermitidos(
+    campoFotografia,
+) {
+    const tipos =
+        campoFotografia.accept
+            .split(',')
+            .map(
+                (tipo) =>
+                    tipo.trim().toLowerCase(),
+            )
+            .filter(
+                (tipo) =>
+                    tipo.includes('/'),
+            );
+
+    if (tipos.length === 0) {
+        throw new TypeError(
+            'O campo da fotografia deve declarar os tipos MIME permitidos.',
+        );
+    }
+
+    return Array.from(
+        new Set(tipos),
+    );
+}
+
+/**
+ * Obtém os contentores das permissões individuais.
+ *
+ * @returns {Array<HTMLElement>} Contentores encontrados.
+ *
+ * @throws {TypeError} Quando uma permissão não pertence a um contentor.
+ *
+ * @since 3.0.0
+ * @version 1.0.0
+ */
+function obterItensPermissoesIndividuais() {
+    return Array.from(
+        document.querySelectorAll(
+            SELETORES.permissaoIndividual,
+        ),
+    ).map((campo) => {
+        if (!(campo instanceof HTMLInputElement)) {
+            throw new TypeError(
+                'Uma das permissões de e-mail não é representada por uma checkbox válida.',
+            );
+        }
+
+        const item =
+            campo.closest(
+                '.form-check',
+            );
+
+        if (!(item instanceof HTMLElement)) {
+            throw new TypeError(
+                'Uma das permissões de e-mail não possui um contentor válido.',
+            );
+        }
+
+        return item;
+    });
+}
+
+/**
+ * Inicia a validação e a pré-visualização da fotografia.
+ *
+ * @returns {void}
+ *
+ * @since 2.0.0
+ * @version 3.0.0
+ */
+function iniciarFotografiaPerfil() {
     const gestorFotografia =
         new GestorFotografiaPerfil(
             SELETORES.fotografia,
@@ -115,27 +242,6 @@ function iniciarGestorFotografia() {
         );
 
     if (!gestorFotografia.estaDisponivel()) {
-        return null;
-    }
-
-    return gestorFotografia;
-}
-
-/**
- * Inicia a validação e a pré-visualização da fotografia.
- *
- * @param {GestorFotografiaPerfil|null}
- * gestorFotografia - Gestor da fotografia do utilizador.
- *
- * @return {void}
- *
- * @since 2.0.0
- * @version 1.0.0
- */
-function iniciarValidacaoFotografia(
-    gestorFotografia,
-) {
-    if (gestorFotografia === null) {
         return;
     }
 
@@ -150,7 +256,9 @@ function iniciarValidacaoFotografia(
         campoFotografia,
         {
             tiposPermitidos:
-                TIPOS_FOTOGRAFIA_PERMITIDOS,
+                obterTiposFotografiaPermitidos(
+                    campoFotografia,
+                ),
 
             tamanhoMaximo:
                 TAMANHO_MAXIMO_FOTOGRAFIA,
@@ -158,25 +266,15 @@ function iniciarValidacaoFotografia(
             seletorMensagemErro:
                 SELETORES.erroFotografia,
 
-            seletorTextoFicheiro:
-                SELETORES.textoFotografia,
-
-            textoPadrao:
-                'Selecionar fotografia',
-
-            textoSelecionado:
-                'Alterar fotografia',
+            aoFicheiroValido: (ficheiro) => {
+                gestorFotografia.previsualizarImagem(
+                    ficheiro,
+                );
+            },
 
             aoFicheiroInvalido: () => {
                 gestorFotografia
                     .restaurarPrevisualizacao();
-            },
-
-            aoFicheiroValido: (ficheiro) => {
-                gestorFotografia
-                    .previsualizarImagem(
-                        ficheiro,
-                    );
             },
 
             aoLimparSelecao: () => {
@@ -190,19 +288,80 @@ function iniciarValidacaoFotografia(
 /**
  * Inicia a validação do formulário de registo.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 3.0.0
  */
 function iniciarValidacaoFormulario() {
-    const formulario = document.querySelector(
-        SELETORES.formulario,
-    );
+    const formulario =
+        document.querySelector(
+            SELETORES.formulario,
+        );
 
     if (!(formulario instanceof HTMLFormElement)) {
         return;
     }
+
+    const campoNome =
+        obterCampo(
+            formulario,
+            'nome',
+        );
+
+    const campoEmail =
+        obterCampo(
+            formulario,
+            'email',
+        );
+
+    const campoPalavraPasse =
+        obterCampo(
+            formulario,
+            'palavra_passe',
+        );
+
+    const campoConfirmacao =
+        obterCampo(
+            formulario,
+            'confirmacao_palavra_passe',
+        );
+
+    const comprimentoMinimoNome =
+        obterComprimentoMinimo(
+            campoNome,
+            3,
+        );
+
+    const comprimentoMaximoNome =
+        obterComprimentoMaximo(
+            campoNome,
+            255,
+        );
+
+    const comprimentoMaximoEmail =
+        obterComprimentoMaximo(
+            campoEmail,
+            255,
+        );
+
+    const comprimentoMinimoPalavraPasse =
+        obterComprimentoMinimo(
+            campoPalavraPasse,
+            12,
+        );
+
+    const comprimentoMaximoPalavraPasse =
+        obterComprimentoMaximo(
+            campoPalavraPasse,
+            4096,
+        );
+
+    const comprimentoMaximoConfirmacao =
+        obterComprimentoMaximo(
+            campoConfirmacao,
+            comprimentoMaximoPalavraPasse,
+        );
 
     new ValidadorFormulario(
         formulario,
@@ -214,19 +373,20 @@ function iniciarValidacaoFormulario() {
 
                 nome: [
                     'obrigatorio',
-                    'minimo:3',
-                    'maximo:255',
+                    `minimo:${comprimentoMinimoNome}`,
+                    `maximo:${comprimentoMaximoNome}`,
                 ],
 
                 email: [
                     'obrigatorio',
                     'email',
-                    'maximo:255',
+                    `maximo:${comprimentoMaximoEmail}`,
                 ],
 
                 palavra_passe: [
                     'obrigatorio',
-                    'minimo:12',
+                    `minimo:${comprimentoMinimoPalavraPasse}`,
+                    `maximo:${comprimentoMaximoPalavraPasse}`,
                     'maiuscula',
                     'minuscula',
                     'numero',
@@ -235,6 +395,7 @@ function iniciarValidacaoFormulario() {
 
                 confirmacao_palavra_passe: [
                     'obrigatorio',
+                    `maximo:${comprimentoMaximoConfirmacao}`,
                     'confirmado:palavra_passe',
                 ],
             },
@@ -242,7 +403,7 @@ function iniciarValidacaoFormulario() {
             mensagens: {
                 codigo_convite: {
                     obrigatorio:
-                        'Ocorreu um erro ao validar a integridade do convite. Recarrega a página e tenta novamente.',
+                        'O código do convite não foi recebido. Recarrega a página e tenta novamente.',
                 },
 
                 nome: {
@@ -250,10 +411,10 @@ function iniciarValidacaoFormulario() {
                         'Por favor, insere o teu nome.',
 
                     minimo:
-                        'O nome deve ter, no mínimo, 3 caracteres.',
+                        `O nome deve ter, pelo menos, ${comprimentoMinimoNome} caracteres.`,
 
                     maximo:
-                        'O nome deve ter, no máximo, 255 caracteres.',
+                        `O nome não pode ter mais de ${comprimentoMaximoNome} caracteres.`,
                 },
 
                 email: {
@@ -264,7 +425,7 @@ function iniciarValidacaoFormulario() {
                         'Por favor, insere um endereço de e-mail válido.',
 
                     maximo:
-                        'O endereço de e-mail deve ter, no máximo, 255 caracteres.',
+                        `O endereço de e-mail não pode ter mais de ${comprimentoMaximoEmail} caracteres.`,
                 },
 
                 palavra_passe: {
@@ -272,7 +433,10 @@ function iniciarValidacaoFormulario() {
                         'Por favor, insere uma palavra-passe.',
 
                     minimo:
-                        'A palavra-passe deve ter, no mínimo, 12 caracteres.',
+                        `A palavra-passe deve ter, pelo menos, ${comprimentoMinimoPalavraPasse} caracteres.`,
+
+                    maximo:
+                        'A palavra-passe é demasiado longa.',
 
                     maiuscula:
                         'A palavra-passe deve incluir, pelo menos, uma letra maiúscula.',
@@ -291,6 +455,9 @@ function iniciarValidacaoFormulario() {
                     obrigatorio:
                         'Por favor, confirma a palavra-passe.',
 
+                    maximo:
+                        'A confirmação da palavra-passe é demasiado longa.',
+
                     confirmado:
                         'A confirmação não corresponde à palavra-passe.',
                 },
@@ -302,7 +469,7 @@ function iniciarValidacaoFormulario() {
 /**
  * Inicia os alternadores de visibilidade das palavras-passe.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
  * @version 2.0.0
@@ -325,10 +492,10 @@ function iniciarAlternadoresPalavraPasse() {
 /**
  * Inicia o seletor das permissões de e-mail.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 3.0.0
  */
 function iniciarPermissoesEmail() {
     const campoTodasPermissoes =
@@ -339,16 +506,14 @@ function iniciarPermissoesEmail() {
     if (
         !(
             campoTodasPermissoes
-                instanceof HTMLInputElement
+            instanceof HTMLInputElement
         )
     ) {
         return;
     }
 
     const itensPermissoes =
-        document.querySelectorAll(
-            SELETORES.itemPermissaoEmail,
-        );
+        obterItensPermissoesIndividuais();
 
     if (itensPermissoes.length === 0) {
         return;
@@ -363,7 +528,7 @@ function iniciarPermissoesEmail() {
 /**
  * Inicia os tooltips existentes na página.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
  * @version 2.0.0
@@ -377,19 +542,13 @@ function iniciarTooltips() {
 /**
  * Inicia os comportamentos da página de registo por convite.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 3.0.0
  */
 function iniciarPaginaRegistoConvite() {
-    const gestorFotografia =
-        iniciarGestorFotografia();
-
-    iniciarValidacaoFotografia(
-        gestorFotografia,
-    );
-
+    iniciarFotografiaPerfil();
     iniciarValidacaoFormulario();
     iniciarAlternadoresPalavraPasse();
     iniciarPermissoesEmail();

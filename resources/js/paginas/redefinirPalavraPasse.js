@@ -5,25 +5,19 @@ import ValidadorFormulario
     from '../modulos/ValidadorFormulario';
 
 /**
- * Script específico da página de redefinição da palavra-passe.
- *
- * Inicializa a validação de apoio do formulário e os alternadores de
- * visibilidade dos campos de palavra-passe.
- *
- * Os nomes dos campos `password` e `password_confirmation` permanecem
- * inalterados por corresponderem ao contrato técnico da autenticação.
+ * Configura os comportamentos da página de redefinição da palavra-passe.
  *
  * @since 1.0.0
- * @version 2.2.0
+ * @version 3.0.0
  */
 
 /**
- * Seletores utilizados na página de redefinição da palavra-passe.
+ * Seletores utilizados na página.
  *
  * @type {Readonly<Record<string, string>>}
  *
  * @since 2.1.0
- * @version 1.1.0
+ * @version 2.0.0
  */
 const SELETORES = Object.freeze({
     formulario:
@@ -34,12 +28,89 @@ const SELETORES = Object.freeze({
 });
 
 /**
+ * Obtém um campo textual através do respetivo nome.
+ *
+ * @param {HTMLFormElement} formulario Formulário pesquisado.
+ * @param {string} nomeCampo Nome HTML do campo.
+ *
+ * @returns {HTMLInputElement|null} Campo encontrado ou nulo.
+ *
+ * @since 3.0.0
+ * @version 1.0.0
+ */
+function obterCampo(
+    formulario,
+    nomeCampo,
+) {
+    const campo =
+        formulario.elements.namedItem(
+            nomeCampo,
+        );
+
+    return campo instanceof HTMLInputElement
+        ? campo
+        : null;
+}
+
+/**
+ * Obtém o comprimento mínimo declarado num campo.
+ *
+ * @param {HTMLInputElement|null} campo Campo recebido.
+ * @param {number} valorPredefinido Valor utilizado quando não existe limite.
+ *
+ * @returns {number} Comprimento mínimo positivo.
+ *
+ * @since 3.0.0
+ * @version 1.0.0
+ */
+function obterComprimentoMinimo(
+    campo,
+    valorPredefinido,
+) {
+    if (
+        campo instanceof HTMLInputElement
+        && Number.isInteger(campo.minLength)
+        && campo.minLength > 0
+    ) {
+        return campo.minLength;
+    }
+
+    return valorPredefinido;
+}
+
+/**
+ * Obtém o comprimento máximo declarado num campo.
+ *
+ * @param {HTMLInputElement|null} campo Campo recebido.
+ * @param {number} valorPredefinido Valor utilizado quando não existe limite.
+ *
+ * @returns {number} Comprimento máximo positivo.
+ *
+ * @since 3.0.0
+ * @version 1.0.0
+ */
+function obterComprimentoMaximo(
+    campo,
+    valorPredefinido,
+) {
+    if (
+        campo instanceof HTMLInputElement
+        && Number.isInteger(campo.maxLength)
+        && campo.maxLength > 0
+    ) {
+        return campo.maxLength;
+    }
+
+    return valorPredefinido;
+}
+
+/**
  * Inicia a validação do formulário de redefinição da palavra-passe.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
- * @version 2.2.0
+ * @version 3.0.0
  */
 function iniciarValidacaoFormulario() {
     const formulario =
@@ -51,32 +122,67 @@ function iniciarValidacaoFormulario() {
         return;
     }
 
+    const campoPalavraPasse =
+        obterCampo(
+            formulario,
+            'palavra_passe',
+        );
+
+    const campoConfirmacao =
+        obterCampo(
+            formulario,
+            'confirmacao_palavra_passe',
+        );
+
+    const comprimentoMinimoPalavraPasse =
+        obterComprimentoMinimo(
+            campoPalavraPasse,
+            12,
+        );
+
+    const comprimentoMaximoPalavraPasse =
+        obterComprimentoMaximo(
+            campoPalavraPasse,
+            4096,
+        );
+
+    const comprimentoMaximoConfirmacao =
+        obterComprimentoMaximo(
+            campoConfirmacao,
+            comprimentoMaximoPalavraPasse,
+        );
+
     new ValidadorFormulario(
         formulario,
         {
             regras: {
-                password: [
+                palavra_passe: [
                     'obrigatorio',
-                    'minimo:12',
+                    `minimo:${comprimentoMinimoPalavraPasse}`,
+                    `maximo:${comprimentoMaximoPalavraPasse}`,
                     'maiuscula',
                     'minuscula',
                     'numero',
                     'simbolo',
                 ],
 
-                password_confirmation: [
+                confirmacao_palavra_passe: [
                     'obrigatorio',
-                    'confirmado:password',
+                    `maximo:${comprimentoMaximoConfirmacao}`,
+                    'confirmado:palavra_passe',
                 ],
             },
 
             mensagens: {
-                password: {
+                palavra_passe: {
                     obrigatorio:
                         'Por favor, insere a nova palavra-passe.',
 
                     minimo:
-                        'A nova palavra-passe deve ter, no mínimo, 12 caracteres.',
+                        `A nova palavra-passe deve ter, pelo menos, ${comprimentoMinimoPalavraPasse} caracteres.`,
+
+                    maximo:
+                        'A nova palavra-passe é demasiado longa.',
 
                     maiuscula:
                         'A nova palavra-passe deve incluir, pelo menos, uma letra maiúscula.',
@@ -91,9 +197,12 @@ function iniciarValidacaoFormulario() {
                         'A nova palavra-passe deve incluir, pelo menos, um símbolo.',
                 },
 
-                password_confirmation: {
+                confirmacao_palavra_passe: {
                     obrigatorio:
                         'Por favor, confirma a nova palavra-passe.',
+
+                    maximo:
+                        'A confirmação da nova palavra-passe é demasiado longa.',
 
                     confirmado:
                         'A confirmação não corresponde à nova palavra-passe.',
@@ -106,10 +215,10 @@ function iniciarValidacaoFormulario() {
 /**
  * Inicia os alternadores de visibilidade das palavras-passe.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
- * @version 2.2.0
+ * @version 2.0.0
  */
 function iniciarAlternadoresPalavraPasse() {
     const alternadores =
@@ -129,10 +238,10 @@ function iniciarAlternadoresPalavraPasse() {
 /**
  * Inicia os comportamentos da página de redefinição da palavra-passe.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
- * @version 2.2.0
+ * @version 3.0.0
  */
 function iniciarPaginaRedefinicaoPalavraPasse() {
     iniciarValidacaoFormulario();

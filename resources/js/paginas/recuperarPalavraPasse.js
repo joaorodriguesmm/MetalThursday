@@ -2,25 +2,19 @@ import ValidadorFormulario
     from '../modulos/ValidadorFormulario';
 
 /**
- * Script específico da página de recuperação da palavra-passe.
- *
- * Inicializa a validação de apoio do formulário utilizado para solicitar
- * uma ligação de redefinição.
- *
- * O nome do campo `email` permanece inalterado por corresponder ao
- * contrato técnico da autenticação.
+ * Configura os comportamentos da página de recuperação da palavra-passe.
  *
  * @since 1.0.0
- * @version 2.2.0
+ * @version 3.0.0
  */
 
 /**
- * Seletores utilizados na página de recuperação da palavra-passe.
+ * Seletores utilizados na página.
  *
  * @type {Readonly<Record<string, string>>}
  *
  * @since 2.2.0
- * @version 1.0.0
+ * @version 2.0.0
  */
 const SELETORES = Object.freeze({
     formulario:
@@ -28,12 +22,39 @@ const SELETORES = Object.freeze({
 });
 
 /**
+ * Obtém o comprimento máximo declarado no campo de e-mail.
+ *
+ * @param {HTMLFormElement} formulario Formulário pesquisado.
+ *
+ * @returns {number} Comprimento máximo positivo.
+ *
+ * @since 3.0.0
+ * @version 1.0.0
+ */
+function obterComprimentoMaximoEmail(formulario) {
+    const campo =
+        formulario.elements.namedItem(
+            'email',
+        );
+
+    if (
+        campo instanceof HTMLInputElement
+        && Number.isInteger(campo.maxLength)
+        && campo.maxLength > 0
+    ) {
+        return campo.maxLength;
+    }
+
+    return 255;
+}
+
+/**
  * Inicia a validação do formulário de recuperação da palavra-passe.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
- * @version 2.2.0
+ * @version 3.0.0
  */
 function iniciarValidacaoFormulario() {
     const formulario =
@@ -45,6 +66,11 @@ function iniciarValidacaoFormulario() {
         return;
     }
 
+    const comprimentoMaximoEmail =
+        obterComprimentoMaximoEmail(
+            formulario,
+        );
+
     new ValidadorFormulario(
         formulario,
         {
@@ -52,7 +78,7 @@ function iniciarValidacaoFormulario() {
                 email: [
                     'obrigatorio',
                     'email',
-                    'maximo:255',
+                    `maximo:${comprimentoMaximoEmail}`,
                 ],
             },
 
@@ -65,7 +91,7 @@ function iniciarValidacaoFormulario() {
                         'Por favor, insere um endereço de e-mail válido.',
 
                     maximo:
-                        'O endereço de e-mail não pode ter mais de 255 caracteres.',
+                        `O endereço de e-mail não pode ter mais de ${comprimentoMaximoEmail} caracteres.`,
                 },
             },
         },
@@ -75,10 +101,10 @@ function iniciarValidacaoFormulario() {
 /**
  * Inicia os comportamentos da página de recuperação da palavra-passe.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
- * @version 2.2.0
+ * @version 3.0.0
  */
 function iniciarPaginaRecuperacaoPalavraPasse() {
     iniciarValidacaoFormulario();

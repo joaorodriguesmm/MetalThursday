@@ -6,7 +6,7 @@
  * imagem apresentada e os respetivos recursos temporários.
  *
  * @since 1.0.0
- * @version 3.0.0
+ * @version 3.1.0
  */
 class GestorFotografiaPerfil {
     /**
@@ -24,7 +24,7 @@ class GestorFotografiaPerfil {
      * @throws {TypeError} Quando algum seletor CSS é inválido.
      *
      * @since 1.0.0
-     * @version 3.0.0
+     * @version 3.1.0
      */
     constructor(
         seletorCampoFicheiro,
@@ -50,10 +50,10 @@ class GestorFotografiaPerfil {
                 seletorBotaoLimpar,
             );
 
-        this.circuloAvatar =
+        this.elementoAvatarIniciais =
             this.elementoIniciais instanceof HTMLElement
                 ? this.elementoIniciais.closest(
-                    '.avatar-circle',
+                    '.circulo-avatar, .circulo-avatar-registo',
                 )
                 : null;
 
@@ -87,14 +87,16 @@ class GestorFotografiaPerfil {
      * @returns {boolean} Verdadeiro quando o gestor pode funcionar.
      *
      * @since 2.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
     estaDisponivel() {
         return this.campoFicheiro instanceof HTMLInputElement
             && this.campoFicheiro.type === 'file'
             && this.elementoPrevisualizacao
                 instanceof HTMLImageElement
-            && this.elementoIniciais instanceof HTMLElement;
+            && this.elementoIniciais instanceof HTMLElement
+            && this.elementoAvatarIniciais
+                instanceof HTMLElement;
     }
 
     /**
@@ -234,7 +236,7 @@ class GestorFotografiaPerfil {
      * @returns {void}
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     registarEstadoInicial() {
         if (
@@ -256,6 +258,7 @@ class GestorFotografiaPerfil {
         const fotografiaVisivel =
             typeof origem === 'string'
             && origem !== ''
+            && !this.elementoPrevisualizacao.hidden
             && !this.elementoPrevisualizacao
                 .classList
                 .contains(
@@ -313,7 +316,7 @@ class GestorFotografiaPerfil {
      * @returns {void}
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     alternarApresentacao(mostrarFotografia) {
         if (
@@ -321,9 +324,16 @@ class GestorFotografiaPerfil {
                 this.elementoPrevisualizacao
                 instanceof HTMLImageElement
             )
+            || !(
+                this.elementoAvatarIniciais
+                instanceof HTMLElement
+            )
         ) {
             return;
         }
+
+        this.elementoPrevisualizacao.hidden =
+            !mostrarFotografia;
 
         this.elementoPrevisualizacao.classList.toggle(
             'd-none',
@@ -337,19 +347,20 @@ class GestorFotografiaPerfil {
                 : 'true',
         );
 
-        if (this.circuloAvatar instanceof HTMLElement) {
-            this.circuloAvatar.classList.toggle(
-                'd-none',
-                mostrarFotografia,
-            );
+        this.elementoAvatarIniciais.hidden =
+            mostrarFotografia;
 
-            this.circuloAvatar.setAttribute(
-                'aria-hidden',
-                mostrarFotografia
-                    ? 'true'
-                    : 'false',
-            );
-        }
+        this.elementoAvatarIniciais.classList.toggle(
+            'd-none',
+            mostrarFotografia,
+        );
+
+        this.elementoAvatarIniciais.setAttribute(
+            'aria-hidden',
+            mostrarFotografia
+                ? 'true'
+                : 'false',
+        );
     }
 
     /**
@@ -366,6 +377,9 @@ class GestorFotografiaPerfil {
         if (!(this.botaoLimpar instanceof HTMLElement)) {
             return;
         }
+
+        this.botaoLimpar.hidden =
+            !mostrar;
 
         this.botaoLimpar.classList.toggle(
             'd-none',

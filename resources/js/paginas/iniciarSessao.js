@@ -5,25 +5,19 @@ import ValidadorFormulario
     from '../modulos/ValidadorFormulario';
 
 /**
- * Script específico da página de início de sessão.
- *
- * Inicializa a validação de apoio do formulário e o alternador de
- * visibilidade da palavra-passe.
- *
- * Os nomes dos campos `email`, `password` e `remember` permanecem
- * inalterados por corresponderem ao contrato técnico da autenticação.
+ * Configura os comportamentos da página de início de sessão.
  *
  * @since 1.0.0
- * @version 2.1.0
+ * @version 3.0.0
  */
 
 /**
- * Seletores utilizados na página de início de sessão.
+ * Seletores utilizados na página.
  *
  * @type {Readonly<Record<string, string>>}
  *
  * @since 2.0.0
- * @version 1.1.0
+ * @version 2.0.0
  */
 const SELETORES = Object.freeze({
     formulario:
@@ -34,12 +28,45 @@ const SELETORES = Object.freeze({
 });
 
 /**
+ * Obtém o comprimento máximo declarado num campo.
+ *
+ * @param {HTMLFormElement} formulario Formulário pesquisado.
+ * @param {string} nomeCampo Nome HTML do campo.
+ * @param {number} valorPredefinido Valor utilizado quando não existe limite.
+ *
+ * @returns {number} Comprimento máximo positivo.
+ *
+ * @since 3.0.0
+ * @version 1.0.0
+ */
+function obterComprimentoMaximo(
+    formulario,
+    nomeCampo,
+    valorPredefinido,
+) {
+    const campo =
+        formulario.elements.namedItem(
+            nomeCampo,
+        );
+
+    if (
+        campo instanceof HTMLInputElement
+        && Number.isInteger(campo.maxLength)
+        && campo.maxLength > 0
+    ) {
+        return campo.maxLength;
+    }
+
+    return valorPredefinido;
+}
+
+/**
  * Inicia a validação do formulário.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
- * @version 2.1.0
+ * @version 3.0.0
  */
 function iniciarValidacaoFormulario() {
     const formulario =
@@ -51,6 +78,20 @@ function iniciarValidacaoFormulario() {
         return;
     }
 
+    const comprimentoMaximoEmail =
+        obterComprimentoMaximo(
+            formulario,
+            'email',
+            255,
+        );
+
+    const comprimentoMaximoPalavraPasse =
+        obterComprimentoMaximo(
+            formulario,
+            'palavra_passe',
+            4096,
+        );
+
     new ValidadorFormulario(
         formulario,
         {
@@ -58,12 +99,12 @@ function iniciarValidacaoFormulario() {
                 email: [
                     'obrigatorio',
                     'email',
-                    'maximo:255',
+                    `maximo:${comprimentoMaximoEmail}`,
                 ],
 
-                password: [
+                palavra_passe: [
                     'obrigatorio',
-                    'maximo:4096',
+                    `maximo:${comprimentoMaximoPalavraPasse}`,
                 ],
             },
 
@@ -76,15 +117,15 @@ function iniciarValidacaoFormulario() {
                         'Por favor, insere um endereço de e-mail válido.',
 
                     maximo:
-                        'O endereço de e-mail deve ter, no máximo, 255 caracteres.',
+                        `O endereço de e-mail não pode ter mais de ${comprimentoMaximoEmail} caracteres.`,
                 },
 
-                password: {
+                palavra_passe: {
                     obrigatorio:
                         'Por favor, insere a tua palavra-passe.',
 
                     maximo:
-                        'A palavra-passe recebida é demasiado extensa.',
+                        'A palavra-passe recebida é demasiado longa.',
                 },
             },
         },
@@ -94,10 +135,10 @@ function iniciarValidacaoFormulario() {
 /**
  * Inicia o alternador de visibilidade da palavra-passe.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
- * @version 2.1.0
+ * @version 2.0.0
  */
 function iniciarAlternadorPalavraPasse() {
     const alternadores =
@@ -117,10 +158,10 @@ function iniciarAlternadorPalavraPasse() {
 /**
  * Inicia os comportamentos da página de início de sessão.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
- * @version 2.1.0
+ * @version 3.0.0
  */
 function iniciarPaginaInicioSessao() {
     iniciarValidacaoFormulario();
