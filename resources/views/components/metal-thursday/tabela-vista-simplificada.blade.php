@@ -6,7 +6,7 @@
     App\View\Components\MetalThursday\TabelaVistaSimplificada.
 
     @since 1.0.0
-    @version 3.0.0
+    @version 4.0.0
 --}}
 
 <div
@@ -41,7 +41,7 @@
                     </th>
 
                     <th scope="col">
-                        País
+                        Origem geográfica
                     </th>
 
                     <th scope="col">
@@ -103,7 +103,7 @@
                         </td>
 
                         <td>
-                            {{ $linha['nomePais'] }}
+                            {{ $linha['nomeOrigemGeografica'] }}
                         </td>
 
                         <th scope="row">

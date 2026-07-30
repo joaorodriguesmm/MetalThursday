@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\View\Components\MetalThursday;
 
 use App\Models\Autenticacao\Utilizador;
+use App\Models\Geografia\OrigemGeografica;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
 use App\Models\Musica\Banda;
 use App\Models\Musica\Genero;
-use App\Models\Musica\Pais;
 use DateTimeInterface;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
@@ -28,7 +28,7 @@ use LogicException;
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 4.0.0
  */
 final class TabelaVistaSimplificada extends Component
 {
@@ -52,7 +52,7 @@ final class TabelaVistaSimplificada extends Component
      *     dataApresentacao: string,
      *     nomeAutor: string,
      *     nomeBanda: string,
-     *     nomePais: string,
+     *     nomeOrigemGeografica: string,
      *     titulo: string,
      *     nomeTipoSeccao: string|null,
      *     ano: string,
@@ -73,7 +73,7 @@ final class TabelaVistaSimplificada extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly array $linhas;
 
@@ -88,7 +88,7 @@ final class TabelaVistaSimplificada extends Component
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
     public function __construct(
         LengthAwarePaginator $seccoesSimplificadas,
@@ -103,13 +103,13 @@ final class TabelaVistaSimplificada extends Component
     }
 
     /**
-     * Obtém a view do componente.
+     * Obtém a vista do componente.
      *
-     * @return View View da tabela simplificada.
+     * @return View Vista da tabela simplificada.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function render(): View
     {
@@ -160,7 +160,7 @@ final class TabelaVistaSimplificada extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function prepararLinha(
         SeccaoMetalThursday $seccao,
@@ -195,24 +195,26 @@ final class TabelaVistaSimplificada extends Component
                 Banda::class,
             );
 
-        /** @var TipoSeccao|null $tipoSeccao */
+        /** @var TipoSeccao $tipoSeccao */
         $tipoSeccao =
             $this->obterModeloRelacionado(
                 $seccao,
                 'tipoSeccao',
                 TipoSeccao::class,
+                true,
             );
 
-        $pais = null;
+        /** @var OrigemGeografica|null $origemGeografica */
+        $origemGeografica = null;
         $generos = new Collection;
 
         if ($banda instanceof Banda) {
-            /** @var Pais|null $pais */
-            $pais =
+            $origemGeografica =
                 $this->obterModeloRelacionado(
                     $banda,
-                    'pais',
-                    Pais::class,
+                    'origemGeografica',
+                    OrigemGeografica::class,
+                    true,
                 );
 
             $generos =
@@ -276,10 +278,10 @@ final class TabelaVistaSimplificada extends Component
             )
                 ?? 'Banda indisponível',
 
-            'nomePais' => $this->normalizarTexto(
-                $pais?->nome,
+            'nomeOrigemGeografica' => $this->normalizarTexto(
+                $origemGeografica?->nome,
             )
-                ?? 'País indisponível',
+                ?? 'Origem geográfica indisponível',
 
             'titulo' => $this->normalizarTexto(
                 $seccao->titulo,
@@ -287,7 +289,7 @@ final class TabelaVistaSimplificada extends Component
                 ?? 'Título indisponível',
 
             'nomeTipoSeccao' => $this->normalizarTexto(
-                $tipoSeccao?->nome,
+                $tipoSeccao->nome,
             ),
 
             'ano' => $this->normalizarAno(
