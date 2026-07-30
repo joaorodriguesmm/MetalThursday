@@ -5,12 +5,12 @@
     avaliações, audições e ações de gestão autorizadas.
 
     @since 1.0.0
-    @version 3.0.0
+    @version 4.0.0
 --}}
 
 <x-layout-aplicacao>
     <x-slot name="titulo">
-        {{ $metalThursday->edicao?->nome ?? 'MetalThursday' }}
+        {{ $metalThursday->edicao->nome }}
 
         @if ($metalThursday->numero_semana_na_edicao !== null)
             — Semana {{ $metalThursday->numero_semana_na_edicao }}
@@ -20,7 +20,7 @@
     <x-slot name="cabecalho">
         <div>
             <h1 class="h4 mb-1 fw-bold">
-                {{ $metalThursday->edicao?->nome ?? 'MetalThursday' }}
+                {{ $metalThursday->edicao->nome }}
 
                 @if ($metalThursday->numero_semana_na_edicao !== null)
                     — Semana {{ $metalThursday->numero_semana_na_edicao }}
@@ -48,7 +48,7 @@
 
     @push('scripts-pagina')
         @vite(
-            'resources/js/paginas/mostrarMetalThursday.js'
+            'resources/js/paginas/detalhesMetalThursday.js'
         )
     @endpush
 </x-layout-aplicacao>
