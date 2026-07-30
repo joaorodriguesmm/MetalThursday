@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\View\Components\MetalThursday;
 
-use App\Models\Geografia\Pais;
+use App\Models\Geografia\OrigemGeografica;
 use App\Models\Musica\Banda;
 use App\Models\Musica\Genero;
 use Illuminate\Contracts\View\View;
@@ -17,8 +17,9 @@ use LogicException;
 /**
  * Prepara o modal utilizado para criar uma banda.
  *
- * O componente valida e prepara as opções de países e géneros recebidas do
- * controlador, bem como o endereço e os limites utilizados pelo formulário.
+ * O componente valida e prepara as opções de origens geográficas e géneros
+ * recebidas do controlador, bem como o endereço e os limites utilizados pelo
+ * formulário.
  *
  * @since 1.0.0
  *
@@ -27,7 +28,7 @@ use LogicException;
 final class ModalCriarBanda extends Component
 {
     /**
-     * Países disponíveis para seleção.
+     * Origens geográficas disponíveis para seleção.
      *
      * @var array<int, array{
      *     identificador: int,
@@ -38,7 +39,7 @@ final class ModalCriarBanda extends Component
      *
      * @version 2.0.0
      */
-    public readonly array $paises;
+    public readonly array $origensGeograficas;
 
     /**
      * Géneros disponíveis para seleção.
@@ -50,17 +51,12 @@ final class ModalCriarBanda extends Component
      *
      * @since 3.0.0
      *
-     *     nome: string
-     * }>
-     * @since 3.0.0
-     *
      * @version 2.0.0
      */
     public readonly array $generos;
 
     /**
      * Endereço utilizado para guardar uma banda.
-     *
      *
      * @since 4.0.0
      *
@@ -71,7 +67,6 @@ final class ModalCriarBanda extends Component
     /**
      * Comprimento máximo permitido para o nome da banda.
      *
-     *
      * @since 4.0.0
      *
      * @version 1.0.0
@@ -81,7 +76,7 @@ final class ModalCriarBanda extends Component
     /**
      * Cria uma nova instância do componente.
      *
-     * @param  Collection<int, Pais>  $paises  Países disponíveis.
+     * @param  Collection<int, OrigemGeografica>  $origensGeograficas  Origens disponíveis.
      * @param  Collection<int, Genero>  $generos  Géneros disponíveis.
      *
      * @throws LogicException Quando uma coleção contém modelos ou dados
@@ -92,13 +87,13 @@ final class ModalCriarBanda extends Component
      * @version 4.0.0
      */
     public function __construct(
-        Collection $paises,
+        Collection $origensGeograficas,
         Collection $generos,
     ) {
-        $this->paises = $this->prepararOpcoes(
-            $paises,
-            Pais::class,
-            'países',
+        $this->origensGeograficas = $this->prepararOpcoes(
+            $origensGeograficas,
+            OrigemGeografica::class,
+            'origens geográficas',
         );
 
         $this->generos = $this->prepararOpcoes(

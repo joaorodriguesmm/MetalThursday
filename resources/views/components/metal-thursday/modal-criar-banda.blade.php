@@ -101,9 +101,9 @@
                         >
                             <label
                                 class="form-label"
-                                for="pais-nova-banda"
+                                for="origem-geografica-nova-banda"
                             >
-                                País
+                                Origem geográfica
 
                                 <span
                                     class="text-danger"
@@ -114,30 +114,32 @@
                             </label>
 
                             <select
-                                id="pais-nova-banda"
+                                id="origem-geografica-nova-banda"
                                 class="form-select tom-select-unico"
-                                name="pais_id"
-                                placeholder="Seleciona um país"
-                                aria-describedby="erro-pais-nova-banda"
+                                name="origem_geografica_id"
+                                placeholder="Seleciona uma origem geográfica"
+                                aria-describedby="erro-origem-geografica-nova-banda"
                                 required
                             >
                                 <option value="">
-                                    Seleciona um país
+                                    Seleciona uma origem geográfica
                                 </option>
 
-                                @foreach ($paises as $pais)
-                                    <option value="{{ $pais['identificador'] }}">
-                                        {{ $pais['nome'] }}
+                                @foreach ($origensGeograficas as $origemGeografica)
+                                    <option
+                                        value="{{ $origemGeografica['identificador'] }}"
+                                    >
+                                        {{ $origemGeografica['nome'] }}
                                     </option>
                                 @endforeach
                             </select>
 
                             <div
-                                id="erro-pais-nova-banda"
+                                id="erro-origem-geografica-nova-banda"
                                 class="invalid-feedback"
                                 aria-live="polite"
                                 aria-atomic="true"
-                                data-erro-campo="pais_id"
+                                data-erro-campo="origem_geografica_id"
                             ></div>
                         </div>
 
