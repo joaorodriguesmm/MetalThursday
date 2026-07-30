@@ -12,31 +12,34 @@ use PHPUnit\Framework\TestCase;
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 final class OrdenacaoMetalThursdayTest extends TestCase
 {
     /**
-     * Confirma que os valores portugueses são reconhecidos.
-     *
+     * Confirma que os valores públicos portugueses são reconhecidos.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    public function test_reconhece_valores_portugueses(): void
+    public function test_reconhece_valores_publicos_portugueses(): void
     {
-        $this->assertSame(
+        self::assertSame(
             OrdenacaoMetalThursday::Data,
-            OrdenacaoMetalThursday::tentarCriar('data'),
+            OrdenacaoMetalThursday::tentarCriar(
+                'data',
+            ),
         );
 
-        $this->assertSame(
+        self::assertSame(
             OrdenacaoMetalThursday::Classificacao,
-            OrdenacaoMetalThursday::tentarCriar('classificacao'),
+            OrdenacaoMetalThursday::tentarCriar(
+                'classificacao',
+            ),
         );
 
-        $this->assertSame(
+        self::assertSame(
             OrdenacaoMetalThursday::MinhaClassificacao,
             OrdenacaoMetalThursday::tentarCriar(
                 'minha_classificacao',
@@ -45,48 +48,70 @@ final class OrdenacaoMetalThursdayTest extends TestCase
     }
 
     /**
-     * Confirma que os valores antigos continuam temporariamente suportados.
-     *
+     * Confirma que os valores textuais são normalizados.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    public function test_reconhece_valores_antigos(): void
+    public function test_normaliza_espacos_e_maiusculas(): void
     {
-        $this->assertSame(
+        self::assertSame(
             OrdenacaoMetalThursday::Data,
-            OrdenacaoMetalThursday::tentarCriar('date'),
+            OrdenacaoMetalThursday::tentarCriar(
+                '  DATA  ',
+            ),
         );
 
-        $this->assertSame(
+        self::assertSame(
             OrdenacaoMetalThursday::Classificacao,
-            OrdenacaoMetalThursday::tentarCriar('rating'),
+            OrdenacaoMetalThursday::tentarCriar(
+                'CLASSIFICACAO',
+            ),
         );
 
-        $this->assertSame(
+        self::assertSame(
             OrdenacaoMetalThursday::MinhaClassificacao,
-            OrdenacaoMetalThursday::tentarCriar('my_rating'),
+            OrdenacaoMetalThursday::tentarCriar(
+                'MINHA_CLASSIFICACAO',
+            ),
         );
     }
 
     /**
-     * Confirma que os aliases portugueses anteriores são reconhecidos.
-     *
+     * Confirma que os contratos antigos e aliases não são reconhecidos.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    public function test_reconhece_aliases_portugueses(): void
+    public function test_rejeita_valores_antigos_e_aliases(): void
     {
-        $this->assertSame(
-            OrdenacaoMetalThursday::Classificacao,
-            OrdenacaoMetalThursday::tentarCriar('avaliacao'),
+        self::assertNull(
+            OrdenacaoMetalThursday::tentarCriar(
+                'date',
+            ),
         );
 
-        $this->assertSame(
-            OrdenacaoMetalThursday::MinhaClassificacao,
+        self::assertNull(
+            OrdenacaoMetalThursday::tentarCriar(
+                'rating',
+            ),
+        );
+
+        self::assertNull(
+            OrdenacaoMetalThursday::tentarCriar(
+                'my_rating',
+            ),
+        );
+
+        self::assertNull(
+            OrdenacaoMetalThursday::tentarCriar(
+                'avaliacao',
+            ),
+        );
+
+        self::assertNull(
             OrdenacaoMetalThursday::tentarCriar(
                 'minha_avaliacao',
             ),
@@ -96,23 +121,59 @@ final class OrdenacaoMetalThursdayTest extends TestCase
     /**
      * Confirma que valores inválidos não originam uma ordenação.
      *
+     * @since 2.0.0
+     *
+     * @version 2.0.0
+     */
+    public function test_rejeita_valores_invalidos(): void
+    {
+        self::assertNull(
+            OrdenacaoMetalThursday::tentarCriar(
+                'invalido',
+            ),
+        );
+
+        self::assertNull(
+            OrdenacaoMetalThursday::tentarCriar(
+                '',
+            ),
+        );
+
+        self::assertNull(
+            OrdenacaoMetalThursday::tentarCriar(
+                [],
+            ),
+        );
+
+        self::assertNull(
+            OrdenacaoMetalThursday::tentarCriar(
+                null,
+            ),
+        );
+    }
+
+    /**
+     * Confirma as etiquetas apresentadas ao utilizador.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    public function test_rejeita_valores_invalidos(): void
+    public function test_devolve_etiquetas_portuguesas(): void
     {
-        $this->assertNull(
-            OrdenacaoMetalThursday::tentarCriar('invalido'),
+        self::assertSame(
+            'Data',
+            OrdenacaoMetalThursday::Data->etiqueta(),
         );
 
-        $this->assertNull(
-            OrdenacaoMetalThursday::tentarCriar([]),
+        self::assertSame(
+            'Avaliação média',
+            OrdenacaoMetalThursday::Classificacao->etiqueta(),
         );
 
-        $this->assertNull(
-            OrdenacaoMetalThursday::tentarCriar(null),
+        self::assertSame(
+            'A minha avaliação',
+            OrdenacaoMetalThursday::MinhaClassificacao->etiqueta(),
         );
     }
 }

@@ -12,91 +12,179 @@ use PHPUnit\Framework\TestCase;
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 final class RespostaBinariaTest extends TestCase
 {
     /**
-     * Confirma que os valores portugueses são reconhecidos.
-     *
+     * Confirma que os valores públicos portugueses são reconhecidos.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    public function test_reconhece_valores_portugueses(): void
+    public function test_reconhece_valores_publicos_portugueses(): void
     {
-        $this->assertSame(
+        self::assertSame(
             RespostaBinaria::Sim,
-            RespostaBinaria::tentarCriar('sim'),
+            RespostaBinaria::tentarCriar(
+                'sim',
+            ),
         );
 
-        $this->assertSame(
+        self::assertSame(
             RespostaBinaria::Nao,
-            RespostaBinaria::tentarCriar('nao'),
+            RespostaBinaria::tentarCriar(
+                'nao',
+            ),
         );
     }
 
     /**
-     * Confirma que os valores antigos continuam temporariamente suportados.
-     *
+     * Confirma que os valores textuais são normalizados.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    public function test_reconhece_valores_antigos(): void
+    public function test_normaliza_espacos_e_maiusculas(): void
     {
-        $this->assertSame(
+        self::assertSame(
             RespostaBinaria::Sim,
-            RespostaBinaria::tentarCriar('yes'),
+            RespostaBinaria::tentarCriar(
+                '  SIM  ',
+            ),
         );
 
-        $this->assertSame(
+        self::assertSame(
             RespostaBinaria::Nao,
-            RespostaBinaria::tentarCriar('no'),
+            RespostaBinaria::tentarCriar(
+                'NAO',
+            ),
+        );
+    }
+
+    /**
+     * Confirma que os valores ingleses antigos não são reconhecidos.
+     *
+     * @since 2.0.0
+     *
+     * @version 2.0.0
+     */
+    public function test_rejeita_valores_ingleses_antigos(): void
+    {
+        self::assertNull(
+            RespostaBinaria::tentarCriar(
+                'yes',
+            ),
+        );
+
+        self::assertNull(
+            RespostaBinaria::tentarCriar(
+                'no',
+            ),
         );
     }
 
     /**
      * Confirma que valores inválidos não originam uma resposta.
      *
+     * @since 2.0.0
+     *
+     * @version 2.0.0
+     */
+    public function test_rejeita_valores_invalidos(): void
+    {
+        self::assertNull(
+            RespostaBinaria::tentarCriar(
+                'talvez',
+            ),
+        );
+
+        self::assertNull(
+            RespostaBinaria::tentarCriar(
+                '',
+            ),
+        );
+
+        self::assertNull(
+            RespostaBinaria::tentarCriar(
+                true,
+            ),
+        );
+
+        self::assertNull(
+            RespostaBinaria::tentarCriar(
+                1,
+            ),
+        );
+
+        self::assertNull(
+            RespostaBinaria::tentarCriar(
+                null,
+            ),
+        );
+    }
+
+    /**
+     * Confirma a criação explícita a partir de valores booleanos.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    public function test_rejeita_valores_invalidos(): void
+    public function test_cria_respostas_a_partir_de_booleanos(): void
     {
-        $this->assertNull(
-            RespostaBinaria::tentarCriar('talvez'),
+        self::assertSame(
+            RespostaBinaria::Sim,
+            RespostaBinaria::deBooleano(
+                true,
+            ),
         );
 
-        $this->assertNull(
-            RespostaBinaria::tentarCriar(true),
-        );
-
-        $this->assertNull(
-            RespostaBinaria::tentarCriar(null),
+        self::assertSame(
+            RespostaBinaria::Nao,
+            RespostaBinaria::deBooleano(
+                false,
+            ),
         );
     }
 
     /**
      * Confirma a conversão das respostas para valores booleanos.
      *
+     * @since 2.0.0
+     *
+     * @version 2.0.0
+     */
+    public function test_converte_respostas_para_booleanos(): void
+    {
+        self::assertTrue(
+            RespostaBinaria::Sim->paraBooleano(),
+        );
+
+        self::assertFalse(
+            RespostaBinaria::Nao->paraBooleano(),
+        );
+    }
+
+    /**
+     * Confirma as etiquetas apresentadas ao utilizador.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    public function test_converte_respostas_para_booleanos(): void
+    public function test_devolve_etiquetas_portuguesas(): void
     {
-        $this->assertTrue(
-            RespostaBinaria::Sim->paraBooleano(),
+        self::assertSame(
+            'Sim',
+            RespostaBinaria::Sim->etiqueta(),
         );
 
-        $this->assertFalse(
-            RespostaBinaria::Nao->paraBooleano(),
+        self::assertSame(
+            'Não',
+            RespostaBinaria::Nao->etiqueta(),
         );
     }
 }

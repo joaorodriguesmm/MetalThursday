@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Servicos\Utilizadores;
 
 use App\Servicos\Utilizadores\ServicoFotografiasUtilizador;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
@@ -17,13 +18,12 @@ use Tests\TestCase;
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.1.0
  */
 final class ServicoFotografiasUtilizadorTest extends TestCase
 {
     /**
      * Serviço testado.
-     *
      *
      * @since 2.0.0
      *
@@ -32,30 +32,50 @@ final class ServicoFotografiasUtilizadorTest extends TestCase
     private ServicoFotografiasUtilizador $servicoFotografias;
 
     /**
-     * Prepara cada teste.
+     * Disco público falso utilizado pelos testes.
      *
+     * A tipagem explícita permite que os analisadores estáticos reconheçam
+     * os métodos de asserção disponibilizados pelo adaptador do Laravel.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
+    private FilesystemAdapter $discoPublico;
+
+    /**
+     * Prepara cada teste.
+     *
+     * @since 2.0.0
+     *
+     * @version 2.1.0
+     */
     protected function setUp(): void
     {
         parent::setUp();
 
-        Storage::fake('public');
+        Storage::fake(
+            'publico',
+        );
+
+        /** @var FilesystemAdapter $discoPublico */
+        $discoPublico = Storage::disk(
+            'publico',
+        );
+
+        $this->discoPublico =
+            $discoPublico;
 
         $this->servicoFotografias =
             new ServicoFotografiasUtilizador;
     }
 
     /**
-     * Confirma que uma fotografia é guardada no diretório atual.
-     *
+     * Confirma que uma fotografia é guardada no diretório autorizado.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function guarda_fotografia_no_diretorio_dos_utilizadores(): void
@@ -80,77 +100,44 @@ final class ServicoFotografiasUtilizadorTest extends TestCase
             $caminho,
         );
 
-        Storage::disk('public')->assertExists(
+        $this->discoPublico->assertExists(
             $caminho,
         );
     }
 
     /**
-     * Confirma que uma fotografia do diretório atual pode ser eliminada.
-     *
+     * Confirma que uma fotografia gerida pela aplicação pode ser eliminada.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
-    public function elimina_fotografia_do_diretorio_atual(): void
+    public function elimina_fotografia_do_diretorio_autorizado(): void
     {
         $caminho =
             'fotografias/utilizadores/fotografia-atual.jpg';
 
-        Storage::disk('public')->put(
+        $this->discoPublico->put(
             $caminho,
             'conteudo-de-teste',
         );
 
-        $resultado = $this->servicoFotografias->eliminar(
+        $this->servicoFotografias->eliminar(
             $caminho,
         );
 
-        self::assertTrue($resultado);
-
-        Storage::disk('public')->assertMissing(
+        $this->discoPublico->assertMissing(
             $caminho,
         );
     }
 
     /**
-     * Confirma a compatibilidade com o diretório histórico.
-     *
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    #[Test]
-    public function elimina_fotografia_do_diretorio_historico(): void
-    {
-        $caminho = 'photos/fotografia-antiga.jpg';
-
-        Storage::disk('public')->put(
-            $caminho,
-            'conteudo-de-teste',
-        );
-
-        $resultado = $this->servicoFotografias->eliminar(
-            $caminho,
-        );
-
-        self::assertTrue($resultado);
-
-        Storage::disk('public')->assertMissing(
-            $caminho,
-        );
-    }
-
-    /**
-     * Confirma que a ausência física do ficheiro é idempotente.
-     *
+     * Confirma que eliminar um ficheiro inexistente é uma operação idempotente.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function considera_eliminado_um_ficheiro_inexistente(): void
@@ -158,48 +145,48 @@ final class ServicoFotografiasUtilizadorTest extends TestCase
         $caminho =
             'fotografias/utilizadores/inexistente.jpg';
 
-        self::assertTrue(
-            $this->servicoFotografias->eliminar(
-                $caminho,
-            ),
+        $this->servicoFotografias->eliminar(
+            $caminho,
         );
 
-        Storage::disk('public')->assertMissing(
+        $this->discoPublico->assertMissing(
             $caminho,
         );
     }
 
     /**
-     * Confirma que valores sem caminho não provocam erros.
+     * Confirma que valores sem fotografia não provocam erros.
      *
-     * @param  string|null  $caminho  - Caminho testado.
+     * @param  string|null  $caminho  Caminho testado.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
-    #[DataProvider('fornecerCaminhosVazios')]
-    public function ignora_caminhos_vazios(
+    #[DataProvider('fornecerCaminhosSemFotografia')]
+    public function ignora_caminhos_sem_fotografia(
         ?string $caminho,
     ): void {
-        self::assertTrue(
-            $this->servicoFotografias->eliminar(
-                $caminho,
-            ),
+        $this->servicoFotografias->eliminar(
+            $caminho,
+        );
+
+        $this->addToAssertionCount(
+            1,
         );
     }
 
     /**
-     * Fornece caminhos que representam a ausência de fotografia.
+     * Fornece valores que representam a ausência de fotografia.
      *
-     * @return array<string, array{0: string|null}> - Caminhos testados.
+     * @return array<string, array{0: string|null}> Caminhos testados.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    public static function fornecerCaminhosVazios(): array
+    public static function fornecerCaminhosSemFotografia(): array
     {
         return [
             'nulo' => [
@@ -217,19 +204,19 @@ final class ServicoFotografiasUtilizadorTest extends TestCase
     }
 
     /**
-     * Impede a eliminação de ficheiros fora dos diretórios permitidos.
-     *
+     * Impede a eliminação de ficheiros fora do diretório autorizado.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
-    public function rejeita_caminho_fora_dos_diretorios_permitidos(): void
+    public function rejeita_caminho_fora_do_diretorio_autorizado(): void
     {
-        $caminho = 'documentos/ficheiro-importante.pdf';
+        $caminho =
+            'documentos/ficheiro-importante.pdf';
 
-        Storage::disk('public')->put(
+        $this->discoPublico->put(
             $caminho,
             'conteudo-de-teste',
         );
@@ -239,7 +226,7 @@ final class ServicoFotografiasUtilizadorTest extends TestCase
         );
 
         $this->expectExceptionMessage(
-            'O caminho da fotografia não pertence a um diretório autorizado.',
+            'O caminho da fotografia não pertence ao diretório autorizado.',
         );
 
         try {
@@ -247,19 +234,41 @@ final class ServicoFotografiasUtilizadorTest extends TestCase
                 $caminho,
             );
         } finally {
-            Storage::disk('public')->assertExists(
+            $this->discoPublico->assertExists(
                 $caminho,
             );
         }
     }
 
     /**
-     * Impede caminhos com tentativa de travessia de diretórios.
-     *
+     * Confirma que o diretório histórico já não é autorizado.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
+     */
+    #[Test]
+    public function rejeita_o_diretorio_historico(): void
+    {
+        $this->expectException(
+            InvalidArgumentException::class,
+        );
+
+        $this->expectExceptionMessage(
+            'O caminho da fotografia não pertence ao diretório autorizado.',
+        );
+
+        $this->servicoFotografias->eliminar(
+            'photos/fotografia-antiga.jpg',
+        );
+    }
+
+    /**
+     * Impede caminhos com tentativa de travessia de diretórios.
+     *
+     * @since 2.0.0
+     *
+     * @version 2.0.0
      */
     #[Test]
     public function rejeita_travessia_de_diretorios(): void
@@ -269,7 +278,7 @@ final class ServicoFotografiasUtilizadorTest extends TestCase
         );
 
         $this->expectExceptionMessage(
-            'O caminho da fotografia não é válido.',
+            'O caminho da fotografia contém segmentos inválidos.',
         );
 
         $this->servicoFotografias->eliminar(
@@ -278,32 +287,48 @@ final class ServicoFotografiasUtilizadorTest extends TestCase
     }
 
     /**
-     * Normaliza separadores de diretórios provenientes de Windows.
+     * Confirma que separadores de diretórios do Windows são rejeitados.
      *
+     * @since 2.0.0
+     *
+     * @version 2.0.0
+     */
+    #[Test]
+    public function rejeita_separadores_de_diretorios_do_windows(): void
+    {
+        $this->expectException(
+            InvalidArgumentException::class,
+        );
+
+        $this->expectExceptionMessage(
+            'O caminho da fotografia não é seguro.',
+        );
+
+        $this->servicoFotografias->eliminar(
+            'fotografias\\utilizadores\\fotografia.jpg',
+        );
+    }
+
+    /**
+     * Confirma que não são permitidos subdiretórios adicionais.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
     #[Test]
-    public function normaliza_separadores_de_diretorios(): void
+    public function rejeita_subdiretorios_dentro_do_diretorio_autorizado(): void
     {
-        $caminhoNormalizado =
-            'fotografias/utilizadores/fotografia.jpg';
-
-        Storage::disk('public')->put(
-            $caminhoNormalizado,
-            'conteudo-de-teste',
+        $this->expectException(
+            InvalidArgumentException::class,
         );
 
-        $resultado = $this->servicoFotografias->eliminar(
-            'fotografias\\utilizadores\\fotografia.jpg',
+        $this->expectExceptionMessage(
+            'O caminho da fotografia não pertence ao diretório autorizado.',
         );
 
-        self::assertTrue($resultado);
-
-        Storage::disk('public')->assertMissing(
-            $caminhoNormalizado,
+        $this->servicoFotografias->eliminar(
+            'fotografias/utilizadores/arquivo/fotografia.jpg',
         );
     }
 }

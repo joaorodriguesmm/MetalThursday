@@ -15,22 +15,21 @@ use Tests\TestCase;
 /**
  * Testa o comportamento de domínio do modelo dos convites.
  *
- * Estes testes não utilizam a base de dados. Validam apenas regras de estado,
- * normalização e segurança implementadas diretamente pelo modelo.
+ * Estes testes não utilizam a base de dados. Validam apenas as regras de
+ * estado, normalização e segurança implementadas diretamente pelo modelo.
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 final class ConviteTest extends TestCase
 {
     /**
-     * Confirma que o hash remove espaços exteriores do código.
-     *
+     * Confirma que o hash remove os espaços exteriores do código.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function calcula_o_hash_do_codigo_normalizado(): void
@@ -53,20 +52,22 @@ final class ConviteTest extends TestCase
     /**
      * Confirma que os códigos permanecem sensíveis à capitalização.
      *
+     * Ambos os códigos utilizados respeitam o comprimento e o padrão
+     * definidos pelo modelo.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function distingue_maiusculas_de_minusculas_no_codigo(): void
     {
         $hashMaiusculas = Convite::calcularHashCodigo(
-            'MT-CODIGO',
+            'MT-CODIGO1',
         );
 
         $hashMinusculas = Convite::calcularHashCodigo(
-            'mt-codigo',
+            'mt-codigo1',
         );
 
         self::assertNotSame(
@@ -78,10 +79,9 @@ final class ConviteTest extends TestCase
     /**
      * Confirma que um código vazio não pode ser convertido em hash.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function rejeita_um_codigo_vazio(): void
@@ -91,19 +91,66 @@ final class ConviteTest extends TestCase
         );
 
         $this->expectExceptionMessage(
-            'O código do convite não pode estar vazio.',
+            'O código do convite não é válido.',
         );
 
-        Convite::calcularHashCodigo('   ');
+        Convite::calcularHashCodigo(
+            '   ',
+        );
+    }
+
+    /**
+     * Confirma que códigos demasiado curtos são rejeitados.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    #[Test]
+    public function rejeita_um_codigo_demasiado_curto(): void
+    {
+        $this->expectException(
+            InvalidArgumentException::class,
+        );
+
+        $this->expectExceptionMessage(
+            'O código do convite não é válido.',
+        );
+
+        Convite::calcularHashCodigo(
+            'MT-CODIGO',
+        );
+    }
+
+    /**
+     * Confirma que códigos com caracteres não permitidos são rejeitados.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    #[Test]
+    public function rejeita_um_codigo_com_caracteres_invalidos(): void
+    {
+        $this->expectException(
+            InvalidArgumentException::class,
+        );
+
+        $this->expectExceptionMessage(
+            'O código do convite não é válido.',
+        );
+
+        Convite::calcularHashCodigo(
+            'MT-CODIGO!TESTE',
+        );
     }
 
     /**
      * Confirma que o modelo guarda apenas o hash do código.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function define_apenas_o_hash_do_codigo_no_modelo(): void
@@ -115,7 +162,10 @@ final class ConviteTest extends TestCase
         );
 
         self::assertSame(
-            hash('sha256', 'MT-CODIGO-SEGURO'),
+            hash(
+                'sha256',
+                'MT-CODIGO-SEGURO',
+            ),
             $convite->codigo_hash,
         );
 
@@ -135,10 +185,9 @@ final class ConviteTest extends TestCase
     /**
      * Confirma que um convite pendente e sem expiração está disponível.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function considera_disponivel_um_convite_pendente(): void
@@ -158,21 +207,24 @@ final class ConviteTest extends TestCase
         );
 
         self::assertFalse(
-            $convite->estaExpirado($momento),
+            $convite->estaExpirado(
+                $momento,
+            ),
         );
 
         self::assertTrue(
-            $convite->estaDisponivel($momento),
+            $convite->estaDisponivel(
+                $momento,
+            ),
         );
     }
 
     /**
      * Confirma que o convite expira exatamente no momento definido.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function considera_expirado_o_convite_no_limite_temporal(): void
@@ -186,11 +238,15 @@ final class ConviteTest extends TestCase
         ]);
 
         self::assertTrue(
-            $convite->estaExpirado($momentoExpiracao),
+            $convite->estaExpirado(
+                $momentoExpiracao,
+            ),
         );
 
         self::assertFalse(
-            $convite->estaDisponivel($momentoExpiracao),
+            $convite->estaDisponivel(
+                $momentoExpiracao,
+            ),
         );
     }
 
@@ -199,7 +255,7 @@ final class ConviteTest extends TestCase
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function utiliza_um_convite_disponivel(): void
@@ -263,10 +319,9 @@ final class ConviteTest extends TestCase
     /**
      * Confirma que um convite revogado não pode ser utilizado.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function impede_a_utilizacao_de_um_convite_revogado(): void
@@ -284,7 +339,10 @@ final class ConviteTest extends TestCase
         $utilizador->exists = true;
 
         $convite = new Convite;
-        $convite->revogar($momento);
+
+        $convite->revogar(
+            $momento,
+        );
 
         $this->expectException(
             DomainException::class,
@@ -303,10 +361,9 @@ final class ConviteTest extends TestCase
     /**
      * Confirma que revogar novamente não altera o momento original.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function mantem_a_primeira_data_ao_revogar_novamente(): void
@@ -321,8 +378,13 @@ final class ConviteTest extends TestCase
 
         $convite = new Convite;
 
-        $convite->revogar($primeiroMomento);
-        $convite->revogar($segundoMomento);
+        $convite->revogar(
+            $primeiroMomento,
+        );
+
+        $convite->revogar(
+            $segundoMomento,
+        );
 
         self::assertNotNull(
             $convite->revogado_em,
@@ -338,10 +400,9 @@ final class ConviteTest extends TestCase
     /**
      * Confirma que um convite utilizado não pode ser revogado.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function impede_a_revogacao_de_um_convite_utilizado(): void
@@ -373,6 +434,8 @@ final class ConviteTest extends TestCase
             'Não é possível revogar um convite já utilizado.',
         );
 
-        $convite->revogar($momento);
+        $convite->revogar(
+            $momento,
+        );
     }
 }
