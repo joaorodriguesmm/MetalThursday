@@ -4,7 +4,7 @@ import TomSelect from 'tom-select';
  * Gere a criação e a remoção dinâmica de filtros de pesquisa.
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 3.0.0
  */
 class GestorFiltrosDinamicos {
     /**
@@ -396,7 +396,7 @@ class GestorFiltrosDinamicos {
      * @returns {HTMLSelectElement}
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     criarCampoSelecao(
         configuracao,
@@ -427,8 +427,17 @@ class GestorFiltrosDinamicos {
         opcoes.forEach((opcao) => {
             if (
                 !this.eObjeto(opcao)
-                || !Object.hasOwn(opcao, 'id')
+                || !Object.hasOwn(
+                    opcao,
+                    'identificador',
+                )
                 || !Object.hasOwn(opcao, 'nome')
+                || !Number.isInteger(
+                    opcao.identificador,
+                )
+                || opcao.identificador < 1
+                || typeof opcao.nome !== 'string'
+                || opcao.nome.trim() === ''
             ) {
                 return;
             }
@@ -437,7 +446,9 @@ class GestorFiltrosDinamicos {
                 document.createElement('option');
 
             elementoOpcao.value =
-                String(opcao.id);
+                String(
+                    opcao.identificador,
+                );
 
             elementoOpcao.textContent =
                 String(opcao.nome);

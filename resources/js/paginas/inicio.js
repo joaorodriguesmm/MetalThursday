@@ -5,378 +5,142 @@ import InicializadorTooltips from '../modulos/InicializadorTooltips';
 import TratadorFormularioAjax from '../modulos/TratadorFormularioAjax';
 import ValidadorFormulario from '../modulos/ValidadorFormulario';
 
-let contadorFormulariosComentario = 0;
+/**
+ * Inicializa os comportamentos da página principal de MetalThursdays.
+ *
+ * Gere os filtros, a ordenação, a alternância de vistas, as avaliações,
+ * os tooltips e a publicação de comentários.
+ *
+ * @since 1.0.0
+ * @version 3.0.0
+ */
 
 /**
- * Normaliza os dados utilizados pelos filtros dinâmicos.
+ * Identificador do bloco JSON com a configuração da listagem.
  *
- * Mantém os contratos atuais disponibilizados pela view e acrescenta o nome
- * português esperado pelo novo gestor quando os registos ainda usam `name`.
+ * @type {string}
  *
- * @param {unknown} dados Dados recebidos da página.
- *
- * @returns {Record<string, unknown>} Dados normalizados.
- *
- * @since 2.0.0
+ * @since 3.0.0
  * @version 1.0.0
  */
-function normalizarDadosFiltros(dados) {
-    if (
-        dados === null
-        || typeof dados !== 'object'
-        || Array.isArray(dados)
-    ) {
-        return {};
-    }
+const IDENTIFICADOR_CONFIGURACAO_LISTAGEM =
+    'configuracao-listagem-metal-thursday';
 
-    return Object.fromEntries(
-        Object.entries(dados).map(
-            ([chave, valores]) => {
-                if (!Array.isArray(valores)) {
-                    return [
-                        chave,
-                        valores,
-                    ];
-                }
-
-                return [
-                    chave,
-                    valores.map((valor) => {
-                        if (
-                            valor === null
-                            || typeof valor !== 'object'
-                            || Array.isArray(valor)
-                        ) {
-                            return valor;
-                        }
-
-                        return {
-                            ...valor,
-
-                            nome:
-                                valor.nome
-                                ?? valor.name
-                                ?? valor.text
-                                ?? '',
-                        };
-                    }),
-                ];
-            },
-        ),
-    );
+/**
+ * Determina se um valor é um objeto não nulo.
+ *
+ * @param {unknown} valor Valor recebido.
+ *
+ * @returns {boolean} Verdadeiro quando o valor é um objeto.
+ *
+ * @since 3.0.0
+ * @version 1.0.0
+ */
+function eObjeto(valor) {
+    return typeof valor === 'object'
+        && valor !== null
+        && !Array.isArray(valor);
 }
 
 /**
- * Converte um tipo antigo de filtro para a designação portuguesa.
+ * Obtém a configuração preparada pelo servidor para a listagem.
  *
- * @param {unknown} tipo Tipo recebido.
+ * @returns {{
+ *     dadosFiltros: Record<string, Array<object>>,
+ *     filtrosDisponiveis: Record<string, object>,
+ *     vistas: {
+ *         completa: string,
+ *         simplificada: string
+ *     }
+ * }} Configuração validada.
  *
- * @returns {string} Tipo normalizado.
+ * @throws {Error} Quando o bloco de configuração não existe ou contém JSON
+ * inválido.
+ * @throws {TypeError} Quando a configuração não respeita o contrato esperado.
  *
- * @since 2.0.0
+ * @since 3.0.0
  * @version 1.0.0
  */
-function normalizarTipoFiltro(tipo) {
-    const tipos = {
-        boolean: 'sim_nao',
-        date: 'data',
-        select: 'selecao',
-        selection: 'selecao',
-        yes_no: 'sim_nao',
-    };
-
-    if (typeof tipo !== 'string') {
-        return 'selecao';
-    }
-
-    const tipoNormalizado =
-        tipo.trim();
-
-    return tipos[tipoNormalizado]
-        ?? tipoNormalizado;
-}
-
-/**
- * Normaliza a configuração dos filtros disponibilizada pela view.
- *
- * @param {unknown} filtros Configuração recebida.
- *
- * @returns {Record<string, object>} Configuração normalizada.
- *
- * @since 2.0.0
- * @version 1.0.0
- */
-function normalizarFiltrosDisponiveis(filtros) {
-    if (
-        filtros === null
-        || typeof filtros !== 'object'
-        || Array.isArray(filtros)
-    ) {
-        return {};
-    }
-
-    return Object.fromEntries(
-        Object.entries(filtros).map(
-            ([chave, configuracao]) => {
-                const configuracaoValida =
-                    configuracao !== null
-                    && typeof configuracao === 'object'
-                    && !Array.isArray(configuracao)
-                        ? configuracao
-                        : {};
-
-                return [
-                    chave,
-                    {
-                        ...configuracaoValida,
-
-                        parametro:
-                            configuracaoValida.parametro
-                            ?? configuracaoValida.param
-                            ?? configuracaoValida.parameter
-                            ?? chave,
-
-                        tipo: normalizarTipoFiltro(
-                            configuracaoValida.tipo
-                            ?? configuracaoValida.type
-                            ?? 'selecao',
-                        ),
-
-                        rotulo:
-                            configuracaoValida.rotulo
-                            ?? configuracaoValida.label
-                            ?? chave,
-
-                        chaveDados:
-                            configuracaoValida.chaveDados
-                            ?? configuracaoValida.dataKey
-                            ?? configuracaoValida.data_key
-                            ?? null,
-                    },
-                ];
-            },
-        ),
-    );
-}
-
-/**
- * Obtém os valores das vistas definidos pela página.
- *
- * @returns {{completa: string, simplificada: string}}
- *
- * @since 2.0.0
- * @version 1.0.0
- */
-function obterVistas() {
-    const traducoes =
-        window.viewTranslations
-        ?? {};
-
-    return {
-        completa:
-            traducoes.completa
-            ?? traducoes.full
-            ?? 'full',
-
-        simplificada:
-            traducoes.simplificada
-            ?? traducoes.simplified
-            ?? 'simplified',
-    };
-}
-
-/**
- * Garante que um formulário possui um identificador HTML único.
- *
- * @param {HTMLFormElement} formulario Formulário recebido.
- *
- * @returns {string} Identificador do formulário.
- *
- * @since 2.0.0
- * @version 1.0.0
- */
-function garantirIdentificadorFormulario(
-    formulario,
-) {
-    if (formulario.id.trim() !== '') {
-        return formulario.id;
-    }
-
-    let identificador;
-
-    do {
-        contadorFormulariosComentario += 1;
-
-        identificador =
-            `formulario-comentario-${contadorFormulariosComentario}`;
-    } while (
+function obterConfiguracaoListagem() {
+    const elemento =
         document.getElementById(
-            identificador,
-        ) !== null
-    );
-
-    formulario.id =
-        identificador;
-
-    return identificador;
-}
-
-/**
- * Converte a resposta da criação de um comentário num elemento HTML.
- *
- * São suportadas temporariamente respostas HTML diretas e objetos com as
- * propriedades `conteudo_html` ou `html`.
- *
- * @param {unknown} dadosResposta Resposta devolvida pelo servidor.
- *
- * @returns {HTMLElement|null} Comentário criado ou nulo.
- *
- * @since 2.0.0
- * @version 1.0.0
- */
-function criarElementoComentario(
-    dadosResposta,
-) {
-    const html =
-        typeof dadosResposta === 'string'
-            ? dadosResposta
-            : dadosResposta?.conteudo_html
-                ?? dadosResposta?.html
-                ?? null;
-
-    if (
-        typeof html !== 'string'
-        || html.trim() === ''
-    ) {
-        return null;
-    }
-
-    const modelo = document.createElement(
-        'template',
-    );
-
-    modelo.innerHTML =
-        html.trim();
-
-    const comentario =
-        modelo.content.firstElementChild;
-
-    return comentario instanceof HTMLElement
-        ? comentario
-        : null;
-}
-
-/**
- * Insere um comentário na lista ou no conjunto de respostas correspondente.
- *
- * Os seletores permanecem temporariamente em inglês por corresponderem às
- * views atuais.
- *
- * @param {HTMLFormElement} formulario Formulário submetido.
- * @param {HTMLElement} comentario Comentário criado.
- *
- * @returns {boolean} Indica se o comentário foi inserido.
- *
- * @since 2.0.0
- * @version 1.0.0
- */
-function inserirComentario(
-    formulario,
-    comentario,
-) {
-    const contentorFormularioResposta =
-        formulario.closest(
-            '.reply-form-container',
+            IDENTIFICADOR_CONFIGURACAO_LISTAGEM,
         );
 
-    if (
-        contentorFormularioResposta
-        instanceof HTMLElement
-    ) {
-        const contentorComentario =
-            formulario.closest(
-                '.comment-container',
-            );
+    if (!(elemento instanceof HTMLScriptElement)) {
+        throw new Error(
+            'Não foi encontrada a configuração da listagem de MetalThursdays.',
+        );
+    }
 
-        const contentorRespostas =
-            contentorComentario?.querySelector(
-                '.replies-container',
-            );
+    const conteudo =
+        elemento.textContent?.trim()
+        ?? '';
 
-        if (
-            !(
-                contentorRespostas
-                instanceof HTMLElement
-            )
-        ) {
-            return false;
+    if (conteudo === '') {
+        throw new Error(
+            'A configuração da listagem de MetalThursdays está vazia.',
+        );
+    }
+
+    let configuracao;
+
+    try {
+        configuracao = JSON.parse(
+            conteudo,
+        );
+    } catch (erro) {
+        throw new Error(
+            'A configuração da listagem de MetalThursdays contém JSON inválido.',
+            {
+                cause: erro,
+            },
+        );
+    }
+
+    if (!eObjeto(configuracao)) {
+        throw new TypeError(
+            'A configuração da listagem de MetalThursdays deve ser um objeto.',
+        );
+    }
+
+    [
+        'dadosFiltros',
+        'filtrosDisponiveis',
+        'vistas',
+    ].forEach((chave) => {
+        if (!eObjeto(configuracao[chave])) {
+            throw new TypeError(
+                `A propriedade "${chave}" da configuração da listagem é inválida.`,
+            );
         }
+    });
 
-        contentorRespostas.append(
-            comentario,
-        );
-
-        contentorFormularioResposta.style.display =
-            'none';
-
-        contentorFormularioResposta.setAttribute(
-            'aria-hidden',
-            'true',
-        );
-
-        return true;
-    }
-
-    const areaComentarios =
-        formulario.closest('.card-body')
-        ?? formulario.closest('.collapse');
-
-    const listaComentarios =
-        areaComentarios?.querySelector(
-            '.comments-list',
-        );
-
-    if (
-        !(
-            listaComentarios
-            instanceof HTMLElement
-        )
-    ) {
-        return false;
-    }
-
-    listaComentarios.querySelector(
-        '.no-comments-placeholder',
-    )?.remove();
-
-    listaComentarios.append(
-        comentario,
-    );
-
-    return true;
+    return configuracao;
 }
 
 /**
  * Inicializa os formulários de comentário existentes num contentor.
  *
- * Os seletores e os nomes dos campos permanecem temporariamente em inglês
- * por corresponderem às views ainda não analisadas.
+ * Após uma publicação bem-sucedida, a página é recarregada para apresentar
+ * o comentário através dos componentes Blade e das autorizações calculadas
+ * pelo servidor.
  *
  * @param {Document|Element} contentor Contentor de pesquisa.
- * @param {InicializadorTooltips} inicializadorTooltips
- *     Inicializador dos tooltips.
  *
  * @returns {void}
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 3.0.0
  */
 function inicializarFormulariosComentario(
     contentor,
-    inicializadorTooltips,
 ) {
     contentor.querySelectorAll(
-        '.comment-form',
+        [
+            'form.formulario-comentario',
+            'form.formulario-resposta-comentario',
+        ].join(', '),
     ).forEach((formulario) => {
         if (
             !(formulario instanceof HTMLFormElement)
@@ -387,41 +151,25 @@ function inicializarFormulariosComentario(
             return;
         }
 
+        if (
+            formulario.id.trim() === ''
+            || formulario.action.trim() === ''
+        ) {
+            throw new Error(
+                'Cada formulário de comentário deve possuir identificador e endereço de submissão.',
+            );
+        }
+
         formulario.dataset
             .formularioComentarioInicializado =
                 'true';
 
-        const identificadorFormulario =
-            garantirIdentificadorFormulario(
-                formulario,
-            );
-
         const tratadorAjax =
             new TratadorFormularioAjax(
-                identificadorFormulario,
+                formulario.id,
                 formulario.action,
-                (dadosResposta) => {
-                    const comentario =
-                        criarElementoComentario(
-                            dadosResposta,
-                        );
-
-                    if (
-                        !(comentario instanceof HTMLElement)
-                        || !inserirComentario(
-                            formulario,
-                            comentario,
-                        )
-                    ) {
-                        return;
-                    }
-
-                    inicializarFormulariosComentario(
-                        comentario,
-                        inicializadorTooltips,
-                    );
-
-                    inicializadorTooltips.atualizar();
+                () => {
+                    window.location.reload();
                 },
             );
 
@@ -429,13 +177,13 @@ function inicializarFormulariosComentario(
             formulario,
             {
                 regras: {
-                    content: [
+                    conteudo: [
                         'obrigatorio',
                     ],
                 },
 
                 mensagens: {
-                    content: {
+                    conteudo: {
                         obrigatorio:
                             'Por favor, insere o texto do comentário.',
                     },
@@ -443,7 +191,7 @@ function inicializarFormulariosComentario(
 
                 aoSucesso: () => {
                     /*
-                     * A promessa não deve ser devolvida porque o
+                     * A promessa não é devolvida porque o
                      * ValidadorFormulario exige um callback síncrono.
                      */
                     tratadorAjax.submeter();
@@ -459,11 +207,11 @@ function inicializarFormulariosComentario(
  * @returns {void}
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 3.0.0
  */
 function configurarSubmissaoAutomatica() {
     const formulario = document.getElementById(
-        'filter-sort-form',
+        'formulario-filtros-ordenacao',
     );
 
     if (!(formulario instanceof HTMLFormElement)) {
@@ -471,7 +219,7 @@ function configurarSubmissaoAutomatica() {
     }
 
     formulario.querySelectorAll(
-        '.auto-submit',
+        '.submissao-automatica',
     ).forEach((campo) => {
         if (
             !(
@@ -508,86 +256,63 @@ function configurarSubmissaoAutomatica() {
 }
 
 /**
- * Inicializa os componentes da página inicial.
+ * Inicializa os componentes da página principal.
  *
  * @returns {void}
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 3.0.0
  */
 function inicializarPaginaInicio() {
-    const inicializadorTooltips =
-        new InicializadorTooltips();
+    const configuracao =
+        obterConfiguracaoListagem();
 
+    new InicializadorTooltips();
     new GestorModalAvaliacao();
 
-    if (
-        document.querySelector(
-            '#add_filter_dropdown',
-        )
-        && document.querySelector(
-            '#active-filters-area',
-        )
-    ) {
-        new GestorFiltrosDinamicos({
-            seletorListaFiltros:
-                '#add_filter_dropdown',
+    new GestorFiltrosDinamicos({
+        seletorListaFiltros:
+            '#seletor-adicionar-filtro',
 
-            seletorContentorFiltros:
-                '#active-filters-area',
+        seletorContentorFiltros:
+            '#area-filtros-ativos',
 
-            dadosFiltros:
-                normalizarDadosFiltros(
-                    window.filterData
-                    ?? {},
-                ),
+        dadosFiltros:
+            configuracao.dadosFiltros,
 
-            filtrosDisponiveis:
-                normalizarFiltrosDisponiveis(
-                    window.availableFilters
-                    ?? {},
-                ),
-        });
-    }
+        filtrosDisponiveis:
+            configuracao.filtrosDisponiveis,
+    });
 
     configurarSubmissaoAutomatica();
 
-    if (
-        document.querySelector(
-            '#view-toggle-btn',
-        )
-        && document.querySelector(
-            '#view-type-input',
-        )
-        && document.querySelector(
-            '#filter-sort-form',
-        )
-    ) {
-        new AlternadorVistas({
-            seletorBotao:
-                '#view-toggle-btn',
+    new AlternadorVistas({
+        seletorBotao:
+            '#botao-alternar-vista',
 
-            seletorCampoVista:
-                '#view-type-input',
+        seletorCampoVista:
+            '#campo-tipo-vista',
 
-            seletorFormulario:
-                '#filter-sort-form',
+        seletorFormulario:
+            '#formulario-filtros-ordenacao',
 
-            vistas:
-                obterVistas(),
-        });
-    }
+        vistas:
+            configuracao.vistas,
+    });
 
     inicializarFormulariosComentario(
         document,
-        inicializadorTooltips,
     );
 }
 
-document.addEventListener(
-    'DOMContentLoaded',
-    inicializarPaginaInicio,
-    {
-        once: true,
-    },
-);
+if (document.readyState === 'loading') {
+    document.addEventListener(
+        'DOMContentLoaded',
+        inicializarPaginaInicio,
+        {
+            once: true,
+        },
+    );
+} else {
+    inicializarPaginaInicio();
+}
