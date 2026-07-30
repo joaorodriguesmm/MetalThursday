@@ -19,17 +19,28 @@ use Illuminate\View\Component;
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 4.0.0
  */
 final class Navegacao extends Component
 {
+    /**
+     * Nome utilizado quando o valor recebido é inválido.
+     *
+     * @var string
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private const NOME_APLICACAO_PREDEFINIDO = 'MetalThursday';
+
     /**
      * Nome apresentado para a aplicação.
      *
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly string $nomeAplicacao;
 
@@ -39,7 +50,7 @@ final class Navegacao extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly Utilizador $utilizadorAutenticado;
 
@@ -49,7 +60,7 @@ final class Navegacao extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly int $numeroNotificacoesNaoLidas;
 
@@ -59,7 +70,7 @@ final class Navegacao extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly bool $paginaInicialAtiva;
 
@@ -69,7 +80,7 @@ final class Navegacao extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly bool $paginaPerfilAtiva;
 
@@ -81,76 +92,144 @@ final class Navegacao extends Component
      * @param  string  $nomeAplicacao  Nome fornecido pelo layout.
      *
      * @throws AuthenticationException Quando não existe um utilizador
-     *                                 autenticado válido.
+     *                                 autenticado e persistido válido.
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
     public function __construct(
         Request $pedido,
         FabricaAutenticacao $autenticacao,
         string $nomeAplicacao,
     ) {
-        $nomeNormalizado = trim(
-            $nomeAplicacao,
-        );
-
-        $this->nomeAplicacao = $nomeNormalizado !== ''
-            ? $nomeNormalizado
-            : 'MetalThursday';
-
-        $utilizador = $autenticacao
-            ->guard(
-                'web',
-            )
-            ->user();
-
-        if (! $utilizador instanceof Utilizador) {
-            throw new AuthenticationException(
-                'É necessário iniciar sessão para apresentar a navegação.',
+        $this->nomeAplicacao =
+            $this->normalizarNomeAplicacao(
+                $nomeAplicacao,
             );
-        }
 
-        $identificadorUtilizador = $utilizador->getKey();
-
-        if (
-            ! is_numeric($identificadorUtilizador)
-            || (int) $identificadorUtilizador < 1
-        ) {
-            throw new AuthenticationException(
-                'Não foi possível identificar o utilizador autenticado.',
+        $this->utilizadorAutenticado =
+            $this->obterUtilizadorAutenticado(
+                $autenticacao,
             );
-        }
 
-        $this->utilizadorAutenticado = $utilizador;
+        $this->numeroNotificacoesNaoLidas =
+            (int) $this
+                ->utilizadorAutenticado
+                ->notificacoesPorLer()
+                ->count();
 
-        $this->numeroNotificacoesNaoLidas = $utilizador
-            ->unreadNotifications()
-            ->count();
+        $this->paginaInicialAtiva =
+            $pedido->routeIs(
+                'inicio',
+            );
 
-        $this->paginaInicialAtiva = $pedido->routeIs(
-            'inicio',
-        );
-
-        $this->paginaPerfilAtiva = $pedido->routeIs(
-            'perfil.*',
-        );
+        $this->paginaPerfilAtiva =
+            $pedido->routeIs(
+                'perfil.*',
+            );
     }
 
     /**
-     * Obtém a view do componente.
+     * Obtém a vista do componente.
      *
-     * @return View View da navegação.
+     * @return View Vista da navegação.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function render(): View
     {
         return view(
             'components.navegacao',
         );
+    }
+
+    /**
+     * Normaliza o nome da aplicação.
+     *
+     * @param  string  $nomeAplicacao  Nome recebido.
+     * @return string Nome normalizado.
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private function normalizarNomeAplicacao(
+        string $nomeAplicacao,
+    ): string {
+        $nomeNormalizado = preg_replace(
+            '/\s+/u',
+            ' ',
+            trim(
+                $nomeAplicacao,
+            ),
+        );
+
+        if (
+            ! is_string($nomeNormalizado)
+            || $nomeNormalizado === ''
+        ) {
+            return self::NOME_APLICACAO_PREDEFINIDO;
+        }
+
+        return $nomeNormalizado;
+    }
+
+    /**
+     * Obtém o utilizador autenticado através do guard da aplicação.
+     *
+     * @param  FabricaAutenticacao  $autenticacao  Gestor de autenticação.
+     * @return Utilizador Utilizador autenticado.
+     *
+     * @throws AuthenticationException Quando não existe um utilizador
+     *                                 autenticado e persistido válido.
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private function obterUtilizadorAutenticado(
+        FabricaAutenticacao $autenticacao,
+    ): Utilizador {
+        $utilizador = $autenticacao
+            ->guard(
+                'sessao',
+            )
+            ->user();
+
+        if (! $utilizador instanceof Utilizador) {
+            throw new AuthenticationException(
+                'É necessário iniciar sessão para apresentar a navegação.',
+                [
+                    'sessao',
+                ],
+            );
+        }
+
+        $identificadorUtilizador = filter_var(
+            $utilizador->getKey(),
+            FILTER_VALIDATE_INT,
+            [
+                'options' => [
+                    'min_range' => 1,
+                ],
+            ],
+        );
+
+        if (
+            ! $utilizador->exists
+            || $identificadorUtilizador === false
+        ) {
+            throw new AuthenticationException(
+                'Não foi possível identificar o utilizador autenticado.',
+                [
+                    'sessao',
+                ],
+            );
+        }
+
+        return $utilizador;
     }
 }

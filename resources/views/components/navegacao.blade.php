@@ -6,7 +6,7 @@
     App\View\Components\Navegacao.
 
     @since 1.0.0
-    @version 3.0.0
+    @version 4.0.0
 --}}
 
 <nav
@@ -60,7 +60,7 @@
             data-bs-target="#conteudo-navegacao-principal"
             aria-controls="conteudo-navegacao-principal"
             aria-expanded="false"
-            aria-label="Alternar navegação"
+            aria-label="Abrir ou fechar a navegação principal"
         >
             <span
                 class="navbar-toggler-icon"
