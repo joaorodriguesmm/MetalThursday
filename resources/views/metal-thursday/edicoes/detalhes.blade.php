@@ -6,7 +6,7 @@
     App\Servicos\MetalThursday\ServicoApresentacaoDetalhesEdicao.
 
     @since 1.0.0
-    @version 3.0.0
+    @version 4.0.0
 --}}
 
 <x-layout-aplicacao>
@@ -34,6 +34,7 @@
                     href="{{ $ligacaoCompilacao }}"
                     target="_blank"
                     rel="noopener noreferrer"
+                    aria-label="Ouvir a compilação de {{ $edicao->nome }} num novo separador"
                 >
                     <i
                         class="bi bi-play-circle-fill me-2"
@@ -96,7 +97,7 @@
                     >
                         @csrf
 
-                        @error('classificacoes')
+                        @error('musicas_favoritas')
                             <div
                                 class="alert alert-danger"
                                 role="alert"
@@ -138,7 +139,7 @@
                                                         )
                                                     }}"
                                                     placeholder="Banda: álbum — música"
-                                                    maxlength="255"
+                                                    maxlength="{{ App\Models\MetalThursday\MusicaFavoritaEdicao::COMPRIMENTO_MAXIMO_MUSICA }}"
                                                     aria-describedby="{{
                                                         $campo['identificadorErro']
                                                     }}"
@@ -228,7 +229,7 @@
                                 )
                             }}"
                             placeholder="https://..."
-                            maxlength="2048"
+                            maxlength="{{ App\Models\MetalThursday\Edicao::COMPRIMENTO_MAXIMO_LIGACAO_COMPILACAO }}"
                             inputmode="url"
                             autocomplete="url"
                             aria-describedby="ajuda-ligacao-compilacao erro-ligacao-compilacao"

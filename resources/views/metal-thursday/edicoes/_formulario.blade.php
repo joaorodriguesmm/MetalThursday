@@ -5,7 +5,7 @@
     texto do botão são preparados pelo controlador responsável pela página.
 
     @since 1.0.0
-    @version 3.0.0
+    @version 4.0.0
 --}}
 
 <form
@@ -42,7 +42,7 @@
             name="nome"
             value="{{ old('nome', $nomeEdicao) }}"
             placeholder="Nome da edição"
-            maxlength="255"
+            maxlength="{{ App\Models\MetalThursday\Edicao::COMPRIMENTO_MAXIMO_NOME }}"
             aria-describedby="erro-nome-edicao"
             required
             autofocus
