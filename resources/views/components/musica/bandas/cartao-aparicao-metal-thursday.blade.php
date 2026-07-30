@@ -5,7 +5,7 @@
     App\View\Components\Musica\Bandas\CartaoAparicaoMetalThursday.
 
     @since 3.0.0
-    @version 1.0.0
+    @version 2.0.0
 --}}
 
 <article
@@ -32,16 +32,16 @@
 
             na
 
-            <a
-                href="{{
-                    route(
-                        'metal-thursday.detalhes',
-                        $dados['metalThursday'],
-                    )
-                }}"
-            >
-                MetalThursday de {{ $dados['nomeAutor'] }}
-            </a>
+            @if ($dados['enderecoMetalThursday'] !== null)
+                <a href="{{ $dados['enderecoMetalThursday'] }}">
+                    MetalThursday de {{ $dados['nomeAutor'] }}
+                </a>
+            @else
+                <span>
+                    MetalThursday de {{ $dados['nomeAutor'] }}
+                    (eliminada)
+                </span>
+            @endif
 
             <time datetime="{{ $dados['dataIso'] }}">
                 ({{ $dados['dataApresentacao'] }})

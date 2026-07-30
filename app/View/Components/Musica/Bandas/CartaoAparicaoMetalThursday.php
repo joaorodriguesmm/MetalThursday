@@ -22,7 +22,7 @@ use LogicException;
  *
  * @since 3.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 final class CartaoAparicaoMetalThursday extends Component
 {
@@ -34,7 +34,7 @@ final class CartaoAparicaoMetalThursday extends Component
      *     titulo: string,
      *     ano: int|null,
      *     nomeTipoSeccao: string,
-     *     metalThursday: MetalThursday,
+     *     enderecoMetalThursday: string|null,
      *     nomeAutor: string,
      *     dataIso: string,
      *     dataApresentacao: string,
@@ -44,7 +44,7 @@ final class CartaoAparicaoMetalThursday extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly array $dados;
 
@@ -59,7 +59,7 @@ final class CartaoAparicaoMetalThursday extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function __construct(
         SeccaoMetalThursday $seccao,
@@ -110,11 +110,16 @@ final class CartaoAparicaoMetalThursday extends Component
             ),
 
             'nomeTipoSeccao' => $this->normalizarTexto(
-                $tipoSeccao?->nome,
+                $tipoSeccao->nome,
             )
                 ?? 'Tipo indisponível',
 
-            'metalThursday' => $metalThursday,
+            'enderecoMetalThursday' => $metalThursday->trashed()
+                ? null
+                : route(
+                    'metal-thursday.detalhes',
+                    $metalThursday,
+                ),
 
             'nomeAutor' => $this->obterNomeAutor(
                 $metalThursday,
@@ -145,13 +150,13 @@ final class CartaoAparicaoMetalThursday extends Component
     }
 
     /**
-     * Obtém a view do componente.
+     * Obtém a vista do componente.
      *
-     * @return View View da aparição.
+     * @return View Vista da aparição.
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function render(): View
     {
@@ -200,18 +205,18 @@ final class CartaoAparicaoMetalThursday extends Component
      * Obtém o tipo relacionado com a secção.
      *
      * @param  SeccaoMetalThursday  $seccao  Secção consultada.
-     * @return TipoSeccao|null Tipo da secção.
+     * @return TipoSeccao Tipo da secção.
      *
-     * @throws LogicException Quando a relação não está carregada ou possui
-     *                        um tipo inesperado.
+     * @throws LogicException Quando a relação não está carregada, é nula ou
+     *                        possui um tipo inesperado.
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterTipoSeccao(
         SeccaoMetalThursday $seccao,
-    ): ?TipoSeccao {
+    ): TipoSeccao {
         if (! $seccao->relationLoaded('tipoSeccao')) {
             throw new LogicException(
                 'A relação "tipoSeccao" deve estar carregada.',
@@ -222,10 +227,6 @@ final class CartaoAparicaoMetalThursday extends Component
             $seccao->getRelation(
                 'tipoSeccao',
             );
-
-        if ($tipoSeccao === null) {
-            return null;
-        }
 
         if (! $tipoSeccao instanceof TipoSeccao) {
             throw new LogicException(

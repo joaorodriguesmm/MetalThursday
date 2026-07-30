@@ -9,7 +9,7 @@
     App\View\Components\Musica\Bandas\CartaoAparicaoMetalThursday.
 
     @since 1.0.0
-    @version 3.0.0
+    @version 4.0.0
 --}}
 
 <x-layout-aplicacao>
@@ -22,11 +22,9 @@
             <h1 class="h4 mb-1 fw-bold">
                 {{ $banda->nome }}
 
-                @if ($nomePaisBanda !== null)
-                    <span class="h5">
-                        ({{ $nomePaisBanda }})
-                    </span>
-                @endif
+                <span class="h5">
+                    ({{ $nomeOrigemGeograficaBanda }})
+                </span>
             </h1>
 
             @if ($nomesGenerosBanda !== null)
