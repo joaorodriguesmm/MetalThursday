@@ -45,7 +45,7 @@ use Throwable;
  *
  * @since 1.0.0
  *
- * @version 4.0.0
+ * @version 5.0.0
  */
 final class ControladorMetalThursday extends Controller
 {
@@ -72,6 +72,37 @@ final class ControladorMetalThursday extends Controller
      * @version 1.0.0
      */
     private const VISTA_SIMPLIFICADA = 'simplificada';
+
+    /**
+     * Tipos de filtros dinâmicos reconhecidos pela interface.
+     *
+     * @var array<int, string>
+     *
+     * @since 5.0.0
+     *
+     * @version 1.0.0
+     */
+    private const TIPOS_FILTROS = [
+        'selecao',
+        'data',
+        'sim_nao',
+    ];
+
+    /**
+     * Chaves das coleções que podem alimentar filtros de seleção.
+     *
+     * @var array<int, string>
+     *
+     * @since 5.0.0
+     *
+     * @version 1.0.0
+     */
+    private const CHAVES_DADOS_FILTROS = [
+        'edicoes',
+        'utilizadores',
+        'bandas',
+        'generos',
+    ];
 
     /**
      * Opções permitidas para o número de registos por página.
@@ -1313,7 +1344,10 @@ final class ControladorMetalThursday extends Controller
      *         rotulo: string,
      *         filtros: array<int, array{
      *             chave: string,
-     *             rotulo: string
+     *             rotulo: string,
+     *             parametro: string,
+     *             tipo: 'selecao'|'data'|'sim_nao',
+     *             chaveDados: string|null
      *         }>
      *     }>,
      *     opcoesPorPagina: array<int, int>,
@@ -1341,7 +1375,7 @@ final class ControladorMetalThursday extends Controller
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterDadosControlosListagem(
         Request $pedido,
@@ -1441,25 +1475,29 @@ final class ControladorMetalThursday extends Controller
     /**
      * Obtém os grupos de filtros disponíveis para apresentação.
      *
-     * Entradas inválidas ou grupos sem filtros válidos não são apresentados.
+     * Entradas inválidas, chaves repetidas e grupos sem filtros válidos não
+     * são apresentados.
      *
      * @return array<int, array{
      *     rotulo: string,
      *     filtros: array<int, array{
      *         chave: string,
-     *         rotulo: string
+     *         rotulo: string,
+     *         parametro: string,
+     *         tipo: 'selecao'|'data'|'sim_nao',
+     *         chaveDados: string|null
      *     }>
      * }> Grupos normalizados.
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterGruposFiltrosDisponiveis(): array
     {
         $configuracao =
             config(
-                'filters.metalthursday',
+                'filtros.metal_thursday',
                 [],
             );
 
@@ -1468,6 +1506,7 @@ final class ControladorMetalThursday extends Controller
         }
 
         $gruposNormalizados = [];
+        $chavesUtilizadas = [];
 
         foreach ($configuracao as $grupo) {
             if (! is_array($grupo)) {
@@ -1519,17 +1558,76 @@ final class ControladorMetalThursday extends Controller
                     )
                     : '';
 
+                $parametro =
+                    is_string(
+                        $filtro['parametro']
+                            ?? null,
+                    )
+                    ? trim(
+                        $filtro['parametro'],
+                    )
+                    : '';
+
+                $tipo =
+                    is_string(
+                        $filtro['tipo']
+                            ?? null,
+                    )
+                    ? trim(
+                        $filtro['tipo'],
+                    )
+                    : '';
+
+                $chaveDadosRecebida =
+                    $filtro['chaveDados']
+                    ?? null;
+
+                $chaveDados =
+                    is_string($chaveDadosRecebida)
+                    ? trim($chaveDadosRecebida)
+                    : null;
+
                 if (
                     $chave === ''
                     || $rotulo === ''
+                    || $parametro === ''
+                    || isset($chavesUtilizadas[$chave])
+                    || ! in_array(
+                        $tipo,
+                        self::TIPOS_FILTROS,
+                        true,
+                    )
                 ) {
                     continue;
                 }
+
+                if ($tipo === 'selecao') {
+                    if (
+                        $chaveDados === null
+                        || ! in_array(
+                            $chaveDados,
+                            self::CHAVES_DADOS_FILTROS,
+                            true,
+                        )
+                    ) {
+                        continue;
+                    }
+                } else {
+                    $chaveDados = null;
+                }
+
+                $chavesUtilizadas[$chave] = true;
 
                 $filtrosNormalizados[] = [
                     'chave' => $chave,
 
                     'rotulo' => $rotulo,
+
+                    'parametro' => $parametro,
+
+                    'tipo' => $tipo,
+
+                    'chaveDados' => $chaveDados,
                 ];
             }
 
@@ -1722,7 +1820,10 @@ final class ControladorMetalThursday extends Controller
      *     rotulo: string,
      *     filtros: array<int, array{
      *         chave: string,
-     *         rotulo: string
+     *         rotulo: string,
+     *         parametro: string,
+     *         tipo: 'selecao'|'data'|'sim_nao',
+     *         chaveDados: string|null
      *     }>
      * }>  $gruposFiltrosDisponiveis  Grupos de filtros disponíveis.
      * @return array{
@@ -1746,7 +1847,10 @@ final class ControladorMetalThursday extends Controller
      *     },
      *     filtrosDisponiveis: array<string, array{
      *         chave: string,
-     *         rotulo: string
+     *         rotulo: string,
+     *         parametro: string,
+     *         tipo: 'selecao'|'data'|'sim_nao',
+     *         chaveDados: string|null
      *     }>,
      *     vistas: array{
      *         completa: string,
@@ -1756,7 +1860,7 @@ final class ControladorMetalThursday extends Controller
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterConfiguracaoListagemMetalThursday(
         array $gruposFiltrosDisponiveis,

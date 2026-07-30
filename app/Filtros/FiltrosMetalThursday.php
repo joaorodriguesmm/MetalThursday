@@ -27,34 +27,34 @@ use Throwable;
  *
  * @since 1.0.0
  *
- * @version 2.1.0
+ * @version 3.0.0
  */
 final class FiltrosMetalThursday
 {
     /**
-     * Parâmetros de filtro permitidos.
+     * Mapa dos parâmetros de filtro para os respetivos métodos.
      *
      * A lista impede que parâmetros arbitrários do pedido possam invocar
      * métodos internos da classe.
      *
-     * @var array<int, string>
+     * @var array<string, non-empty-string>
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
-    private const PARAMETROS_FILTROS = [
-        'filtro_autor',
-        'filtro_banda',
-        'filtro_autoria_utilizador',
-        'filtro_data_ate',
-        'filtro_data_desde',
-        'filtro_data',
-        'filtro_edicao',
-        'filtro_nomeacao',
-        'filtro_genero',
-        'filtro_avaliacao',
-        'filtro_audicao',
+    private const MAPA_FILTROS = [
+        'filtro_autor' => 'filtrarPorAutor',
+        'filtro_banda' => 'filtrarPorBanda',
+        'filtro_autoria_utilizador' => 'filtrarPorAutoriaDoUtilizador',
+        'filtro_data_ate' => 'filtrarPorDataAte',
+        'filtro_data_desde' => 'filtrarPorDataDesde',
+        'filtro_data' => 'filtrarPorData',
+        'filtro_edicao' => 'filtrarPorEdicao',
+        'filtro_nomeacao' => 'filtrarPorNomeacaoDoUtilizador',
+        'filtro_genero' => 'filtrarPorGenero',
+        'filtro_avaliacao' => 'filtrarPorAvaliacaoDoUtilizador',
+        'filtro_audicao' => 'filtrarPorAudicaoDoUtilizador',
     ];
 
     /**
@@ -125,7 +125,7 @@ final class FiltrosMetalThursday
      *
      * @version 2.0.0
      */
-    private Builder $construtorConsulta;
+    private Builder $construtor;
 
     /**
      * Nome completo da classe do modelo associado à consulta.
@@ -156,27 +156,27 @@ final class FiltrosMetalThursday
     /**
      * Aplica os filtros e a ordenação à consulta.
      *
-     * @param  Builder<Model>  $construtorConsulta  Construtor da consulta.
+     * @param  Builder<Model>  $construtor  Construtor da consulta.
      * @return Builder<Model> Consulta com filtros e ordenação aplicados.
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
     public function aplicar(
-        Builder $construtorConsulta,
+        Builder $construtor,
     ): Builder {
-        $this->construtorConsulta =
-            $construtorConsulta;
+        $this->construtor =
+            $construtor;
 
-        $this->classeModelo = $construtorConsulta
+        $this->classeModelo = $construtor
             ->getModel()::class;
 
         $this->garantirModeloSuportado();
         $this->aplicarFiltros();
         $this->aplicarOrdenacao();
 
-        return $this->construtorConsulta;
+        return $this->construtor;
     }
 
     /**
@@ -184,12 +184,12 @@ final class FiltrosMetalThursday
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     private function aplicarFiltros(): void
     {
         foreach (
-            self::PARAMETROS_FILTROS as $parametro
+            self::MAPA_FILTROS as $parametro => $metodo
         ) {
             $valor = $this->pedido->query(
                 $parametro,
@@ -199,90 +199,9 @@ final class FiltrosMetalThursday
                 continue;
             }
 
-            $this->aplicarFiltroPermitido(
-                $parametro,
+            $this->{$metodo}(
                 $valor,
             );
-        }
-    }
-
-    /**
-     * Aplica um filtro previamente autorizado.
-     *
-     * @param  string  $parametro  Nome do parâmetro.
-     * @param  mixed  $valor  Valor recebido.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private function aplicarFiltroPermitido(
-        string $parametro,
-        mixed $valor,
-    ): void {
-        switch ($parametro) {
-            case 'filtro_autor':
-                $this->filtrarPorAutor($valor);
-
-                return;
-
-            case 'filtro_banda':
-                $this->filtrarPorBanda($valor);
-
-                return;
-
-            case 'filtro_autoria_utilizador':
-                $this->filtrarPorAutoriaDoUtilizador(
-                    $valor,
-                );
-
-                return;
-
-            case 'filtro_data_ate':
-                $this->filtrarPorDataAte($valor);
-
-                return;
-
-            case 'filtro_data_desde':
-                $this->filtrarPorDataDesde($valor);
-
-                return;
-
-            case 'filtro_data':
-                $this->filtrarPorData($valor);
-
-                return;
-
-            case 'filtro_edicao':
-                $this->filtrarPorEdicao($valor);
-
-                return;
-
-            case 'filtro_nomeacao':
-                $this->filtrarPorNomeacaoDoUtilizador(
-                    $valor,
-                );
-
-                return;
-
-            case 'filtro_genero':
-                $this->filtrarPorGenero($valor);
-
-                return;
-
-            case 'filtro_avaliacao':
-                $this->filtrarPorAvaliacaoDoUtilizador(
-                    $valor,
-                );
-
-                return;
-
-            case 'filtro_audicao':
-                $this->filtrarPorAudicaoDoUtilizador(
-                    $valor,
-                );
-
-                return;
         }
     }
 
@@ -344,7 +263,7 @@ final class FiltrosMetalThursday
         DirecaoOrdenacao $direcao,
     ): void {
         $modelo = $this
-            ->construtorConsulta
+            ->construtor
             ->getModel();
 
         $subconsulta = DB::table(
@@ -362,7 +281,7 @@ final class FiltrosMetalThursday
                 $modelo->getMorphClass(),
             );
 
-        $this->construtorConsulta
+        $this->construtor
             ->addSelect([
                 self::COLUNA_CLASSIFICACAO_MEDIA => $subconsulta,
             ])
@@ -408,7 +327,7 @@ final class FiltrosMetalThursday
         }
 
         $modelo = $this
-            ->construtorConsulta
+            ->construtor
             ->getModel();
 
         $subconsulta = DB::table(
@@ -431,7 +350,7 @@ final class FiltrosMetalThursday
             )
             ->limit(1);
 
-        $this->construtorConsulta
+        $this->construtor
             ->addSelect([
                 self::COLUNA_CLASSIFICACAO_UTILIZADOR => $subconsulta,
             ])
@@ -467,9 +386,9 @@ final class FiltrosMetalThursday
         DirecaoOrdenacao $direcao,
     ): void {
         if ($this->eConsultaDeMetalThursdays()) {
-            $this->construtorConsulta->orderBy(
+            $this->construtor->orderBy(
                 $this
-                    ->construtorConsulta
+                    ->construtor
                     ->getModel()
                     ->qualifyColumn('data'),
                 $direcao->paraSql(),
@@ -494,7 +413,7 @@ final class FiltrosMetalThursday
             )
             ->limit(1);
 
-        $this->construtorConsulta
+        $this->construtor
             ->addSelect([
                 self::COLUNA_DATA_METAL_THURSDAY => $subconsulta,
             ])
@@ -520,9 +439,9 @@ final class FiltrosMetalThursday
     private function adicionarCriterioDesempate(
         DirecaoOrdenacao $direcao,
     ): void {
-        $this->construtorConsulta->orderBy(
+        $this->construtor->orderBy(
             $this
-                ->construtorConsulta
+                ->construtor
                 ->getModel()
                 ->getQualifiedKeyName(),
             $direcao->paraSql(),
@@ -552,8 +471,8 @@ final class FiltrosMetalThursday
 
         $this->aplicarRestricaoNaMetalThursday(
             static fn (
-                Builder $consulta,
-            ): Builder => $consulta->where(
+                Builder $construtor,
+            ): Builder => $construtor->where(
                 'autor_id',
                 $identificadorAutor,
             ),
@@ -582,11 +501,11 @@ final class FiltrosMetalThursday
         }
 
         if ($this->eConsultaDeMetalThursdays()) {
-            $this->construtorConsulta->whereHas(
+            $this->construtor->whereHas(
                 'seccoes.banda',
                 static fn (
-                    Builder $consulta,
-                ): Builder => $consulta->whereKey(
+                    Builder $construtor,
+                ): Builder => $construtor->whereKey(
                     $identificadorBanda,
                 ),
             );
@@ -594,7 +513,7 @@ final class FiltrosMetalThursday
             return;
         }
 
-        $this->construtorConsulta->where(
+        $this->construtor->where(
             'banda_id',
             $identificadorBanda,
         );
@@ -656,8 +575,8 @@ final class FiltrosMetalThursday
 
         $this->aplicarRestricaoNaMetalThursday(
             static fn (
-                Builder $consulta,
-            ): Builder => $consulta->whereDate(
+                Builder $construtor,
+            ): Builder => $construtor->whereDate(
                 'data',
                 '<=',
                 $data->toDateString(),
@@ -687,8 +606,8 @@ final class FiltrosMetalThursday
 
         $this->aplicarRestricaoNaMetalThursday(
             static fn (
-                Builder $consulta,
-            ): Builder => $consulta->whereDate(
+                Builder $construtor,
+            ): Builder => $construtor->whereDate(
                 'data',
                 '>=',
                 $data->toDateString(),
@@ -718,8 +637,8 @@ final class FiltrosMetalThursday
 
         $this->aplicarRestricaoNaMetalThursday(
             static fn (
-                Builder $consulta,
-            ): Builder => $consulta->whereDate(
+                Builder $construtor,
+            ): Builder => $construtor->whereDate(
                 'data',
                 $data->toDateString(),
             ),
@@ -749,8 +668,8 @@ final class FiltrosMetalThursday
 
         $this->aplicarRestricaoNaMetalThursday(
             static fn (
-                Builder $consulta,
-            ): Builder => $consulta->where(
+                Builder $construtor,
+            ): Builder => $construtor->where(
                 'edicao_id',
                 $identificadorEdicao,
             ),
@@ -829,11 +748,11 @@ final class FiltrosMetalThursday
         }
 
         if ($this->eConsultaDeMetalThursdays()) {
-            $this->construtorConsulta->whereHas(
+            $this->construtor->whereHas(
                 'seccoes.banda.generos',
                 static fn (
-                    Builder $consulta,
-                ): Builder => $consulta->whereKey(
+                    Builder $construtor,
+                ): Builder => $construtor->whereKey(
                     $identificadoresGeneros,
                 ),
             );
@@ -841,11 +760,11 @@ final class FiltrosMetalThursday
             return;
         }
 
-        $this->construtorConsulta->whereHas(
+        $this->construtor->whereHas(
             'banda.generos',
             static fn (
-                Builder $consulta,
-            ): Builder => $consulta->whereKey(
+                Builder $construtor,
+            ): Builder => $construtor->whereKey(
                 $identificadoresGeneros,
             ),
         );
@@ -879,14 +798,14 @@ final class FiltrosMetalThursday
         }
 
         $restricao = static fn (
-            Builder $consulta,
-        ): Builder => $consulta->where(
+            Builder $construtor,
+        ): Builder => $construtor->where(
             'utilizador_id',
             $identificadorUtilizador,
         );
 
         if ($deveExistir) {
-            $this->construtorConsulta->whereHas(
+            $this->construtor->whereHas(
                 'avaliacoes',
                 $restricao,
             );
@@ -894,7 +813,7 @@ final class FiltrosMetalThursday
             return;
         }
 
-        $this->construtorConsulta->whereDoesntHave(
+        $this->construtor->whereDoesntHave(
             'avaliacoes',
             $restricao,
         );
@@ -928,14 +847,14 @@ final class FiltrosMetalThursday
         }
 
         $restricao = static fn (
-            Builder $consulta,
-        ): Builder => $consulta->where(
+            Builder $construtor,
+        ): Builder => $construtor->where(
             'utilizador_id',
             $identificadorUtilizador,
         );
 
         if ($deveExistir) {
-            $this->construtorConsulta->whereHas(
+            $this->construtor->whereHas(
                 'audicoes',
                 $restricao,
             );
@@ -943,7 +862,7 @@ final class FiltrosMetalThursday
             return;
         }
 
-        $this->construtorConsulta->whereDoesntHave(
+        $this->construtor->whereDoesntHave(
             'audicoes',
             $restricao,
         );
@@ -966,13 +885,13 @@ final class FiltrosMetalThursday
     ): void {
         if ($this->eConsultaDeMetalThursdays()) {
             $restricao(
-                $this->construtorConsulta,
+                $this->construtor,
             );
 
             return;
         }
 
-        $this->construtorConsulta->whereHas(
+        $this->construtor->whereHas(
             'metalThursday',
             $restricao,
         );
@@ -999,27 +918,27 @@ final class FiltrosMetalThursday
     ): void {
         $this->aplicarRestricaoNaMetalThursday(
             static function (
-                Builder $consulta,
+                Builder $construtor,
             ) use (
                 $coluna,
                 $identificador,
                 $deveCoincidir,
             ): Builder {
                 if ($deveCoincidir) {
-                    return $consulta->where(
+                    return $construtor->where(
                         $coluna,
                         $identificador,
                     );
                 }
 
-                return $consulta->where(
+                return $construtor->where(
                     static function (
-                        Builder $subconsulta,
+                        Builder $construtor,
                     ) use (
                         $coluna,
                         $identificador,
                     ): void {
-                        $subconsulta
+                        $construtor
                             ->whereNull(
                                 $coluna,
                             )
