@@ -6,7 +6,7 @@
     App\View\Components\MetalThursday\CartaoVistaCompleta.
 
     @since 1.0.0
-    @version 3.1.0
+    @version 4.0.0
 --}}
 
 <article
@@ -186,7 +186,9 @@
                                 type="button"
                                 data-bs-toggle="modal"
                                 data-bs-target="#modal-avaliacao"
-                                data-tipo-avaliavel="seccao-metal-thursday"
+                                data-tipo-avaliavel="{{
+                                    $seccaoPreparada['tipoInteracao']
+                                }}"
                                 data-identificador-avaliavel="{{
                                     $seccaoPreparada['identificador']
                                 }}"
@@ -201,7 +203,7 @@
                                         'avaliacoes.guardar',
                                         [
                                             'tipoAvaliavel' =>
-                                                'seccao-metal-thursday',
+                                                $seccaoPreparada['tipoInteracao'],
 
                                             'identificadorAvaliavel' =>
                                                 $seccaoPreparada['identificador'],
@@ -225,13 +227,15 @@
                                 class="btn btn-sm btn-success"
                                 type="button"
                                 data-tipo-interacao="alternar-audicao"
-                                data-tipo-audivel="seccao-metal-thursday"
+                                data-tipo-audivel="{{
+                                    $seccaoPreparada['tipoInteracao']
+                                }}"
                                 data-endereco="{{
                                     route(
                                         'audicoes.alternar',
                                         [
                                             'tipoAudivel' =>
-                                                'seccao-metal-thursday',
+                                                $seccaoPreparada['tipoInteracao'],
 
                                             'identificadorAudivel' =>
                                                 $seccaoPreparada['identificador'],
@@ -360,7 +364,7 @@
                     type="button"
                     data-bs-toggle="modal"
                     data-bs-target="#modal-avaliacao"
-                    data-tipo-avaliavel="metal-thursday"
+                    data-tipo-avaliavel="{{ $tipoInteracaoMetalThursday }}"
                     data-identificador-avaliavel="{{
                         $identificadorMetalThursday
                     }}"
@@ -373,7 +377,7 @@
                             'avaliacoes.guardar',
                             [
                                 'tipoAvaliavel' =>
-                                    'metal-thursday',
+                                    $tipoInteracaoMetalThursday,
 
                                 'identificadorAvaliavel' =>
                                     $identificadorMetalThursday,
@@ -395,13 +399,13 @@
                     class="btn btn-sm btn-success"
                     type="button"
                     data-tipo-interacao="alternar-audicao"
-                    data-tipo-audivel="metal-thursday"
+                    data-tipo-audivel="{{ $tipoInteracaoMetalThursday }}"
                     data-endereco="{{
                         route(
                             'audicoes.alternar',
                             [
                                 'tipoAudivel' =>
-                                    'metal-thursday',
+                                    $tipoInteracaoMetalThursday,
 
                                 'identificadorAudivel' =>
                                     $identificadorMetalThursday,

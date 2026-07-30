@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\View\Components\MetalThursday;
 
+use App\Enumeracoes\Interacoes\TipoEntidadeInteracao;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
@@ -27,17 +28,39 @@ use LogicException;
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 4.0.0
  */
 final class CartaoVistaCompleta extends Component
 {
+    /**
+     * Pontuação mínima representada na interface.
+     *
+     * @var float
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private const PONTUACAO_MINIMA = 0.0;
+
+    /**
+     * Pontuação máxima representada na interface.
+     *
+     * @var float
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private const PONTUACAO_MAXIMA = 10.0;
+
     /**
      * MetalThursday apresentada.
      *
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly MetalThursday $registoMetalThursday;
 
@@ -47,9 +70,19 @@ final class CartaoVistaCompleta extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly int $identificadorMetalThursday;
+
+    /**
+     * Tipo público da MetalThursday nas rotas de interação.
+     *
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    public readonly string $tipoInteracaoMetalThursday;
 
     /**
      * Título completo da MetalThursday.
@@ -57,7 +90,7 @@ final class CartaoVistaCompleta extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly string $tituloMetalThursday;
 
@@ -67,7 +100,7 @@ final class CartaoVistaCompleta extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly string $nomeAutor;
 
@@ -77,7 +110,7 @@ final class CartaoVistaCompleta extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly string $nomeProximoNomeado;
 
@@ -99,7 +132,7 @@ final class CartaoVistaCompleta extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly array $interacoesMetalThursday;
 
@@ -109,6 +142,7 @@ final class CartaoVistaCompleta extends Component
      * @var array<int, array{
      *     modelo: SeccaoMetalThursday,
      *     identificador: int,
+     *     tipoInteracao: string,
      *     temDetalhes: bool,
      *     titulo: string|null,
      *     descricao: string|null,
@@ -132,7 +166,7 @@ final class CartaoVistaCompleta extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly array $seccoesPreparadas;
 
@@ -142,7 +176,7 @@ final class CartaoVistaCompleta extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly string $identificadorComentariosMetalThursday;
 
@@ -152,7 +186,7 @@ final class CartaoVistaCompleta extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly string $nomeAvaliavelMetalThursday;
 
@@ -166,7 +200,7 @@ final class CartaoVistaCompleta extends Component
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
     public function __construct(
         MetalThursday $registoMetalThursday,
@@ -179,6 +213,11 @@ final class CartaoVistaCompleta extends Component
                 $registoMetalThursday,
                 'MetalThursday',
             );
+
+        $this->tipoInteracaoMetalThursday =
+            TipoEntidadeInteracao::deModelo(
+                $registoMetalThursday,
+            )->value;
 
         $edicao =
             $this->obterEdicao(
@@ -275,7 +314,7 @@ final class CartaoVistaCompleta extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function prepararSeccoes(
         Collection $seccoes,
@@ -322,7 +361,7 @@ final class CartaoVistaCompleta extends Component
                 ?? 'Banda indisponível';
 
             $temDetalhes =
-                (bool) $tipoSeccao->tem_detalhes;
+                (bool) $tipoSeccao->exige_detalhes;
 
             $this->obterColecaoCarregada(
                 $seccao,
@@ -344,6 +383,10 @@ final class CartaoVistaCompleta extends Component
                 'modelo' => $seccao,
 
                 'identificador' => $identificador,
+
+                'tipoInteracao' => TipoEntidadeInteracao::deModelo(
+                    $seccao,
+                )->value,
 
                 'temDetalhes' => $temDetalhes,
 
@@ -387,7 +430,7 @@ final class CartaoVistaCompleta extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function prepararInteracoes(
         MetalThursday|SeccaoMetalThursday $modelo,
@@ -410,12 +453,9 @@ final class CartaoVistaCompleta extends Component
             );
 
         $pontuacaoUtilizador =
-            max(
-                0.0,
-                $this->normalizarDecimal(
-                    $modelo->getAttribute(
-                        'pontuacao_utilizador_autenticado',
-                    ),
+            $this->normalizarDecimal(
+                $modelo->getAttribute(
+                    'pontuacao_utilizador_autenticado',
                 ),
             );
 
@@ -446,8 +486,7 @@ final class CartaoVistaCompleta extends Component
             );
 
         $mediaAvaliacoes =
-            max(
-                0.0,
+            $this->normalizarDecimal(
                 $this->obterMediaAvaliacoes(
                     $modelo,
                     $avaliacoes,
@@ -622,12 +661,13 @@ final class CartaoVistaCompleta extends Component
                     'utilizador',
                 );
 
-            $linhas[] = e(
-                $this->normalizarTexto(
-                    $utilizador?->nome,
-                )
-                    ?? 'Utilizador removido',
-            );
+            $linhas[] =
+                e(
+                    $this->normalizarTexto(
+                        $utilizador?->nome,
+                    )
+                        ?? 'Utilizador removido',
+                );
         }
 
         return new HtmlString(
@@ -915,7 +955,7 @@ final class CartaoVistaCompleta extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterContagem(
         Model $modelo,
@@ -927,11 +967,13 @@ final class CartaoVistaCompleta extends Component
                 $atributoContagem,
             );
 
-        if (is_numeric($valor)) {
-            return max(
-                0,
-                (int) $valor,
+        $contagem =
+            $this->normalizarInteiroNaoNegativo(
+                $valor,
             );
+
+        if ($contagem !== null) {
+            return $contagem;
         }
 
         return $this
@@ -987,29 +1029,30 @@ final class CartaoVistaCompleta extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterIdentificador(
         Model $modelo,
         string $descricao,
     ): int {
         $identificador =
-            $modelo->getKey();
+            $this->normalizarInteiroPositivo(
+                $modelo->getKey(),
+            );
 
         if (
             ! $modelo->exists
-            || ! is_numeric($identificador)
-            || (int) $identificador < 1
+            || $identificador === null
         ) {
             throw new LogicException(
                 sprintf(
-                    'A %s deve estar persistida.',
+                    'A %s deve estar persistida e possuir um identificador válido.',
                     $descricao,
                 ),
             );
         }
 
-        return (int) $identificador;
+        return $identificador;
     }
 
     /**
@@ -1047,19 +1090,54 @@ final class CartaoVistaCompleta extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function normalizarInteiroPositivo(
         mixed $valor,
     ): ?int {
-        if (
-            ! is_numeric($valor)
-            || (int) $valor < 1
-        ) {
-            return null;
-        }
+        $inteiro =
+            filter_var(
+                $valor,
+                FILTER_VALIDATE_INT,
+                [
+                    'options' => [
+                        'min_range' => 1,
+                    ],
+                ],
+            );
 
-        return (int) $valor;
+        return $inteiro !== false
+            ? $inteiro
+            : null;
+    }
+
+    /**
+     * Normaliza um número inteiro não negativo.
+     *
+     * @param  mixed  $valor  Valor recebido.
+     * @return int|null Número normalizado.
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private function normalizarInteiroNaoNegativo(
+        mixed $valor,
+    ): ?int {
+        $inteiro =
+            filter_var(
+                $valor,
+                FILTER_VALIDATE_INT,
+                [
+                    'options' => [
+                        'min_range' => 0,
+                    ],
+                ],
+            );
+
+        return $inteiro !== false
+            ? $inteiro
+            : null;
     }
 
     /**
@@ -1070,14 +1148,29 @@ final class CartaoVistaCompleta extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function normalizarDecimal(
         mixed $valor,
     ): float {
-        return is_numeric($valor)
-            ? (float) $valor
-            : 0.0;
+        if (! is_numeric($valor)) {
+            return self::PONTUACAO_MINIMA;
+        }
+
+        $pontuacao =
+            (float) $valor;
+
+        if (! is_finite($pontuacao)) {
+            return self::PONTUACAO_MINIMA;
+        }
+
+        return min(
+            self::PONTUACAO_MAXIMA,
+            max(
+                self::PONTUACAO_MINIMA,
+                $pontuacao,
+            ),
+        );
     }
 
     /**
@@ -1088,13 +1181,19 @@ final class CartaoVistaCompleta extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function formatarPontuacao(
         float $pontuacao,
     ): string {
         return number_format(
-            $pontuacao,
+            min(
+                self::PONTUACAO_MAXIMA,
+                max(
+                    self::PONTUACAO_MINIMA,
+                    $pontuacao,
+                ),
+            ),
             1,
             ',',
             ' ',
