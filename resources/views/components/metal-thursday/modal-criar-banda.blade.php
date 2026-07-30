@@ -2,11 +2,15 @@
     Apresenta o formulário modal para criação de uma banda sem abandonar
     o formulário principal da MetalThursday.
 
-    Os valores antigos e as opções disponíveis são preparados pela classe
+    As opções, o endereço de submissão e os limites do formulário são
+    preparados pela classe
     App\View\Components\MetalThursday\ModalCriarBanda.
 
+    A validação da submissão AJAX é apresentada através dos contentores
+    identificados com o atributo data-erro-campo.
+
     @since 1.0.0
-    @version 3.0.0
+    @version 4.0.0
 --}}
 
 @can(
@@ -25,10 +29,10 @@
                 <form
                     id="formulario-criar-banda"
                     method="POST"
-                    action="{{ route('bandas.guardar') }}"
+                    action="{{ $enderecoGuardarBanda }}"
                     data-ajax-form
                     data-formulario-criar-banda
-                    data-endereco="{{ route('bandas.guardar') }}"
+                    data-endereco="{{ $enderecoGuardarBanda }}"
                     data-mensagem-sucesso="Banda criada com sucesso."
                     data-mensagem-erro="Não foi possível criar a banda."
                     novalidate
@@ -72,30 +76,23 @@
 
                             <input
                                 id="nome-nova-banda"
-                                class="form-control @error('nome') is-invalid @enderror"
+                                class="form-control"
                                 type="text"
                                 name="nome"
-                                value="{{ $nomeBanda }}"
                                 placeholder="Nome da banda"
-                                maxlength="255"
+                                maxlength="{{ $comprimentoMaximoNome }}"
                                 autocomplete="organization"
                                 aria-describedby="erro-nome-nova-banda"
                                 required
-                                @error('nome')
-                                    aria-invalid="true"
-                                @enderror
                             >
 
                             <div
                                 id="erro-nome-nova-banda"
-                                class="invalid-feedback @error('nome') d-block @enderror"
+                                class="invalid-feedback"
                                 aria-live="polite"
+                                aria-atomic="true"
                                 data-erro-campo="nome"
-                            >
-                                @error('nome')
-                                    {{ $message }}
-                                @enderror
-                            </div>
+                            ></div>
                         </div>
 
                         <div
@@ -118,42 +115,30 @@
 
                             <select
                                 id="pais-nova-banda"
-                                class="form-select tom-select-unico @error('pais_id') is-invalid @enderror"
+                                class="form-select tom-select-unico"
                                 name="pais_id"
                                 placeholder="Seleciona um país"
                                 aria-describedby="erro-pais-nova-banda"
                                 required
-                                @error('pais_id')
-                                    aria-invalid="true"
-                                @enderror
                             >
                                 <option value="">
                                     Seleciona um país
                                 </option>
 
                                 @foreach ($paises as $pais)
-                                    <option
-                                        value="{{ $pais->getKey() }}"
-                                        @selected(
-                                            $identificadorPaisSelecionado
-                                            === (string) $pais->getKey()
-                                        )
-                                    >
-                                        {{ $pais->nome }}
+                                    <option value="{{ $pais['identificador'] }}">
+                                        {{ $pais['nome'] }}
                                     </option>
                                 @endforeach
                             </select>
 
                             <div
                                 id="erro-pais-nova-banda"
-                                class="invalid-feedback @error('pais_id') d-block @enderror"
+                                class="invalid-feedback"
                                 aria-live="polite"
+                                aria-atomic="true"
                                 data-erro-campo="pais_id"
-                            >
-                                @error('pais_id')
-                                    {{ $message }}
-                                @enderror
-                            </div>
+                            ></div>
                         </div>
 
                         <div
@@ -177,38 +162,18 @@
                             <div class="input-group has-validation">
                                 <select
                                     id="generos-nova-banda"
-                                    class="form-select tom-select-multiplo {{
-                                        (
-                                            $errors->has('generos')
-                                            || $errors->has('generos.*')
-                                        )
-                                            ? 'is-invalid'
-                                            : ''
-                                    }}"
+                                    class="form-select tom-select-multiplo"
                                     name="generos[]"
                                     placeholder="Seleciona um ou mais géneros"
                                     aria-describedby="erro-generos-nova-banda"
                                     multiple
                                     required
-                                    @if (
-                                        $errors->has('generos')
-                                        || $errors->has('generos.*')
-                                    )
-                                        aria-invalid="true"
-                                    @endif
                                 >
                                     @foreach ($generos as $genero)
                                         <option
-                                            value="{{ $genero->getKey() }}"
-                                            @selected(
-                                                in_array(
-                                                    (string) $genero->getKey(),
-                                                    $identificadoresGenerosSelecionados,
-                                                    true,
-                                                )
-                                            )
+                                            value="{{ $genero['identificador'] }}"
                                         >
-                                            {{ $genero->nome }}
+                                            {{ $genero['nome'] }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -235,25 +200,11 @@
 
                             <div
                                 id="erro-generos-nova-banda"
-                                class="invalid-feedback {{
-                                    (
-                                        $errors->has('generos')
-                                        || $errors->has('generos.*')
-                                    )
-                                        ? 'd-block'
-                                        : ''
-                                }}"
+                                class="invalid-feedback"
                                 aria-live="polite"
+                                aria-atomic="true"
                                 data-erro-campo="generos"
-                            >
-                                @error('generos')
-                                    {{ $message }}
-                                @else
-                                    @error('generos.*')
-                                        {{ $message }}
-                                    @enderror
-                                @enderror
-                            </div>
+                            ></div>
                         </div>
                     </div>
 

@@ -4,126 +4,125 @@ declare(strict_types=1);
 
 namespace App\View\Components\MetalThursday;
 
+use App\Models\Geografia\Pais;
+use App\Models\Musica\Banda;
+use App\Models\Musica\Genero;
 use Illuminate\Contracts\View\View;
-use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 use Illuminate\View\Component;
+use LogicException;
 
 /**
  * Prepara o modal utilizado para criar uma banda.
  *
- * O componente normaliza os valores antigos do formulário e recebe as
- * coleções de países e géneros preparadas pelo controlador da página.
+ * O componente valida e prepara as opções de países e géneros recebidas do
+ * controlador, bem como o endereço e os limites utilizados pelo formulário.
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 4.0.0
  */
 final class ModalCriarBanda extends Component
 {
     /**
      * Países disponíveis para seleção.
      *
-     * @var Collection<int, mixed>
+     * @var array<int, array{
+     *     identificador: int,
+     *     nome: string
+     * }>
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    public readonly Collection $paises;
+    public readonly array $paises;
 
     /**
      * Géneros disponíveis para seleção.
      *
-     * @var Collection<int, mixed>
+     * @var array<int, array{
+     *     identificador: int,
+     *     nome: string
+     * }>
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     *     nome: string
+     * }>
+     * @since 3.0.0
+     *
+     * @version 2.0.0
      */
-    public readonly Collection $generos;
+    public readonly array $generos;
 
     /**
-     * Nome anteriormente introduzido.
+     * Endereço utilizado para guardar uma banda.
      *
      *
-     * @since 3.0.0
+     * @since 4.0.0
      *
      * @version 1.0.0
      */
-    public readonly string $nomeBanda;
+    public readonly string $enderecoGuardarBanda;
 
     /**
-     * Identificador do país anteriormente selecionado.
+     * Comprimento máximo permitido para o nome da banda.
      *
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
-     */
-    public readonly string $identificadorPaisSelecionado;
-
-    /**
-     * Identificadores dos géneros anteriormente selecionados.
-     *
-     * @var array<int, string>
-     *
-     * @since 3.0.0
+     * @since 4.0.0
      *
      * @version 1.0.0
      */
-    public readonly array $identificadoresGenerosSelecionados;
+    public readonly int $comprimentoMaximoNome;
 
     /**
      * Cria uma nova instância do componente.
      *
-     * @param  Request  $pedido  Pedido HTTP atual.
-     * @param  Collection<int, mixed>  $paises  Países disponíveis.
-     * @param  Collection<int, mixed>  $generos  Géneros disponíveis.
+     * @param  Collection<int, Pais>  $paises  Países disponíveis.
+     * @param  Collection<int, Genero>  $generos  Géneros disponíveis.
+     *
+     * @throws LogicException Quando uma coleção contém modelos ou dados
+     *                        inválidos.
+     *
+     * @since 1.0.0
+     *
+     * @version 4.0.0
+     */
+    public function __construct(
+        Collection $paises,
+        Collection $generos,
+    ) {
+        $this->paises = $this->prepararOpcoes(
+            $paises,
+            Pais::class,
+            'países',
+        );
+
+        $this->generos = $this->prepararOpcoes(
+            $generos,
+            Genero::class,
+            'géneros',
+        );
+
+        $this->enderecoGuardarBanda = route(
+            'bandas.guardar',
+        );
+
+        $this->comprimentoMaximoNome =
+            Banda::COMPRIMENTO_MAXIMO_NOME;
+    }
+
+    /**
+     * Obtém a vista do componente.
+     *
+     * @return View Vista do modal.
      *
      * @since 1.0.0
      *
      * @version 3.0.0
-     */
-    public function __construct(
-        Request $pedido,
-        Collection $paises,
-        Collection $generos,
-    ) {
-        $this->paises = $paises;
-        $this->generos = $generos;
-
-        $this->nomeBanda =
-            $this->normalizarTexto(
-                $pedido->old(
-                    'nome',
-                ),
-            );
-
-        $this->identificadorPaisSelecionado =
-            $this->normalizarIdentificador(
-                $pedido->old(
-                    'pais_id',
-                ),
-            );
-
-        $this->identificadoresGenerosSelecionados =
-            $this->normalizarIdentificadores(
-                $pedido->old(
-                    'generos',
-                    [],
-                ),
-            );
-    }
-
-    /**
-     * Obtém a view do componente.
-     *
-     * @return View View do modal.
-     *
-     * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function render(): View
     {
@@ -133,102 +132,160 @@ final class ModalCriarBanda extends Component
     }
 
     /**
-     * Normaliza um texto utilizado num campo do formulário.
+     * Prepara opções de seleção a partir de modelos persistidos.
      *
-     * @param  mixed  $valor  Valor recebido.
-     * @return string Texto normalizado.
+     * @template TModelo of Model
      *
-     * @since 3.0.0
+     * @param  Collection<int, TModelo>  $modelos  Modelos recebidos.
+     * @param  class-string<TModelo>  $classeEsperada  Classe permitida.
+     * @param  string  $descricaoColecao  Descrição utilizada nos erros.
+     * @return array<int, array{
+     *     identificador: int,
+     *     nome: string
+     * }> Opções preparadas.
      *
-     * @version 1.0.0
-     */
-    private function normalizarTexto(
-        mixed $valor,
-    ): string {
-        if (
-            ! is_string($valor)
-            && ! is_int($valor)
-            && ! is_float($valor)
-        ) {
-            return '';
-        }
-
-        return trim(
-            (string) $valor,
-        );
-    }
-
-    /**
-     * Normaliza um identificador selecionado.
+     * @throws LogicException Quando existe um modelo, identificador ou nome
+     *                        inválido.
      *
-     * @param  mixed  $valor  Identificador recebido.
-     * @return string Identificador normalizado.
-     *
-     * @since 3.0.0
+     * @since 4.0.0
      *
      * @version 1.0.0
      */
-    private function normalizarIdentificador(
-        mixed $valor,
-    ): string {
-        if (
-            ! is_int($valor)
-            && ! is_string($valor)
-        ) {
-            return '';
-        }
-
-        $identificador =
-            trim(
-                (string) $valor,
-            );
-
-        if (
-            $identificador === ''
-            || ! ctype_digit($identificador)
-            || (int) $identificador < 1
-        ) {
-            return '';
-        }
-
-        return (string) (int) $identificador;
-    }
-
-    /**
-     * Normaliza uma lista de identificadores selecionados.
-     *
-     * @param  mixed  $valores  Valores recebidos.
-     * @return array<int, string> Identificadores normalizados e únicos.
-     *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
-     */
-    private function normalizarIdentificadores(
-        mixed $valores,
+    private function prepararOpcoes(
+        Collection $modelos,
+        string $classeEsperada,
+        string $descricaoColecao,
     ): array {
-        if (! is_array($valores)) {
-            return [];
-        }
-
+        $opcoes = [];
         $identificadores = [];
 
-        foreach ($valores as $valor) {
-            $identificador =
-                $this->normalizarIdentificador(
-                    $valor,
+        foreach ($modelos as $modelo) {
+            if (! $modelo instanceof $classeEsperada) {
+                throw new LogicException(
+                    sprintf(
+                        'A coleção de %s contém um modelo inesperado.',
+                        $descricaoColecao,
+                    ),
                 );
-
-            if ($identificador === '') {
-                continue;
             }
 
-            $identificadores[$identificador] =
-                $identificador;
+            $identificador = $this->obterIdentificadorModelo(
+                $modelo,
+                $descricaoColecao,
+            );
+
+            if (isset($identificadores[$identificador])) {
+                throw new LogicException(
+                    sprintf(
+                        'A coleção de %s contém identificadores repetidos.',
+                        $descricaoColecao,
+                    ),
+                );
+            }
+
+            $nome = $this->obterNomeModelo(
+                $modelo,
+                $descricaoColecao,
+            );
+
+            $identificadores[$identificador] = true;
+
+            $opcoes[] = [
+                'identificador' => $identificador,
+
+                'nome' => $nome,
+            ];
         }
 
-        return array_values(
-            $identificadores,
+        return $opcoes;
+    }
+
+    /**
+     * Obtém o identificador positivo de um modelo persistido.
+     *
+     * @param  Model  $modelo  Modelo recebido.
+     * @param  string  $descricaoColecao  Descrição utilizada no erro.
+     * @return int Identificador do modelo.
+     *
+     * @throws LogicException Quando o modelo não está persistido ou possui
+     *                        um identificador inválido.
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private function obterIdentificadorModelo(
+        Model $modelo,
+        string $descricaoColecao,
+    ): int {
+        $identificador = filter_var(
+            $modelo->getKey(),
+            FILTER_VALIDATE_INT,
+            [
+                'options' => [
+                    'min_range' => 1,
+                ],
+            ],
         );
+
+        if (
+            ! $modelo->exists
+            || $identificador === false
+        ) {
+            throw new LogicException(
+                sprintf(
+                    'A coleção de %s contém um modelo não persistido ou sem identificador válido.',
+                    $descricaoColecao,
+                ),
+            );
+        }
+
+        return $identificador;
+    }
+
+    /**
+     * Obtém o nome normalizado de um modelo de seleção.
+     *
+     * @param  Model  $modelo  Modelo recebido.
+     * @param  string  $descricaoColecao  Descrição utilizada no erro.
+     * @return string Nome normalizado.
+     *
+     * @throws LogicException Quando o modelo não possui um nome válido.
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private function obterNomeModelo(
+        Model $modelo,
+        string $descricaoColecao,
+    ): string {
+        $nome = $modelo->getAttribute(
+            'nome',
+        );
+
+        if (! is_string($nome)) {
+            throw new LogicException(
+                sprintf(
+                    'A coleção de %s contém um modelo sem nome válido.',
+                    $descricaoColecao,
+                ),
+            );
+        }
+
+        $nomeNormalizado = Str::squish(
+            $nome,
+        );
+
+        if ($nomeNormalizado === '') {
+            throw new LogicException(
+                sprintf(
+                    'A coleção de %s contém um modelo sem nome válido.',
+                    $descricaoColecao,
+                ),
+            );
+        }
+
+        return $nomeNormalizado;
     }
 }
