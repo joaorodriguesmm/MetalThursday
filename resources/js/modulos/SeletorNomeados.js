@@ -5,7 +5,7 @@ import Swal from 'sweetalert2';
  * Gere os botões de seleção de utilizadores nomeados.
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 3.0.0
  */
 class SeletorNomeados {
     /**
@@ -17,7 +17,7 @@ class SeletorNomeados {
      * @param {string|null} opcoes.seletorBotaoMaisAntigo
      *     Seletor CSS do botão que escolhe o nomeado mais antigo.
      * @param {object|null} opcoes.instanciaTomSelect
-     *     Instância do Tom Select associada ao campo de nomeados.
+     *     Instância Tom Select associada ao campo de nomeados.
      * @param {string|null} opcoes.urlNomeadoMaisAntigo
      *     Endereço utilizado para obter o nomeado mais antigo.
      *
@@ -32,29 +32,39 @@ class SeletorNomeados {
         instanciaTomSelect = null,
         urlNomeadoMaisAntigo = null,
     } = {}) {
-        this.botaoAleatorio = this.obterElementoOpcional(
-            seletorBotaoAleatorio,
-        );
+        this.botaoAleatorio =
+            this.obterElementoOpcional(
+                seletorBotaoAleatorio,
+            );
 
-        this.botaoMaisAntigo = this.obterElementoOpcional(
-            seletorBotaoMaisAntigo,
-        );
+        this.botaoMaisAntigo =
+            this.obterElementoOpcional(
+                seletorBotaoMaisAntigo,
+            );
 
-        this.tomSelect = instanciaTomSelect;
+        this.tomSelect =
+            instanciaTomSelect;
 
         this.urlNomeadoMaisAntigo =
             typeof urlNomeadoMaisAntigo === 'string'
                 ? urlNomeadoMaisAntigo.trim()
                 : '';
 
-        this.emPedidoMaisAntigo = false;
-        this.iniciado = false;
+        this.emPedidoMaisAntigo =
+            false;
+
+        this.iniciado =
+            false;
 
         this.aoClicarAleatorio = () => {
             this.selecionarAleatorio();
         };
 
         this.aoClicarMaisAntigo = () => {
+            /*
+             * A promessa pertence ao próprio manipulador e não deve ser
+             * devolvida ao sistema de eventos do navegador.
+             */
             this.selecionarMaisAntigo();
         };
 
@@ -64,9 +74,9 @@ class SeletorNomeados {
     }
 
     /**
-     * Verifica se a instância do Tom Select pode ser utilizada.
+     * Verifica se a instância Tom Select pode ser utilizada.
      *
-     * @returns {boolean}
+     * @returns {boolean} Verdadeiro quando a instância é válida.
      *
      * @since 2.0.0
      * @version 1.0.0
@@ -81,6 +91,8 @@ class SeletorNomeados {
 
     /**
      * Inicia os eventos dos botões de seleção.
+     *
+     * @returns {void}
      *
      * @since 1.0.0
      * @version 2.0.0
@@ -100,11 +112,14 @@ class SeletorNomeados {
             this.aoClicarMaisAntigo,
         );
 
-        this.iniciado = true;
+        this.iniciado =
+            true;
     }
 
     /**
      * Seleciona aleatoriamente um dos nomeados disponíveis.
+     *
+     * @returns {void}
      *
      * @since 1.0.0
      * @version 2.0.0
@@ -114,17 +129,21 @@ class SeletorNomeados {
             return;
         }
 
-        const valoresDisponiveis = Object.keys(
-            this.tomSelect.options,
-        ).filter((valor) => {
-            if (valor.trim() === '') {
-                return false;
-            }
+        const valoresDisponiveis =
+            Object.keys(
+                this.tomSelect.options,
+            ).filter((valor) => {
+                if (valor.trim() === '') {
+                    return false;
+                }
 
-            const opcao = this.tomSelect.options[valor];
+                const opcao =
+                    this.tomSelect.options[
+                        valor
+                    ];
 
-            return opcao?.disabled !== true;
-        });
+                return opcao?.disabled !== true;
+            });
 
         if (valoresDisponiveis.length === 0) {
             Swal.fire({
@@ -136,22 +155,26 @@ class SeletorNomeados {
             return;
         }
 
-        const indiceAleatorio = Math.floor(
-            Math.random() * valoresDisponiveis.length,
-        );
+        const indiceAleatorio =
+            Math.floor(
+                Math.random()
+                * valoresDisponiveis.length,
+            );
 
         this.tomSelect.setValue(
-            valoresDisponiveis[indiceAleatorio],
+            valoresDisponiveis[
+                indiceAleatorio
+            ],
         );
     }
 
     /**
-     * Seleciona o nomeado há mais tempo sem ser escolhido.
+     * Seleciona o utilizador há mais tempo sem ser nomeado.
      *
      * @returns {Promise<void>}
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
     async selecionarMaisAntigo() {
         if (
@@ -162,51 +185,82 @@ class SeletorNomeados {
             return;
         }
 
-        this.emPedidoMaisAntigo = true;
+        this.emPedidoMaisAntigo =
+            true;
 
         const botaoEstavaDesativado =
-            this.botaoMaisAntigo instanceof HTMLButtonElement
+            this.botaoMaisAntigo
+                instanceof HTMLButtonElement
                 ? this.botaoMaisAntigo.disabled
                 : false;
 
-        this.definirEstadoCarregamentoMaisAntigo(true);
+        this.definirEstadoCarregamentoMaisAntigo(
+            true,
+        );
 
         try {
-            const resposta = await axios.get(
-                this.urlNomeadoMaisAntigo,
-                {
-                    headers: {
-                        Accept: 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                },
-            );
+            const resposta =
+                await axios.get(
+                    this.urlNomeadoMaisAntigo,
+                    {
+                        headers: {
+                            Accept:
+                                'application/json',
 
-            const identificador = resposta.data?.id;
+                            'X-Requested-With':
+                                'XMLHttpRequest',
+                        },
+                    },
+                );
+
+            const identificador =
+                resposta.data
+                    ?.identificador;
 
             if (
-                identificador !== null
-                && identificador !== undefined
-                && String(identificador).trim() !== ''
+                !Number.isInteger(
+                    identificador,
+                )
+                || identificador < 1
             ) {
-                this.tomSelect.setValue(
-                    String(identificador),
-                );
+                this.apresentarNomeadoNaoEncontrado();
 
                 return;
             }
 
-            Swal.fire({
-                icon: 'info',
-                title: 'Nomeado não encontrado',
-                text: 'Não foi encontrado nenhum nomeado disponível.',
-            });
+            const valor =
+                String(
+                    identificador,
+                );
+
+            if (
+                !Object.hasOwn(
+                    this.tomSelect.options,
+                    valor,
+                )
+            ) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Nomeado indisponível',
+                    text: 'O utilizador devolvido já não está disponível para seleção.',
+                });
+
+                return;
+            }
+
+            this.tomSelect.setValue(
+                valor,
+            );
         } catch (erro) {
             const mensagem =
-                axios.isAxiosError(erro)
-                && typeof erro.response?.data?.mensagem === 'string'
+                axios.isAxiosError(
+                    erro,
+                )
+                && typeof erro.response
+                    ?.data
+                    ?.mensagem === 'string'
                     ? erro.response.data.mensagem
-                    : 'Não foi possível obter o nomeado mais antigo.';
+                    : 'Não foi possível obter o utilizador há mais tempo sem nomeação.';
 
             Swal.fire({
                 icon: 'error',
@@ -219,8 +273,25 @@ class SeletorNomeados {
                 botaoEstavaDesativado,
             );
 
-            this.emPedidoMaisAntigo = false;
+            this.emPedidoMaisAntigo =
+                false;
         }
+    }
+
+    /**
+     * Apresenta a ausência de um utilizador elegível.
+     *
+     * @returns {void}
+     *
+     * @since 3.0.0
+     * @version 1.0.0
+     */
+    apresentarNomeadoNaoEncontrado() {
+        Swal.fire({
+            icon: 'info',
+            title: 'Nomeado não encontrado',
+            text: 'Não foi encontrado nenhum utilizador disponível para nomeação.',
+        });
     }
 
     /**
@@ -228,6 +299,8 @@ class SeletorNomeados {
      *
      * @param {boolean} emCarregamento Estado de carregamento.
      * @param {boolean} estadoAnterior Estado anterior do botão.
+     *
+     * @returns {void}
      *
      * @since 2.0.0
      * @version 1.0.0
@@ -266,41 +339,50 @@ class SeletorNomeados {
      *
      * @param {string|null} seletor Seletor CSS.
      *
-     * @returns {Element|null}
+     * @returns {Element|null} Elemento encontrado.
      *
      * @throws {TypeError} Quando o seletor CSS é inválido.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    obterElementoOpcional(seletor) {
+    obterElementoOpcional(
+        seletor,
+    ) {
         if (
             seletor === null
             || seletor === undefined
-            || seletor === ''
         ) {
             return null;
         }
 
-        if (typeof seletor !== 'string') {
+        if (
+            typeof seletor !== 'string'
+            || seletor.trim() === ''
+        ) {
             throw new TypeError(
-                'O seletor indicado deve ser uma cadeia de caracteres.',
+                'O seletor indicado deve ser uma sequência de caracteres não vazia.',
             );
         }
 
+        const seletorNormalizado =
+            seletor.trim();
+
         try {
             return document.querySelector(
-                seletor,
+                seletorNormalizado,
             );
         } catch {
             throw new TypeError(
-                `O seletor CSS "${seletor}" é inválido.`,
+                `O seletor CSS "${seletorNormalizado}" é inválido.`,
             );
         }
     }
 
     /**
      * Remove os eventos associados aos botões.
+     *
+     * @returns {void}
      *
      * @since 2.0.0
      * @version 1.0.0
@@ -320,7 +402,8 @@ class SeletorNomeados {
             this.aoClicarMaisAntigo,
         );
 
-        this.iniciado = false;
+        this.iniciado =
+            false;
     }
 }
 

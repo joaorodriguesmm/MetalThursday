@@ -1,13 +1,21 @@
 /**
  * Gere a adição, a remoção e a configuração dinâmica de secções.
  *
- * Os seletores CSS permanecem temporariamente inalterados por corresponderem
- * à estrutura atual das views.
- *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 3.0.0
  */
 class GestorSeccoes {
+    /**
+     * Marcador utilizado pelo modelo HTML para representar o índice.
+     *
+     * @type {string}
+     *
+     * @since 3.0.0
+     * @version 1.0.0
+     */
+    static MARCADOR_INDICE =
+        '__INDICE_SECCAO__';
+
     /**
      * Cria um gestor de secções dinâmicas.
      *
@@ -23,7 +31,7 @@ class GestorSeccoes {
      * @throws {TypeError} Quando algum argumento é inválido.
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
     constructor(
         seletorContentor,
@@ -55,21 +63,31 @@ class GestorSeccoes {
             'O seletor do modelo da secção é obrigatório.',
         );
 
-        this.aoAdicionarSeccao = aoAdicionarSeccao;
-        this.indiceSeguinte = this.calcularProximoIndice();
-        this.iniciado = false;
+        this.aoAdicionarSeccao =
+            aoAdicionarSeccao;
+
+        this.indiceSeguinte =
+            this.calcularProximoIndice();
+
+        this.iniciado =
+            false;
 
         this.aoClicarAdicionar = (evento) => {
             evento.preventDefault();
+
             this.adicionar();
         };
 
         this.aoClicarContentor = (evento) => {
-            this.tratarClique(evento);
+            this.tratarClique(
+                evento,
+            );
         };
 
         this.aoAlterarContentor = (evento) => {
-            this.tratarAlteracao(evento);
+            this.tratarAlteracao(
+                evento,
+            );
         };
 
         if (this.estaAtivo()) {
@@ -80,25 +98,30 @@ class GestorSeccoes {
     /**
      * Verifica se todos os elementos obrigatórios estão disponíveis.
      *
-     * @returns {boolean}
+     * @returns {boolean} Verdadeiro quando o gestor pode funcionar.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     estaAtivo() {
         return this.contentor instanceof HTMLElement
-            && this.botaoAdicionar instanceof HTMLElement
-            && this.modelo instanceof HTMLElement;
+            && this.botaoAdicionar instanceof HTMLButtonElement
+            && this.modelo instanceof HTMLTemplateElement;
     }
 
     /**
-     * Inicia os eventos do gestor.
+     * Inicia os eventos do gestor e normaliza as secções existentes.
+     *
+     * @returns {void}
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
     iniciar() {
-        if (!this.estaAtivo() || this.iniciado) {
+        if (
+            !this.estaAtivo()
+            || this.iniciado
+        ) {
             return;
         }
 
@@ -118,62 +141,106 @@ class GestorSeccoes {
         );
 
         this.contentor
-            .querySelectorAll('.section-type-select')
+            .querySelectorAll(
+                '.seletor-tipo-seccao',
+            )
             .forEach((selecao) => {
-                if (selecao instanceof HTMLSelectElement) {
-                    this.atualizarEstadoSeccao(selecao);
+                if (
+                    selecao instanceof HTMLSelectElement
+                ) {
+                    this.atualizarEstadoSeccao(
+                        selecao,
+                    );
                 }
             });
 
-        this.iniciado = true;
+        this.iniciado =
+            true;
     }
 
     /**
      * Adiciona uma nova secção ao contentor.
      *
-     * @returns {HTMLElement|null} Elemento criado.
+     * @returns {HTMLElement|null} Secção criada ou nulo.
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
     adicionar() {
         if (!this.estaAtivo()) {
             return null;
         }
 
-        const conteudoModelo = this.modelo.innerHTML.replace(
-            /__INDEX__/g,
-            String(this.indiceSeguinte),
-        );
+        const conteudoModelo =
+            this.modelo.innerHTML.replaceAll(
+                GestorSeccoes.MARCADOR_INDICE,
+                String(
+                    this.indiceSeguinte,
+                ),
+            );
 
-        const modeloTemporario = document.createElement('template');
-
-        modeloTemporario.innerHTML = conteudoModelo.trim();
-
-        const fragmento = modeloTemporario.content.cloneNode(true);
-        const novaSeccao = fragmento.querySelector('.section-item');
-
-        if (!(novaSeccao instanceof HTMLElement)) {
-            return null;
+        if (
+            conteudoModelo.includes(
+                GestorSeccoes.MARCADOR_INDICE,
+            )
+        ) {
+            throw new Error(
+                'Não foi possível substituir o índice do modelo da secção.',
+            );
         }
 
-        novaSeccao.dataset.indiceSeccao = String(
-            this.indiceSeguinte,
+        const modeloTemporario =
+            document.createElement(
+                'template',
+            );
+
+        modeloTemporario.innerHTML =
+            conteudoModelo.trim();
+
+        const fragmento =
+            modeloTemporario.content.cloneNode(
+                true,
+            );
+
+        const novaSeccao =
+            fragmento.querySelector(
+                '.item-seccao',
+            );
+
+        if (!(novaSeccao instanceof HTMLElement)) {
+            throw new Error(
+                'O modelo não contém um item de secção válido.',
+            );
+        }
+
+        novaSeccao.dataset.indiceSeccao =
+            String(
+                this.indiceSeguinte,
+            );
+
+        this.contentor.append(
+            fragmento,
         );
 
-        this.contentor.append(fragmento);
         this.indiceSeguinte += 1;
 
-        const selecaoTipo = novaSeccao.querySelector(
-            '.section-type-select',
-        );
+        const selecaoTipo =
+            novaSeccao.querySelector(
+                '.seletor-tipo-seccao',
+            );
 
-        if (selecaoTipo instanceof HTMLSelectElement) {
-            this.atualizarEstadoSeccao(selecaoTipo);
+        if (
+            selecaoTipo instanceof HTMLSelectElement
+        ) {
+            this.atualizarEstadoSeccao(
+                selecaoTipo,
+            );
         }
 
         if (this.aoAdicionarSeccao !== null) {
-            this.aoAdicionarSeccao(novaSeccao);
+            this.aoAdicionarSeccao(
+                novaSeccao,
+            );
         }
 
         return novaSeccao;
@@ -184,25 +251,32 @@ class GestorSeccoes {
      *
      * @param {MouseEvent} evento Evento de clique.
      *
+     * @returns {void}
+     *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     tratarClique(evento) {
         if (!(evento.target instanceof Element)) {
             return;
         }
 
-        const botaoRemover = evento.target.closest(
-            '.remove-section-btn',
-        );
+        const botaoRemover =
+            evento.target.closest(
+                '.botao-remover-seccao',
+            );
 
-        if (!(botaoRemover instanceof HTMLElement)) {
+        if (
+            !(botaoRemover instanceof HTMLButtonElement)
+        ) {
             return;
         }
 
         evento.preventDefault();
 
-        this.remover(botaoRemover);
+        this.remover(
+            botaoRemover,
+        );
     }
 
     /**
@@ -210,52 +284,64 @@ class GestorSeccoes {
      *
      * @param {Event} evento Evento de alteração.
      *
+     * @returns {void}
+     *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     tratarAlteracao(evento) {
-        const selecaoTipo = evento.target;
+        const selecaoTipo =
+            evento.target;
 
         if (
             !(selecaoTipo instanceof HTMLSelectElement)
             || !selecaoTipo.classList.contains(
-                'section-type-select',
+                'seletor-tipo-seccao',
             )
         ) {
             return;
         }
 
-        this.atualizarEstadoSeccao(selecaoTipo);
+        this.atualizarEstadoSeccao(
+            selecaoTipo,
+        );
     }
 
     /**
-     * Remove uma secção e destrói as respetivas instâncias do Tom Select.
+     * Remove uma secção e destrói as respetivas instâncias Tom Select.
      *
-     * @param {HTMLElement} botaoRemover
+     * @param {HTMLButtonElement} botaoRemover
      *     Botão que solicitou a remoção.
      *
-     * @returns {boolean} Indica se a secção foi removida.
+     * @returns {boolean} Indica se foi removida uma secção.
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
     remover(botaoRemover) {
-        const seccao = botaoRemover.closest(
-            '.section-item',
-        );
+        const seccao =
+            botaoRemover.closest(
+                '.item-seccao',
+            );
 
         if (!(seccao instanceof HTMLElement)) {
             return false;
         }
 
         seccao
-            .querySelectorAll('.tomselected')
+            .querySelectorAll(
+                'select.tomselected',
+            )
             .forEach((elemento) => {
+                const instancia =
+                    elemento.tomselect;
+
                 if (
-                    typeof elemento.tomselect?.destroy
-                    === 'function'
+                    instancia
+                    && typeof instancia.destroy
+                        === 'function'
                 ) {
-                    elemento.tomselect.destroy();
+                    instancia.destroy();
                 }
             });
 
@@ -265,18 +351,23 @@ class GestorSeccoes {
     }
 
     /**
-     * Atualiza os campos visíveis e obrigatórios de uma secção.
+     * Atualiza a visibilidade e o estado dos detalhes de uma secção.
      *
      * @param {HTMLSelectElement} selecaoTipo
      *     Campo do tipo de secção.
      *
+     * @returns {void}
+     *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
-    atualizarEstadoSeccao(selecaoTipo) {
-        const seccao = selecaoTipo.closest(
-            '.section-item',
-        );
+    atualizarEstadoSeccao(
+        selecaoTipo,
+    ) {
+        const seccao =
+            selecaoTipo.closest(
+                '.item-seccao',
+            );
 
         if (!(seccao instanceof HTMLElement)) {
             return;
@@ -288,107 +379,125 @@ class GestorSeccoes {
             ]
             ?? null;
 
-        const temDetalhes = [
-            'true',
-            '1',
-        ].includes(
-            opcaoSelecionada?.dataset.hasDetails
-            ?? '',
-        );
+        const exigeDetalhes =
+            opcaoSelecionada
+                ?.dataset
+                .exigeDetalhes
+            === 'true';
 
-        seccao
-            .querySelectorAll(
-                '.section-details-row-1, .section-details-row-2',
-            )
-            .forEach((contentorDetalhes) => {
+        const linhasDetalhes =
+            seccao.querySelectorAll(
+                '.linha-detalhes-seccao',
+            );
+
+        linhasDetalhes.forEach(
+            (linhaDetalhes) => {
                 if (
-                    !(
-                        contentorDetalhes
-                        instanceof HTMLElement
-                    )
+                    !(linhaDetalhes instanceof HTMLElement)
                 ) {
                     return;
                 }
 
-                contentorDetalhes.style.display =
-                    temDetalhes
-                        ? ''
-                        : 'none';
+                linhaDetalhes.hidden =
+                    !exigeDetalhes;
 
-                contentorDetalhes.setAttribute(
+                linhaDetalhes.setAttribute(
                     'aria-hidden',
-                    String(!temDetalhes),
+                    String(
+                        !exigeDetalhes,
+                    ),
                 );
-            });
 
-        seccao
-            .querySelectorAll(
-                [
-                    '.section-details-row-1 input',
-                    '.section-details-row-1 select',
-                    '.section-details-row-1 textarea',
-                    '.section-details-row-2 input',
-                    '.section-details-row-2 select',
-                    '.section-details-row-2 textarea',
-                ].join(', '),
-            )
-            .forEach((campo) => {
-                if (
-                    campo instanceof HTMLInputElement
-                    || campo instanceof HTMLSelectElement
-                    || campo instanceof HTMLTextAreaElement
-                ) {
-                    campo.required = temDetalhes;
-                    campo.disabled = !temDetalhes;
-                }
-            });
+                linhaDetalhes
+                    .querySelectorAll(
+                        'input, select, textarea, button',
+                    )
+                    .forEach((elemento) => {
+                        if (
+                            elemento instanceof HTMLInputElement
+                            || elemento instanceof HTMLSelectElement
+                            || elemento instanceof HTMLTextAreaElement
+                            || elemento instanceof HTMLButtonElement
+                        ) {
+                            elemento.disabled =
+                                !exigeDetalhes;
+                        }
+                    });
+            },
+        );
+
+        [
+            'select[name$="[banda_id]"]',
+            'input[name$="[titulo]"]',
+            'input[name$="[ligacao]"]',
+            'input[name$="[ano]"]',
+        ].forEach((seletor) => {
+            const campo =
+                seccao.querySelector(
+                    seletor,
+                );
+
+            if (
+                campo instanceof HTMLInputElement
+                || campo instanceof HTMLSelectElement
+            ) {
+                campo.required =
+                    exigeDetalhes;
+            }
+        });
 
         const indicadorTituloObrigatorio =
             seccao.querySelector(
-                '.title-required-indicator',
+                '.indicador-titulo-obrigatorio',
             );
 
         if (
             indicadorTituloObrigatorio
             instanceof HTMLElement
         ) {
-            indicadorTituloObrigatorio.style.display =
-                temDetalhes
-                    ? ''
-                    : 'none';
+            indicadorTituloObrigatorio.hidden =
+                !exigeDetalhes;
         }
     }
 
     /**
      * Calcula o próximo índice disponível para uma nova secção.
      *
-     * @returns {number}
+     * @returns {number} Próximo índice.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     calcularProximoIndice() {
         if (!(this.contentor instanceof HTMLElement)) {
             return 0;
         }
 
-        let maiorIndice = -1;
+        let maiorIndice =
+            -1;
 
         this.contentor
-            .querySelectorAll('.section-item')
+            .querySelectorAll(
+                '.item-seccao',
+            )
             .forEach((seccao) => {
                 if (!(seccao instanceof HTMLElement)) {
                     return;
                 }
 
-                const indiceDados = Number.parseInt(
-                    seccao.dataset.indiceSeccao
-                    ?? seccao.dataset.sectionIndex
-                    ?? '',
-                    10,
-                );
+                const indiceDados =
+                    Number.parseInt(
+                        seccao.dataset.indiceSeccao
+                        ?? '',
+                        10,
+                    );
 
-                if (Number.isInteger(indiceDados)) {
+                if (
+                    Number.isInteger(
+                        indiceDados,
+                    )
+                    && indiceDados >= 0
+                ) {
                     maiorIndice = Math.max(
                         maiorIndice,
                         indiceDados,
@@ -396,14 +505,22 @@ class GestorSeccoes {
                 }
 
                 seccao
-                    .querySelectorAll('[name]')
+                    .querySelectorAll(
+                        '[name]',
+                    )
                     .forEach((campo) => {
-                        const correspondencia =
-                            campo
-                                .getAttribute('name')
-                                ?.match(/\[(\d+)]/);
+                        const nome =
+                            campo.getAttribute(
+                                'name',
+                            );
 
-                        if (!correspondencia) {
+                        const correspondencia =
+                            nome?.match(
+                                /^seccoes\[(\d+)]/,
+                            )
+                            ?? null;
+
+                        if (correspondencia === null) {
                             return;
                         }
 
@@ -413,7 +530,12 @@ class GestorSeccoes {
                                 10,
                             );
 
-                        if (Number.isInteger(indiceNome)) {
+                        if (
+                            Number.isInteger(
+                                indiceNome,
+                            )
+                            && indiceNome >= 0
+                        ) {
                             maiorIndice = Math.max(
                                 maiorIndice,
                                 indiceNome,
@@ -432,7 +554,7 @@ class GestorSeccoes {
      * @param {string} mensagem
      *     Mensagem utilizada quando o seletor está vazio.
      *
-     * @returns {Element|null}
+     * @returns {Element|null} Elemento encontrado.
      *
      * @throws {TypeError} Quando o seletor é inválido.
      *
@@ -447,16 +569,21 @@ class GestorSeccoes {
             typeof seletor !== 'string'
             || seletor.trim() === ''
         ) {
-            throw new TypeError(mensagem);
+            throw new TypeError(
+                mensagem,
+            );
         }
+
+        const seletorNormalizado =
+            seletor.trim();
 
         try {
             return document.querySelector(
-                seletor,
+                seletorNormalizado,
             );
         } catch {
             throw new TypeError(
-                `O seletor CSS "${seletor}" é inválido.`,
+                `O seletor CSS "${seletorNormalizado}" é inválido.`,
             );
         }
     }
@@ -464,11 +591,16 @@ class GestorSeccoes {
     /**
      * Remove os eventos associados ao gestor.
      *
+     * @returns {void}
+     *
      * @since 2.0.0
      * @version 1.0.0
      */
     destruir() {
-        if (!this.estaAtivo() || !this.iniciado) {
+        if (
+            !this.estaAtivo()
+            || !this.iniciado
+        ) {
             return;
         }
 
@@ -487,7 +619,8 @@ class GestorSeccoes {
             this.aoAlterarContentor,
         );
 
-        this.iniciado = false;
+        this.iniciado =
+            false;
     }
 }
 
