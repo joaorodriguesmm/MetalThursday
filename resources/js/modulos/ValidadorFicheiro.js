@@ -6,7 +6,7 @@
  * servidor.
  *
  * @since 1.0.0
- * @version 2.1.0
+ * @version 3.0.0
  */
 class ValidadorFicheiro {
     /**
@@ -54,28 +54,37 @@ class ValidadorFicheiro {
             );
         }
 
-        this.campoFicheiro = campoFicheiro;
+        this.campoFicheiro =
+            campoFicheiro;
 
-        this.opcoes = this.normalizarOpcoes(
-            opcoes,
-        );
+        this.opcoes =
+            this.normalizarOpcoes(
+                opcoes,
+            );
 
-        this.elementoMensagemErro = this.obterElementoOpcional(
-            this.opcoes.seletorMensagemErro,
-        );
+        this.elementoMensagemErro =
+            this.obterElementoOpcional(
+                this.opcoes.seletorMensagemErro,
+            );
 
-        this.elementoTextoFicheiro = this.obterElementoOpcional(
-            this.opcoes.seletorTextoFicheiro,
-        );
+        this.elementoTextoFicheiro =
+            this.obterElementoOpcional(
+                this.opcoes.seletorTextoFicheiro,
+            );
 
-        this.iniciado = false;
+        this.iniciado =
+            false;
 
         this.manipularAlteracao =
-            this.manipularAlteracao.bind(this);
+            this.manipularAlteracao.bind(
+                this,
+            );
 
         this.configurarAcessibilidade();
         this.configurarEventos();
-        this.atualizarTextoSelecao(null);
+        this.atualizarTextoSelecao(
+            null,
+        );
     }
 
     /**
@@ -114,27 +123,39 @@ class ValidadorFicheiro {
             ...opcoes,
         };
 
-        if (!Array.isArray(opcoesNormalizadas.tiposPermitidos)) {
+        if (
+            !Array.isArray(
+                opcoesNormalizadas.tiposPermitidos,
+            )
+        ) {
             throw new TypeError(
                 'Os tipos permitidos devem ser apresentados numa lista.',
             );
         }
 
-        const tiposPermitidos = opcoesNormalizadas
-            .tiposPermitidos
-            .map((tipo) => {
-                if (typeof tipo !== 'string') {
-                    throw new TypeError(
-                        'Cada tipo permitido deve ser uma cadeia de caracteres.',
-                    );
-                }
+        const tiposPermitidos =
+            opcoesNormalizadas
+                .tiposPermitidos
+                .map((tipo) => {
+                    if (typeof tipo !== 'string') {
+                        throw new TypeError(
+                            'Cada tipo permitido deve ser uma cadeia de caracteres.',
+                        );
+                    }
 
-                return tipo.trim().toLowerCase();
-            })
-            .filter((tipo) => tipo !== '');
+                    return tipo
+                        .trim()
+                        .toLowerCase();
+                })
+                .filter(
+                    (tipo) =>
+                        tipo !== '',
+                );
 
         if (
-            !Number.isFinite(opcoesNormalizadas.tamanhoMaximo)
+            !Number.isFinite(
+                opcoesNormalizadas.tamanhoMaximo,
+            )
             || opcoesNormalizadas.tamanhoMaximo < 0
         ) {
             throw new TypeError(
@@ -167,13 +188,15 @@ class ValidadorFicheiro {
             'aoLimparSelecao',
         );
 
-        const textoPadrao = String(
-            opcoesNormalizadas.textoPadrao,
-        ).trim();
+        const textoPadrao =
+            String(
+                opcoesNormalizadas.textoPadrao,
+            ).trim();
 
-        const textoSelecionado = String(
-            opcoesNormalizadas.textoSelecionado,
-        ).trim();
+        const textoSelecionado =
+            String(
+                opcoesNormalizadas.textoSelecionado,
+            ).trim();
 
         if (
             textoPadrao === ''
@@ -189,7 +212,9 @@ class ValidadorFicheiro {
 
             tiposPermitidos: Object.freeze(
                 Array.from(
-                    new Set(tiposPermitidos),
+                    new Set(
+                        tiposPermitidos,
+                    ),
                 ),
             ),
 
@@ -274,7 +299,8 @@ class ValidadorFicheiro {
             this.manipularAlteracao,
         );
 
-        this.iniciado = true;
+        this.iniciado =
+            true;
     }
 
     /**
@@ -298,11 +324,15 @@ class ValidadorFicheiro {
         this.limparErro();
 
         const ficheiro =
-            this.campoFicheiro.files?.item(0)
+            this.campoFicheiro.files?.item(
+                0,
+            )
             ?? null;
 
         if (!(ficheiro instanceof File)) {
-            this.atualizarTextoSelecao(null);
+            this.atualizarTextoSelecao(
+                null,
+            );
 
             this.executarCallback(
                 this.opcoes.aoLimparSelecao,
@@ -312,16 +342,21 @@ class ValidadorFicheiro {
         }
 
         const resultado =
-            this.validar(ficheiro);
+            this.validar(
+                ficheiro,
+            );
 
         if (!resultado.valido) {
             this.apresentarErro(
                 resultado.mensagem,
             );
 
-            this.campoFicheiro.value = '';
+            this.campoFicheiro.value =
+                '';
 
-            this.atualizarTextoSelecao(null);
+            this.atualizarTextoSelecao(
+                null,
+            );
 
             this.executarCallback(
                 this.opcoes.aoFicheiroInvalido,
@@ -363,13 +398,16 @@ class ValidadorFicheiro {
             };
         }
 
-        const tipoFicheiro = ficheiro.type
-            .trim()
-            .toLowerCase();
+        const tipoFicheiro =
+            ficheiro.type
+                .trim()
+                .toLowerCase();
 
         if (
             this.opcoes.tiposPermitidos.length > 0
-            && !this.tipoEPermitido(tipoFicheiro)
+            && !this.tipoEPermitido(
+                tipoFicheiro,
+            )
         ) {
             return {
                 valido: false,
@@ -410,7 +448,7 @@ class ValidadorFicheiro {
      *
      * @param {string} tipoFicheiro Tipo MIME do ficheiro.
      *
-     * @returns {boolean}
+     * @returns {boolean} Verdadeiro quando o tipo é permitido.
      *
      * @since 2.1.0
      * @version 1.0.0
@@ -419,7 +457,9 @@ class ValidadorFicheiro {
         return this.opcoes.tiposPermitidos.some(
             (tipoPermitido) => {
                 if (
-                    tipoPermitido.endsWith('/*')
+                    tipoPermitido.endsWith(
+                        '/*',
+                    )
                 ) {
                     return tipoFicheiro.startsWith(
                         tipoPermitido.slice(
@@ -443,7 +483,7 @@ class ValidadorFicheiro {
      * @returns {void}
      *
      * @since 1.0.0
-     * @version 2.1.0
+     * @version 3.0.0
      */
     apresentarErro(mensagem) {
         this.campoFicheiro.classList.add(
@@ -453,6 +493,10 @@ class ValidadorFicheiro {
         this.campoFicheiro.setAttribute(
             'aria-invalid',
             'true',
+        );
+
+        this.campoFicheiro.setCustomValidity(
+            mensagem,
         );
 
         if (
@@ -482,7 +526,7 @@ class ValidadorFicheiro {
      * @returns {void}
      *
      * @since 1.0.0
-     * @version 2.1.0
+     * @version 3.0.0
      */
     limparErro() {
         this.campoFicheiro.classList.remove(
@@ -491,6 +535,10 @@ class ValidadorFicheiro {
 
         this.campoFicheiro.removeAttribute(
             'aria-invalid',
+        );
+
+        this.campoFicheiro.setCustomValidity(
+            '',
         );
 
         if (
@@ -583,24 +631,37 @@ class ValidadorFicheiro {
      * @version 1.1.0
      */
     formatarTipoMime(tipoMime) {
-        if (tipoMime.endsWith('/*')) {
+        if (
+            tipoMime.endsWith(
+                '/*',
+            )
+        ) {
             return `${tipoMime
-                .slice(0, -2)
+                .slice(
+                    0,
+                    -2,
+                )
                 .toUpperCase()}/*`;
         }
 
         const partes =
-            tipoMime.split('/');
+            tipoMime.split(
+                '/',
+            );
 
         if (partes.length < 2) {
             return tipoMime.toUpperCase();
         }
 
-        const subtipo = partes
-            .slice(1)
-            .join('/')
-            .replace('+xml', '')
-            .toUpperCase();
+        const subtipo =
+            partes
+                .slice(1)
+                .join('/')
+                .replace(
+                    '+xml',
+                    '',
+                )
+                .toUpperCase();
 
         return subtipo === 'JPEG'
             ? 'JPG/JPEG'
@@ -627,12 +688,15 @@ class ValidadorFicheiro {
         }
 
         return `${elementos
-            .slice(0, -1)
+            .slice(
+                0,
+                -1,
+            )
             .join(', ')} e ${elementos.at(-1)}`;
     }
 
     /**
-     * Formata um tamanho em bytes.
+     * Formata um tamanho em bytes utilizando unidades binárias.
      *
      * @param {number} bytes Tamanho em bytes.
      * @param {number} casasDecimais
@@ -641,7 +705,7 @@ class ValidadorFicheiro {
      * @returns {string} Tamanho formatado.
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
     formatarBytes(
         bytes,
@@ -656,10 +720,10 @@ class ValidadorFicheiro {
 
         const unidades = [
             'bytes',
-            'KB',
-            'MB',
-            'GB',
-            'TB',
+            'KiB',
+            'MiB',
+            'GiB',
+            'TiB',
         ];
 
         const indice = Math.min(
@@ -810,7 +874,9 @@ class ValidadorFicheiro {
         ...argumentos
     ) {
         if (typeof callback === 'function') {
-            callback(...argumentos);
+            callback(
+                ...argumentos,
+            );
         }
     }
 
@@ -832,7 +898,12 @@ class ValidadorFicheiro {
             this.manipularAlteracao,
         );
 
-        this.iniciado = false;
+        this.campoFicheiro.setCustomValidity(
+            '',
+        );
+
+        this.iniciado =
+            false;
     }
 }
 

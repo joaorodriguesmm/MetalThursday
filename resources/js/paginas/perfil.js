@@ -8,11 +8,11 @@ import ValidadorFormulario from '../modulos/ValidadorFormulario';
 /**
  * Configura os comportamentos da página de edição do perfil.
  *
- * Este ficheiro limita-se a associar os módulos reutilizáveis aos elementos
- * específicos da página. A validação definitiva permanece no servidor.
+ * A validação executada no navegador melhora a experiência do utilizador.
+ * A validação definitiva permanece no servidor.
  *
  * @since 1.0.0
- * @version 2.1.0
+ * @version 3.0.0
  */
 
 /**
@@ -21,7 +21,7 @@ import ValidadorFormulario from '../modulos/ValidadorFormulario';
  * @type {Readonly<Record<string, string>>}
  *
  * @since 2.0.0
- * @version 1.0.0
+ * @version 2.0.0
  */
 const SELETORES = Object.freeze({
     formularioPerfil:
@@ -59,43 +59,183 @@ const SELETORES = Object.freeze({
 });
 
 /**
- * Tipos MIME permitidos para as fotografias.
- *
- * Esta lista deve permanecer alinhada com `AtualizarPerfilRequest`.
- *
- * @type {ReadonlyArray<string>}
- *
- * @since 2.0.0
- * @version 1.0.0
- */
-const TIPOS_FOTOGRAFIA_PERMITIDOS = Object.freeze([
-    'image/jpeg',
-    'image/png',
-    'image/webp',
-]);
-
-/**
  * Tamanho máximo permitido para a fotografia, em bytes.
+ *
+ * O valor corresponde aos 10 240 KiB aceites por AtualizarPerfilRequest.
  *
  * @type {number}
  *
  * @since 2.0.0
- * @version 1.0.0
+ * @version 2.0.0
  */
 const TAMANHO_MAXIMO_FOTOGRAFIA =
-    10 * 1024 * 1024;
+    10 * (1024 ** 2);
+
+/**
+ * Comprimento mínimo da nova palavra-passe.
+ *
+ * @type {number}
+ *
+ * @since 3.0.0
+ * @version 1.0.0
+ */
+const COMPRIMENTO_MINIMO_PALAVRA_PASSE =
+    12;
+
+/**
+ * Obtém um campo do formulário através do respetivo nome.
+ *
+ * @param {HTMLFormElement} formulario Formulário pesquisado.
+ * @param {string} nome Nome HTML do campo.
+ *
+ * @returns {
+ *     HTMLInputElement
+ *     |HTMLSelectElement
+ *     |HTMLTextAreaElement
+ *     |null
+ * } Campo encontrado ou nulo.
+ *
+ * @since 3.0.0
+ * @version 1.0.0
+ */
+function obterCampoFormulario(
+    formulario,
+    nome,
+) {
+    const campo =
+        formulario.elements.namedItem(
+            nome,
+        );
+
+    return campo instanceof HTMLInputElement
+        || campo instanceof HTMLSelectElement
+        || campo instanceof HTMLTextAreaElement
+        ? campo
+        : null;
+}
+
+/**
+ * Obtém o comprimento máximo declarado num campo textual.
+ *
+ * @param {Element|null} campo Campo recebido.
+ * @param {number} valorPredefinido Valor utilizado quando não existe limite.
+ *
+ * @returns {number} Comprimento máximo positivo.
+ *
+ * @since 3.0.0
+ * @version 1.0.0
+ */
+function obterComprimentoMaximo(
+    campo,
+    valorPredefinido,
+) {
+    if (
+        (
+            campo instanceof HTMLInputElement
+            || campo instanceof HTMLTextAreaElement
+        )
+        && Number.isInteger(campo.maxLength)
+        && campo.maxLength > 0
+    ) {
+        return campo.maxLength;
+    }
+
+    return valorPredefinido;
+}
+
+/**
+ * Obtém o comprimento máximo opcional declarado num campo textual.
+ *
+ * @param {Element|null} campo Campo recebido.
+ *
+ * @returns {number|null} Comprimento máximo ou nulo.
+ *
+ * @since 3.0.0
+ * @version 1.0.0
+ */
+function obterComprimentoMaximoOpcional(campo) {
+    if (
+        (
+            campo instanceof HTMLInputElement
+            || campo instanceof HTMLTextAreaElement
+        )
+        && Number.isInteger(campo.maxLength)
+        && campo.maxLength > 0
+    ) {
+        return campo.maxLength;
+    }
+
+    return null;
+}
+
+/**
+ * Acrescenta uma regra de comprimento máximo quando existe um limite.
+ *
+ * @param {Array<string|Function>} regras Regras base.
+ * @param {number|null} comprimentoMaximo Comprimento máximo opcional.
+ *
+ * @returns {Array<string|Function>} Regras finais.
+ *
+ * @since 3.0.0
+ * @version 1.0.0
+ */
+function acrescentarRegraMaximo(
+    regras,
+    comprimentoMaximo,
+) {
+    return comprimentoMaximo === null
+        ? [...regras]
+        : [
+            ...regras,
+            `maximo:${comprimentoMaximo}`,
+        ];
+}
+
+/**
+ * Obtém os tipos MIME declarados no atributo `accept` do campo.
+ *
+ * @param {HTMLInputElement} campoFotografia Campo da fotografia.
+ *
+ * @returns {Array<string>} Tipos MIME permitidos.
+ *
+ * @throws {TypeError} Quando o campo não declara tipos MIME válidos.
+ *
+ * @since 3.0.0
+ * @version 1.0.0
+ */
+function obterTiposFotografiaPermitidos(
+    campoFotografia,
+) {
+    const tipos =
+        campoFotografia.accept
+            .split(',')
+            .map(
+                (tipo) =>
+                    tipo.trim().toLowerCase(),
+            )
+            .filter(
+                (tipo) =>
+                    tipo.includes('/'),
+            );
+
+    if (tipos.length === 0) {
+        throw new TypeError(
+            'O campo da fotografia deve declarar os tipos MIME permitidos.',
+        );
+    }
+
+    return Array.from(
+        new Set(tipos),
+    );
+}
 
 /**
  * Inicia a gestão e a validação da fotografia do perfil.
  *
- * O gestor trata a pré-visualização do ficheiro. O validador restaura o
- * estado inicial apenas quando a seleção não cumpre o tipo ou o tamanho
- * permitidos, evitando uma segunda pré-visualização do mesmo ficheiro.
- *
  * @returns {void}
  *
  * @since 1.0.0
- * @version 2.1.0
+ * @version 3.0.0
  */
 function iniciarFotografiaPerfil() {
     const gestorFotografia =
@@ -120,7 +260,9 @@ function iniciarFotografiaPerfil() {
         campoFotografia,
         {
             tiposPermitidos:
-                TIPOS_FOTOGRAFIA_PERMITIDOS,
+                obterTiposFotografiaPermitidos(
+                    campoFotografia,
+                ),
 
             tamanhoMaximo:
                 TAMANHO_MAXIMO_FOTOGRAFIA,
@@ -137,7 +279,18 @@ function iniciarFotografiaPerfil() {
             textoSelecionado:
                 'Alterar fotografia',
 
+            aoFicheiroValido: (ficheiro) => {
+                gestorFotografia.previsualizarImagem(
+                    ficheiro,
+                );
+            },
+
             aoFicheiroInvalido: () => {
+                gestorFotografia
+                    .restaurarPrevisualizacao();
+            },
+
+            aoLimparSelecao: () => {
                 gestorFotografia
                     .restaurarPrevisualizacao();
             },
@@ -151,7 +304,7 @@ function iniciarFotografiaPerfil() {
  * @returns {void}
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 3.0.0
  */
 function iniciarValidacaoPerfil() {
     const formulario = document.querySelector(
@@ -162,6 +315,24 @@ function iniciarValidacaoPerfil() {
         return;
     }
 
+    const comprimentoMaximoNome =
+        obterComprimentoMaximo(
+            obterCampoFormulario(
+                formulario,
+                'nome',
+            ),
+            255,
+        );
+
+    const comprimentoMaximoEmail =
+        obterComprimentoMaximo(
+            obterCampoFormulario(
+                formulario,
+                'email',
+            ),
+            255,
+        );
+
     new ValidadorFormulario(
         formulario,
         {
@@ -169,13 +340,13 @@ function iniciarValidacaoPerfil() {
                 nome: [
                     'obrigatorio',
                     'minimo:3',
-                    'maximo:255',
+                    `maximo:${comprimentoMaximoNome}`,
                 ],
 
                 email: [
                     'obrigatorio',
                     'email',
-                    'maximo:255',
+                    `maximo:${comprimentoMaximoEmail}`,
                 ],
             },
 
@@ -188,7 +359,7 @@ function iniciarValidacaoPerfil() {
                         'O nome deve ter, pelo menos, 3 caracteres.',
 
                     maximo:
-                        'O nome não pode ter mais de 255 caracteres.',
+                        `O nome não pode ter mais de ${comprimentoMaximoNome} caracteres.`,
                 },
 
                 email: {
@@ -199,7 +370,7 @@ function iniciarValidacaoPerfil() {
                         'Por favor, insere um endereço de e-mail válido.',
 
                     maximo:
-                        'O endereço de e-mail não pode ter mais de 255 caracteres.',
+                        `O endereço de e-mail não pode ter mais de ${comprimentoMaximoEmail} caracteres.`,
                 },
             },
         },
@@ -243,7 +414,7 @@ function iniciarPermissoesEmail() {
  * @returns {void}
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 3.0.0
  */
 function iniciarValidacaoPalavraPasse() {
     const formulario = document.querySelector(
@@ -254,34 +425,91 @@ function iniciarValidacaoPalavraPasse() {
         return;
     }
 
+    const campoPalavraPasseAtual =
+        obterCampoFormulario(
+            formulario,
+            'palavra_passe_atual',
+        );
+
+    const campoNovaPalavraPasse =
+        obterCampoFormulario(
+            formulario,
+            'nova_palavra_passe',
+        );
+
+    const campoConfirmacao =
+        obterCampoFormulario(
+            formulario,
+            'confirmacao_nova_palavra_passe',
+        );
+
+    const maximoPalavraPasseAtual =
+        obterComprimentoMaximoOpcional(
+            campoPalavraPasseAtual,
+        );
+
+    const maximoNovaPalavraPasse =
+        obterComprimentoMaximoOpcional(
+            campoNovaPalavraPasse,
+        );
+
+    const maximoConfirmacao =
+        obterComprimentoMaximoOpcional(
+            campoConfirmacao,
+        );
+
+    const minimoNovaPalavraPasse =
+        campoNovaPalavraPasse instanceof HTMLInputElement
+        && Number.isInteger(
+            campoNovaPalavraPasse.minLength,
+        )
+        && campoNovaPalavraPasse.minLength > 0
+            ? campoNovaPalavraPasse.minLength
+            : COMPRIMENTO_MINIMO_PALAVRA_PASSE;
+
     new ValidadorFormulario(
         formulario,
         {
             regras: {
-                palavra_passe_atual: [
-                    'obrigatorio',
-                ],
+                palavra_passe_atual:
+                    acrescentarRegraMaximo(
+                        [
+                            'obrigatorio',
+                        ],
+                        maximoPalavraPasseAtual,
+                    ),
 
-                nova_palavra_passe: [
-                    'obrigatorio',
-                    'minimo:12',
-                    'maiuscula',
-                    'minuscula',
-                    'numero',
-                    'simbolo',
-                    'diferente:palavra_passe_atual',
-                ],
+                nova_palavra_passe:
+                    acrescentarRegraMaximo(
+                        [
+                            'obrigatorio',
+                            `minimo:${minimoNovaPalavraPasse}`,
+                            'maiuscula',
+                            'minuscula',
+                            'numero',
+                            'simbolo',
+                            'diferente:palavra_passe_atual',
+                        ],
+                        maximoNovaPalavraPasse,
+                    ),
 
-                confirmacao_nova_palavra_passe: [
-                    'obrigatorio',
-                    'confirmado:nova_palavra_passe',
-                ],
+                confirmacao_nova_palavra_passe:
+                    acrescentarRegraMaximo(
+                        [
+                            'obrigatorio',
+                            'confirmado:nova_palavra_passe',
+                        ],
+                        maximoConfirmacao,
+                    ),
             },
 
             mensagens: {
                 palavra_passe_atual: {
                     obrigatorio:
                         'Por favor, insere a tua palavra-passe atual.',
+
+                    maximo:
+                        'A palavra-passe atual não é válida.',
                 },
 
                 nova_palavra_passe: {
@@ -289,7 +517,10 @@ function iniciarValidacaoPalavraPasse() {
                         'Por favor, insere a nova palavra-passe.',
 
                     minimo:
-                        'A nova palavra-passe deve ter, pelo menos, 12 caracteres.',
+                        `A nova palavra-passe deve ter, pelo menos, ${minimoNovaPalavraPasse} caracteres.`,
+
+                    maximo:
+                        'A nova palavra-passe é demasiado longa.',
 
                     maiuscula:
                         'A nova palavra-passe deve conter uma letra maiúscula.',
@@ -310,6 +541,9 @@ function iniciarValidacaoPalavraPasse() {
                 confirmacao_nova_palavra_passe: {
                     obrigatorio:
                         'Por favor, confirma a nova palavra-passe.',
+
+                    maximo:
+                        'A confirmação da nova palavra-passe não é válida.',
 
                     confirmado:
                         'A confirmação da nova palavra-passe não coincide.',
@@ -361,7 +595,7 @@ function iniciarTooltips() {
  * @returns {void}
  *
  * @since 2.0.0
- * @version 1.0.0
+ * @version 2.0.0
  */
 function iniciarPaginaPerfil() {
     iniciarFotografiaPerfil();

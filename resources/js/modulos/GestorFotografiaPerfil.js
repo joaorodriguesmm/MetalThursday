@@ -1,12 +1,12 @@
 /**
  * Gere a pré-visualização da fotografia do perfil.
  *
- * O gestor preserva o estado inicial apresentado pela página. Quando uma
- * fotografia selecionada é inválida ou removida antes da submissão, a
- * fotografia atual do utilizador é restaurada.
+ * O gestor preserva o estado inicial apresentado pela página. A validação
+ * do ficheiro pertence a ValidadorFicheiro; este módulo limita-se a gerir a
+ * imagem apresentada e os respetivos recursos temporários.
  *
  * @since 1.0.0
- * @version 2.1.0
+ * @version 3.0.0
  */
 class GestorFotografiaPerfil {
     /**
@@ -21,11 +21,10 @@ class GestorFotografiaPerfil {
      * @param {string|null} seletorBotaoLimpar
      *     Seletor opcional do botão que limpa apenas a nova seleção.
      *
-     * @throws { @param {string|null} seletorBotaoLimpar
-     *     Seletor opcional do botãoTypeError} Quando algum seletor CSS é inválido.
+     * @throws {TypeError} Quando algum seletor CSS é inválido.
      *
      * @since 1.0.0
-     * @version 2.1.0
+     * @version 3.0.0
      */
     constructor(
         seletorCampoFicheiro,
@@ -47,23 +46,30 @@ class GestorFotografiaPerfil {
 
         this.botaoLimpar = seletorBotaoLimpar === null
             ? null
-            : this.obterElemento(seletorBotaoLimpar);
+            : this.obterElemento(
+                seletorBotaoLimpar,
+            );
 
         this.circuloAvatar =
             this.elementoIniciais instanceof HTMLElement
-                ? this.elementoIniciais.closest('.avatar-circle')
+                ? this.elementoIniciais.closest(
+                    '.avatar-circle',
+                )
                 : null;
 
-        this.origemFotografiaInicial = null;
-        this.urlPrevisualizacaoTemporaria = null;
-        this.iniciado = false;
+        this.origemFotografiaInicial =
+            null;
 
-        this.aoAlterarCampoFicheiro = (evento) => {
-            this.manipularAlteracaoCampoFicheiro(evento);
-        };
+        this.urlPrevisualizacaoTemporaria =
+            null;
+
+        this.iniciado =
+            false;
 
         this.aoClicarBotaoLimpar = (evento) => {
-            this.manipularCliqueBotaoLimpar(evento);
+            this.manipularCliqueBotaoLimpar(
+                evento,
+            );
         };
 
         if (!this.estaDisponivel()) {
@@ -78,35 +84,34 @@ class GestorFotografiaPerfil {
     /**
      * Determina se os elementos obrigatórios estão disponíveis.
      *
-     * @returns {boolean}
+     * @returns {boolean} Verdadeiro quando o gestor pode funcionar.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     estaDisponivel() {
         return this.campoFicheiro instanceof HTMLInputElement
             && this.campoFicheiro.type === 'file'
-            && this.elementoPrevisualizacao instanceof HTMLImageElement
+            && this.elementoPrevisualizacao
+                instanceof HTMLImageElement
             && this.elementoIniciais instanceof HTMLElement;
     }
 
     /**
-     * Configura os eventos do gestor.
+     * Configura o botão opcional de limpeza.
+     *
+     * O campo de ficheiro não é observado diretamente para impedir que a
+     * pré-visualização seja atualizada antes da validação do ficheiro.
      *
      * @returns {void}
      *
      * @since 2.1.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     iniciar() {
         if (!this.estaDisponivel() || this.iniciado) {
             return;
         }
-
-        this.campoFicheiro.addEventListener(
-            'change',
-            this.aoAlterarCampoFicheiro,
-        );
 
         if (this.botaoLimpar instanceof HTMLElement) {
             this.botaoLimpar.addEventListener(
@@ -115,13 +120,14 @@ class GestorFotografiaPerfil {
             );
         }
 
-        this.iniciado = true;
+        this.iniciado =
+            true;
     }
 
     /**
      * Obtém o campo de ficheiro gerido.
      *
-     * @returns {HTMLInputElement|null}
+     * @returns {HTMLInputElement|null} Campo de ficheiro ou nulo.
      *
      * @since 2.0.0
      * @version 1.0.0
@@ -133,100 +139,50 @@ class GestorFotografiaPerfil {
     }
 
     /**
-     * Trata a alteração do campo de ficheiro.
+     * Pré-visualiza uma fotografia previamente validada.
      *
-     * @param {Event} evento Evento de alteração.
+     * É utilizado um URL de objeto temporário, evitando converter o ficheiro
+     * para Base64 e reduzindo a utilização de memória.
      *
-     * @returns {void}
+     * @param {File} ficheiro Fotografia validada.
      *
-     * @since 2.1.0
-     * @version 1.0.0
-     */
-    manipularAlteracaoCampoFicheiro(evento) {
-        const campo = evento.currentTarget;
-
-        if (!(campo instanceof HTMLInputElement)) {
-            return;
-        }
-
-        campo.setCustomValidity('');
-
-        const ficheiro = campo.files?.item(0) ?? null;
-
-        if (ficheiro === null) {
-            this.restaurarPrevisualizacao();
-
-            return;
-        }
-
-        if (!this.eImagemValida(ficheiro)) {
-            campo.value = '';
-
-            campo.setCustomValidity(
-                'Seleciona um ficheiro de imagem válido.',
-            );
-
-            campo.reportValidity();
-
-            this.restaurarPrevisualizacao();
-
-            return;
-        }
-
-        this.previsualizarImagem(ficheiro);
-    }
-
-    /**
-     * Verifica se o ficheiro selecionado representa uma imagem.
-     *
-     * @param {File} ficheiro Ficheiro selecionado.
-     *
-     * @returns {boolean}
-     *
-     * @since 2.1.0
-     * @version 1.0.0
-     */
-    eImagemValida(ficheiro) {
-        return ficheiro.type.startsWith('image/');
-    }
-
-    /**
-     * Pré-visualiza uma fotografia selecionada.
-     *
-     * É utilizado um URL de objeto temporário, evitando converter todo o
-     * ficheiro para Base64 e reduzindo a utilização de memória.
-     *
-     * @param {File|null} ficheiro Fotografia selecionada.
-     *
-     * @returns {void}
+     * @returns {boolean} Indica se a pré-visualização foi atualizada.
      *
      * @since 1.0.0
-     * @version 2.1.0
+     * @version 3.0.0
      */
     previsualizarImagem(ficheiro) {
-        if (!this.estaDisponivel()) {
-            return;
-        }
-
         if (
-            !(ficheiro instanceof File)
-            || !this.eImagemValida(ficheiro)
+            !this.estaDisponivel()
+            || !(ficheiro instanceof File)
+            || !ficheiro.type.startsWith(
+                'image/',
+            )
         ) {
             this.restaurarPrevisualizacao();
 
-            return;
+            return false;
         }
 
         this.revogarUrlTemporario();
 
         this.urlPrevisualizacaoTemporaria =
-            URL.createObjectURL(ficheiro);
+            URL.createObjectURL(
+                ficheiro,
+            );
 
         this.elementoPrevisualizacao.src =
             this.urlPrevisualizacaoTemporaria;
 
-        this.alternarApresentacao(true);
-        this.atualizarBotaoLimpar(true);
+        this.alternarApresentacao(
+            true,
+        );
+
+        this.atualizarBotaoLimpar(
+            true,
+        );
+
+        return true;
     }
 
     /**
@@ -251,16 +207,22 @@ class GestorFotografiaPerfil {
             this.elementoPrevisualizacao.src =
                 this.origemFotografiaInicial;
 
-            this.alternarApresentacao(true);
+            this.alternarApresentacao(
+                true,
+            );
         } else {
             this.elementoPrevisualizacao.removeAttribute(
                 'src',
             );
 
-            this.alternarApresentacao(false);
+            this.alternarApresentacao(
+                false,
+            );
         }
 
-        this.atualizarBotaoLimpar(false);
+        this.atualizarBotaoLimpar(
+            false,
+        );
     }
 
     /**
@@ -284,16 +246,21 @@ class GestorFotografiaPerfil {
             return;
         }
 
-        const origem = this.elementoPrevisualizacao
-            .getAttribute('src')
-            ?.trim();
+        const origem =
+            this.elementoPrevisualizacao
+                .getAttribute(
+                    'src',
+                )
+                ?.trim();
 
         const fotografiaVisivel =
             typeof origem === 'string'
             && origem !== ''
-            && !this.elementoPrevisualizacao.classList.contains(
-                'd-none',
-            );
+            && !this.elementoPrevisualizacao
+                .classList
+                .contains(
+                    'd-none',
+                );
 
         this.origemFotografiaInicial =
             fotografiaVisivel
@@ -318,8 +285,21 @@ class GestorFotografiaPerfil {
             this.campoFicheiro
             instanceof HTMLInputElement
         ) {
-            this.campoFicheiro.value = '';
-            this.campoFicheiro.setCustomValidity('');
+            this.campoFicheiro.value =
+                '';
+
+            this.campoFicheiro.setCustomValidity(
+                '',
+            );
+
+            this.campoFicheiro.dispatchEvent(
+                new Event(
+                    'change',
+                    {
+                        bubbles: true,
+                    },
+                ),
+            );
         }
 
         this.restaurarPrevisualizacao();
@@ -428,7 +408,8 @@ class GestorFotografiaPerfil {
             this.urlPrevisualizacaoTemporaria,
         );
 
-        this.urlPrevisualizacaoTemporaria = null;
+        this.urlPrevisualizacaoTemporaria =
+            null;
     }
 
     /**
@@ -436,7 +417,7 @@ class GestorFotografiaPerfil {
      *
      * @param {unknown} seletor Seletor CSS.
      *
-     * @returns {Element|null}
+     * @returns {Element|null} Elemento encontrado ou nulo.
      *
      * @throws {TypeError} Quando o seletor é inválido.
      *
@@ -453,13 +434,16 @@ class GestorFotografiaPerfil {
             );
         }
 
+        const seletorNormalizado =
+            seletor.trim();
+
         try {
             return document.querySelector(
-                seletor,
+                seletorNormalizado,
             );
         } catch {
             throw new TypeError(
-                `O seletor CSS "${seletor}" é inválido.`,
+                `O seletor CSS "${seletorNormalizado}" é inválido.`,
             );
         }
     }
@@ -470,30 +454,23 @@ class GestorFotografiaPerfil {
      * @returns {void}
      *
      * @since 2.0.0
-     * @version 1.1.0
+     * @version 2.0.0
      */
     destruir() {
-        if (this.iniciado) {
-            if (
-                this.campoFicheiro
-                instanceof HTMLInputElement
-            ) {
-                this.campoFicheiro.removeEventListener(
-                    'change',
-                    this.aoAlterarCampoFicheiro,
-                );
-            }
-
-            if (this.botaoLimpar instanceof HTMLElement) {
-                this.botaoLimpar.removeEventListener(
-                    'click',
-                    this.aoClicarBotaoLimpar,
-                );
-            }
+        if (
+            this.iniciado
+            && this.botaoLimpar instanceof HTMLElement
+        ) {
+            this.botaoLimpar.removeEventListener(
+                'click',
+                this.aoClicarBotaoLimpar,
+            );
         }
 
         this.revogarUrlTemporario();
-        this.iniciado = false;
+
+        this.iniciado =
+            false;
     }
 }
 
