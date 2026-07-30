@@ -6,7 +6,7 @@
     associados aos respetivos campos pelo gestor global de formulários AJAX.
 
     @since 1.0.0
-    @version 3.0.0
+    @version 4.0.0
 --}}
 
 @can(
@@ -73,7 +73,7 @@
                                 type="text"
                                 name="nome"
                                 placeholder="Nome do género"
-                                maxlength="255"
+                                maxlength="{{ App\Models\Musica\Genero::COMPRIMENTO_MAXIMO_NOME }}"
                                 autocomplete="off"
                                 aria-describedby="erro-nome-novo-genero"
                                 required

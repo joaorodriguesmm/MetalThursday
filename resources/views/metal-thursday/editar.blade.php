@@ -6,7 +6,7 @@
     App\Http\Controllers\MetalThursday\ControladorMetalThursday.
 
     @since 1.0.0
-    @version 3.0.0
+    @version 4.0.0
 --}}
 
 <x-layout-aplicacao>
@@ -152,7 +152,7 @@
     )
 
     <x-metal-thursday.modal-criar-banda
-        :paises="$paises"
+        :origens-geograficas="$origensGeograficas"
         :generos="$generos"
     />
 
@@ -162,7 +162,7 @@
 
     @push('scripts-pagina')
         <script>
-            window.configuracaoEdicaoMetalThursday =
+            window.configuracaoFormularioMetalThursday =
                 @json($configuracaoFormularioMetalThursday);
         </script>
 
