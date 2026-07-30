@@ -7,7 +7,7 @@ import TomSelect from 'tom-select';
  * à API disponibilizada pela biblioteca Tom Select.
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 3.0.0
  */
 class InicializadorTomSelect {
     /**
@@ -19,10 +19,10 @@ class InicializadorTomSelect {
      * @throws {TypeError} Quando o seletor é inválido.
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
     constructor(
-        seletor = 'select.tom-select-single, select.tom-select-multiple',
+        seletor = 'select.tom-select-unico, select.tom-select-multiplo',
     ) {
         if (
             typeof seletor !== 'string'
@@ -54,7 +54,7 @@ class InicializadorTomSelect {
      * @param {Document|Element} raiz
      *     Elemento a partir do qual os campos serão procurados.
      *
-     * @returns {TomSelect[]} Instâncias encontradas ou criadas.
+     * @return {TomSelect[]} Instâncias encontradas ou criadas.
      *
      * @since 1.0.0
      * @version 2.0.0
@@ -87,14 +87,14 @@ class InicializadorTomSelect {
     }
 
     /**
-     * Inicializa uma instância de Tom Select num elemento.
+     * Inicializa uma instância Tom Select num elemento.
      *
      * Quando o elemento já possui uma instância, essa instância é registada
      * e devolvida sem ser recriada.
      *
      * @param {HTMLSelectElement} elemento Campo a inicializar.
      *
-     * @returns {TomSelect|null} Instância disponível para o campo.
+     * @return {TomSelect|null} Instância disponível para o campo.
      *
      * @since 1.0.0
      * @version 2.0.0
@@ -135,7 +135,7 @@ class InicializadorTomSelect {
      *
      * @param {HTMLSelectElement} elemento Campo a configurar.
      *
-     * @returns {object} Configuração da instância.
+     * @return {object} Configuração da instância.
      *
      * @since 2.0.0
      * @version 1.0.0
@@ -170,6 +170,8 @@ class InicializadorTomSelect {
      * @param {HTMLSelectElement} elemento Campo associado.
      * @param {TomSelect} instancia Instância a registar.
      *
+     * @return {void}
+     *
      * @since 2.0.0
      * @version 1.0.0
      */
@@ -192,27 +194,27 @@ class InicializadorTomSelect {
     /**
      * Obtém uma instância Tom Select através do identificador do campo.
      *
-     * @param {string} id Identificador HTML do campo.
+     * @param {string} identificador Identificador HTML do campo.
      *
-     * @returns {TomSelect|null} Instância encontrada.
+     * @return {TomSelect|null} Instância encontrada.
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
-    obterInstancia(id) {
+    obterInstancia(identificador) {
         if (
-            typeof id !== 'string'
-            || id.trim() === ''
+            typeof identificador !== 'string'
+            || identificador.trim() === ''
         ) {
             return null;
         }
 
-        const identificador =
-            id.trim();
+        const identificadorNormalizado =
+            identificador.trim();
 
         const instanciaRegistada =
             this.instanciasPorId.get(
-                identificador,
+                identificadorNormalizado,
             );
 
         if (instanciaRegistada) {
@@ -221,7 +223,7 @@ class InicializadorTomSelect {
 
         const elemento =
             document.getElementById(
-                identificador,
+                identificadorNormalizado,
             );
 
         if (!(elemento instanceof HTMLSelectElement)) {
@@ -239,7 +241,7 @@ class InicializadorTomSelect {
      * @param {string|HTMLSelectElement} referencia
      *     Identificador ou elemento associado à instância.
      *
-     * @returns {boolean} Indica se foi destruída uma instância.
+     * @return {boolean} Indica se foi destruída uma instância.
      *
      * @since 2.0.0
      * @version 1.0.0
@@ -280,6 +282,8 @@ class InicializadorTomSelect {
 
     /**
      * Destrói todas as instâncias registadas.
+     *
+     * @return {void}
      *
      * @since 2.0.0
      * @version 1.0.0

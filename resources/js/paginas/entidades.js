@@ -11,7 +11,7 @@ import ValidadorFormulario
  * formulários de bandas, géneros e edições.
  *
  * @since 1.0.0
- * @version 2.3.0
+ * @version 3.0.0
  */
 
 /**
@@ -20,7 +20,7 @@ import ValidadorFormulario
  * @type {ReadonlyArray<Object>}
  *
  * @since 2.1.0
- * @version 1.2.0
+ * @version 2.0.0
  */
 const CONFIGURACOES_FORMULARIOS = Object.freeze([
     {
@@ -33,8 +33,9 @@ const CONFIGURACOES_FORMULARIOS = Object.freeze([
                 'maximo:255',
             ],
 
-            pais_id: [
+            origem_geografica_id: [
                 'obrigatorio',
+                'inteiro',
             ],
 
             'generos[]': [
@@ -51,9 +52,12 @@ const CONFIGURACOES_FORMULARIOS = Object.freeze([
                     'O nome da banda não pode ter mais de 255 caracteres.',
             },
 
-            pais_id: {
+            origem_geografica_id: {
                 obrigatorio:
-                    'Por favor, seleciona o país da banda.',
+                    'Por favor, seleciona a origem geográfica da banda.',
+
+                inteiro:
+                    'A origem geográfica selecionada não é válida.',
             },
 
             'generos[]': {
@@ -70,7 +74,7 @@ const CONFIGURACOES_FORMULARIOS = Object.freeze([
         regras: {
             nome: [
                 'obrigatorio',
-                'maximo:255',
+                'maximo:100',
             ],
         },
 
@@ -80,7 +84,7 @@ const CONFIGURACOES_FORMULARIOS = Object.freeze([
                     'Por favor, insere o nome do género.',
 
                 maximo:
-                    'O nome do género não pode ter mais de 255 caracteres.',
+                    'O nome do género não pode ter mais de 100 caracteres.',
             },
         },
     },
