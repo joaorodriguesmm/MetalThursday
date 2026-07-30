@@ -1,22 +1,26 @@
 {{--
     Apresenta o formulário e a lista de comentários de uma entidade.
 
-    A preparação da entidade, dos identificadores, do utilizador autenticado
-    e dos comentários é efetuada pela classe
+    A preparação dos identificadores, endereço, utilizador autenticado e
+    comentários é efetuada pela classe
     App\View\Components\SeccaoComentarios.
 
     @since 1.0.0
-    @version 3.0.0
+    @version 4.0.0
 --}}
 
 <section
     {{
-        $attributes->class([
-            'card',
-            'card-body',
-            'bg-dark',
-            'border-secondary',
-        ])
+        $attributes
+            ->except([
+                'aria-label',
+            ])
+            ->class([
+                'card',
+                'card-body',
+                'bg-dark',
+                'border-secondary',
+            ])
     }}
     aria-label="Comentários"
 >
@@ -24,30 +28,8 @@
         id="{{ $identificadorFormulario }}"
         class="formulario-comentario mb-4"
         method="POST"
-        action="{{
-            route(
-                'comentarios.guardar',
-                [
-                    'tipoComentavel' =>
-                        $tipoComentavel,
-
-                    'identificadorComentavel' =>
-                        $identificadorComentavel,
-                ],
-            )
-        }}"
-        data-endereco="{{
-            route(
-                'comentarios.guardar',
-                [
-                    'tipoComentavel' =>
-                        $tipoComentavel,
-
-                    'identificadorComentavel' =>
-                        $identificadorComentavel,
-                ],
-            )
-        }}"
+        action="{{ $enderecoGuardarComentario }}"
+        data-endereco="{{ $enderecoGuardarComentario }}"
         data-mensagem-sucesso="Comentário publicado com sucesso."
         data-mensagem-erro="Não foi possível publicar o comentário."
         novalidate
@@ -89,6 +71,7 @@
                     id="{{ $identificadorErro }}"
                     class="invalid-feedback mt-1"
                     aria-live="polite"
+                    aria-atomic="true"
                 ></div>
 
                 <div class="mt-2 text-end">
@@ -109,9 +92,7 @@
                 :comentario="$comentario"
             />
         @empty
-            <p
-                class="sem-comentarios small text-muted text-center"
-            >
+            <p class="sem-comentarios small text-muted text-center">
                 Ainda não existem comentários.
                 Sê a primeira pessoa a comentar!
             </p>

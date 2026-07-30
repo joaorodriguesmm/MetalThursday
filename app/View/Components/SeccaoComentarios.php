@@ -9,6 +9,7 @@ use App\Models\Autenticacao\Utilizador;
 use App\Models\Interacoes\Comentario;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -20,31 +21,21 @@ use LogicException;
  *
  * O componente exige que a relação `comentarios` tenha sido previamente
  * carregada pelo controlador, impedindo consultas à base de dados durante
- * a renderização da view.
+ * a renderização da vista.
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 4.0.0
  */
 final class SeccaoComentarios extends Component
 {
-    /**
-     * Entidade que recebe os comentários.
-     *
-     *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
-     */
-    public readonly MetalThursday|SeccaoMetalThursday $comentavel;
-
     /**
      * Identificador da entidade comentada.
      *
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly int $identificadorComentavel;
 
@@ -54,7 +45,7 @@ final class SeccaoComentarios extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly string $tipoComentavel;
 
@@ -65,7 +56,7 @@ final class SeccaoComentarios extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly Collection $comentarios;
 
@@ -75,9 +66,19 @@ final class SeccaoComentarios extends Component
      *
      * @since 3.0.0
      *
+     * @version 2.0.0
+     */
+    public readonly Utilizador $utilizadorAutenticado;
+
+    /**
+     * Endereço utilizado para publicar um comentário.
+     *
+     *
+     * @since 4.0.0
+     *
      * @version 1.0.0
      */
-    public readonly ?Utilizador $utilizadorAutenticado;
+    public readonly string $enderecoGuardarComentario;
 
     /**
      * Identificador HTML do formulário.
@@ -85,7 +86,7 @@ final class SeccaoComentarios extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly string $identificadorFormulario;
 
@@ -95,7 +96,7 @@ final class SeccaoComentarios extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly string $identificadorConteudo;
 
@@ -105,28 +106,29 @@ final class SeccaoComentarios extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly string $identificadorErro;
 
     /**
      * Cria uma nova instância do componente.
      *
-     * @param  MetalThursday|SeccaoMetalThursday  $comentavel  Entidade comentada.
+     * @param  MetalThursday|SeccaoMetalThursday  $comentavel  Entidade
+     *                                                         comentada.
      *
-     * @throws LogicException Quando a entidade não está persistida, o tipo não
-     *                        corresponde ao modelo ou a relação não foi carregada.
+     * @throws AuthenticationException Quando não existe um utilizador
+     *                                 autenticado e persistido válido.
+     * @throws LogicException Quando a entidade não está persistida ou a
+     *                        relação de comentários não foi carregada
+     *                        corretamente.
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
     public function __construct(
         MetalThursday|SeccaoMetalThursday $comentavel,
     ) {
-        $this->comentavel =
-            $comentavel;
-
         $this->identificadorComentavel =
             $this->obterIdentificadorComentavel(
                 $comentavel,
@@ -145,6 +147,16 @@ final class SeccaoComentarios extends Component
         $this->utilizadorAutenticado =
             $this->obterUtilizadorAutenticado();
 
+        $this->enderecoGuardarComentario =
+            route(
+                'comentarios.guardar',
+                [
+                    'tipoComentavel' => $this->tipoComentavel,
+
+                    'identificadorComentavel' => $this->identificadorComentavel,
+                ],
+            );
+
         $sufixoIdentificador =
             "{$this->tipoComentavel}-{$this->identificadorComentavel}";
 
@@ -159,13 +171,13 @@ final class SeccaoComentarios extends Component
     }
 
     /**
-     * Obtém a view do componente.
+     * Obtém a vista do componente.
      *
-     * @return View View da secção de comentários.
+     * @return View Vista da secção de comentários.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function render(): View
     {
@@ -177,37 +189,53 @@ final class SeccaoComentarios extends Component
     /**
      * Obtém o identificador persistido da entidade.
      *
-     * @param  MetalThursday|SeccaoMetalThursday  $comentavel  Entidade recebida.
+     * @param  MetalThursday|SeccaoMetalThursday  $comentavel  Entidade
+     *                                                         recebida.
      * @return int Identificador da entidade.
      *
-     * @throws LogicException Quando a entidade não está persistida.
+     * @throws LogicException Quando a entidade não está persistida ou possui
+     *                        um identificador inválido.
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterIdentificadorComentavel(
         MetalThursday|SeccaoMetalThursday $comentavel,
     ): int {
-        $identificador = $comentavel->getKey();
-
-        if (
-            ! $comentavel->exists
-            || ! is_numeric($identificador)
-            || (int) $identificador < 1
-        ) {
+        if (! $comentavel->exists) {
             throw new LogicException(
                 'A entidade comentada deve estar persistida.',
             );
         }
 
-        return (int) $identificador;
+        $identificador = $comentavel->getKey();
+
+        if (
+            is_int($identificador)
+            && $identificador > 0
+        ) {
+            return $identificador;
+        }
+
+        if (
+            is_string($identificador)
+            && ctype_digit($identificador)
+            && (int) $identificador > 0
+        ) {
+            return (int) $identificador;
+        }
+
+        throw new LogicException(
+            'A entidade comentada possui um identificador persistido inválido.',
+        );
     }
 
     /**
      * Obtém os comentários previamente carregados.
      *
-     * @param  MetalThursday|SeccaoMetalThursday  $comentavel  Entidade recebida.
+     * @param  MetalThursday|SeccaoMetalThursday  $comentavel  Entidade
+     *                                                         recebida.
      * @return Collection<int, Comentario> Comentários principais.
      *
      * @throws LogicException Quando a relação não está carregada ou contém
@@ -215,7 +243,7 @@ final class SeccaoComentarios extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterComentarios(
         MetalThursday|SeccaoMetalThursday $comentavel,
@@ -249,28 +277,50 @@ final class SeccaoComentarios extends Component
     }
 
     /**
-     * Obtém o utilizador autenticado.
+     * Obtém o utilizador autenticado através do guard da aplicação.
      *
-     * @return Utilizador|null Utilizador autenticado ou nulo.
+     * @return Utilizador Utilizador autenticado.
      *
-     * @throws LogicException Quando o guard devolve um tipo inesperado.
+     * @throws AuthenticationException Quando não existe um utilizador
+     *                                 autenticado e persistido válido.
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    private function obterUtilizadorAutenticado(): ?Utilizador
+    private function obterUtilizadorAutenticado(): Utilizador
     {
         $utilizador = Auth::guard(
-            'web',
+            'sessao',
         )->user();
 
+        if (! $utilizador instanceof Utilizador) {
+            throw new AuthenticationException(
+                'É necessário iniciar sessão para apresentar os comentários.',
+                [
+                    'sessao',
+                ],
+            );
+        }
+
+        $identificador = $utilizador->getKey();
+
         if (
-            $utilizador !== null
-            && ! $utilizador instanceof Utilizador
+            ! $utilizador->exists
+            || (
+                ! is_int($identificador)
+                && ! (
+                    is_string($identificador)
+                    && ctype_digit($identificador)
+                )
+            )
+            || (int) $identificador < 1
         ) {
-            throw new LogicException(
-                'O guard web devolveu um utilizador de tipo inesperado.',
+            throw new AuthenticationException(
+                'Não foi possível identificar o utilizador autenticado.',
+                [
+                    'sessao',
+                ],
             );
         }
 
