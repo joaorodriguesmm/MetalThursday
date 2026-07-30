@@ -1,3 +1,13 @@
+{{--
+    Define o documento utilizado nas páginas destinadas a visitantes.
+
+    Os dados comuns do documento são preparados pela classe
+    App\View\Components\LayoutConvidado, através da classe LayoutBase.
+
+    @since 1.0.0
+    @version 4.0.0
+--}}
+
 <!DOCTYPE html>
 
 <html lang="{{ $idiomaDocumento }}">
@@ -49,7 +59,7 @@
                         <div class="mb-4 text-center">
                             <a
                                 href="{{ route('inicio') }}"
-                                aria-label="Ir para a página inicial"
+                                aria-label="Ir para a página inicial de {{ $nomeAplicacao }}"
                             >
                                 <img
                                     class="img-fluid"
