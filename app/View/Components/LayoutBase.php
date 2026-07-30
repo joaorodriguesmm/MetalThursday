@@ -16,17 +16,39 @@ use Stringable;
  *
  * @since 3.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 abstract class LayoutBase extends Component
 {
+    /**
+     * Nome utilizado quando a configuração da aplicação é inválida.
+     *
+     * @var string
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private const NOME_APLICACAO_PREDEFINIDO = 'MetalThursday';
+
+    /**
+     * Idioma utilizado quando a configuração da aplicação é inválida.
+     *
+     * @var string
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private const IDIOMA_PREDEFINIDO = 'pt-PT';
+
     /**
      * Nome da aplicação.
      *
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly string $nomeAplicacao;
 
@@ -36,7 +58,7 @@ abstract class LayoutBase extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly string $idiomaDocumento;
 
@@ -46,7 +68,7 @@ abstract class LayoutBase extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly int $anoAtual;
 
@@ -55,22 +77,27 @@ abstract class LayoutBase extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function __construct()
     {
-        $this->nomeAplicacao = $this->normalizarNomeAplicacao(
-            config(
-                'app.name',
-                'MetalThursday',
-            ),
-        );
+        $this->nomeAplicacao =
+            $this->normalizarNomeAplicacao(
+                config(
+                    'app.name',
+                    self::NOME_APLICACAO_PREDEFINIDO,
+                ),
+            );
 
-        $this->idiomaDocumento = $this->normalizarIdioma(
-            app()->getLocale(),
-        );
+        $this->idiomaDocumento =
+            $this->normalizarIdioma(
+                app()->getLocale(),
+            );
 
-        $this->anoAtual = (int) now()->year;
+        $this->anoAtual =
+            (int) now()->format(
+                'Y',
+            );
     }
 
     /**
@@ -79,46 +106,23 @@ abstract class LayoutBase extends Component
      * O conteúdo HTML do slot é removido e os espaços consecutivos são
      * normalizados antes da composição do título.
      *
-     * @param  mixed  $titulo  Conteúdo recebido através do slot.
+     * @param  Htmlable|Stringable|string|null  $titulo  Conteúdo recebido
+     *                                                   através do slot.
      * @return string Título completo do documento.
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function tituloDocumento(
-        mixed $titulo,
+        Htmlable|Stringable|string|null $titulo = null,
     ): string {
-        $conteudo = match (true) {
-            $titulo instanceof Htmlable => $titulo->toHtml(),
+        $tituloNormalizado =
+            $this->normalizarTitulo(
+                $titulo,
+            );
 
-            $titulo instanceof Stringable => (string) $titulo,
-
-            is_string($titulo) => $titulo,
-
-            default => '',
-        };
-
-        $tituloSemHtml = html_entity_decode(
-            strip_tags(
-                $conteudo,
-            ),
-            ENT_QUOTES | ENT_HTML5,
-            'UTF-8',
-        );
-
-        $tituloNormalizado = preg_replace(
-            '/\s+/u',
-            ' ',
-            trim(
-                $tituloSemHtml,
-            ),
-        );
-
-        if (
-            ! is_string($tituloNormalizado)
-            || $tituloNormalizado === ''
-        ) {
+        if ($tituloNormalizado === null) {
             return $this->nomeAplicacao;
         }
 
@@ -137,7 +141,7 @@ abstract class LayoutBase extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function normalizarNomeAplicacao(
         mixed $nome,
@@ -146,16 +150,25 @@ abstract class LayoutBase extends Component
             ! is_string($nome)
             && ! $nome instanceof Stringable
         ) {
-            return 'MetalThursday';
+            return self::NOME_APLICACAO_PREDEFINIDO;
         }
 
-        $nomeNormalizado = trim(
-            (string) $nome,
+        $nomeNormalizado = preg_replace(
+            '/\s+/u',
+            ' ',
+            trim(
+                (string) $nome,
+            ),
         );
 
-        return $nomeNormalizado !== ''
-            ? $nomeNormalizado
-            : 'MetalThursday';
+        if (
+            ! is_string($nomeNormalizado)
+            || $nomeNormalizado === ''
+        ) {
+            return self::NOME_APLICACAO_PREDEFINIDO;
+        }
+
+        return $nomeNormalizado;
     }
 
     /**
@@ -164,20 +177,16 @@ abstract class LayoutBase extends Component
      * O separador interno do Laravel é convertido para o formato esperado
      * pelo atributo `lang` do documento HTML.
      *
-     * @param  mixed  $idioma  Idioma configurado.
+     * @param  string  $idioma  Idioma configurado.
      * @return string Idioma normalizado.
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function normalizarIdioma(
-        mixed $idioma,
+        string $idioma,
     ): string {
-        if (! is_string($idioma)) {
-            return 'pt-PT';
-        }
-
         $idiomaNormalizado = trim(
             str_replace(
                 '_',
@@ -186,8 +195,64 @@ abstract class LayoutBase extends Component
             ),
         );
 
-        return $idiomaNormalizado !== ''
-            ? $idiomaNormalizado
-            : 'pt-PT';
+        if (
+            $idiomaNormalizado === ''
+            || preg_match(
+                '/^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$/',
+                $idiomaNormalizado,
+            ) !== 1
+        ) {
+            return self::IDIOMA_PREDEFINIDO;
+        }
+
+        return $idiomaNormalizado;
+    }
+
+    /**
+     * Normaliza o título específico da página.
+     *
+     * @param  Htmlable|Stringable|string|null  $titulo  Conteúdo recebido.
+     * @return string|null Título normalizado ou nulo.
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private function normalizarTitulo(
+        Htmlable|Stringable|string|null $titulo,
+    ): ?string {
+        if ($titulo === null) {
+            return null;
+        }
+
+        $conteudo =
+            $titulo instanceof Htmlable
+            ? $titulo->toHtml()
+            : (string) $titulo;
+
+        $tituloSemHtml = strip_tags(
+            html_entity_decode(
+                $conteudo,
+                ENT_QUOTES | ENT_HTML5,
+                'UTF-8',
+            ),
+        );
+
+        $tituloNormalizado = preg_replace(
+            '/\s+/u',
+            ' ',
+            trim(
+                $tituloSemHtml,
+            ),
+        );
+
+        if (
+            ! is_string($tituloNormalizado)
+            || $tituloNormalizado === ''
+        ) {
+            return null;
+        }
+
+        return $tituloNormalizado;
     }
 }
