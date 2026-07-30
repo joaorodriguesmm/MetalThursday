@@ -8,7 +8,7 @@
     App\Http\Controllers\Musica\ControladorBanda.
 
     @since 1.0.0
-    @version 3.0.0
+    @version 4.0.0
 --}}
 
 <x-layout-aplicacao>
@@ -110,7 +110,7 @@
                             </th>
 
                             <th scope="col">
-                                País
+                                Origem geográfica
                             </th>
 
                             <th scope="col">
@@ -135,8 +135,8 @@
 
                                 <td>
                                     {{
-                                        $banda->pais?->nome
-                                        ?? 'País indisponível'
+                                        $banda->origemGeografica?->nome
+                                        ?? 'Origem geográfica indisponível'
                                     }}
                                 </td>
 
@@ -190,34 +190,30 @@
                                     @endcan
 
                                     @can('delete', $banda)
-                                        <form
-                                            class="d-inline"
-                                            method="POST"
-                                            action="{{
+                                        <button
+                                            class="btn btn-sm btn-danger"
+                                            type="button"
+                                            data-tipo-interacao="eliminar"
+                                            data-endereco="{{
                                                 route(
                                                     'bandas.eliminar',
                                                     $banda,
                                                 )
                                             }}"
-                                            onsubmit="return confirm(
-                                                'Tens a certeza de que pretendes eliminar esta banda?'
-                                            );"
+                                            data-seletor-elemento-removivel="#banda-{{
+                                                $banda->getKey()
+                                            }}"
+                                            data-mensagem-confirmacao="Tens a certeza de que pretendes eliminar esta banda?"
+                                            data-mensagem-sucesso="Banda eliminada com sucesso."
+                                            data-mensagem-erro="Não foi possível eliminar a banda."
+                                            aria-label="Eliminar {{ $banda->nome }}"
+                                            title="Eliminar"
                                         >
-                                            @csrf
-                                            @method('DELETE')
-
-                                            <button
-                                                class="btn btn-sm btn-danger"
-                                                type="submit"
-                                                aria-label="Eliminar {{ $banda->nome }}"
-                                                title="Eliminar"
-                                            >
-                                                <i
-                                                    class="bi bi-trash"
-                                                    aria-hidden="true"
-                                                ></i>
-                                            </button>
-                                        </form>
+                                            <i
+                                                class="bi bi-trash"
+                                                aria-hidden="true"
+                                            ></i>
+                                        </button>
                                     @endcan
                                 </td>
                             </tr>

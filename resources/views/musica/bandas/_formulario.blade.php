@@ -5,7 +5,7 @@
     pelo controlador responsável pelas bandas.
 
     @since 1.0.0
-    @version 3.0.0
+    @version 4.0.0
 --}}
 
 <form
@@ -42,7 +42,7 @@
             name="nome"
             value="{{ $nomeBanda }}"
             placeholder="Nome da banda"
-            maxlength="255"
+            maxlength="{{ App\Models\Musica\Banda::COMPRIMENTO_MAXIMO_NOME }}"
             autocomplete="organization"
             aria-describedby="erro-nome-banda"
             required
@@ -66,9 +66,9 @@
     <div class="grupo-campo-formulario mb-3">
         <label
             class="form-label"
-            for="pais-banda"
+            for="origem-geografica-banda"
         >
-            País
+            Origem geográfica
 
             <span
                 class="text-danger"
@@ -79,39 +79,42 @@
         </label>
 
         <select
-            id="pais-banda"
-            class="form-select tom-select-unico @error('pais_id') is-invalid @enderror"
-            name="pais_id"
-            placeholder="Seleciona um país"
-            aria-describedby="erro-pais-banda"
+            id="origem-geografica-banda"
+            class="form-select tom-select-unico @error('origem_geografica_id') is-invalid @enderror"
+            name="origem_geografica_id"
+            placeholder="Seleciona uma origem geográfica"
+            aria-describedby="erro-origem-geografica-banda"
             required
-            @error('pais_id')
+            @error('origem_geografica_id')
                 aria-invalid="true"
             @enderror
         >
             <option value="">
-                Seleciona um país
+                Seleciona uma origem geográfica
             </option>
 
-            @foreach ($paises as $pais)
+            @foreach (
+                $origensGeograficas
+                as $origemGeografica
+            )
                 <option
-                    value="{{ $pais->getKey() }}"
+                    value="{{ $origemGeografica->getKey() }}"
                     @selected(
-                        $identificadorPaisSelecionado
-                        === (string) $pais->getKey()
+                        $identificadorOrigemGeograficaSelecionada
+                        === (string) $origemGeografica->getKey()
                     )
                 >
-                    {{ $pais->nome }}
+                    {{ $origemGeografica->nome }}
                 </option>
             @endforeach
         </select>
 
         <div
-            id="erro-pais-banda"
-            class="invalid-feedback @error('pais_id') d-block @enderror"
+            id="erro-origem-geografica-banda"
+            class="invalid-feedback @error('origem_geografica_id') d-block @enderror"
             aria-live="polite"
         >
-            @error('pais_id')
+            @error('origem_geografica_id')
                 {{ $message }}
             @enderror
         </div>
