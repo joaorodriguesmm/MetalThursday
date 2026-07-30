@@ -4,23 +4,93 @@ declare(strict_types=1);
 
 namespace App\View\Components\Notificacoes;
 
+use App\Models\Notificacoes\NotificacaoPersistida;
+use Carbon\CarbonInterface;
 use Illuminate\Contracts\View\View;
-use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Support\Str;
 use Illuminate\View\Component;
 use LogicException;
 
 /**
- * Prepara uma notificação para apresentação.
+ * Prepara uma notificação persistida para apresentação.
  *
- * O componente normaliza o conteúdo persistido no campo de dados e impede
- * que classes CSS ou ligações inválidas sejam introduzidas na apresentação.
+ * O componente normaliza o conteúdo persistido e impede que classes CSS,
+ * identificadores ou ligações inválidas sejam introduzidos na vista.
  *
  * @since 3.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 final class ItemNotificacao extends Component
 {
+    /**
+     * Ícone utilizado quando o valor persistido é inválido.
+     *
+     * @var string
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private const ICONE_PREDEFINIDO =
+        'bi-info-circle';
+
+    /**
+     * Cor utilizada quando o valor persistido é inválido.
+     *
+     * @var string
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private const COR_PREDEFINIDA =
+        'text-info';
+
+    /**
+     * Título utilizado quando o valor persistido é inválido.
+     *
+     * @var string
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private const TITULO_PREDEFINIDO =
+        'Nova notificação';
+
+    /**
+     * Mensagem utilizada quando o valor persistido é inválido.
+     *
+     * @var string
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private const MENSAGEM_PREDEFINIDA =
+        'Tens uma nova notificação.';
+
+    /**
+     * Classes de cor permitidas na apresentação.
+     *
+     * @var list<string>
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private const CORES_PERMITIDAS = [
+        'text-primary',
+        'text-secondary',
+        'text-success',
+        'text-danger',
+        'text-warning',
+        'text-info',
+        'text-light',
+        'text-muted',
+    ];
+
     /**
      * Dados preparados para apresentação.
      *
@@ -32,52 +102,52 @@ final class ItemNotificacao extends Component
      *     titulo: string,
      *     mensagem: string,
      *     tempoRelativo: string,
-     *     ligacao: string|null
+     *     dataCriacao: string|null,
+     *     ligacao: string|null,
+     *     enderecoMarcarComoLida: string|null
      * }
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public readonly array $dados;
 
     /**
      * Cria uma nova instância do componente.
      *
-     * @param  DatabaseNotification  $notificacao  Notificação apresentada.
+     * @param  NotificacaoPersistida  $notificacao  Notificação apresentada.
      *
-     * @throws LogicException Quando a notificação não possui identificador.
+     * @throws LogicException Quando a notificação não está persistida ou não
+     *                        possui um identificador UUID válido.
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function __construct(
-        DatabaseNotification $notificacao,
+        NotificacaoPersistida $notificacao,
     ) {
         $identificador =
-            $notificacao->getKey();
-
-        if (
-            ! is_string($identificador)
-            || trim($identificador) === ''
-        ) {
-            throw new LogicException(
-                'A notificação não possui um identificador válido.',
+            $this->obterIdentificadorNotificacao(
+                $notificacao,
             );
-        }
 
         $conteudo =
             is_array($notificacao->data)
             ? $notificacao->data
             : [];
 
-        $this->dados = [
-            'identificador' => trim(
-                $identificador,
-            ),
+        $lida =
+            $notificacao->read_at !== null;
 
-            'lida' => $notificacao->read_at !== null,
+        $dataCriacao =
+            $notificacao->created_at;
+
+        $this->dados = [
+            'identificador' => $identificador,
+
+            'lida' => $lida,
 
             'icone' => $this->normalizarIcone(
                 $conteudo['icone']
@@ -93,38 +163,94 @@ final class ItemNotificacao extends Component
                 $conteudo['titulo']
                     ?? null,
             )
-                ?? 'Nova notificação',
+                ?? self::TITULO_PREDEFINIDO,
 
             'mensagem' => $this->normalizarTexto(
                 $conteudo['mensagem']
                     ?? null,
             )
-                ?? 'Tens uma nova notificação.',
+                ?? self::MENSAGEM_PREDEFINIDA,
 
-            'tempoRelativo' => $notificacao->created_at?->diffForHumans()
-                ?? 'Data indisponível',
+            'tempoRelativo' => $dataCriacao instanceof CarbonInterface
+                ? $dataCriacao->diffForHumans()
+                : 'Data indisponível',
 
-            'ligacao' => $this->normalizarLigacao(
+            'dataCriacao' => $dataCriacao instanceof CarbonInterface
+                ? $dataCriacao->toAtomString()
+                : null,
+
+            'ligacao' => $this->normalizarLigacaoInterna(
                 $conteudo['ligacao']
                     ?? null,
             ),
+
+            'enderecoMarcarComoLida' => $lida
+                ? null
+                : route(
+                    'notificacoes.marcar-como-lida',
+                    [
+                        'identificadorNotificacao' => $identificador,
+                    ],
+                ),
         ];
     }
 
     /**
-     * Obtém a view do componente.
+     * Obtém a vista do componente.
      *
-     * @return View View da notificação.
+     * @return View Vista da notificação.
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function render(): View
     {
         return view(
             'components.notificacoes.item-notificacao',
         );
+    }
+
+    /**
+     * Obtém e valida o identificador persistido da notificação.
+     *
+     * @param  NotificacaoPersistida  $notificacao  Notificação recebida.
+     * @return string Identificador UUID normalizado.
+     *
+     * @throws LogicException Quando a notificação não está persistida ou não
+     *                        possui um identificador UUID válido.
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private function obterIdentificadorNotificacao(
+        NotificacaoPersistida $notificacao,
+    ): string {
+        $identificador =
+            $notificacao->getKey();
+
+        if (
+            ! $notificacao->exists
+            || ! is_string($identificador)
+        ) {
+            throw new LogicException(
+                'A notificação apresentada deve estar persistida.',
+            );
+        }
+
+        $identificadorNormalizado =
+            trim(
+                $identificador,
+            );
+
+        if (! Str::isUuid($identificadorNormalizado)) {
+            throw new LogicException(
+                'A notificação não possui um identificador UUID válido.',
+            );
+        }
+
+        return $identificadorNormalizado;
     }
 
     /**
@@ -135,7 +261,7 @@ final class ItemNotificacao extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function normalizarTexto(
         mixed $valor,
@@ -145,13 +271,22 @@ final class ItemNotificacao extends Component
         }
 
         $texto =
-            trim(
-                $valor,
+            preg_replace(
+                '/\s+/u',
+                ' ',
+                trim(
+                    $valor,
+                ),
             );
 
-        return $texto !== ''
-            ? $texto
-            : null;
+        if (
+            ! is_string($texto)
+            || $texto === ''
+        ) {
+            return null;
+        }
+
+        return $texto;
     }
 
     /**
@@ -162,7 +297,7 @@ final class ItemNotificacao extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function normalizarIcone(
         mixed $valor,
@@ -175,11 +310,11 @@ final class ItemNotificacao extends Component
         if (
             $icone === null
             || preg_match(
-                '/^bi-[a-z0-9-]+$/',
+                '/^bi-[a-z0-9]+(?:-[a-z0-9]+)*$/',
                 $icone,
             ) !== 1
         ) {
-            return 'bi-info-circle';
+            return self::ICONE_PREDEFINIDO;
         }
 
         return $icone;
@@ -193,7 +328,7 @@ final class ItemNotificacao extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function normalizarCor(
         mixed $valor,
@@ -203,39 +338,35 @@ final class ItemNotificacao extends Component
                 $valor,
             );
 
-        $coresPermitidas = [
-            'text-primary',
-            'text-secondary',
-            'text-success',
-            'text-danger',
-            'text-warning',
-            'text-info',
-            'text-light',
-            'text-muted',
-        ];
+        if (
+            $cor === null
+            || ! in_array(
+                $cor,
+                self::CORES_PERMITIDAS,
+                true,
+            )
+        ) {
+            return self::COR_PREDEFINIDA;
+        }
 
-        return in_array(
-            $cor,
-            $coresPermitidas,
-            true,
-        )
-            ? $cor
-            : 'text-info';
+        return $cor;
     }
 
     /**
-     * Normaliza uma ligação guardada na notificação.
+     * Normaliza uma ligação interna guardada na notificação.
      *
-     * São permitidas ligações internas e endereços HTTP ou HTTPS.
+     * São aceites caminhos internos e endereços HTTP ou HTTPS pertencentes
+     * ao domínio configurado para a aplicação. Os endereços absolutos válidos
+     * são convertidos para caminhos internos antes de chegarem à vista.
      *
      * @param  mixed  $valor  Ligação recebida.
-     * @return string|null Ligação segura.
+     * @return string|null Ligação interna segura.
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    private function normalizarLigacao(
+    private function normalizarLigacaoInterna(
         mixed $valor,
     ): ?string {
         $ligacao =
@@ -243,38 +374,123 @@ final class ItemNotificacao extends Component
                 $valor,
             );
 
-        if ($ligacao === null) {
-            return null;
-        }
-
-        if (str_starts_with($ligacao, '/')) {
-            return $ligacao;
-        }
-
         if (
-            filter_var(
+            $ligacao === null
+            || preg_match(
+                '/[\x00-\x1F\x7F\\\\]/',
                 $ligacao,
-                FILTER_VALIDATE_URL,
-            ) === false
+            ) === 1
+            || preg_match(
+                '/\s/u',
+                $ligacao,
+            ) === 1
         ) {
             return null;
         }
 
-        $esquema =
+        if (str_starts_with($ligacao, '/')) {
+            return str_starts_with($ligacao, '//')
+                ? null
+                : $ligacao;
+        }
+
+        $componentes =
             parse_url(
                 $ligacao,
-                PHP_URL_SCHEME,
             );
 
-        return in_array(
-            $esquema,
-            [
-                'http',
-                'https',
-            ],
-            true,
-        )
-            ? $ligacao
-            : null;
+        if (
+            ! is_array($componentes)
+            || ! isset(
+                $componentes['scheme'],
+                $componentes['host'],
+            )
+            || isset(
+                $componentes['user'],
+                $componentes['pass'],
+            )
+            || ! in_array(
+                mb_strtolower(
+                    (string) $componentes['scheme'],
+                ),
+                [
+                    'http',
+                    'https',
+                ],
+                true,
+            )
+        ) {
+            return null;
+        }
+
+        $hostAplicacao =
+            $this->obterHostAplicacao();
+
+        if (
+            $hostAplicacao === null
+            || mb_strtolower(
+                (string) $componentes['host'],
+            ) !== $hostAplicacao
+        ) {
+            return null;
+        }
+
+        $caminho =
+            '/'.ltrim(
+                (string) ($componentes['path'] ?? ''),
+                '/',
+            );
+
+        $consulta =
+            isset($componentes['query'])
+            ? '?'.$componentes['query']
+            : '';
+
+        $fragmento =
+            isset($componentes['fragment'])
+            ? '#'.$componentes['fragment']
+            : '';
+
+        return $caminho.$consulta.$fragmento;
+    }
+
+    /**
+     * Obtém o domínio configurado para a aplicação.
+     *
+     * @return string|null Domínio normalizado ou nulo.
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    private function obterHostAplicacao(): ?string
+    {
+        $enderecoAplicacao =
+            config(
+                'app.url',
+            );
+
+        if (! is_string($enderecoAplicacao)) {
+            return null;
+        }
+
+        $host =
+            parse_url(
+                trim(
+                    $enderecoAplicacao,
+                ),
+                PHP_URL_HOST,
+            );
+
+        if (
+            ! is_string($host)
+            || $host === ''
+        ) {
+            return null;
+        }
+
+        return mb_strtolower(
+            $host,
+        );
     }
 }

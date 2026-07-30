@@ -1,11 +1,11 @@
 {{--
     Apresenta uma notificação individual.
 
-    Todos os valores são preparados pela classe
-    App\View\Components\Notificacoes\ItemNotificacao.
+    Todos os valores e endereços utilizados na apresentação são preparados
+    pela classe App\View\Components\Notificacoes\ItemNotificacao.
 
     @since 3.0.0
-    @version 1.0.0
+    @version 2.0.0
 --}}
 
 <article
@@ -40,29 +40,33 @@
                     {{ $dados['mensagem'] }}
                 </p>
 
-                <small class="text-muted">
-                    {{ $dados['tempoRelativo'] }}
-                </small>
+                @if ($dados['dataCriacao'] !== null)
+                    <time
+                        class="small text-muted"
+                        datetime="{{ $dados['dataCriacao'] }}"
+                    >
+                        {{ $dados['tempoRelativo'] }}
+                    </time>
+                @else
+                    <small class="text-muted">
+                        {{ $dados['tempoRelativo'] }}
+                    </small>
+                @endif
             </div>
         </div>
 
         <div class="d-flex align-items-center gap-2">
-            @if (! $dados['lida'])
+            @if ($dados['enderecoMarcarComoLida'] !== null)
                 <form
                     method="POST"
-                    action="{{
-                        route(
-                            'notificacoes.marcar-como-lida',
-                            $dados['identificador'],
-                        )
-                    }}"
+                    action="{{ $dados['enderecoMarcarComoLida'] }}"
                 >
                     @csrf
 
                     <button
                         class="btn btn-sm btn-outline-success"
                         type="submit"
-                        aria-label="Marcar como lida"
+                        aria-label="Marcar a notificação como lida"
                         title="Marcar como lida"
                     >
                         <i
