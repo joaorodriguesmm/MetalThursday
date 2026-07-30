@@ -8,7 +8,7 @@
     App\Http\Controllers\Musica\ControladorGenero.
 
     @since 1.0.0
-    @version 3.0.0
+    @version 4.0.0
 --}}
 
 <x-layout-aplicacao>
@@ -182,34 +182,30 @@
                                     @endcan
 
                                     @can('delete', $genero)
-                                        <form
-                                            class="d-inline"
-                                            method="POST"
-                                            action="{{
+                                        <button
+                                            class="btn btn-sm btn-danger"
+                                            type="button"
+                                            data-tipo-interacao="eliminar"
+                                            data-endereco="{{
                                                 route(
                                                     'generos.eliminar',
                                                     $genero,
                                                 )
                                             }}"
-                                            onsubmit="return confirm(
-                                                'Tens a certeza de que pretendes eliminar este género?'
-                                            );"
+                                            data-seletor-elemento-removivel="#genero-{{
+                                                $genero->getKey()
+                                            }}"
+                                            data-mensagem-confirmacao="Tens a certeza de que pretendes eliminar este género?"
+                                            data-mensagem-sucesso="Género eliminado com sucesso."
+                                            data-mensagem-erro="Não foi possível eliminar o género."
+                                            aria-label="Eliminar {{ $genero->nome }}"
+                                            title="Eliminar"
                                         >
-                                            @csrf
-                                            @method('DELETE')
-
-                                            <button
-                                                class="btn btn-sm btn-danger"
-                                                type="submit"
-                                                aria-label="Eliminar {{ $genero->nome }}"
-                                                title="Eliminar"
-                                            >
-                                                <i
-                                                    class="bi bi-trash"
-                                                    aria-hidden="true"
-                                                ></i>
-                                            </button>
-                                        </form>
+                                            <i
+                                                class="bi bi-trash"
+                                                aria-hidden="true"
+                                            ></i>
+                                        </button>
                                     @endcan
                                 </td>
                             </tr>

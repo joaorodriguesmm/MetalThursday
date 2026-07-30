@@ -5,7 +5,7 @@
     são preparados pelo App\Http\Controllers\Musica\ControladorGenero.
 
     @since 1.0.0
-    @version 3.0.0
+    @version 4.0.0
 --}}
 
 <x-layout-aplicacao>
@@ -68,7 +68,7 @@
                             </th>
 
                             <th scope="col">
-                                País
+                                Origem geográfica
                             </th>
 
                             <th scope="col">
@@ -94,7 +94,11 @@
                                 </th>
 
                                 <td>
-                                    {{ $bandaApresentacao['nomePais'] }}
+                                    {{
+                                        $bandaApresentacao[
+                                            'nomeOrigemGeografica'
+                                        ]
+                                    }}
                                 </td>
 
                                 <td>

@@ -5,7 +5,7 @@
     pelo controlador responsável pelos géneros.
 
     @since 1.0.0
-    @version 3.0.0
+    @version 4.0.0
 --}}
 
 <form
@@ -42,7 +42,7 @@
             name="nome"
             value="{{ $nomeGenero }}"
             placeholder="Nome do género"
-            maxlength="255"
+            maxlength="{{ App\Models\Musica\Genero::COMPRIMENTO_MAXIMO_NOME }}"
             autocomplete="off"
             aria-describedby="erro-nome-genero"
             required
