@@ -6,21 +6,25 @@
     App\View\Components\MetalThursday\ItemSeccaoFormulario.
 
     @since 1.0.0
-    @version 3.0.0
+    @version 4.0.0
 --}}
 
 <section
     {{
-        $attributes->class([
-            'item-seccao',
-            'border',
-            'rounded',
-            'p-3',
-            'mb-3',
-            'bg-light',
-            'bg-opacity-10',
-            'position-relative',
-        ])
+        $attributes
+            ->except([
+                'data-indice-seccao',
+            ])
+            ->class([
+                'item-seccao',
+                'border',
+                'rounded',
+                'p-3',
+                'mb-3',
+                'bg-light',
+                'bg-opacity-10',
+                'position-relative',
+            ])
     }}
     data-indice-seccao="{{ $indice }}"
 >
@@ -74,8 +78,8 @@
                 @foreach ($tiposSeccao as $tipoSeccao)
                     <option
                         value="{{ $tipoSeccao->getKey() }}"
-                        data-tem-detalhes="{{
-                            $tipoSeccao->tem_detalhes
+                        data-exige-detalhes="{{
+                            $tipoSeccao->exige_detalhes
                                 ? 'true'
                                 : 'false'
                         }}"
@@ -93,6 +97,7 @@
                 id="erro-{{ $identificadores['tipoSeccao'] }}"
                 class="invalid-feedback @error($chavesErro['tipoSeccao']) d-block @enderror"
                 aria-live="polite"
+                aria-atomic="true"
             >
                 @error($chavesErro['tipoSeccao'])
                     {{ $message }}
@@ -103,7 +108,7 @@
 
     <div
         class="row linha-detalhes-seccao linha-detalhes-seccao-principal"
-        @if (! $temDetalhes)
+        @if (! $exigeDetalhes)
             hidden
         @endif
     >
@@ -139,7 +144,7 @@
                     class="form-select tom-select-unico tom-select-bandas @error($chavesErro['banda']) is-invalid @enderror"
                     name="{{ $nomeBaseCampo }}[banda_id]"
                     aria-describedby="erro-{{ $identificadores['banda'] }}"
-                    @if ($temDetalhes)
+                    @if ($exigeDetalhes)
                         required
                     @endif
                     @error($chavesErro['banda'])
@@ -187,6 +192,7 @@
                 id="erro-{{ $identificadores['banda'] }}"
                 class="invalid-feedback @error($chavesErro['banda']) d-block @enderror"
                 aria-live="polite"
+                aria-atomic="true"
             >
                 @error($chavesErro['banda'])
                     {{ $message }}
@@ -207,7 +213,7 @@
                     <span
                         class="text-danger indicador-titulo-obrigatorio"
                         aria-hidden="true"
-                        @if (! $temDetalhes)
+                        @if (! $exigeDetalhes)
                             hidden
                         @endif
                     >
@@ -231,9 +237,9 @@
                 type="text"
                 name="{{ $nomeBaseCampo }}[titulo]"
                 value="{{ $valores['titulo'] }}"
-                maxlength="255"
+                maxlength="{{ $comprimentoMaximoTitulo }}"
                 aria-describedby="erro-{{ $identificadores['titulo'] }}"
-                @if ($temDetalhes)
+                @if ($exigeDetalhes)
                     required
                 @endif
                 @error($chavesErro['titulo'])
@@ -245,6 +251,7 @@
                 id="erro-{{ $identificadores['titulo'] }}"
                 class="invalid-feedback @error($chavesErro['titulo']) d-block @enderror"
                 aria-live="polite"
+                aria-atomic="true"
             >
                 @error($chavesErro['titulo'])
                     {{ $message }}
@@ -255,7 +262,7 @@
 
     <div
         class="row linha-detalhes-seccao linha-detalhes-seccao-incorporacao"
-        @if (! $temDetalhes)
+        @if (! $exigeDetalhes)
             hidden
         @endif
     >
@@ -293,11 +300,11 @@
                     name="{{ $nomeBaseCampo }}[ligacao]"
                     value="{{ $valores['ligacao'] }}"
                     placeholder="https://..."
-                    maxlength="2048"
+                    maxlength="{{ $comprimentoMaximoLigacao }}"
                     inputmode="url"
                     autocomplete="url"
                     aria-describedby="erro-{{ $identificadores['ligacao'] }}"
-                    @if ($temDetalhes)
+                    @if ($exigeDetalhes)
                         required
                     @endif
                     @error($chavesErro['ligacao'])
@@ -320,6 +327,7 @@
                 id="erro-{{ $identificadores['ligacao'] }}"
                 class="invalid-feedback @error($chavesErro['ligacao']) d-block @enderror"
                 aria-live="polite"
+                aria-atomic="true"
             >
                 @error($chavesErro['ligacao'])
                     {{ $message }}
@@ -338,6 +346,7 @@
                 id="erro-{{ $identificadores['tipoIncorporacao'] }}"
                 class="invalid-feedback @error($chavesErro['tipoIncorporacao']) d-block @enderror"
                 aria-live="polite"
+                aria-atomic="true"
             >
                 @error($chavesErro['tipoIncorporacao'])
                     {{ $message }}
@@ -353,6 +362,7 @@
                     id="{{ $identificadores['estadoTesteIncorporacao'] }}"
                     class="estado-teste-incorporacao small mb-2"
                     aria-live="polite"
+                    aria-atomic="true"
                 ></div>
 
                 <div
@@ -485,9 +495,10 @@
                 value="{{ $valores['ano'] }}"
                 min="{{ $anoMinimo }}"
                 max="{{ $anoMaximo }}"
+                step="1"
                 inputmode="numeric"
                 aria-describedby="erro-{{ $identificadores['ano'] }}"
-                @if ($temDetalhes)
+                @if ($exigeDetalhes)
                     required
                 @endif
                 @error($chavesErro['ano'])
@@ -499,6 +510,7 @@
                 id="erro-{{ $identificadores['ano'] }}"
                 class="invalid-feedback @error($chavesErro['ano']) d-block @enderror"
                 aria-live="polite"
+                aria-atomic="true"
             >
                 @error($chavesErro['ano'])
                     {{ $message }}
@@ -538,6 +550,7 @@
             class="form-control @error($chavesErro['descricao']) is-invalid @enderror"
             name="{{ $nomeBaseCampo }}[descricao]"
             rows="3"
+            maxlength="{{ $comprimentoMaximoDescricao }}"
             aria-describedby="erro-{{ $identificadores['descricao'] }}"
             required
             @error($chavesErro['descricao'])
@@ -549,6 +562,7 @@
             id="erro-{{ $identificadores['descricao'] }}"
             class="invalid-feedback @error($chavesErro['descricao']) d-block @enderror"
             aria-live="polite"
+            aria-atomic="true"
         >
             @error($chavesErro['descricao'])
                 {{ $message }}

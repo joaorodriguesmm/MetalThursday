@@ -18,26 +18,15 @@ use LogicException;
  * Prepara um item repetível do formulário de secções.
  *
  * O componente constrói os nomes e identificadores dos campos, recupera os
- * valores antigos do pedido, determina se o tipo selecionado possui detalhes
+ * valores antigos do pedido, determina se o tipo selecionado exige detalhes
  * e disponibiliza os valores canónicos dos tipos de incorporação.
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 4.0.0
  */
 final class ItemSeccaoFormulario extends Component
 {
-    /**
-     * Ano mínimo permitido para uma publicação musical.
-     *
-     * @var int
-     *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
-     */
-    private const ANO_MINIMO = 1900;
-
     /**
      * Índice utilizado nos nomes e identificadores dos campos.
      *
@@ -81,7 +70,7 @@ final class ItemSeccaoFormulario extends Component
      *
      * @version 1.0.0
      */
-    public readonly string $prefixoCampo;
+    private readonly string $prefixoCampo;
 
     /**
      * Nome base utilizado pelos campos HTML.
@@ -172,14 +161,14 @@ final class ItemSeccaoFormulario extends Component
     public readonly array $tiposIncorporacao;
 
     /**
-     * Indica se o tipo de secção selecionado possui detalhes musicais.
+     * Indica se o tipo de secção selecionado exige detalhes musicais.
      *
      *
-     * @since 3.0.0
+     * @since 4.0.0
      *
      * @version 1.0.0
      */
-    public readonly bool $temDetalhes;
+    public readonly bool $exigeDetalhes;
 
     /**
      * Ano mínimo permitido.
@@ -202,20 +191,52 @@ final class ItemSeccaoFormulario extends Component
     public readonly int $anoMaximo;
 
     /**
+     * Comprimento máximo permitido para o título.
+     *
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    public readonly int $comprimentoMaximoTitulo;
+
+    /**
+     * Comprimento máximo permitido para a ligação.
+     *
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    public readonly int $comprimentoMaximoLigacao;
+
+    /**
+     * Comprimento máximo permitido para a descrição.
+     *
+     *
+     * @since 4.0.0
+     *
+     * @version 1.0.0
+     */
+    public readonly int $comprimentoMaximoDescricao;
+
+    /**
      * Cria uma nova instância do componente.
      *
      * @param  Request  $pedido  Pedido HTTP atual.
      * @param  int|string  $indice  Índice do item.
      * @param  Collection<int, TipoSeccao>  $tiposSeccao  Tipos disponíveis.
      * @param  Collection<int, Banda>  $bandas  Bandas disponíveis.
-     * @param  SeccaoMetalThursday|array<string, mixed>|null  $seccao
-     *                                                                 Secção existente ou dados iniciais.
+     * @param  SeccaoMetalThursday|array<string, mixed>|null  $seccao  Secção
+     *                                                                 existente
+     *                                                                 ou dados
+     *                                                                 iniciais.
      *
      * @throws LogicException Quando o índice ou as coleções são inválidos.
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
     public function __construct(
         Request $pedido,
@@ -287,14 +308,15 @@ final class ItemSeccaoFormulario extends Component
             'descricao' => "{$this->prefixoCampo}.descricao",
         ];
 
-        $tipoIncorporacao = $this->normalizarTipoIncorporacao(
-            $this->obterValorCampo(
-                $pedido,
-                $seccao,
-                'tipo_incorporacao',
-                TipoIncorporacao::Ligacao->value,
-            ),
-        );
+        $tipoIncorporacao =
+            $this->normalizarTipoIncorporacao(
+                $this->obterValorCampo(
+                    $pedido,
+                    $seccao,
+                    'tipo_incorporacao',
+                    TipoIncorporacao::Ligacao->value,
+                ),
+            );
 
         $this->valores = [
             'identificador' => $this->normalizarTexto(
@@ -368,23 +390,36 @@ final class ItemSeccaoFormulario extends Component
             'ligacao' => TipoIncorporacao::Ligacao->value,
         ];
 
-        $this->temDetalhes = $this->tipoTemDetalhes(
-            $this->valores['tipoSeccao'],
-            $tiposSeccao,
-        );
+        $this->exigeDetalhes =
+            $this->tipoExigeDetalhes(
+                $this->valores['tipoSeccao'],
+                $tiposSeccao,
+            );
 
-        $this->anoMinimo = self::ANO_MINIMO;
-        $this->anoMaximo = (int) now()->year;
+        $this->anoMinimo =
+            SeccaoMetalThursday::ANO_MINIMO;
+
+        $this->anoMaximo =
+            SeccaoMetalThursday::ANO_MAXIMO;
+
+        $this->comprimentoMaximoTitulo =
+            SeccaoMetalThursday::COMPRIMENTO_MAXIMO_TITULO;
+
+        $this->comprimentoMaximoLigacao =
+            SeccaoMetalThursday::COMPRIMENTO_MAXIMO_LIGACAO;
+
+        $this->comprimentoMaximoDescricao =
+            SeccaoMetalThursday::COMPRIMENTO_MAXIMO_DESCRICAO;
     }
 
     /**
-     * Obtém a view do componente.
+     * Obtém a vista do componente.
      *
-     * @return View View do item de secção.
+     * @return View Vista do item de secção.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function render(): View
     {
@@ -397,8 +432,9 @@ final class ItemSeccaoFormulario extends Component
      * Obtém um valor antigo ou o valor existente na secção.
      *
      * @param  Request  $pedido  Pedido HTTP atual.
-     * @param  SeccaoMetalThursday|array<string, mixed>|null  $seccao
-     *                                                                 Secção ou dados iniciais.
+     * @param  SeccaoMetalThursday|array<string, mixed>|null  $seccao  Secção
+     *                                                                 ou dados
+     *                                                                 iniciais.
      * @param  string  $campo  Campo consultado.
      * @param  mixed  $valorPredefinido  Valor utilizado por omissão.
      * @return mixed Valor encontrado.
@@ -413,11 +449,12 @@ final class ItemSeccaoFormulario extends Component
         string $campo,
         mixed $valorPredefinido = null,
     ): mixed {
-        $valorModelo = data_get(
-            $seccao,
-            $campo,
-            $valorPredefinido,
-        );
+        $valorModelo =
+            data_get(
+                $seccao,
+                $campo,
+                $valorPredefinido,
+            );
 
         return $pedido->old(
             "{$this->prefixoCampo}.{$campo}",
@@ -443,9 +480,10 @@ final class ItemSeccaoFormulario extends Component
     private function normalizarIndice(
         int|string $indice,
     ): string {
-        $indiceNormalizado = trim(
-            (string) $indice,
-        );
+        $indiceNormalizado =
+            trim(
+                (string) $indice,
+            );
 
         if (
             $indiceNormalizado === ''
@@ -470,7 +508,7 @@ final class ItemSeccaoFormulario extends Component
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function normalizarTexto(
         mixed $valor,
@@ -483,6 +521,13 @@ final class ItemSeccaoFormulario extends Component
             return '';
         }
 
+        if (
+            is_float($valor)
+            && ! is_finite($valor)
+        ) {
+            return '';
+        }
+
         return trim(
             (string) $valor,
         );
@@ -491,16 +536,23 @@ final class ItemSeccaoFormulario extends Component
     /**
      * Normaliza o tipo de incorporação.
      *
+     * Aceita diretamente a enumeração devolvida pelo cast do modelo ou um
+     * valor textual recebido através dos dados antigos do pedido.
+     *
      * @param  mixed  $valor  Valor recebido.
      * @return string Valor canónico.
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function normalizarTipoIncorporacao(
         mixed $valor,
     ): string {
+        if ($valor instanceof TipoIncorporacao) {
+            return $valor->value;
+        }
+
         return (
             TipoIncorporacao::tentarCriar(
                 $valor,
@@ -510,17 +562,17 @@ final class ItemSeccaoFormulario extends Component
     }
 
     /**
-     * Determina se o tipo selecionado possui detalhes.
+     * Determina se o tipo selecionado exige detalhes musicais.
      *
      * @param  string  $identificadorTipo  Identificador selecionado.
      * @param  Collection<int, TipoSeccao>  $tiposSeccao  Tipos disponíveis.
-     * @return bool Verdadeiro quando o tipo possui detalhes.
+     * @return bool Verdadeiro quando o tipo exige detalhes musicais.
      *
-     * @since 3.0.0
+     * @since 4.0.0
      *
      * @version 1.0.0
      */
-    private function tipoTemDetalhes(
+    private function tipoExigeDetalhes(
         string $identificadorTipo,
         Collection $tiposSeccao,
     ): bool {
@@ -536,7 +588,7 @@ final class ItemSeccaoFormulario extends Component
                 continue;
             }
 
-            return (bool) $tipoSeccao->tem_detalhes;
+            return (bool) $tipoSeccao->exige_detalhes;
         }
 
         return false;
