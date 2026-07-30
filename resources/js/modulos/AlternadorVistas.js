@@ -1,11 +1,8 @@
 /**
- * Gere a alternância entre diferentes vistas de uma página.
- *
- * A chave `metalThursdayView` permanece temporariamente inalterada por poder
- * ser utilizada por outros módulos ainda não analisados.
+ * Gere a alternância entre as vistas completa e simplificada de uma página.
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 3.0.0
  */
 class AlternadorVistas {
     /**
@@ -18,14 +15,10 @@ class AlternadorVistas {
      *     Seletor CSS do campo que guarda a vista selecionada.
      * @param {string} opcoes.seletorFormulario
      *     Seletor CSS do formulário submetido após a alteração.
-     * @param {object} opcoes.vistas
-     *     Valores utilizados para identificar as vistas.
-     * @param {string} opcoes.vistas.completa
-     *     Valor correspondente à vista completa.
-     * @param {string} opcoes.vistas.simplificada
-     *     Valor correspondente à vista simplificada.
-     * @param {object} [opcoes.textosBotao]
-     *     Textos opcionais apresentados no botão.
+     * @param {object} opcoes.vistas Valores utilizados nas vistas.
+     * @param {string} opcoes.vistas.completa Valor da vista completa.
+     * @param {string} opcoes.vistas.simplificada Valor da vista simplificada.
+     * @param {object} [opcoes.textosBotao] Textos apresentados no botão.
      * @param {string} [opcoes.textosBotao.mostrarCompleta]
      *     Texto utilizado para mudar para a vista completa.
      * @param {string} [opcoes.textosBotao.mostrarSimplificada]
@@ -34,7 +27,7 @@ class AlternadorVistas {
      * @throws {TypeError} Quando a configuração é inválida.
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
     constructor({
         seletorBotao,
@@ -43,43 +36,44 @@ class AlternadorVistas {
         vistas,
         textosBotao = {},
     } = {}) {
-        this.validarVistas(vistas);
+        this.vistas =
+            this.normalizarVistas(
+                vistas,
+            );
 
-        this.botaoAlternar = this.obterElemento(
-            seletorBotao,
-            'O seletor do botão de alternância é obrigatório.',
-        );
+        this.textosBotao =
+            this.normalizarTextosBotao(
+                textosBotao,
+            );
 
-        this.campoVista = this.obterElemento(
-            seletorCampoVista,
-            'O seletor do campo da vista é obrigatório.',
-        );
+        this.botaoAlternar =
+            this.obterElemento(
+                seletorBotao,
+                HTMLButtonElement,
+                'O seletor do botão de alternância é obrigatório.',
+            );
 
-        this.formulario = this.obterElemento(
-            seletorFormulario,
-            'O seletor do formulário é obrigatório.',
-        );
+        this.campoVista =
+            this.obterElemento(
+                seletorCampoVista,
+                HTMLInputElement,
+                'O seletor do campo da vista é obrigatório.',
+            );
 
-        this.vistas = {
-            completa: vistas.completa,
-            simplificada: vistas.simplificada,
-        };
+        this.formulario =
+            this.obterElemento(
+                seletorFormulario,
+                HTMLFormElement,
+                'O seletor do formulário é obrigatório.',
+            );
 
-        this.textosBotao = {
-            mostrarCompleta:
-                textosBotao.mostrarCompleta
-                ?? 'Ver vista completa',
-
-            mostrarSimplificada:
-                textosBotao.mostrarSimplificada
-                ?? 'Ver vista simplificada',
-        };
-
-        this.chaveArmazenamento = 'metalThursdayView';
-        this.iniciado = false;
+        this.iniciado =
+            false;
 
         this.aoClicarBotao = (evento) => {
-            this.alternar(evento);
+            this.alternar(
+                evento,
+            );
         };
 
         if (this.estaAtivo()) {
@@ -90,13 +84,13 @@ class AlternadorVistas {
     /**
      * Verifica se os elementos obrigatórios estão disponíveis.
      *
-     * @returns {boolean}
+     * @returns {boolean} Verdadeiro quando o alternador pode funcionar.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     estaAtivo() {
-        return this.botaoAlternar instanceof HTMLElement
+        return this.botaoAlternar instanceof HTMLButtonElement
             && this.campoVista instanceof HTMLInputElement
             && this.formulario instanceof HTMLFormElement;
     }
@@ -104,12 +98,22 @@ class AlternadorVistas {
     /**
      * Inicia o alternador de vistas.
      *
+     * @returns {void}
+     *
+     * @throws {Error} Quando o campo contém uma vista desconhecida.
+     *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
     iniciar() {
         if (!this.estaAtivo() || this.iniciado) {
             return;
+        }
+
+        if (!this.eVistaValida(this.campoVista.value)) {
+            throw new Error(
+                'O formulário contém uma vista de MetalThursday inválida.',
+            );
         }
 
         this.botaoAlternar.addEventListener(
@@ -121,7 +125,8 @@ class AlternadorVistas {
             this.campoVista.value,
         );
 
-        this.iniciado = true;
+        this.iniciado =
+            true;
     }
 
     /**
@@ -129,8 +134,10 @@ class AlternadorVistas {
      *
      * @param {MouseEvent|null} evento Evento de clique.
      *
+     * @returns {void}
+     *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
     alternar(evento = null) {
         evento?.preventDefault();
@@ -139,26 +146,19 @@ class AlternadorVistas {
             return;
         }
 
-        const vistaAtual =
-            this.campoVista.value;
-
         const novaVista =
-            vistaAtual === this.vistas.completa
+            this.campoVista.value === this.vistas.completa
                 ? this.vistas.simplificada
                 : this.vistas.completa;
 
         this.campoVista.value =
             novaVista;
 
-        this.guardarPreferencia(
-            novaVista,
-        );
-
         this.atualizarTextoBotao(
             novaVista,
         );
 
-        this.submeterFormulario();
+        this.formulario.requestSubmit();
     }
 
     /**
@@ -168,11 +168,13 @@ class AlternadorVistas {
      *
      * @param {string} vistaAtual Valor da vista atual.
      *
+     * @returns {void}
+     *
      * @since 1.0.0
      * @version 2.0.0
      */
     atualizarTextoBotao(vistaAtual) {
-        if (!(this.botaoAlternar instanceof HTMLElement)) {
+        if (!(this.botaoAlternar instanceof HTMLButtonElement)) {
             return;
         }
 
@@ -183,114 +185,181 @@ class AlternadorVistas {
     }
 
     /**
-     * Guarda localmente a vista selecionada.
+     * Verifica se um valor corresponde a uma vista configurada.
      *
-     * Falhas de acesso ao armazenamento local não impedem a alteração da
-     * vista nem a submissão do formulário.
+     * @param {unknown} vista Valor recebido.
      *
-     * @param {string} vista Vista selecionada.
+     * @returns {boolean} Verdadeiro quando a vista é válida.
      *
-     * @since 2.0.0
+     * @since 3.0.0
      * @version 1.0.0
      */
-    guardarPreferencia(vista) {
-        try {
-            window.localStorage.setItem(
-                this.chaveArmazenamento,
-                vista,
-            );
-        } catch {
-            // O armazenamento local pode estar indisponível no navegador.
-        }
+    eVistaValida(vista) {
+        return vista === this.vistas.completa
+            || vista === this.vistas.simplificada;
     }
 
     /**
-     * Submete o formulário respeitando os eventos e a validação nativa.
+     * Normaliza os valores das vistas configuradas.
      *
-     * @since 2.0.0
-     * @version 1.0.0
-     */
-    submeterFormulario() {
-        if (!(this.formulario instanceof HTMLFormElement)) {
-            return;
-        }
-
-        if (
-            typeof this.formulario.requestSubmit
-            === 'function'
-        ) {
-            this.formulario.requestSubmit();
-
-            return;
-        }
-
-        this.formulario.submit();
-    }
-
-    /**
-     * Valida os valores das vistas configuradas.
+     * @param {unknown} vistas Configuração recebida.
      *
-     * @param {unknown} vistas Configuração a validar.
+     * @returns {{completa: string, simplificada: string}}
+     *     Vistas normalizadas.
      *
      * @throws {TypeError} Quando a configuração é inválida.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    validarVistas(vistas) {
+    normalizarVistas(vistas) {
         if (
             typeof vistas !== 'object'
             || vistas === null
             || Array.isArray(vistas)
             || typeof vistas.completa !== 'string'
-            || vistas.completa.trim() === ''
             || typeof vistas.simplificada !== 'string'
-            || vistas.simplificada.trim() === ''
-            || vistas.completa === vistas.simplificada
         ) {
             throw new TypeError(
-                'Os valores das vistas completa e simplificada são obrigatórios e devem ser diferentes.',
+                'As vistas completa e simplificada são obrigatórias.',
             );
         }
+
+        const completa =
+            vistas.completa.trim();
+
+        const simplificada =
+            vistas.simplificada.trim();
+
+        if (
+            completa === ''
+            || simplificada === ''
+            || completa === simplificada
+        ) {
+            throw new TypeError(
+                'As vistas completa e simplificada devem ser diferentes e não podem estar vazias.',
+            );
+        }
+
+        return Object.freeze({
+            completa,
+            simplificada,
+        });
+    }
+
+    /**
+     * Normaliza os textos apresentados no botão.
+     *
+     * @param {unknown} textos Textos recebidos.
+     *
+     * @returns {{
+     *     mostrarCompleta: string,
+     *     mostrarSimplificada: string
+     * }} Textos normalizados.
+     *
+     * @throws {TypeError} Quando os textos são inválidos.
+     *
+     * @since 3.0.0
+     * @version 1.0.0
+     */
+    normalizarTextosBotao(textos) {
+        if (
+            typeof textos !== 'object'
+            || textos === null
+            || Array.isArray(textos)
+        ) {
+            throw new TypeError(
+                'Os textos do botão devem ser apresentados num objeto.',
+            );
+        }
+
+        const mostrarCompleta =
+            textos.mostrarCompleta
+            ?? 'Ver vista completa';
+
+        const mostrarSimplificada =
+            textos.mostrarSimplificada
+            ?? 'Ver vista simplificada';
+
+        if (
+            typeof mostrarCompleta !== 'string'
+            || mostrarCompleta.trim() === ''
+            || typeof mostrarSimplificada !== 'string'
+            || mostrarSimplificada.trim() === ''
+        ) {
+            throw new TypeError(
+                'Os textos do botão de alternância não podem estar vazios.',
+            );
+        }
+
+        return Object.freeze({
+            mostrarCompleta:
+                mostrarCompleta.trim(),
+
+            mostrarSimplificada:
+                mostrarSimplificada.trim(),
+        });
     }
 
     /**
      * Obtém um elemento através de um seletor CSS.
      *
      * @param {unknown} seletor Seletor CSS.
-     * @param {string} mensagem Mensagem utilizada quando está vazio.
+     * @param {Function} tipoElemento Tipo de elemento esperado.
+     * @param {string} mensagem Mensagem utilizada quando o seletor está vazio.
      *
-     * @returns {Element|null}
+     * @returns {Element|null} Elemento encontrado ou nulo.
      *
-     * @throws {TypeError} Quando o seletor CSS é inválido.
+     * @throws {TypeError} Quando o seletor ou o elemento são inválidos.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     obterElemento(
         seletor,
+        tipoElemento,
         mensagem,
     ) {
         if (
             typeof seletor !== 'string'
             || seletor.trim() === ''
         ) {
-            throw new TypeError(mensagem);
+            throw new TypeError(
+                mensagem,
+            );
         }
 
+        const seletorNormalizado =
+            seletor.trim();
+
+        let elemento;
+
         try {
-            return document.querySelector(
-                seletor,
+            elemento = document.querySelector(
+                seletorNormalizado,
             );
         } catch {
             throw new TypeError(
-                `O seletor CSS "${seletor}" é inválido.`,
+                `O seletor CSS "${seletorNormalizado}" é inválido.`,
             );
         }
+
+        if (
+            elemento !== null
+            && !(elemento instanceof tipoElemento)
+        ) {
+            throw new TypeError(
+                `O elemento encontrado através de "${seletorNormalizado}" possui um tipo inválido.`,
+            );
+        }
+
+        return elemento;
     }
 
     /**
      * Remove os eventos associados ao alternador.
+     *
+     * @returns {void}
      *
      * @since 2.0.0
      * @version 1.0.0
@@ -305,7 +374,8 @@ class AlternadorVistas {
             this.aoClicarBotao,
         );
 
-        this.iniciado = false;
+        this.iniciado =
+            false;
     }
 }
 

@@ -10,7 +10,7 @@
 
 <x-layout-aplicacao>
     <x-slot name="titulo">
-        {{ $metalThursday->edicao->nome }}
+        {{ $metalThursday->edicao?->nome ?? 'MetalThursday' }}
 
         @if ($metalThursday->numero_semana_na_edicao !== null)
             — Semana {{ $metalThursday->numero_semana_na_edicao }}
@@ -20,7 +20,7 @@
     <x-slot name="cabecalho">
         <div>
             <h1 class="h4 mb-1 fw-bold">
-                {{ $metalThursday->edicao->nome }}
+                {{ $metalThursday->edicao?->nome ?? 'MetalThursday' }}
 
                 @if ($metalThursday->numero_semana_na_edicao !== null)
                     — Semana {{ $metalThursday->numero_semana_na_edicao }}

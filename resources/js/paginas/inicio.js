@@ -1,9 +1,8 @@
 import AlternadorVistas from '../modulos/AlternadorVistas';
 import GestorFiltrosDinamicos from '../modulos/GestorFiltrosDinamicos';
 import GestorModalAvaliacao from '../modulos/GestorModalAvaliacao';
+import InicializadorComentarios from '../modulos/InicializadorComentarios';
 import InicializadorTooltips from '../modulos/InicializadorTooltips';
-import TratadorFormularioAjax from '../modulos/TratadorFormularioAjax';
-import ValidadorFormulario from '../modulos/ValidadorFormulario';
 
 /**
  * Inicializa os comportamentos da página principal de MetalThursdays.
@@ -12,7 +11,7 @@ import ValidadorFormulario from '../modulos/ValidadorFormulario';
  * os tooltips e a publicação de comentários.
  *
  * @since 1.0.0
- * @version 3.0.0
+ * @version 3.1.0
  */
 
 /**
@@ -120,88 +119,6 @@ function obterConfiguracaoListagem() {
 }
 
 /**
- * Inicializa os formulários de comentário existentes num contentor.
- *
- * Após uma publicação bem-sucedida, a página é recarregada para apresentar
- * o comentário através dos componentes Blade e das autorizações calculadas
- * pelo servidor.
- *
- * @param {Document|Element} contentor Contentor de pesquisa.
- *
- * @returns {void}
- *
- * @since 1.0.0
- * @version 3.0.0
- */
-function inicializarFormulariosComentario(
-    contentor,
-) {
-    contentor.querySelectorAll(
-        [
-            'form.formulario-comentario',
-            'form.formulario-resposta-comentario',
-        ].join(', '),
-    ).forEach((formulario) => {
-        if (
-            !(formulario instanceof HTMLFormElement)
-            || formulario.dataset
-                .formularioComentarioInicializado
-                === 'true'
-        ) {
-            return;
-        }
-
-        if (
-            formulario.id.trim() === ''
-            || formulario.action.trim() === ''
-        ) {
-            throw new Error(
-                'Cada formulário de comentário deve possuir identificador e endereço de submissão.',
-            );
-        }
-
-        formulario.dataset
-            .formularioComentarioInicializado =
-                'true';
-
-        const tratadorAjax =
-            new TratadorFormularioAjax(
-                formulario.id,
-                formulario.action,
-                () => {
-                    window.location.reload();
-                },
-            );
-
-        new ValidadorFormulario(
-            formulario,
-            {
-                regras: {
-                    conteudo: [
-                        'obrigatorio',
-                    ],
-                },
-
-                mensagens: {
-                    conteudo: {
-                        obrigatorio:
-                            'Por favor, insere o texto do comentário.',
-                    },
-                },
-
-                aoSucesso: () => {
-                    /*
-                     * A promessa não é devolvida porque o
-                     * ValidadorFormulario exige um callback síncrono.
-                     */
-                    tratadorAjax.submeter();
-                },
-            },
-        );
-    });
-}
-
-/**
  * Configura a submissão automática dos campos de filtro e ordenação.
  *
  * @returns {void}
@@ -240,16 +157,7 @@ function configurarSubmissaoAutomatica() {
         campo.addEventListener(
             'change',
             () => {
-                if (
-                    typeof formulario.requestSubmit
-                    === 'function'
-                ) {
-                    formulario.requestSubmit();
-
-                    return;
-                }
-
-                formulario.submit();
+                formulario.requestSubmit();
             },
         );
     });
@@ -261,9 +169,9 @@ function configurarSubmissaoAutomatica() {
  * @returns {void}
  *
  * @since 1.0.0
- * @version 3.0.0
+ * @version 3.1.0
  */
-function inicializarPaginaInicio() {
+function iniciarPaginaInicio() {
     const configuracao =
         obterConfiguracaoListagem();
 
@@ -300,19 +208,17 @@ function inicializarPaginaInicio() {
             configuracao.vistas,
     });
 
-    inicializarFormulariosComentario(
-        document,
-    );
+    new InicializadorComentarios();
 }
 
 if (document.readyState === 'loading') {
     document.addEventListener(
         'DOMContentLoaded',
-        inicializarPaginaInicio,
+        iniciarPaginaInicio,
         {
             once: true,
         },
     );
 } else {
-    inicializarPaginaInicio();
+    iniciarPaginaInicio();
 }
