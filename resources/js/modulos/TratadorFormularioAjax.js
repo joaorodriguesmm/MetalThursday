@@ -6,16 +6,14 @@ import Swal from 'sweetalert2';
  * Gere a submissão assíncrona de formulários.
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 3.0.0
  */
 class TratadorFormularioAjax {
     /**
      * Cria um tratador de formulário assíncrono.
      *
      * @param {string} idFormulario Identificador do formulário.
-class TratadorFormularioAjax {
-    /**
-     * Cria um trat     * @param {string} url Endereço utilizado na submissão.
+     * @param {string} url Endereço utilizado na submissão.
      * @param {((dados: unknown) => void|Promise<void>)|null} aoSucesso
      *     Função executada após uma submissão bem-sucedida.
      *
@@ -412,7 +410,7 @@ class TratadorFormularioAjax {
      * @returns {HTMLElement|null}
      *
      * @since 2.0.0
-     * @version 1.0.0
+     * @version 2.0.0
      */
     obterElementoFeedback(
         campo,
@@ -421,10 +419,7 @@ class TratadorFormularioAjax {
             campo.closest(
                 [
                     '[data-grupo-campo]',
-                    '.form-field-group',
-                    '.form-group',
-                    '.mb-3',
-                    '.flex-grow-1',
+                    '.grupo-campo-formulario',
                 ].join(
                     ', ',
                 ),

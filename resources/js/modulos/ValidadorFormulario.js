@@ -6,7 +6,7 @@
  * servidor.
  *
  * @since 1.0.0
- * @version 2.0.0
+ * @version 3.0.0
  */
 class ValidadorFormulario {
     /**
@@ -655,7 +655,7 @@ class ValidadorFormulario {
      * @return {void}
      *
      * @since 1.0.0
-     * @version 2.0.0
+     * @version 3.0.0
      */
     apresentarErros(
         campos,
@@ -686,7 +686,7 @@ class ValidadorFormulario {
                 campos
                     .map(
                         (campo) => campo.closest(
-                            '.form-field-group',
+                            '.grupo-campo-formulario',
                         ),
                     )
                     .filter(
