@@ -21,7 +21,7 @@ use LogicException;
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 3.1.0
  */
 final class AtualizarPalavraPasseRequest extends FormRequest
 {
@@ -42,15 +42,20 @@ final class AtualizarPalavraPasseRequest extends FormRequest
     /**
      * Determina se o pedido pode ser processado.
      *
+     * A autenticação é resolvida explicitamente através do guard `sessao`,
+     * sem depender do guard predefinido da aplicação.
+     *
      * @return bool Verdadeiro quando existe um utilizador autenticado válido.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function authorize(): bool
     {
-        return $this->user() instanceof Utilizador;
+        return $this->user(
+            'sessao',
+        ) instanceof Utilizador;
     }
 
     /**

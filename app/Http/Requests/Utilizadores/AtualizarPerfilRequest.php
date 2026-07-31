@@ -25,7 +25,7 @@ use LogicException;
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 3.1.0
  */
 final class AtualizarPerfilRequest extends FormRequest
 {
@@ -60,18 +60,20 @@ final class AtualizarPerfilRequest extends FormRequest
     /**
      * Determina se o pedido pode ser processado.
      *
-     * Apenas o modelo principal de utilizador autenticado pode atualizar o
-     * respetivo perfil.
+     * A autenticação é resolvida explicitamente através do guard `sessao`,
+     * sem depender do guard predefinido da aplicação.
      *
      * @return bool Verdadeiro quando existe um utilizador autenticado válido.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function authorize(): bool
     {
-        return $this->user() instanceof Utilizador;
+        return $this->user(
+            'sessao',
+        ) instanceof Utilizador;
     }
 
     /**
@@ -314,7 +316,7 @@ final class AtualizarPerfilRequest extends FormRequest
     }
 
     /**
-     * Obtém o utilizador autenticado.
+     * Obtém o utilizador autenticado através do guard `sessao`.
      *
      * @return Utilizador Utilizador autenticado.
      *
@@ -323,12 +325,14 @@ final class AtualizarPerfilRequest extends FormRequest
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 1.2.0
      */
     public function obterUtilizadorAutenticado(): Utilizador
     {
         $utilizador =
-            $this->user();
+            $this->user(
+                'sessao',
+            );
 
         if (! $utilizador instanceof Utilizador) {
             throw new LogicException(

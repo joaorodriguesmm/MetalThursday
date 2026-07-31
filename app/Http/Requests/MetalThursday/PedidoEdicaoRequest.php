@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\MetalThursday;
 
+use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Unique;
+use LogicException;
 
 /**
  * Define a validação comum dos pedidos de criação e atualização de edições.
@@ -16,27 +18,75 @@ use Illuminate\Validation\Rules\Unique;
  * {@see Edicao} volta a normalizar e validar os atributos antes da
  * persistência, protegendo outros pontos de entrada.
  *
+ * A política da edição é aplicada antes da preparação dos dados, construção
+ * das regras e execução das consultas de validação.
+ *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 3.0.0
  */
 abstract class PedidoEdicaoRequest extends FormRequest
 {
     /**
-     * Determina se o pedido pode ser processado.
+     * Indica se o parâmetro da edição já foi resolvido.
      *
-     * A autorização da operação é realizada pelo controlador através da
-     * política da edição.
+     * A flag permite distinguir uma rota de criação, cujo resultado válido é
+     * nulo, de um parâmetro ainda não consultado.
      *
-     * @return bool Verdadeiro para permitir a validação.
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private bool $edicaoDaRotaResolvida = false;
+
+    /**
+     * Edição resolvida através do parâmetro da rota.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private ?Edicao $edicaoDaRota = null;
+
+    /**
+     * Determina se o utilizador autenticado pode executar a operação.
+     *
+     * A ausência de uma edição na rota representa uma criação. Quando existe
+     * uma edição resolvida, é verificada a capacidade de atualização dessa
+     * instância.
+     *
+     * @return bool Verdadeiro quando a política permite a operação.
+     *
+     * @throws LogicException Quando existe um parâmetro de rota inválido.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function authorize(): bool
     {
-        return true;
+        $utilizador = $this->user(
+            'sessao',
+        );
+
+        if (! $utilizador instanceof Utilizador) {
+            return false;
+        }
+
+        $edicao =
+            $this->obterEdicaoDaRota();
+
+        if ($edicao instanceof Edicao) {
+            return $utilizador->can(
+                'update',
+                $edicao,
+            );
+        }
+
+        return $utilizador->can(
+            'create',
+            Edicao::class,
+        );
     }
 
     /**
@@ -227,6 +277,49 @@ abstract class PedidoEdicaoRequest extends FormRequest
      * @version 1.0.0
      */
     abstract protected function obterRegraUnicidadeNome(): Unique;
+
+    /**
+     * Obtém a edição associada ao parâmetro da rota.
+     *
+     * Numa rota de criação não existe uma edição e o resultado é nulo. O
+     * resultado é guardado para ser reutilizado pela autorização e pelas
+     * regras de validação sem voltar a resolver o parâmetro.
+     *
+     * @return Edicao|null Edição atual ou nulo durante a criação.
+     *
+     * @throws LogicException Quando existe um parâmetro com tipo inesperado.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    final protected function obterEdicaoDaRota(): ?Edicao
+    {
+        if ($this->edicaoDaRotaResolvida) {
+            return $this->edicaoDaRota;
+        }
+
+        $edicao = $this->route(
+            'edicao',
+        );
+
+        if (
+            $edicao !== null
+            && ! $edicao instanceof Edicao
+        ) {
+            throw new LogicException(
+                'A rota não contém uma edição válida.',
+            );
+        }
+
+        $this->edicaoDaRota =
+            $edicao;
+
+        $this->edicaoDaRotaResolvida =
+            true;
+
+        return $this->edicaoDaRota;
+    }
 
     /**
      * Normaliza o nome da edição.

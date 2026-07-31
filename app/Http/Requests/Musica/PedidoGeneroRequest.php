@@ -20,27 +20,10 @@ use Illuminate\Validation\Rules\Unique;
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 1.1.0
  */
 abstract class PedidoGeneroRequest extends FormRequest
 {
-    /**
-     * Determina se o pedido pode ser processado.
-     *
-     * A autorização da operação é realizada pelo controlador através da
-     * política do género.
-     *
-     * @return bool Verdadeiro para permitir a validação.
-     *
-     * @since 1.0.0
-     *
-     * @version 2.0.0
-     */
-    public function authorize(): bool
-    {
-        return true;
-    }
-
     /**
      * Normaliza os dados antes da validação.
      *

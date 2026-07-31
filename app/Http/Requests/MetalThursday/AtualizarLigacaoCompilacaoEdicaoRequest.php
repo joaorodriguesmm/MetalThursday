@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\MetalThursday;
 
+use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
@@ -21,25 +22,38 @@ use LogicException;
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 final class AtualizarLigacaoCompilacaoEdicaoRequest extends FormRequest
 {
     /**
-     * Determina se o pedido pode ser processado.
+     * Determina se o utilizador autenticado pode atualizar a edição.
      *
-     * A autorização da atualização é realizada pelo controlador através da
-     * política da edição.
+     * A política é aplicada antes da normalização da ligação e da execução
+     * das regras de validação.
      *
-     * @return bool Verdadeiro para permitir a validação.
+     * @return bool Verdadeiro quando a atualização é autorizada.
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function authorize(): bool
     {
-        return true;
+        $utilizador = $this->user(
+            'sessao',
+        );
+
+        $edicao = $this->route(
+            'edicao',
+        );
+
+        return $utilizador instanceof Utilizador
+            && $edicao instanceof Edicao
+            && $utilizador->can(
+                'update',
+                $edicao,
+            );
     }
 
     /**

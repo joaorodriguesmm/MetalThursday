@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Interacoes;
 
+use App\Models\Autenticacao\Utilizador;
 use App\Models\Interacoes\Avaliacao;
 use Illuminate\Foundation\Http\FormRequest;
 use LogicException;
@@ -17,25 +18,28 @@ use LogicException;
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 3.1.0
  */
 final class GuardarAvaliacaoRequest extends FormRequest
 {
     /**
      * Determina se o pedido pode ser processado.
      *
-     * A autenticação e a autorização da interação são realizadas pela rota e
-     * pelo controlador responsável.
+     * A autenticação é resolvida explicitamente através do guard `sessao`,
+     * impedindo que a normalização e a validação sejam executadas para um
+     * utilizador obtido através de outro guard.
      *
-     * @return bool Verdadeiro para permitir a validação.
+     * @return bool Verdadeiro quando existe um utilizador autenticado válido.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function authorize(): bool
     {
-        return true;
+        return $this->user(
+            'sessao',
+        ) instanceof Utilizador;
     }
 
     /**

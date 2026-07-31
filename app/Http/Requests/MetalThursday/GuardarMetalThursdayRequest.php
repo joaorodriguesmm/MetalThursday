@@ -32,7 +32,7 @@ use LogicException;
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 3.1.0
  */
 final class GuardarMetalThursdayRequest extends FormRequest
 {
@@ -52,20 +52,65 @@ final class GuardarMetalThursdayRequest extends FormRequest
     private const NUMERO_MAXIMO_SECCOES = 50;
 
     /**
-     * Determina se o pedido pode ser processado.
+     * Indica se o parâmetro da rota já foi resolvido.
      *
-     * A autorização da operação é realizada pelo controlador através da
-     * política da MetalThursday.
+     * A flag permite distinguir uma rota de criação, cujo resultado válido é
+     * nulo, de um parâmetro ainda não consultado.
      *
-     * @return bool Verdadeiro para permitir a validação.
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private bool $metalThursdayDaRotaResolvida = false;
+
+    /**
+     * MetalThursday resolvida através do parâmetro da rota.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private ?MetalThursday $metalThursdayDaRota = null;
+
+    /**
+     * Determina se o utilizador autenticado pode executar a operação.
+     *
+     * A criação utiliza a capacidade da classe. A atualização utiliza a
+     * instância resolvida pela rota. Esta verificação ocorre antes da
+     * construção das regras e das consultas adicionais de validação.
+     *
+     * @return bool Verdadeiro quando a política permite a operação.
+     *
+     * @throws LogicException Quando existe um parâmetro de rota inválido.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function authorize(): bool
     {
-        return true;
+        $utilizador = $this->user(
+            'sessao',
+        );
+
+        if (! $utilizador instanceof Utilizador) {
+            return false;
+        }
+
+        $metalThursday =
+            $this->obterMetalThursdayDaRota();
+
+        if ($metalThursday instanceof MetalThursday) {
+            return $utilizador->can(
+                'update',
+                $metalThursday,
+            );
+        }
+
+        return $utilizador->can(
+            'create',
+            MetalThursday::class,
+        );
     }
 
     /**
@@ -928,26 +973,35 @@ final class GuardarMetalThursdayRequest extends FormRequest
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     private function obterMetalThursdayDaRota(): ?MetalThursday
     {
+        if ($this->metalThursdayDaRotaResolvida) {
+            return $this->metalThursdayDaRota;
+        }
+
         $metalThursday =
             $this->route(
                 'metalThursday',
             );
 
-        if ($metalThursday === null) {
-            return null;
-        }
-
-        if (! $metalThursday instanceof MetalThursday) {
+        if (
+            $metalThursday !== null
+            && ! $metalThursday instanceof MetalThursday
+        ) {
             throw new LogicException(
                 'A rota não contém uma MetalThursday válida.',
             );
         }
 
-        return $metalThursday;
+        $this->metalThursdayDaRota =
+            $metalThursday;
+
+        $this->metalThursdayDaRotaResolvida =
+            true;
+
+        return $this->metalThursdayDaRota;
     }
 
     /**

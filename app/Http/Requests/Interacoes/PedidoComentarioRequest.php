@@ -13,7 +13,8 @@ use LogicException;
  * Define a validação comum dos pedidos de comentários.
  *
  * É utilizado pelos pedidos de criação, resposta e atualização de
- * comentários.
+ * comentários. Cada pedido concreto aplica a respetiva política antes da
+ * normalização e da validação dos dados.
  *
  * A normalização efetuada nesta camada melhora a resposta de validação
  * apresentada ao cliente. O modelo {@see Comentario} volta a validar o
@@ -21,27 +22,10 @@ use LogicException;
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 abstract class PedidoComentarioRequest extends FormRequest
 {
-    /**
-     * Determina se o pedido pode ser processado.
-     *
-     * A autorização da operação é realizada pelo controlador através da
-     * política dos comentários.
-     *
-     * @return bool Verdadeiro para permitir a validação.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    public function authorize(): bool
-    {
-        return true;
-    }
-
     /**
      * Normaliza o conteúdo antes da validação.
      *

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Musica;
 
+use App\Models\Autenticacao\Utilizador;
 use App\Models\Musica\Genero;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Unique;
@@ -17,7 +18,7 @@ use LogicException;
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 3.1.0
  */
 final class AtualizarGeneroRequest extends PedidoGeneroRequest
 {
@@ -27,12 +28,38 @@ final class AtualizarGeneroRequest extends PedidoGeneroRequest
      * A instância é conservada para evitar repetir a resolução e a validação
      * do parâmetro durante a construção das regras.
      *
-     *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
     private ?Genero $generoDaRota = null;
+
+    /**
+     * Determina se o utilizador autenticado pode atualizar o género da rota.
+     *
+     * A autorização é executada antes da consulta recursiva e das restantes
+     * regras de validação.
+     *
+     * @return bool Verdadeiro quando a política permite a atualização.
+     *
+     * @throws LogicException Quando a rota não contém um género válido.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function authorize(): bool
+    {
+        $utilizador = $this->user(
+            'sessao',
+        );
+
+        return $utilizador instanceof Utilizador
+            && $utilizador->can(
+                'update',
+                $this->obterGeneroDaRota(),
+            );
+    }
 
     /**
      * Obtém a regra de unicidade aplicável ao nome.

@@ -14,7 +14,7 @@ use LogicException;
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 final class AtualizarEdicaoRequest extends PedidoEdicaoRequest
 {
@@ -30,38 +30,12 @@ final class AtualizarEdicaoRequest extends PedidoEdicaoRequest
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     protected function obterRegraUnicidadeNome(): Unique
     {
-        return Rule::unique(
-            Edicao::class,
-            'nome',
-        )
-            ->ignore(
-                $this->obterEdicaoDaRota(),
-            )
-            ->whereNull(
-                'deleted_at',
-            );
-    }
-
-    /**
-     * Obtém a edição associada ao parâmetro da rota.
-     *
-     * @return Edicao Edição que será atualizada.
-     *
-     * @throws LogicException Quando a rota não contém uma edição válida.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private function obterEdicaoDaRota(): Edicao
-    {
-        $edicao = $this->route(
-            'edicao',
-        );
+        $edicao =
+            $this->obterEdicaoDaRota();
 
         if (! $edicao instanceof Edicao) {
             throw new LogicException(
@@ -69,6 +43,15 @@ final class AtualizarEdicaoRequest extends PedidoEdicaoRequest
             );
         }
 
-        return $edicao;
+        return Rule::unique(
+            Edicao::class,
+            'nome',
+        )
+            ->ignore(
+                $edicao,
+            )
+            ->whereNull(
+                'deleted_at',
+            );
     }
 }
