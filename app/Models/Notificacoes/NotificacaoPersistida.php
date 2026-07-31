@@ -15,6 +15,10 @@ use Illuminate\Notifications\DatabaseNotification;
  * O modelo estende o contrato técnico do Laravel, mas utiliza a tabela em
  * português definida pelo MetalThursday.
  *
+ * As operações de leitura são executadas diretamente pelos controladores
+ * através de consultas condicionais, evitando métodos de conveniência sem
+ * utilização e atualizações não atómicas.
+ *
  * @property string $id
  * @property string $type
  * @property string $notifiable_type
@@ -27,7 +31,7 @@ use Illuminate\Notifications\DatabaseNotification;
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 1.1.0
  */
 final class NotificacaoPersistida extends DatabaseNotification
 {
@@ -55,60 +59,4 @@ final class NotificacaoPersistida extends DatabaseNotification
         'data' => 'array',
         'read_at' => 'immutable_datetime',
     ];
-
-    /**
-     * Marca a notificação como lida.
-     *
-     * A operação é idempotente.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    public function marcarComoLida(): void
-    {
-        $this->markAsRead();
-    }
-
-    /**
-     * Marca a notificação como não lida.
-     *
-     * A operação é idempotente.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    public function marcarComoNaoLida(): void
-    {
-        $this->markAsUnread();
-    }
-
-    /**
-     * Determina se a notificação já foi lida.
-     *
-     * @return bool Verdadeiro quando existe uma data de leitura.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    public function estaLida(): bool
-    {
-        return $this->read();
-    }
-
-    /**
-     * Determina se a notificação ainda está por ler.
-     *
-     * @return bool Verdadeiro quando não existe uma data de leitura.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    public function estaPorLer(): bool
-    {
-        return $this->unread();
-    }
 }

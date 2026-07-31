@@ -6,7 +6,6 @@ namespace App\Http\Controllers\Utilizadores;
 
 use App\Http\Controllers\Controller;
 use App\Models\Autenticacao\Utilizador;
-use App\Models\Notificacoes\NotificacaoPersistida;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -19,9 +18,12 @@ use Illuminate\View\View;
  * impedindo o acesso ou a alteração de notificações pertencentes a outras
  * contas.
  *
+ * As marcações de leitura utilizam atualizações condicionais atómicas,
+ * preservando a primeira data de leitura perante pedidos concorrentes.
+ *
  * @since 1.0.0
  *
- * @version 4.0.0
+ * @version 4.1.0
  */
 final class ControladorNotificacao extends Controller
 {
@@ -98,12 +100,16 @@ final class ControladorNotificacao extends Controller
     /**
      * Marca uma notificação do utilizador autenticado como lida.
      *
-     * A notificação é procurada exclusivamente através da relação do
-     * utilizador autenticado. Um identificador pertencente a outra conta
-     * produz uma resposta de recurso inexistente.
+     * A atualização permanece limitada à relação do utilizador autenticado e
+     * apenas modifica notificações cuja data de leitura ainda esteja vazia.
      *
-     * A operação é idempotente: uma notificação anteriormente lida não é
-     * novamente persistida.
+     * A condição é aplicada diretamente no `UPDATE`, garantindo que pedidos
+     * concorrentes não substituem a primeira data de leitura. Uma marcação
+     * bem-sucedida necessita apenas de uma consulta à tabela.
+     *
+     * Quando nenhuma linha é atualizada, é confirmada a existência da
+     * notificação dentro da mesma relação. Uma notificação pertencente a outra
+     * conta continua a produzir uma resposta de recurso inexistente.
      *
      * @param  string  $identificadorNotificacao  Identificador da notificação.
      * @return RedirectResponse Redirecionamento para as notificações.
@@ -112,7 +118,7 @@ final class ControladorNotificacao extends Controller
      *
      * @since 1.0.0
      *
-     * @version 4.0.0
+     * @version 4.1.0
      */
     public function marcarComoLida(
         string $identificadorNotificacao,
@@ -120,16 +126,27 @@ final class ControladorNotificacao extends Controller
         $utilizador =
             $this->obterUtilizadorAutenticado();
 
-        /** @var NotificacaoPersistida $notificacao */
-        $notificacao =
+        $consultaNotificacao =
             $utilizador
                 ->notificacoes()
+                ->reorder()
                 ->whereKey(
                     $identificadorNotificacao,
+                );
+
+        $quantidadeAtualizada =
+            (clone $consultaNotificacao)
+                ->whereNull(
+                    'read_at',
                 )
+                ->update([
+                    'read_at' => now(),
+                ]);
+
+        if ($quantidadeAtualizada === 0) {
+            (clone $consultaNotificacao)
                 ->firstOrFail();
 
-        if ($notificacao->read_at !== null) {
             return to_route(
                 'notificacoes.indice',
             )->with(
@@ -137,8 +154,6 @@ final class ControladorNotificacao extends Controller
                 'A notificação já estava marcada como lida.',
             );
         }
-
-        $notificacao->marcarComoLida();
 
         return to_route(
             'notificacoes.indice',

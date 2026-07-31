@@ -21,13 +21,17 @@ use InvalidArgumentException;
  * restantes destinatários por lotes, evitando carregar todos os utilizadores
  * simultaneamente em memória.
  *
+ * As permissões de e-mail são carregadas juntamente com cada lote. A
+ * determinação dos canais da notificação utiliza, assim, a relação já
+ * disponível em memória e não executa consultas adicionais por destinatário.
+ *
  * O sujeito e o utilizador responsável são recebidos explicitamente,
  * mantendo o serviço independente do contexto HTTP e do estado global da
  * autenticação.
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 final class NotificadorInteracoes
 {
@@ -38,7 +42,8 @@ final class NotificadorInteracoes
      *
      * @version 1.0.0
      */
-    private const TAMANHO_LOTE = 200;
+    private const TAMANHO_LOTE =
+        200;
 
     /**
      * Cria o serviço de notificações de interações.
@@ -66,6 +71,10 @@ final class NotificadorInteracoes
      * com que eventuais dados inválidos sejam rejeitados mesmo quando não
      * existem outros utilizadores a notificar.
      *
+     * As permissões de e-mail são obtidas numa única consulta adicional por
+     * lote. As verificações realizadas por `via()` são depois resolvidas
+     * através da coleção carregada em memória.
+     *
      * @param  MetalThursday|SeccaoMetalThursday|Comentario  $sujeito  Entidade
      *                                                                 que
      *                                                                 recebeu
@@ -79,7 +88,7 @@ final class NotificadorInteracoes
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function notificarOutrosUtilizadores(
         MetalThursday|SeccaoMetalThursday|Comentario $sujeito,
@@ -110,6 +119,9 @@ final class NotificadorInteracoes
             );
 
         Utilizador::query()
+            ->with([
+                'permissoesEmail',
+            ])
             ->selecionaveis()
             ->whereKeyNot(
                 $identificadorCausador,
@@ -128,10 +140,12 @@ final class NotificadorInteracoes
                         return;
                     }
 
-                    $this->notificacoes->send(
-                        $destinatarios,
-                        $notificacao,
-                    );
+                    $this
+                        ->notificacoes
+                        ->send(
+                            $destinatarios,
+                            $notificacao,
+                        );
                 },
                 'utilizadores.id',
                 'id',

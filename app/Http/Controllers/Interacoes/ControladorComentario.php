@@ -33,7 +33,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 3.1.0
  */
 final class ControladorComentario extends Controller
 {
@@ -400,8 +400,10 @@ final class ControladorComentario extends Controller
      * A eliminação lógica preserva a estrutura da conversa quando existem
      * respostas associadas.
      *
-     * O comentário é bloqueado antes da autorização e da eliminação,
-     * impedindo alterações concorrentes durante a operação.
+     * A autorização é verificada antes de abrir a transação, evitando obter
+     * um bloqueio exclusivo para pedidos que serão rejeitados. Depois da
+     * autorização, o comentário é novamente obtido e bloqueado imediatamente
+     * antes da eliminação.
      *
      * @param  Comentario  $comentario  Comentário eliminado.
      * @return JsonResponse Resposta sem conteúdo.
@@ -410,12 +412,17 @@ final class ControladorComentario extends Controller
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 3.1.0
      */
     public function eliminar(
         Comentario $comentario,
     ): JsonResponse {
         $this->obterUtilizadorAutenticado();
+
+        $this->authorize(
+            'delete',
+            $comentario,
+        );
 
         DB::transaction(
             function () use ($comentario): void {
@@ -426,11 +433,6 @@ final class ControladorComentario extends Controller
                         )
                         ->lockForUpdate()
                         ->firstOrFail();
-
-                $this->authorize(
-                    'delete',
-                    $comentarioBloqueado,
-                );
 
                 $comentarioBloqueado->deleteOrFail();
             },

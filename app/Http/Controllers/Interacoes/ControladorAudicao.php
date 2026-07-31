@@ -27,7 +27,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  *
  * @since 1.0.0
  *
- * @version 4.0.0
+ * @version 4.1.0
  */
 final class ControladorAudicao extends Controller
 {
@@ -90,6 +90,10 @@ final class ControladorAudicao extends Controller
      * associadas ao mesmo registo. A restrição única da base de dados
      * continua a garantir, no máximo, uma audição por utilizador e entidade.
      *
+     * A transação limita-se à alteração da audição. A contagem e o indicador
+     * são construídos depois da libertação do bloqueio através de uma única
+     * consulta.
+     *
      * A notificação é enviada depois da conclusão da transação e apenas
      * quando a entidade foi marcada como ouvida.
      *
@@ -103,7 +107,7 @@ final class ControladorAudicao extends Controller
      *
      * @since 1.0.0
      *
-     * @version 4.0.0
+     * @version 4.1.0
      */
     public function alternar(
         string $tipoAudivel,
@@ -124,8 +128,7 @@ final class ControladorAudicao extends Controller
         /**
          * @var array{
          *     audivel: MetalThursday|SeccaoMetalThursday,
-         *     marcado_como_ouvido: bool,
-         *     numero_audicoes: int
+         *     marcado_como_ouvido: bool
          * } $resultado
          */
         $resultado =
@@ -164,17 +167,10 @@ final class ControladorAudicao extends Controller
                             true;
                     }
 
-                    $numeroAudicoes =
-                        $audivelBloqueado
-                            ->audicoes()
-                            ->count();
-
                     return [
                         'audivel' => $audivelBloqueado,
 
                         'marcado_como_ouvido' => $marcadoComoOuvido,
-
-                        'numero_audicoes' => $numeroAudicoes,
                     ];
                 },
                 self::TENTATIVAS_TRANSACAO,
@@ -196,14 +192,17 @@ final class ControladorAudicao extends Controller
                 );
         }
 
+        $dadosIndicador =
+            $this->obterDadosIndicador(
+                $audivelAtualizado,
+            );
+
         return response()->json([
             'marcado_como_ouvido' => $marcadoComoOuvido,
 
-            'numero_audicoes' => $resultado['numero_audicoes'],
+            'numero_audicoes' => $dadosIndicador['numero_audicoes'],
 
-            'conteudo_indicador_html' => $this->obterConteudoIndicador(
-                $audivelAtualizado,
-            ),
+            'conteudo_indicador_html' => $dadosIndicador['conteudo_html'],
         ]);
     }
 
@@ -281,7 +280,11 @@ final class ControladorAudicao extends Controller
     }
 
     /**
-     * Obtém o conteúdo apresentado no indicador das audições.
+     * Obtém a contagem e o indicador das audições.
+     *
+     * Uma única consulta obtém os identificadores e nomes necessários. O
+     * número total corresponde ao número de registos devolvidos por essa mesma
+     * consulta.
      *
      * Os nomes são validados, ordenados e escapados antes de serem incluídos
      * no fragmento HTML devolvido ao cliente. Contas diferentes com o mesmo
@@ -289,31 +292,57 @@ final class ControladorAudicao extends Controller
      *
      * @param  MetalThursday|SeccaoMetalThursday  $audivel  Entidade
      *                                                      consultada.
-     * @return string Conteúdo HTML seguro.
+     * @return array{
+     *     numero_audicoes: int,
+     *     conteudo_html: string
+     * } Dados preparados.
      *
      * @throws LogicException Quando uma audição possui dados persistidos
      *                        inválidos.
      *
-     * @since 2.0.0
+     * @since 4.1.0
      *
-     * @version 2.0.0
+     * @version 1.0.0
      */
-    private function obterConteudoIndicador(
+    private function obterDadosIndicador(
         MetalThursday|SeccaoMetalThursday $audivel,
-    ): string {
+    ): array {
+        $modeloAudicao =
+            new Audicao;
+
+        $tabelaAudicoes =
+            $modeloAudicao->getTable();
+
         $audicoes =
-            $audivel
-                ->audicoes()
-                ->with([
-                    'utilizador:id,nome',
-                ])
-                ->orderBy(
-                    'id',
+            DB::table(
+                $tabelaAudicoes,
+            )
+                ->join(
+                    'utilizadores',
+                    'utilizadores.id',
+                    '=',
+                    $tabelaAudicoes.'.utilizador_id',
                 )
-                ->get();
+                ->where(
+                    $tabelaAudicoes.'.audivel_id',
+                    $audivel->getKey(),
+                )
+                ->where(
+                    $tabelaAudicoes.'.tipo_audivel',
+                    $audivel->getMorphClass(),
+                )
+                ->get([
+                    'utilizadores.id AS utilizador_id',
+
+                    'utilizadores.nome',
+                ]);
 
         if ($audicoes->isEmpty()) {
-            return self::MENSAGEM_SEM_AUDICOES;
+            return [
+                'numero_audicoes' => 0,
+
+                'conteudo_html' => self::MENSAGEM_SEM_AUDICOES,
+            ];
         }
 
         /**
@@ -325,23 +354,9 @@ final class ControladorAudicao extends Controller
         $utilizadores = [];
 
         foreach ($audicoes as $audicao) {
-            if (! $audicao instanceof Audicao) {
-                throw new LogicException(
-                    'Foi encontrada uma audição persistida inválida.',
-                );
-            }
-
-            $utilizador =
-                $audicao->utilizador;
-
-            if (! $utilizador instanceof Utilizador) {
-                throw new LogicException(
-                    'Foi encontrada uma audição sem um utilizador válido.',
-                );
-            }
-
             $identificadorUtilizador =
-                $utilizador->getKey();
+                $audicao->utilizador_id
+                ?? null;
 
             if (
                 ! is_numeric($identificadorUtilizador)
@@ -353,11 +368,21 @@ final class ControladorAudicao extends Controller
             }
 
             $nome =
+                $audicao->nome
+                ?? null;
+
+            if (! is_string($nome)) {
+                throw new LogicException(
+                    'Foi encontrada uma audição sem um utilizador válido.',
+                );
+            }
+
+            $nomeNormalizado =
                 trim(
-                    $utilizador->nome,
+                    $nome,
                 );
 
-            if ($nome === '') {
+            if ($nomeNormalizado === '') {
                 throw new LogicException(
                     'Foi encontrada uma audição associada a um utilizador sem nome válido.',
                 );
@@ -366,7 +391,7 @@ final class ControladorAudicao extends Controller
             $utilizadores[] = [
                 'identificador' => (int) $identificadorUtilizador,
 
-                'nome' => $nome,
+                'nome' => $nomeNormalizado,
             ];
         }
 
@@ -401,10 +426,16 @@ final class ControladorAudicao extends Controller
                 $utilizadores,
             );
 
-        return implode(
-            '<br>',
-            $nomesEscapados,
-        );
+        return [
+            'numero_audicoes' => count(
+                $utilizadores,
+            ),
+
+            'conteudo_html' => implode(
+                '<br>',
+                $nomesEscapados,
+            ),
+        ];
     }
 
     /**

@@ -11,18 +11,19 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Support\Facades\Auth;
+use LogicException;
 
 /**
  * Adiciona suporte a avaliações polimórficas a um modelo Eloquent.
  *
  * Disponibiliza a relação com todas as avaliações e a pontuação atribuída pelo
- * utilizador autenticado através da guarda `sessao`.
+ * utilizador autenticado através do guard `sessao`.
  *
  * @mixin Model
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 trait TemAvaliacoes
 {
@@ -87,17 +88,21 @@ trait TemAvaliacoes
     /**
      * Obtém a pontuação atribuída pelo utilizador autenticado.
      *
-     * Quando não existe autenticação válida ou uma avaliação associada, é
-     * devolvida a pontuação zero.
+     * Quando não existe autenticação válida, é devolvida a pontuação zero.
      *
-     * Quando a relação já está carregada, o valor é obtido sem executar uma
-     * nova consulta.
+     * Para um utilizador autenticado, a relação
+     * `avaliacaoUtilizadorAutenticado` deve ser carregada explicitamente pela
+     * consulta responsável pela apresentação do modelo. O accessor nunca
+     * executa consultas ocultas.
      *
      * @return Attribute<float, never> Pontuação atribuída pelo utilizador.
      *
+     * @throws LogicException Quando existe autenticação válida, mas a relação
+     *                        necessária não foi carregada.
+     *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     protected function pontuacaoUtilizadorAutenticado(): Attribute
     {
@@ -110,15 +115,19 @@ trait TemAvaliacoes
                     return 0.0;
                 }
 
-                $avaliacao = $this->relationLoaded(
-                    'avaliacaoUtilizadorAutenticado',
-                )
-                    ? $this->getRelation(
+                if (
+                    ! $this->relationLoaded(
                         'avaliacaoUtilizadorAutenticado',
                     )
-                    : $this
-                        ->avaliacaoUtilizadorAutenticado()
-                        ->first();
+                ) {
+                    throw new LogicException(
+                        'A relação "avaliacaoUtilizadorAutenticado" deve estar carregada antes de obter a pontuação do utilizador autenticado.',
+                    );
+                }
+
+                $avaliacao = $this->getRelation(
+                    'avaliacaoUtilizadorAutenticado',
+                );
 
                 if (
                     ! $avaliacao instanceof Avaliacao
@@ -136,7 +145,7 @@ trait TemAvaliacoes
     /**
      * Obtém o identificador do utilizador autenticado para as avaliações.
      *
-     * O método confirma que o objeto autenticado através da guarda `sessao`
+     * O método confirma que o objeto autenticado através do guard `sessao`
      * corresponde a um utilizador persistido e possui um identificador inteiro
      * positivo.
      *

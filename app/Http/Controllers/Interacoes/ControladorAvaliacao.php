@@ -28,7 +28,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 3.1.0
  */
 final class ControladorAvaliacao extends Controller
 {
@@ -92,6 +92,9 @@ final class ControladorAvaliacao extends Controller
      * A notificação é enviada depois da conclusão da transação e apenas quando
      * ocorreu uma criação ou alteração efetiva.
      *
+     * A média, a contagem e o indicador são construídos depois da transação
+     * através de uma única consulta.
+     *
      * @param  GuardarAvaliacaoRequest  $pedido  Pedido validado.
      * @param  string  $tipoAvaliavel  Tipo da entidade avaliada.
      * @param  int  $identificadorAvaliavel  Identificador da entidade.
@@ -103,7 +106,7 @@ final class ControladorAvaliacao extends Controller
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 3.1.0
      */
     public function guardar(
         GuardarAvaliacaoRequest $pedido,
@@ -205,24 +208,22 @@ final class ControladorAvaliacao extends Controller
                 );
         }
 
-        $estatisticas =
-            $this->obterEstatisticas(
+        $dadosIndicador =
+            $this->obterDadosIndicador(
                 $avaliavelAtualizado,
             );
 
         return response()->json([
             'media_avaliacoes' => round(
-                $estatisticas['media'],
+                $dadosIndicador['media_avaliacoes'],
                 1,
             ),
 
-            'numero_avaliacoes' => $estatisticas['numero'],
+            'numero_avaliacoes' => $dadosIndicador['numero_avaliacoes'],
 
             'pontuacao_utilizador' => $pontuacao,
 
-            'conteudo_indicador_html' => $this->obterConteudoIndicador(
-                $avaliavelAtualizado,
-            ),
+            'conteudo_indicador_html' => $dadosIndicador['conteudo_html'],
         ]);
     }
 
@@ -300,132 +301,146 @@ final class ControladorAvaliacao extends Controller
     }
 
     /**
-     * Obtém a média e o número total de avaliações.
+     * Obtém a média, a contagem e o indicador das avaliações.
      *
-     * A consulta é limitada simultaneamente pelo identificador e pelo alias
-     * polimórfico da entidade.
+     * Uma única consulta obtém as pontuações e os nomes necessários. A média e
+     * o número total são calculados em memória a partir desses mesmos registos,
+     * evitando uma consulta agregada separada.
+     *
+     * Os nomes são validados e escapados antes de serem incluídos no fragmento
+     * HTML devolvido ao cliente.
      *
      * @param  MetalThursday|SeccaoMetalThursday  $avaliavel  Entidade
      *                                                        consultada.
      * @return array{
-     *     media: float,
-     *     numero: int
-     * } Estatísticas das avaliações.
+     *     media_avaliacoes: float,
+     *     numero_avaliacoes: int,
+     *     conteudo_html: string
+     * } Dados preparados.
      *
-     * @since 2.0.0
+     * @throws LogicException Quando uma avaliação possui dados persistidos
+     *                        inválidos.
      *
-     * @version 2.0.0
+     * @since 3.1.0
+     *
+     * @version 1.0.0
      */
-    private function obterEstatisticas(
+    private function obterDadosIndicador(
         MetalThursday|SeccaoMetalThursday $avaliavel,
     ): array {
         $modeloAvaliacao =
             new Avaliacao;
 
-        $estatisticas =
+        $tabelaAvaliacoes =
+            $modeloAvaliacao->getTable();
+
+        $avaliacoes =
             DB::table(
-                $modeloAvaliacao->getTable(),
+                $tabelaAvaliacoes,
             )
+                ->join(
+                    'utilizadores',
+                    'utilizadores.id',
+                    '=',
+                    $tabelaAvaliacoes.'.utilizador_id',
+                )
                 ->where(
-                    'avaliavel_id',
+                    $tabelaAvaliacoes.'.avaliavel_id',
                     $avaliavel->getKey(),
                 )
                 ->where(
-                    'tipo_avaliavel',
+                    $tabelaAvaliacoes.'.tipo_avaliavel',
                     $avaliavel->getMorphClass(),
                 )
-                ->selectRaw(
-                    'COUNT(*) AS numero_avaliacoes, '
-                        .'AVG(pontuacao) AS media_avaliacoes',
-                )
-                ->first();
-
-        return [
-            'media' => (float) (
-                $estatisticas?->media_avaliacoes
-                ?? 0
-            ),
-
-            'numero' => (int) (
-                $estatisticas?->numero_avaliacoes
-                ?? 0
-            ),
-        ];
-    }
-
-    /**
-     * Obtém o conteúdo apresentado no indicador das avaliações.
-     *
-     * Os nomes são validados e escapados antes de serem incluídos no
-     * fragmento HTML devolvido ao cliente.
-     *
-     * @param  MetalThursday|SeccaoMetalThursday  $avaliavel  Entidade
-     *                                                        consultada.
-     * @return string Conteúdo HTML seguro.
-     *
-     * @throws LogicException Quando uma avaliação possui dados persistidos
-     *                        inválidos.
-     *
-     * @since 2.0.0
-     *
-     * @version 2.0.0
-     */
-    private function obterConteudoIndicador(
-        MetalThursday|SeccaoMetalThursday $avaliavel,
-    ): string {
-        $avaliacoes =
-            $avaliavel
-                ->avaliacoes()
-                ->with([
-                    'utilizador:id,nome',
-                ])
                 ->orderByDesc(
-                    'pontuacao',
+                    $tabelaAvaliacoes.'.pontuacao',
                 )
                 ->orderBy(
-                    'id',
+                    $tabelaAvaliacoes.'.id',
                 )
-                ->get();
+                ->get([
+                    $tabelaAvaliacoes.'.pontuacao',
+
+                    'utilizadores.nome',
+                ]);
 
         if ($avaliacoes->isEmpty()) {
-            return self::MENSAGEM_SEM_AVALIACOES;
+            return [
+                'media_avaliacoes' => 0.0,
+
+                'numero_avaliacoes' => 0,
+
+                'conteudo_html' => self::MENSAGEM_SEM_AVALIACOES,
+            ];
         }
+
+        $somaPontuacoes =
+            0.0;
 
         $linhas = [];
 
         foreach ($avaliacoes as $avaliacao) {
-            if (! $avaliacao instanceof Avaliacao) {
+            $pontuacao =
+                $avaliacao->pontuacao
+                ?? null;
+
+            if (
+                ! is_int($pontuacao)
+                && ! is_float($pontuacao)
+                && ! is_string($pontuacao)
+            ) {
                 throw new LogicException(
-                    'Foi encontrada uma avaliação persistida inválida.',
+                    'Foi encontrada uma avaliação com uma pontuação persistida inválida.',
                 );
             }
 
-            $utilizador =
-                $avaliacao->utilizador;
+            if (! is_numeric($pontuacao)) {
+                throw new LogicException(
+                    'Foi encontrada uma avaliação com uma pontuação persistida inválida.',
+                );
+            }
 
-            if (! $utilizador instanceof Utilizador) {
+            $pontuacaoNormalizada =
+                (float) $pontuacao;
+
+            if (! is_finite($pontuacaoNormalizada)) {
+                throw new LogicException(
+                    'Foi encontrada uma avaliação com uma pontuação persistida inválida.',
+                );
+            }
+
+            $nome =
+                $avaliacao->nome
+                ?? null;
+
+            if (! is_string($nome)) {
                 throw new LogicException(
                     'Foi encontrada uma avaliação sem um utilizador válido.',
                 );
             }
 
-            $nome =
+            $nomeNormalizado =
                 trim(
-                    $utilizador->nome,
+                    $nome,
                 );
 
-            if ($nome === '') {
+            if ($nomeNormalizado === '') {
                 throw new LogicException(
                     'Foi encontrada uma avaliação associada a um utilizador sem nome válido.',
                 );
             }
 
+            $somaPontuacoes +=
+                $pontuacaoNormalizada;
+
             $linhas[] =
                 sprintf(
                     '%s: %s',
-                    e($nome),
+                    e(
+                        $nomeNormalizado,
+                    ),
                     number_format(
-                        $avaliacao->pontuacao,
+                        $pontuacaoNormalizada,
                         1,
                         ',',
                         '',
@@ -433,10 +448,21 @@ final class ControladorAvaliacao extends Controller
                 );
         }
 
-        return implode(
-            '<br>',
-            $linhas,
-        );
+        $numeroAvaliacoes =
+            count(
+                $linhas,
+            );
+
+        return [
+            'media_avaliacoes' => $somaPontuacoes / $numeroAvaliacoes,
+
+            'numero_avaliacoes' => $numeroAvaliacoes,
+
+            'conteudo_html' => implode(
+                '<br>',
+                $linhas,
+            ),
+        ];
     }
 
     /**

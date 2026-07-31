@@ -24,7 +24,7 @@ use LogicException;
  *
  * @since 1.0.0
  *
- * @version 4.0.0
+ * @version 4.1.0
  */
 final class ControladorGosto extends Controller
 {
@@ -109,6 +109,10 @@ final class ControladorGosto extends Controller
      * mesmo registo. A restrição única da base de dados continua a garantir
      * que cada utilizador possui, no máximo, um gosto por comentário.
      *
+     * A transação limita-se à alteração do gosto. A contagem e a construção
+     * do indicador são realizadas depois da libertação do bloqueio através de
+     * uma única consulta.
+     *
      * A notificação só é enviada depois de a transação terminar com sucesso e
      * apenas quando o gosto foi adicionado.
      *
@@ -119,7 +123,7 @@ final class ControladorGosto extends Controller
      *
      * @since 1.0.0
      *
-     * @version 4.0.0
+     * @version 4.1.0
      */
     public function alternar(
         Comentario $comentario,
@@ -133,8 +137,7 @@ final class ControladorGosto extends Controller
         /**
          * @var array{
          *     comentario: Comentario,
-         *     adicionado: bool,
-         *     numero_gostos: int
+         *     adicionado: bool
          * } $resultado
          */
         $resultado =
@@ -176,17 +179,10 @@ final class ControladorGosto extends Controller
                             true;
                     }
 
-                    $numeroGostos =
-                        $comentarioBloqueado
-                            ->gostos()
-                            ->count();
-
                     return [
                         'comentario' => $comentarioBloqueado,
 
                         'adicionado' => $adicionado,
-
-                        'numero_gostos' => $numeroGostos,
                     ];
                 },
                 self::TENTATIVAS_TRANSACAO,
@@ -216,7 +212,7 @@ final class ControladorGosto extends Controller
         return response()->json([
             'adicionado' => $adicionado,
 
-            'numero_gostos' => $resultado['numero_gostos'],
+            'numero_gostos' => $dadosIndicador['numero_gostos'],
 
             'mensagem' => $adicionado
                 ? self::MENSAGEM_GOSTO_ADICIONADO
@@ -257,12 +253,14 @@ final class ControladorGosto extends Controller
     /**
      * Obtém os dados utilizados no indicador dos gostos.
      *
-     * Os nomes são escapados antes de serem incluídos no fragmento HTML
-     * devolvido ao cliente.
+     * A mesma consulta fornece os nomes apresentados e o número total de
+     * gostos. Os nomes são escapados antes de serem incluídos no fragmento
+     * HTML devolvido ao cliente.
      *
      * @param  Comentario  $comentario  Comentário consultado.
      * @return array{
      *     nomes: list<string>,
+     *     numero_gostos: int,
      *     conteudo_html: string
      * } Dados preparados.
      *
@@ -271,7 +269,7 @@ final class ControladorGosto extends Controller
      *
      * @since 3.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     private function obterDadosIndicador(
         Comentario $comentario,
@@ -332,6 +330,10 @@ final class ControladorGosto extends Controller
 
         return [
             'nomes' => $nomes,
+
+            'numero_gostos' => count(
+                $nomes,
+            ),
 
             'conteudo_html' => $nomesEscapados === []
                 ? self::MENSAGEM_SEM_GOSTOS

@@ -8,16 +8,19 @@ use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
 use Carbon\CarbonInterface;
+use InvalidArgumentException;
 
 /**
  * Notifica os utilizadores sobre a publicação de uma nova MetalThursday.
  *
- * A notificação é guardada na base de dados e pode também ser enviada por
- * e-mail, conforme as permissões do destinatário.
+ * A notificação guarda apenas um retrato de valores escalares obtidos no
+ * momento da criação. O processamento posterior da fila não depende da
+ * existência atual do modelo nem executa consultas para reconstruir a
+ * mensagem.
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 3.1.0
  */
 final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
 {
@@ -45,17 +48,85 @@ final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
         'novas_publicacoes';
 
     /**
-     * Cria a notificação.
+     * Identificador da MetalThursday publicada.
+     *
+     * @since 3.1.0
+     *
+     * @version 1.0.0
+     */
+    private readonly int $identificadorMetalThursday;
+
+    /**
+     * Nome utilizado para apresentar a MetalThursday.
+     *
+     * @since 3.1.0
+     *
+     * @version 1.0.0
+     */
+    private readonly string $nomeMetalThursday;
+
+    /**
+     * Nome do autor no momento da publicação.
+     *
+     * @since 3.1.0
+     *
+     * @version 1.0.0
+     */
+    private readonly string $nomeAutor;
+
+    /**
+     * Nome do utilizador que publicou a MetalThursday.
+     *
+     * @since 3.1.0
+     *
+     * @version 1.0.0
+     */
+    private readonly string $nomeCriador;
+
+    /**
+     * Cria a notificação e captura os dados necessários para a fila.
      *
      * @param  MetalThursday  $metalThursday  MetalThursday publicada.
      *
+     * @throws InvalidArgumentException Quando a MetalThursday não está
+     *                                  persistida ou não possui um
+     *                                  identificador válido.
+     *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.1.0
      */
     public function __construct(
-        private readonly MetalThursday $metalThursday,
+        MetalThursday $metalThursday,
     ) {
+        $this->identificadorMetalThursday =
+            $this->obterIdentificadorMetalThursday(
+                $metalThursday,
+            );
+
+        $metalThursday->loadMissing([
+            'edicao:id,nome',
+            'autor:id,nome',
+            'criadoPor:id,nome',
+        ]);
+
+        $this->nomeMetalThursday =
+            $this->construirNomeMetalThursday(
+                $metalThursday,
+            );
+
+        $this->nomeAutor =
+            $this->obterNomeUtilizador(
+                $metalThursday->autor,
+                'um utilizador',
+            );
+
+        $this->nomeCriador =
+            $this->obterNomeUtilizador(
+                $metalThursday->criadoPor,
+                'o sistema',
+            );
+
         $this->afterCommit();
     }
 
@@ -96,7 +167,7 @@ final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 3.1.0
      */
     public function toArray(
         Utilizador $utilizador,
@@ -104,7 +175,7 @@ final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
         return [
             'tipo' => 'metal_thursday_criada',
 
-            'identificador_metal_thursday' => (int) $this->metalThursday->getKey(),
+            'identificador_metal_thursday' => $this->identificadorMetalThursday,
 
             'titulo' => 'Nova MetalThursday disponível',
 
@@ -128,14 +199,14 @@ final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     protected function obterAssunto(
         Utilizador $utilizador,
     ): string {
         return sprintf(
             'Nova MetalThursday disponível: %s',
-            $this->obterNomeMetalThursday(),
+            $this->nomeMetalThursday,
         );
     }
 
@@ -179,7 +250,7 @@ final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 3.1.0
      */
     protected function obterUrlAcao(
         Utilizador $utilizador,
@@ -187,7 +258,7 @@ final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
         return route(
             'metal-thursday.detalhes',
             [
-                'metalThursday' => $this->metalThursday,
+                'metalThursday' => $this->identificadorMetalThursday,
             ],
         );
     }
@@ -199,37 +270,33 @@ final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterMensagem(): string
     {
-        $this->metalThursday->loadMissing([
-            'edicao',
-            'autor',
-            'criadoPor',
-        ]);
-
         return sprintf(
             'Uma nova MetalThursday da autoria de %s foi publicada por %s: %s',
-            $this->obterNomeAutor(),
-            $this->obterNomeCriador(),
-            $this->obterNomeMetalThursday(),
+            $this->nomeAutor,
+            $this->nomeCriador,
+            $this->nomeMetalThursday,
         );
     }
 
     /**
-     * Obtém o nome utilizado para identificar a MetalThursday.
+     * Constrói o nome utilizado para identificar a MetalThursday.
      *
+     * @param  MetalThursday  $metalThursday  MetalThursday consultada.
      * @return string Nome de apresentação.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
-    private function obterNomeMetalThursday(): string
-    {
+    private function construirNomeMetalThursday(
+        MetalThursday $metalThursday,
+    ): string {
         $nome =
-            $this->metalThursday->nome;
+            $metalThursday->nome;
 
         if (
             is_string($nome)
@@ -240,12 +307,8 @@ final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
             );
         }
 
-        $this->metalThursday->loadMissing([
-            'edicao',
-        ]);
-
         $edicao =
-            $this->metalThursday->edicao;
+            $metalThursday->edicao;
 
         $nomeEdicao =
             $edicao instanceof Edicao
@@ -257,7 +320,7 @@ final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
             : null;
 
         $data =
-            $this->metalThursday->data;
+            $metalThursday->data;
 
         $dataFormatada =
             $data instanceof CarbonInterface
@@ -290,61 +353,88 @@ final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
 
         return sprintf(
             'MetalThursday #%d',
-            (int) $this->metalThursday->getKey(),
+            $this->identificadorMetalThursday,
         );
     }
 
     /**
-     * Obtém o nome do autor.
+     * Obtém um nome válido de utilizador ou o texto alternativo.
      *
-     * @return string Nome do autor ou valor alternativo.
+     * @param  Utilizador|null  $utilizador  Utilizador consultado.
+     * @param  string  $alternativa  Texto utilizado quando o nome não existe.
+     * @return string Nome normalizado ou alternativa.
      *
-     * @since 2.0.0
+     * @since 3.1.0
      *
      * @version 1.0.0
      */
-    private function obterNomeAutor(): string
-    {
-        $autor =
-            $this->metalThursday->autor;
-
+    private function obterNomeUtilizador(
+        ?Utilizador $utilizador,
+        string $alternativa,
+    ): string {
         if (
-            $autor instanceof Utilizador
-            && is_string($autor->nome)
-            && trim($autor->nome) !== ''
+            $utilizador instanceof Utilizador
+            && is_string($utilizador->nome)
+            && trim($utilizador->nome) !== ''
         ) {
             return trim(
-                $autor->nome,
+                $utilizador->nome,
             );
         }
 
-        return 'um utilizador';
+        return $alternativa;
     }
 
     /**
-     * Obtém o nome do utilizador que publicou a MetalThursday.
+     * Obtém o identificador persistido da MetalThursday.
      *
-     * @return string Nome do criador ou valor alternativo.
+     * @param  MetalThursday  $metalThursday  MetalThursday recebida.
+     * @return int Identificador persistido.
      *
-     * @since 2.0.0
+     * @throws InvalidArgumentException Quando o modelo não está persistido ou
+     *                                  não possui um identificador válido.
+     *
+     * @since 3.1.0
      *
      * @version 1.0.0
      */
-    private function obterNomeCriador(): string
-    {
-        $criador =
-            $this->metalThursday->criadoPor;
-
-        if (
-            $criador instanceof Utilizador
-            && is_string($criador->nome)
-            && trim($criador->nome) !== ''
-        ) {
-            return trim(
-                $criador->nome,
+    private function obterIdentificadorMetalThursday(
+        MetalThursday $metalThursday,
+    ): int {
+        if (! $metalThursday->exists) {
+            throw new InvalidArgumentException(
+                'A MetalThursday da notificação deve estar persistida.',
             );
         }
 
-        return 'o sistema';
+        $identificador =
+            $metalThursday->getKey();
+
+        if (
+            is_int($identificador)
+            && $identificador > 0
+        ) {
+            return $identificador;
+        }
+
+        if (is_string($identificador)) {
+            $identificadorNormalizado = trim(
+                $identificador,
+            );
+
+            if (
+                $identificadorNormalizado !== ''
+                && ctype_digit(
+                    $identificadorNormalizado,
+                )
+                && (int) $identificadorNormalizado > 0
+            ) {
+                return (int) $identificadorNormalizado;
+            }
+        }
+
+        throw new InvalidArgumentException(
+            'A MetalThursday da notificação deve possuir um identificador válido.',
+        );
     }
 }

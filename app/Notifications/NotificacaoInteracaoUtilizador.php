@@ -12,25 +12,25 @@ use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
 use App\Models\Musica\Banda;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
 
 /**
  * Notifica os utilizadores quando ocorre uma interação numa MetalThursday,
  * numa secção ou num comentário.
  *
- * A notificação guarda apenas identificadores e valores escalares, evitando
- * serializar modelos Eloquent completos para a fila.
+ * A notificação guarda apenas um retrato de identificadores e valores
+ * escalares obtidos no momento da interação. O processamento posterior da
+ * fila não recupera o sujeito nem as respetivas relações da base de dados.
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 3.1.0
  */
 final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
 {
     /**
      * Tipo interno correspondente a uma MetalThursday.
-     *
-     * @var string
      *
      * @since 2.0.0
      *
@@ -42,8 +42,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
     /**
      * Tipo interno correspondente a uma secção.
      *
-     * @var string
-     *
      * @since 2.0.0
      *
      * @version 1.0.0
@@ -53,8 +51,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
 
     /**
      * Tipo interno correspondente a um comentário.
-     *
-     * @var string
      *
      * @since 2.0.0
      *
@@ -66,8 +62,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
     /**
      * Permissão que autoriza todas as comunicações por e-mail.
      *
-     * @var string
-     *
      * @since 2.0.0
      *
      * @version 1.0.0
@@ -77,8 +71,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
 
     /**
      * Permissão relativa a todas as novas interações.
-     *
-     * @var string
      *
      * @since 2.0.0
      *
@@ -90,8 +82,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
     /**
      * Permissão relativa às interações nas publicações do utilizador.
      *
-     * @var string
-     *
      * @since 2.0.0
      *
      * @version 1.0.0
@@ -102,7 +92,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
     /**
      * Tipo interno do sujeito da interação.
      *
-     *
      * @since 2.0.0
      *
      * @version 1.0.0
@@ -111,7 +100,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
 
     /**
      * Identificador do sujeito da interação.
-     *
      *
      * @since 2.0.0
      *
@@ -122,7 +110,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
     /**
      * Identificador do utilizador que provocou a interação.
      *
-     *
      * @since 2.0.0
      *
      * @version 1.0.0
@@ -131,7 +118,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
 
     /**
      * Nome do utilizador no momento da interação.
-     *
      *
      * @since 2.0.0
      *
@@ -142,7 +128,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
     /**
      * Ação realizada pelo utilizador.
      *
-     *
      * @since 2.0.0
      *
      * @version 1.0.0
@@ -150,70 +135,71 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
     private readonly string $acao;
 
     /**
-     * Sujeito recuperado da base de dados.
+     * Identificador da MetalThursday relacionada com a interação.
      *
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private MetalThursday|SeccaoMetalThursday|Comentario|null $sujeitoRecuperado =
-        null;
-
-    /**
-     * Indica se já foi tentada a recuperação do sujeito.
-     *
-     *
-     * @since 2.0.0
+     * @since 3.1.0
      *
      * @version 1.0.0
      */
-    private bool $sujeitoFoiProcurado = false;
+    private readonly ?int $identificadorMetalThursday;
 
     /**
-     * Cria a notificação.
+     * Identificador do autor da MetalThursday relacionada.
      *
-     * @param  MetalThursday|SeccaoMetalThursday|Comentario  $sujeito
-     *                                                                 Sujeito da interação.
+     * @since 3.1.0
+     *
+     * @version 1.0.0
+     */
+    private readonly ?int $identificadorAutorMetalThursday;
+
+    /**
+     * Descrição do sujeito ou do contexto do comentário.
+     *
+     * @since 3.1.0
+     *
+     * @version 1.0.0
+     */
+    private readonly string $descricaoContexto;
+
+    /**
+     * Identificador do autor quando o sujeito é um comentário.
+     *
+     * @since 3.1.0
+     *
+     * @version 1.0.0
+     */
+    private readonly ?int $identificadorAutorComentario;
+
+    /**
+     * Nome do autor quando o sujeito é um comentário.
+     *
+     * @since 3.1.0
+     *
+     * @version 1.0.0
+     */
+    private readonly string $nomeAutorComentario;
+
+    /**
+     * Cria a notificação e captura o contexto necessário para a fila.
+     *
+     * @param  MetalThursday|SeccaoMetalThursday|Comentario  $sujeito  Sujeito
+     *                                                                 da
+     *                                                                 interação.
      * @param  Utilizador  $causador  Utilizador que realizou a interação.
      * @param  string  $acao  Ação realizada.
      *
-     * @throws InvalidArgumentException Quando um identificador ou a ação não
-     *                                  são válidos.
+     * @throws InvalidArgumentException Quando um modelo, identificador ou a
+     *                                  ação não são válidos.
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.1.0
      */
     public function __construct(
         MetalThursday|SeccaoMetalThursday|Comentario $sujeito,
         Utilizador $causador,
         string $acao,
     ) {
-        $identificadorSujeito =
-            $sujeito->getKey();
-
-        if (
-            ! is_numeric($identificadorSujeito)
-            || (int) $identificadorSujeito < 1
-        ) {
-            throw new InvalidArgumentException(
-                'O sujeito da interação deve estar persistido.',
-            );
-        }
-
-        $identificadorCausador =
-            $causador->getKey();
-
-        if (
-            ! is_numeric($identificadorCausador)
-            || (int) $identificadorCausador < 1
-        ) {
-            throw new InvalidArgumentException(
-                'O utilizador responsável pela interação deve estar persistido.',
-            );
-        }
-
         $this->tipoSujeito = match (true) {
             $sujeito instanceof MetalThursday => self::TIPO_METAL_THURSDAY,
 
@@ -223,20 +209,47 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
         };
 
         $this->identificadorSujeito =
-            (int) $identificadorSujeito;
+            $this->obterIdentificadorPersistido(
+                $sujeito,
+                'O sujeito da interação',
+            );
 
         $this->identificadorCausador =
-            (int) $identificadorCausador;
+            $this->obterIdentificadorPersistido(
+                $causador,
+                'O utilizador responsável pela interação',
+            );
 
         $this->nomeCausador =
             $this->normalizarNomeUtilizador(
                 $causador->nome,
+                'Um utilizador',
             );
 
         $this->acao =
             $this->normalizarAcao(
                 $acao,
             );
+
+        $retrato =
+            $this->criarRetratoSujeito(
+                $sujeito,
+            );
+
+        $this->identificadorMetalThursday =
+            $retrato['identificador_metal_thursday'];
+
+        $this->identificadorAutorMetalThursday =
+            $retrato['identificador_autor_metal_thursday'];
+
+        $this->descricaoContexto =
+            $retrato['descricao_contexto'];
+
+        $this->identificadorAutorComentario =
+            $retrato['identificador_autor_comentario'];
+
+        $this->nomeAutorComentario =
+            $retrato['nome_autor_comentario'];
 
         $this->afterCommit();
     }
@@ -249,24 +262,21 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.1.0
      */
     protected function deveEnviarPorEmail(
         Utilizador $utilizador,
     ): bool {
-        $metalThursday =
-            $this->obterMetalThursdayPai();
-
-        if (! $metalThursday instanceof MetalThursday) {
-            return false;
-        }
+        $identificadorDestinatario =
+            $this->normalizarIdentificador(
+                $utilizador->getKey(),
+            );
 
         $eAutor =
-            is_numeric(
-                $metalThursday->autor_id,
-            )
-            && (int) $metalThursday->autor_id
-            === (int) $utilizador->getKey();
+            $identificadorDestinatario !== null
+            && $this->identificadorAutorMetalThursday !== null
+            && $identificadorDestinatario
+            === $this->identificadorAutorMetalThursday;
 
         return $utilizador->temPermissaoEmail(
             self::PERMISSAO_TODAS,
@@ -301,7 +311,7 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 3.1.0
      */
     public function toArray(
         Utilizador $utilizador,
@@ -357,7 +367,7 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.1.0
      */
     protected function obterLinhaMensagem(
         Utilizador $utilizador,
@@ -391,15 +401,12 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 3.1.0
      */
     protected function obterUrlAcao(
         Utilizador $utilizador,
     ): ?string {
-        $metalThursday =
-            $this->obterMetalThursdayPai();
-
-        if (! $metalThursday instanceof MetalThursday) {
+        if ($this->identificadorMetalThursday === null) {
             return route(
                 'inicio',
             );
@@ -408,7 +415,7 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
         return route(
             'metal-thursday.detalhes',
             [
-                'metalThursday' => $metalThursday,
+                'metalThursday' => $this->identificadorMetalThursday,
             ],
         );
     }
@@ -440,120 +447,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
     }
 
     /**
-     * Obtém o sujeito da interação.
-     *
-     * @return MetalThursday|SeccaoMetalThursday|Comentario|null Sujeito
-     *                                                           encontrado.
-     *
-     * @since 1.0.0
-     *
-     * @version 2.0.0
-     */
-    private function obterSujeito(): MetalThursday|SeccaoMetalThursday|Comentario|null
-    {
-        if ($this->sujeitoFoiProcurado) {
-            return $this->sujeitoRecuperado;
-        }
-
-        $this->sujeitoFoiProcurado =
-            true;
-
-        $this->sujeitoRecuperado = match ($this->tipoSujeito) {
-            self::TIPO_METAL_THURSDAY => MetalThursday::query()
-                ->find(
-                    $this->identificadorSujeito,
-                ),
-
-            self::TIPO_SECCAO => SeccaoMetalThursday::query()
-                ->find(
-                    $this->identificadorSujeito,
-                ),
-
-            self::TIPO_COMENTARIO => Comentario::query()
-                ->find(
-                    $this->identificadorSujeito,
-                ),
-
-            default => null,
-        };
-
-        return $this->sujeitoRecuperado;
-    }
-
-    /**
-     * Obtém a MetalThursday principal da interação.
-     *
-     * @return MetalThursday|null MetalThursday encontrada.
-     *
-     * @since 1.0.0
-     *
-     * @version 2.0.0
-     */
-    private function obterMetalThursdayPai(): ?MetalThursday
-    {
-        $sujeito =
-            $this->obterSujeito();
-
-        if ($sujeito instanceof MetalThursday) {
-            return $sujeito;
-        }
-
-        if ($sujeito instanceof SeccaoMetalThursday) {
-            return $this->obterMetalThursdayDaSeccao(
-                $sujeito,
-            );
-        }
-
-        if ($sujeito instanceof Comentario) {
-            $comentavel =
-                $sujeito
-                    ->comentavel()
-                    ->first();
-
-            if ($comentavel instanceof MetalThursday) {
-                return $comentavel;
-            }
-
-            if ($comentavel instanceof SeccaoMetalThursday) {
-                return $this->obterMetalThursdayDaSeccao(
-                    $comentavel,
-                );
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Obtém a MetalThursday associada a uma secção.
-     *
-     * @param  SeccaoMetalThursday  $seccao  Secção consultada.
-     * @return MetalThursday|null MetalThursday encontrada.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.1.0
-     */
-    private function obterMetalThursdayDaSeccao(
-        SeccaoMetalThursday $seccao,
-    ): ?MetalThursday {
-        $identificador =
-            $seccao->metal_thursday_id;
-
-        if (
-            ! is_numeric($identificador)
-            || (int) $identificador < 1
-        ) {
-            return null;
-        }
-
-        return MetalThursday::query()
-            ->find(
-                (int) $identificador,
-            );
-    }
-
-    /**
      * Constrói a mensagem apresentada ao destinatário.
      *
      * @param  Utilizador  $utilizador  Utilizador destinatário.
@@ -561,67 +454,47 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.1.0
      */
     private function obterMensagem(
         Utilizador $utilizador,
     ): string {
-        $sujeito =
-            $this->obterSujeito();
-
-        if (
-            ! $sujeito instanceof MetalThursday
-            && ! $sujeito instanceof SeccaoMetalThursday
-            && ! $sujeito instanceof Comentario
-        ) {
-            return sprintf(
-                '%s realizou uma interação num conteúdo que foi entretanto removido.',
-                $this->nomeCausador,
-            );
-        }
-
-        if ($sujeito instanceof Comentario) {
+        if ($this->tipoSujeito === self::TIPO_COMENTARIO) {
             return $this->obterMensagemComentario(
                 $utilizador,
-                $sujeito,
             );
         }
-
-        $descricao =
-            $this->obterDescricaoConteudo(
-                $sujeito,
-            );
 
         return match ($this->acao) {
             'comentou' => sprintf(
                 '%s comentou na %s.',
                 $this->nomeCausador,
-                $descricao,
+                $this->descricaoContexto,
             ),
 
             'avaliou' => sprintf(
                 '%s avaliou a %s.',
                 $this->nomeCausador,
-                $descricao,
+                $this->descricaoContexto,
             ),
 
             'ouviu' => sprintf(
                 '%s assinalou a %s como ouvida.',
                 $this->nomeCausador,
-                $descricao,
+                $this->descricaoContexto,
             ),
 
             'gostou' => sprintf(
                 '%s gostou da %s.',
                 $this->nomeCausador,
-                $descricao,
+                $this->descricaoContexto,
             ),
 
             default => sprintf(
                 '%s %s a %s.',
                 $this->nomeCausador,
                 $this->acao,
-                $descricao,
+                $this->descricaoContexto,
             ),
         };
     }
@@ -630,134 +503,268 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * Constrói a mensagem relativa a um comentário.
      *
      * @param  Utilizador  $utilizador  Utilizador destinatário.
-     * @param  Comentario  $comentario  Comentário relacionado.
      * @return string Mensagem construída.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterMensagemComentario(
         Utilizador $utilizador,
-        Comentario $comentario,
     ): string {
-        $descricao =
-            $this->obterDescricaoContextoComentario(
-                $comentario,
+        $identificadorDestinatario =
+            $this->normalizarIdentificador(
+                $utilizador->getKey(),
             );
 
         $eAutorComentario =
-            is_numeric(
-                $comentario->utilizador_id,
-            )
-            && (int) $comentario->utilizador_id
-            === (int) $utilizador->getKey();
+            $identificadorDestinatario !== null
+            && $this->identificadorAutorComentario !== null
+            && $identificadorDestinatario
+            === $this->identificadorAutorComentario;
 
         if ($eAutorComentario) {
             return match ($this->acao) {
                 'gostou' => sprintf(
                     '%s gostou do teu comentário em %s.',
                     $this->nomeCausador,
-                    $descricao,
+                    $this->descricaoContexto,
                 ),
 
                 'respondeu' => sprintf(
                     '%s respondeu ao teu comentário em %s.',
                     $this->nomeCausador,
-                    $descricao,
+                    $this->descricaoContexto,
                 ),
 
                 default => sprintf(
                     '%s %s o teu comentário em %s.',
                     $this->nomeCausador,
                     $this->acao,
-                    $descricao,
+                    $this->descricaoContexto,
                 ),
             };
         }
-
-        $nomeAutor =
-            $this->obterNomeAutorComentario(
-                $comentario,
-            );
 
         return match ($this->acao) {
             'gostou' => sprintf(
                 '%s gostou de um comentário de %s em %s.',
                 $this->nomeCausador,
-                $nomeAutor,
-                $descricao,
+                $this->nomeAutorComentario,
+                $this->descricaoContexto,
             ),
 
             'respondeu' => sprintf(
                 '%s respondeu a um comentário de %s em %s.',
                 $this->nomeCausador,
-                $nomeAutor,
-                $descricao,
+                $this->nomeAutorComentario,
+                $this->descricaoContexto,
             ),
 
             default => sprintf(
                 '%s %s um comentário de %s em %s.',
                 $this->nomeCausador,
                 $this->acao,
-                $nomeAutor,
-                $descricao,
+                $this->nomeAutorComentario,
+                $this->descricaoContexto,
             ),
         };
     }
 
     /**
-     * Obtém a descrição do contexto de um comentário.
+     * Captura o retrato do sujeito e do respetivo contexto.
      *
-     * @param  Comentario  $comentario  Comentário consultado.
-     * @return string Descrição do conteúdo.
+     * @param  MetalThursday|SeccaoMetalThursday|Comentario  $sujeito  Sujeito
+     *                                                                 original.
+     * @return array{
+     *     identificador_metal_thursday: int|null,
+     *     identificador_autor_metal_thursday: int|null,
+     *     descricao_contexto: string,
+     *     identificador_autor_comentario: int|null,
+     *     nome_autor_comentario: string
+     * } Retrato escalar do contexto.
      *
-     * @since 2.0.0
+     * @since 3.1.0
      *
      * @version 1.0.0
      */
-    private function obterDescricaoContextoComentario(
-        Comentario $comentario,
-    ): string {
-        $comentavel =
-            $comentario
-                ->comentavel()
-                ->first();
-
-        if (
-            $comentavel instanceof MetalThursday
-            || $comentavel instanceof SeccaoMetalThursday
-        ) {
-            return $this->obterDescricaoConteudo(
-                $comentavel,
+    private function criarRetratoSujeito(
+        MetalThursday|SeccaoMetalThursday|Comentario $sujeito,
+    ): array {
+        if ($sujeito instanceof MetalThursday) {
+            return $this->criarRetratoMetalThursday(
+                $sujeito,
             );
         }
 
-        return 'um conteúdo que foi entretanto removido';
+        if ($sujeito instanceof SeccaoMetalThursday) {
+            return $this->criarRetratoSeccao(
+                $sujeito,
+            );
+        }
+
+        return $this->criarRetratoComentario(
+            $sujeito,
+        );
     }
 
     /**
-     * Obtém a descrição de uma MetalThursday ou secção.
+     * Captura o retrato de uma MetalThursday.
      *
-     * @param  MetalThursday|SeccaoMetalThursday  $conteudo  Conteúdo descrito.
-     * @return string Descrição construída.
+     * @param  MetalThursday  $metalThursday  MetalThursday original.
+     * @return array{
+     *     identificador_metal_thursday: int,
+     *     identificador_autor_metal_thursday: int|null,
+     *     descricao_contexto: string,
+     *     identificador_autor_comentario: null,
+     *     nome_autor_comentario: string
+     * } Retrato escalar.
      *
-     * @since 2.0.0
+     * @since 3.1.0
      *
      * @version 1.0.0
      */
-    private function obterDescricaoConteudo(
-        MetalThursday|SeccaoMetalThursday $conteudo,
-    ): string {
-        if ($conteudo instanceof MetalThursday) {
-            return $this->obterDescricaoMetalThursday(
-                $conteudo,
-            );
+    private function criarRetratoMetalThursday(
+        MetalThursday $metalThursday,
+    ): array {
+        $metalThursday->loadMissing([
+            'edicao:id,nome',
+        ]);
+
+        return [
+            'identificador_metal_thursday' => $this->obterIdentificadorPersistido(
+                $metalThursday,
+                'A MetalThursday relacionada com a interação',
+            ),
+
+            'identificador_autor_metal_thursday' => $this->normalizarIdentificador(
+                $metalThursday->autor_id,
+            ),
+
+            'descricao_contexto' => $this->obterDescricaoMetalThursday(
+                $metalThursday,
+            ),
+
+            'identificador_autor_comentario' => null,
+
+            'nome_autor_comentario' => 'um utilizador',
+        ];
+    }
+
+    /**
+     * Captura o retrato de uma secção.
+     *
+     * @param  SeccaoMetalThursday  $seccao  Secção original.
+     * @return array{
+     *     identificador_metal_thursday: int|null,
+     *     identificador_autor_metal_thursday: int|null,
+     *     descricao_contexto: string,
+     *     identificador_autor_comentario: null,
+     *     nome_autor_comentario: string
+     * } Retrato escalar.
+     *
+     * @since 3.1.0
+     *
+     * @version 1.0.0
+     */
+    private function criarRetratoSeccao(
+        SeccaoMetalThursday $seccao,
+    ): array {
+        $seccao->loadMissing([
+            'metalThursday',
+            'tipoSeccao:id,nome',
+            'banda:id,nome',
+        ]);
+
+        $metalThursday =
+            $seccao->metalThursday;
+
+        return [
+            'identificador_metal_thursday' => $metalThursday instanceof MetalThursday
+                ? $this->normalizarIdentificador(
+                    $metalThursday->getKey(),
+                )
+                : null,
+
+            'identificador_autor_metal_thursday' => $metalThursday instanceof MetalThursday
+                ? $this->normalizarIdentificador(
+                    $metalThursday->autor_id,
+                )
+                : null,
+
+            'descricao_contexto' => $this->obterDescricaoSeccao(
+                $seccao,
+            ),
+
+            'identificador_autor_comentario' => null,
+
+            'nome_autor_comentario' => 'um utilizador',
+        ];
+    }
+
+    /**
+     * Captura o retrato de um comentário e do respetivo conteúdo.
+     *
+     * @param  Comentario  $comentario  Comentário original.
+     * @return array{
+     *     identificador_metal_thursday: int|null,
+     *     identificador_autor_metal_thursday: int|null,
+     *     descricao_contexto: string,
+     *     identificador_autor_comentario: int|null,
+     *     nome_autor_comentario: string
+     * } Retrato escalar.
+     *
+     * @since 3.1.0
+     *
+     * @version 1.0.0
+     */
+    private function criarRetratoComentario(
+        Comentario $comentario,
+    ): array {
+        $comentario->loadMissing([
+            'utilizador:id,nome',
+            'comentavel',
+        ]);
+
+        $comentavel =
+            $comentario->comentavel;
+
+        if ($comentavel instanceof MetalThursday) {
+            $retratoContexto =
+                $this->criarRetratoMetalThursday(
+                    $comentavel,
+                );
+        } elseif ($comentavel instanceof SeccaoMetalThursday) {
+            $retratoContexto =
+                $this->criarRetratoSeccao(
+                    $comentavel,
+                );
+        } else {
+            $retratoContexto = [
+                'identificador_metal_thursday' => null,
+
+                'identificador_autor_metal_thursday' => null,
+
+                'descricao_contexto' => 'um conteúdo que foi entretanto removido',
+            ];
         }
 
-        return $this->obterDescricaoSeccao(
-            $conteudo,
-        );
+        return [
+            'identificador_metal_thursday' => $retratoContexto['identificador_metal_thursday'],
+
+            'identificador_autor_metal_thursday' => $retratoContexto['identificador_autor_metal_thursday'],
+
+            'descricao_contexto' => $retratoContexto['descricao_contexto'],
+
+            'identificador_autor_comentario' => $this->normalizarIdentificador(
+                $comentario->utilizador_id,
+            ),
+
+            'nome_autor_comentario' => $this->normalizarNomeUtilizador(
+                $comentario->utilizador?->nome,
+                'um utilizador',
+            ),
+        ];
     }
 
     /**
@@ -768,7 +775,7 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterDescricaoMetalThursday(
         MetalThursday $metalThursday,
@@ -787,10 +794,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
                 ),
             );
         }
-
-        $metalThursday->loadMissing([
-            'edicao',
-        ]);
 
         $edicao =
             $metalThursday->edicao;
@@ -841,7 +844,10 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
 
         return sprintf(
             'MetalThursday #%d',
-            (int) $metalThursday->getKey(),
+            $this->obterIdentificadorPersistido(
+                $metalThursday,
+                'A MetalThursday descrita',
+            ),
         );
     }
 
@@ -853,16 +859,11 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 2.0.0
      */
     private function obterDescricaoSeccao(
         SeccaoMetalThursday $seccao,
     ): string {
-        $seccao->loadMissing([
-            'tipoSeccao',
-            'banda',
-        ]);
-
         $titulo =
             is_string($seccao->titulo)
             ? trim(
@@ -920,33 +921,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
     }
 
     /**
-     * Obtém o nome do autor de um comentário.
-     *
-     * @param  Comentario  $comentario  Comentário consultado.
-     * @return string Nome do autor.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private function obterNomeAutorComentario(
-        Comentario $comentario,
-    ): string {
-        $comentario->loadMissing([
-            'utilizador',
-        ]);
-
-        $autor =
-            $comentario->utilizador;
-
-        return $autor instanceof Utilizador
-            ? $this->normalizarNomeUtilizador(
-                $autor->nome,
-            )
-            : 'um utilizador';
-    }
-
-    /**
      * Obtém o ícone correspondente à ação.
      *
      * @return string Classe do ícone.
@@ -994,21 +968,43 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
     }
 
     /**
-     * Normaliza a ação recebida.
+     * Normaliza e valida a ação recebida.
      *
      * @param  string  $acao  Ação original.
      * @return string Ação normalizada.
      *
-     * @throws InvalidArgumentException Quando a ação está vazia ou é
-     *                                  demasiado extensa.
+     * @throws InvalidArgumentException Quando a ação contém texto inválido,
+     *                                  fica vazia ou é demasiado extensa.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function normalizarAcao(
         string $acao,
     ): string {
+        if (
+            preg_match(
+                '//u',
+                $acao,
+            ) !== 1
+        ) {
+            throw new InvalidArgumentException(
+                'A ação da interação contém texto inválido.',
+            );
+        }
+
+        if (
+            preg_match(
+                '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/',
+                $acao,
+            ) === 1
+        ) {
+            throw new InvalidArgumentException(
+                'A ação da interação contém caracteres inválidos.',
+            );
+        }
+
         $acaoNormalizada =
             preg_replace(
                 '/\s+/u',
@@ -1042,17 +1038,19 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * Normaliza o nome de um utilizador.
      *
      * @param  mixed  $nome  Nome recebido.
-     * @return string Nome normalizado.
+     * @param  string  $alternativa  Texto utilizado perante um nome inválido.
+     * @return string Nome normalizado ou alternativa.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function normalizarNomeUtilizador(
         mixed $nome,
+        string $alternativa,
     ): string {
         if (! is_string($nome)) {
-            return 'Um utilizador';
+            return $alternativa;
         }
 
         $nomeNormalizado =
@@ -1067,6 +1065,96 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
         return is_string($nomeNormalizado)
             && $nomeNormalizado !== ''
             ? $nomeNormalizado
-            : 'Um utilizador';
+            : $alternativa;
+    }
+
+    /**
+     * Obtém o identificador inteiro de um modelo persistido.
+     *
+     * @param  Model  $modelo  Modelo recebido.
+     * @param  string  $designacao  Designação utilizada na mensagem de erro.
+     * @return int Identificador persistido.
+     *
+     * @throws InvalidArgumentException Quando o modelo não está persistido ou
+     *                                  não possui um identificador válido.
+     *
+     * @since 3.1.0
+     *
+     * @version 1.0.0
+     */
+    private function obterIdentificadorPersistido(
+        Model $modelo,
+        string $designacao,
+    ): int {
+        if (! $modelo->exists) {
+            throw new InvalidArgumentException(
+                sprintf(
+                    '%s deve estar persistido.',
+                    $designacao,
+                ),
+            );
+        }
+
+        $identificador =
+            $this->normalizarIdentificador(
+                $modelo->getKey(),
+            );
+
+        if ($identificador !== null) {
+            return $identificador;
+        }
+
+        throw new InvalidArgumentException(
+            sprintf(
+                '%s deve possuir um identificador válido.',
+                $designacao,
+            ),
+        );
+    }
+
+    /**
+     * Normaliza um identificador inteiro positivo.
+     *
+     * @param  mixed  $identificador  Valor recebido.
+     * @return int|null Identificador normalizado ou nulo.
+     *
+     * @since 3.1.0
+     *
+     * @version 1.0.0
+     */
+    private function normalizarIdentificador(
+        mixed $identificador,
+    ): ?int {
+        if (
+            is_int($identificador)
+            && $identificador > 0
+        ) {
+            return $identificador;
+        }
+
+        if (! is_string($identificador)) {
+            return null;
+        }
+
+        $identificadorNormalizado =
+            trim(
+                $identificador,
+            );
+
+        if (
+            $identificadorNormalizado === ''
+            || ! ctype_digit(
+                $identificadorNormalizado,
+            )
+        ) {
+            return null;
+        }
+
+        $identificadorInteiro =
+            (int) $identificadorNormalizado;
+
+        return $identificadorInteiro > 0
+            ? $identificadorInteiro
+            : null;
     }
 }

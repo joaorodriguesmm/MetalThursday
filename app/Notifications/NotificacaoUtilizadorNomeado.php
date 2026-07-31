@@ -8,17 +8,20 @@ use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\MetalThursday;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
+use InvalidArgumentException;
 
 /**
  * Notifica um utilizador quando é nomeado para preparar a próxima
  * MetalThursday.
  *
- * A notificação é sempre guardada na base de dados e pode também ser enviada
- * por e-mail, conforme as permissões do destinatário.
+ * A notificação guarda apenas um retrato de valores escalares obtidos no
+ * momento da nomeação. O processamento posterior da fila não depende da
+ * existência atual do modelo nem executa consultas para reconstruir a
+ * mensagem.
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 3.1.0
  */
 final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
 {
@@ -46,18 +49,68 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
         'alertas_nomeacao';
 
     /**
-     * Cria a notificação.
+     * Identificador da MetalThursday onde ocorreu a nomeação.
+     *
+     * @since 3.1.0
+     *
+     * @version 1.0.0
+     */
+    private readonly int $identificadorMetalThursday;
+
+    /**
+     * Nome do utilizador responsável pela nomeação.
+     *
+     * @since 3.1.0
+     *
+     * @version 1.0.0
+     */
+    private readonly string $nomeAutor;
+
+    /**
+     * Prazo apresentado ao utilizador nomeado.
+     *
+     * @since 3.1.0
+     *
+     * @version 1.0.0
+     */
+    private readonly ?string $prazo;
+
+    /**
+     * Cria a notificação e captura os dados necessários para a fila.
      *
      * @param  MetalThursday  $metalThursday  MetalThursday onde ocorreu a
      *                                        nomeação.
      *
+     * @throws InvalidArgumentException Quando a MetalThursday não está
+     *                                  persistida ou não possui um
+     *                                  identificador válido.
+     *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.1.0
      */
     public function __construct(
-        private readonly MetalThursday $metalThursday,
+        MetalThursday $metalThursday,
     ) {
+        $this->identificadorMetalThursday =
+            $this->obterIdentificadorMetalThursday(
+                $metalThursday,
+            );
+
+        $metalThursday->loadMissing([
+            'autor:id,nome',
+        ]);
+
+        $this->nomeAutor =
+            $this->obterNomeAutor(
+                $metalThursday,
+            );
+
+        $this->prazo =
+            $this->obterPrazo(
+                $metalThursday->data,
+            );
+
         $this->afterCommit();
     }
 
@@ -98,7 +151,7 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 3.1.0
      */
     public function toArray(
         Utilizador $utilizador,
@@ -106,7 +159,7 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
         return [
             'tipo' => 'utilizador_nomeado',
 
-            'identificador_metal_thursday' => (int) $this->metalThursday->getKey(),
+            'identificador_metal_thursday' => $this->identificadorMetalThursday,
 
             'titulo' => 'Foste nomeado para a próxima MetalThursday',
 
@@ -178,7 +231,7 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 3.1.0
      */
     protected function obterUrlAcao(
         Utilizador $utilizador,
@@ -186,7 +239,7 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
         return route(
             'metal-thursday.detalhes',
             [
-                'metalThursday' => $this->metalThursday,
+                'metalThursday' => $this->identificadorMetalThursday,
             ],
         );
     }
@@ -198,47 +251,39 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterMensagem(): string
     {
-        $nomeAutor =
-            $this->obterNomeAutor();
-
-        $prazo =
-            $this->obterPrazo();
-
-        if ($prazo === null) {
+        if ($this->prazo === null) {
             return sprintf(
                 'Foste nomeado por %s! Prepara a tua próxima MetalThursday.',
-                $nomeAutor,
+                $this->nomeAutor,
             );
         }
 
         return sprintf(
             'Foste nomeado por %s! Prepara e publica a tua MetalThursday até quinta-feira, dia %s.',
-            $nomeAutor,
-            $prazo,
+            $this->nomeAutor,
+            $this->prazo,
         );
     }
 
     /**
      * Obtém o nome do utilizador que realizou a nomeação.
      *
+     * @param  MetalThursday  $metalThursday  MetalThursday consultada.
      * @return string Nome do autor ou valor alternativo.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    private function obterNomeAutor(): string
-    {
-        $this->metalThursday->loadMissing([
-            'autor',
-        ]);
-
+    private function obterNomeAutor(
+        MetalThursday $metalThursday,
+    ): string {
         $autor =
-            $this->metalThursday->autor;
+            $metalThursday->autor;
 
         if (
             $autor instanceof Utilizador
@@ -259,18 +304,17 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
      * A data corresponde à primeira quinta-feira posterior à data da
      * MetalThursday onde ocorreu a nomeação.
      *
+     * @param  mixed  $data  Data original da MetalThursday.
      * @return string|null Data formatada ou nulo quando a data original não
      *                     está disponível.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    private function obterPrazo(): ?string
-    {
-        $data =
-            $this->metalThursday->data;
-
+    private function obterPrazo(
+        mixed $data,
+    ): ?string {
         if (! $data instanceof CarbonInterface) {
             return null;
         }
@@ -284,5 +328,58 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
             ->format(
                 'd/m/Y',
             );
+    }
+
+    /**
+     * Obtém o identificador persistido da MetalThursday.
+     *
+     * @param  MetalThursday  $metalThursday  MetalThursday recebida.
+     * @return int Identificador persistido.
+     *
+     * @throws InvalidArgumentException Quando o modelo não está persistido ou
+     *                                  não possui um identificador válido.
+     *
+     * @since 3.1.0
+     *
+     * @version 1.0.0
+     */
+    private function obterIdentificadorMetalThursday(
+        MetalThursday $metalThursday,
+    ): int {
+        if (! $metalThursday->exists) {
+            throw new InvalidArgumentException(
+                'A MetalThursday da notificação deve estar persistida.',
+            );
+        }
+
+        $identificador =
+            $metalThursday->getKey();
+
+        if (
+            is_int($identificador)
+            && $identificador > 0
+        ) {
+            return $identificador;
+        }
+
+        if (is_string($identificador)) {
+            $identificadorNormalizado = trim(
+                $identificador,
+            );
+
+            if (
+                $identificadorNormalizado !== ''
+                && ctype_digit(
+                    $identificadorNormalizado,
+                )
+                && (int) $identificadorNormalizado > 0
+            ) {
+                return (int) $identificadorNormalizado;
+            }
+        }
+
+        throw new InvalidArgumentException(
+            'A MetalThursday da notificação deve possuir um identificador válido.',
+        );
     }
 }

@@ -20,7 +20,7 @@ use LogicException;
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 abstract class NotificacaoAplicacao extends Notification implements ShouldQueue
 {
@@ -30,8 +30,9 @@ abstract class NotificacaoAplicacao extends Notification implements ShouldQueue
      * Obtém os canais utilizados para enviar a notificação.
      *
      * A notificação é sempre guardada na base de dados. O canal de e-mail
-     * apenas é adicionado quando o utilizador possui um endereço disponível e
-     * autorizou esse tipo de comunicação.
+     * apenas é considerado quando o utilizador possui primeiro um endereço
+     * disponível. Desta forma, as preferências de e-mail não são consultadas
+     * para destinatários que nunca poderiam receber esse canal.
      *
      * @param  object  $notificavel  Entidade que recebe a notificação.
      * @return array<int, string> Canais utilizados.
@@ -40,7 +41,7 @@ abstract class NotificacaoAplicacao extends Notification implements ShouldQueue
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function via(
         object $notificavel,
@@ -55,10 +56,10 @@ abstract class NotificacaoAplicacao extends Notification implements ShouldQueue
         ];
 
         if (
-            $this->deveEnviarPorEmail(
+            $this->utilizadorPossuiEmail(
                 $utilizador,
             )
-            && $this->utilizadorPossuiEmail(
+            && $this->deveEnviarPorEmail(
                 $utilizador,
             )
         ) {
@@ -273,7 +274,9 @@ abstract class NotificacaoAplicacao extends Notification implements ShouldQueue
     ): string {
         $nome =
             is_string($utilizador->nome)
-            ? trim($utilizador->nome)
+            ? trim(
+                $utilizador->nome,
+            )
             : '';
 
         if ($nome === '') {
@@ -289,7 +292,9 @@ abstract class NotificacaoAplicacao extends Notification implements ShouldQueue
             is_array($partes)
             && isset($partes[0])
             && is_string($partes[0])
-            ? trim($partes[0])
+            ? trim(
+                $partes[0],
+            )
             : '';
 
         if ($primeiroNome === '') {

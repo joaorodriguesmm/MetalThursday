@@ -11,18 +11,19 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Support\Facades\Auth;
+use LogicException;
 
 /**
  * Adiciona suporte a audições polimórficas a um modelo Eloquent.
  *
  * Disponibiliza a relação com todas as audições e o estado correspondente ao
- * utilizador autenticado através da guarda `sessao`.
+ * utilizador autenticado através do guard `sessao`.
  *
  * @mixin Model
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 trait TemAudicoes
 {
@@ -87,15 +88,21 @@ trait TemAudicoes
     /**
      * Determina se o utilizador autenticado ouviu a entidade.
      *
-     * Quando a relação já está carregada, o resultado é obtido sem executar
-     * uma nova consulta. Caso contrário, é verificada a existência do registo
-     * diretamente na base de dados.
+     * Quando não existe autenticação válida, é devolvido falso.
+     *
+     * Para um utilizador autenticado, a relação
+     * `audicaoUtilizadorAutenticado` deve ser carregada explicitamente pela
+     * consulta responsável pela apresentação do modelo. O accessor nunca
+     * executa consultas ocultas.
      *
      * @return Attribute<bool, never> Estado da audição do utilizador.
      *
+     * @throws LogicException Quando existe autenticação válida, mas a relação
+     *                        necessária não foi carregada.
+     *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     protected function ouvidoPeloUtilizadorAutenticado(): Attribute
     {
@@ -109,22 +116,22 @@ trait TemAudicoes
                 }
 
                 if (
-                    $this->relationLoaded(
+                    ! $this->relationLoaded(
                         'audicaoUtilizadorAutenticado',
                     )
                 ) {
-                    $audicao = $this->getRelation(
-                        'audicaoUtilizadorAutenticado',
+                    throw new LogicException(
+                        'A relação "audicaoUtilizadorAutenticado" deve estar carregada antes de obter o estado de audição do utilizador autenticado.',
                     );
-
-                    return $audicao instanceof Audicao
-                        && $audicao->utilizador_id
-                        === $identificadorUtilizador;
                 }
 
-                return $this
-                    ->audicaoUtilizadorAutenticado()
-                    ->exists();
+                $audicao = $this->getRelation(
+                    'audicaoUtilizadorAutenticado',
+                );
+
+                return $audicao instanceof Audicao
+                    && $audicao->utilizador_id
+                    === $identificadorUtilizador;
             },
         );
     }
@@ -132,7 +139,7 @@ trait TemAudicoes
     /**
      * Obtém o identificador do utilizador autenticado para as audições.
      *
-     * O método confirma que o objeto autenticado através da guarda `sessao`
+     * O método confirma que o objeto autenticado através do guard `sessao`
      * corresponde a um utilizador persistido e possui um identificador inteiro
      * positivo.
      *
