@@ -32,7 +32,7 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * @since 1.0.0
  *
- * @version 4.0.0
+ * @version 4.1.0
  */
 final class ControladorBanda extends Controller
 {
@@ -48,7 +48,7 @@ final class ControladorBanda extends Controller
      * @version 2.0.0
      */
     private const REGISTOS_POR_PAGINA =
-        20;
+    20;
 
     /**
      * Comprimento máximo do termo de pesquisa.
@@ -60,7 +60,7 @@ final class ControladorBanda extends Controller
      * @version 1.0.0
      */
     private const COMPRIMENTO_MAXIMO_PESQUISA =
-        100;
+    100;
 
     /**
      * Número máximo de tentativas perante conflitos transitórios.
@@ -72,7 +72,7 @@ final class ControladorBanda extends Controller
      * @version 1.0.0
      */
     private const TENTATIVAS_TRANSACAO =
-        3;
+    3;
 
     /**
      * Apresenta a lista paginada de bandas.
@@ -82,7 +82,7 @@ final class ControladorBanda extends Controller
      *
      * @since 1.0.0
      *
-     * @version 4.0.0
+     * @version 4.1.0
      */
     public function indice(
         Request $pedido,
@@ -101,53 +101,35 @@ final class ControladorBanda extends Controller
 
         $bandas =
             Banda::query()
-                ->select([
-                    'id',
+            ->select([
+                'id',
+                'nome',
+                'origem_geografica_id',
+            ])
+            ->with([
+                'origemGeografica:id,nome',
+                'generos:id,nome',
+            ])
+            ->when(
+                $pesquisa !== null,
+                static fn(
+                    Builder $construtor,
+                ): Builder => $construtor->where(
                     'nome',
-                    'origem_geografica_id',
-                ])
-                ->with([
-                    'origemGeografica' => static fn (
-                        Builder $construtor,
-                    ): Builder => $construtor->select([
-                        'id',
-                        'nome',
-                    ]),
-
-                    'generos' => static fn (
-                        Builder $construtor,
-                    ): Builder => $construtor
-                        ->select([
-                            'generos.id',
-                            'generos.nome',
-                        ])
-                        ->orderBy(
-                            'generos.nome',
-                        )
-                        ->orderBy(
-                            'generos.id',
-                        ),
-                ])
-                ->when(
-                    $pesquisa !== null,
-                    static fn (
-                        Builder $construtor,
-                    ): Builder => $construtor->where(
-                        'nome',
-                        'like',
-                        '%'.$pesquisa.'%',
-                    ),
-                )
-                ->orderBy(
-                    'nome',
-                )
-                ->orderBy(
-                    'id',
-                )
-                ->paginate(
-                    self::REGISTOS_POR_PAGINA,
-                )
-                ->withQueryString();
+                    'like',
+                    '%' . $pesquisa . '%',
+                ),
+            )
+            ->orderBy(
+                'nome',
+            )
+            ->orderBy(
+                'id',
+            )
+            ->paginate(
+                self::REGISTOS_POR_PAGINA,
+            )
+            ->withQueryString();
 
         return view(
             'musica.bandas.indice',
@@ -193,7 +175,7 @@ final class ControladorBanda extends Controller
      *
      * @since 1.0.0
      *
-     * @version 4.0.0
+     * @version 4.1.0
      */
     public function guardar(
         CriarBandaRequest $pedido,
@@ -218,13 +200,17 @@ final class ControladorBanda extends Controller
                 static function () use (
                     $dados,
                 ): Banda {
-                    $banda =
-                        Banda::query()
-                            ->create([
-                                'nome' => $dados['nome'],
+                    $banda = new Banda([
+                        'nome' => $dados['nome'],
+                    ]);
 
-                                'origem_geografica_id' => $dados['origem_geografica_id'],
-                            ]);
+                    $banda
+                        ->origemGeografica()
+                        ->associate(
+                            $dados['origem_geografica_id'],
+                        );
+
+                    $banda->saveOrFail();
 
                     $banda
                         ->generos()
@@ -237,12 +223,12 @@ final class ControladorBanda extends Controller
                 self::TENTATIVAS_TRANSACAO,
             );
 
-        $banda->load([
-            'origemGeografica:id,nome',
-            'generos:id,nome',
-        ]);
-
         if ($pedido->expectsJson()) {
+            $banda->load([
+                'origemGeografica:id,nome',
+                'generos:id,nome',
+            ]);
+
             return response()->json(
                 [
                     'mensagem' => 'Banda criada com sucesso.',
@@ -271,7 +257,7 @@ final class ControladorBanda extends Controller
      *
      * @since 1.0.0
      *
-     * @version 4.0.0
+     * @version 4.1.0
      */
     public function detalhes(
         Banda $banda,
@@ -303,35 +289,42 @@ final class ControladorBanda extends Controller
 
         $seccoes =
             SeccaoMetalThursday::query()
-                ->select(
-                    $tabelaSeccoes.'.*',
-                )
-                ->join(
-                    $tabelaMetalThursdays
-                        .' as '
-                        .$aliasOrdenacao,
-                    $aliasOrdenacao.'.id',
-                    '=',
-                    $tabelaSeccoes.'.metal_thursday_id',
-                )
-                ->where(
-                    $tabelaSeccoes.'.banda_id',
-                    $banda->getKey(),
-                )
-                ->with([
-                    'metalThursday.autor',
-                    'tipoSeccao',
-                ])
-                ->orderByDesc(
-                    $aliasOrdenacao.'.data',
-                )
-                ->orderByDesc(
-                    $tabelaSeccoes.'.id',
-                )
-                ->paginate(
-                    self::REGISTOS_POR_PAGINA,
-                )
-                ->withQueryString();
+            ->select([
+                $tabelaSeccoes . '.id',
+                $tabelaSeccoes . '.metal_thursday_id',
+                $tabelaSeccoes . '.tipo_seccao_id',
+                $tabelaSeccoes . '.titulo',
+                $tabelaSeccoes . '.descricao',
+                $tabelaSeccoes . '.ligacao',
+                $tabelaSeccoes . '.ano',
+            ])
+            ->join(
+                $tabelaMetalThursdays
+                    . ' as '
+                    . $aliasOrdenacao,
+                $aliasOrdenacao . '.id',
+                '=',
+                $tabelaSeccoes . '.metal_thursday_id',
+            )
+            ->where(
+                $tabelaSeccoes . '.banda_id',
+                $banda->getKey(),
+            )
+            ->with([
+                'metalThursday:id,autor_id,data,deleted_at',
+                'metalThursday.autor:id,nome',
+                'tipoSeccao:id,nome',
+            ])
+            ->orderByDesc(
+                $aliasOrdenacao . '.data',
+            )
+            ->orderByDesc(
+                $tabelaSeccoes . '.id',
+            )
+            ->paginate(
+                self::REGISTOS_POR_PAGINA,
+            )
+            ->withQueryString();
 
         return view(
             'musica.bandas.detalhes',
@@ -356,7 +349,7 @@ final class ControladorBanda extends Controller
      *
      * @since 1.0.0
      *
-     * @version 4.0.0
+     * @version 4.1.0
      */
     public function editar(
         Request $pedido,
@@ -366,11 +359,6 @@ final class ControladorBanda extends Controller
             'update',
             $banda,
         );
-
-        $banda->loadMissing([
-            'origemGeografica:id,nome',
-            'generos:id,nome',
-        ]);
 
         return view(
             'musica.bandas.editar',
@@ -385,7 +373,7 @@ final class ControladorBanda extends Controller
      * Atualiza uma banda e sincroniza os respetivos géneros.
      *
      * O registo é novamente obtido e bloqueado dentro da transação. A
-     * autorização é aplicada ao modelo bloqueado.
+     * autorização é verificada antes de iniciar a operação.
      *
      * @param  AtualizarBandaRequest  $pedido  Pedido validado.
      * @param  Banda  $banda  Banda atualizada.
@@ -393,12 +381,17 @@ final class ControladorBanda extends Controller
      *
      * @since 1.0.0
      *
-     * @version 4.0.0
+     * @version 4.1.0
      */
     public function atualizar(
         AtualizarBandaRequest $pedido,
         Banda $banda,
     ): JsonResponse|RedirectResponse {
+        $this->authorize(
+            'update',
+            $banda,
+        );
+
         /**
          * @var array{
          *     nome: string,
@@ -417,22 +410,22 @@ final class ControladorBanda extends Controller
                 ): Banda {
                     $bandaBloqueada =
                         Banda::query()
-                            ->whereKey(
-                                $banda->getKey(),
-                            )
-                            ->lockForUpdate()
-                            ->firstOrFail();
+                        ->whereKey(
+                            $banda->getKey(),
+                        )
+                        ->lockForUpdate()
+                        ->firstOrFail();
 
-                    $this->authorize(
-                        'update',
-                        $bandaBloqueada,
-                    );
+                    $bandaBloqueada->nome =
+                        $dados['nome'];
 
-                    $bandaBloqueada->updateOrFail([
-                        'nome' => $dados['nome'],
+                    $bandaBloqueada
+                        ->origemGeografica()
+                        ->associate(
+                            $dados['origem_geografica_id'],
+                        );
 
-                        'origem_geografica_id' => $dados['origem_geografica_id'],
-                    ]);
+                    $bandaBloqueada->saveOrFail();
 
                     $bandaBloqueada
                         ->generos()
@@ -445,14 +438,12 @@ final class ControladorBanda extends Controller
                 self::TENTATIVAS_TRANSACAO,
             );
 
-        $bandaAtualizada
-            ->refresh()
-            ->load([
+        if ($pedido->expectsJson()) {
+            $bandaAtualizada->load([
                 'origemGeografica:id,nome',
                 'generos:id,nome',
             ]);
 
-        if ($pedido->expectsJson()) {
             return response()->json([
                 'mensagem' => 'Banda atualizada com sucesso.',
 
@@ -473,7 +464,7 @@ final class ControladorBanda extends Controller
     /**
      * Elimina logicamente uma banda.
      *
-     * O registo é bloqueado antes da autorização e da eliminação.
+     * A autorização é verificada antes de bloquear e eliminar o registo.
      *
      * @param  Request  $pedido  Pedido HTTP.
      * @param  Banda  $banda  Banda eliminada.
@@ -481,28 +472,28 @@ final class ControladorBanda extends Controller
      *
      * @since 1.0.0
      *
-     * @version 4.0.0
+     * @version 4.1.0
      */
     public function eliminar(
         Request $pedido,
         Banda $banda,
     ): JsonResponse|RedirectResponse {
+        $this->authorize(
+            'delete',
+            $banda,
+        );
+
         DB::transaction(
             function () use (
                 $banda,
             ): void {
                 $bandaBloqueada =
                     Banda::query()
-                        ->whereKey(
-                            $banda->getKey(),
-                        )
-                        ->lockForUpdate()
-                        ->firstOrFail();
-
-                $this->authorize(
-                    'delete',
-                    $bandaBloqueada,
-                );
+                    ->whereKey(
+                        $banda->getKey(),
+                    )
+                    ->lockForUpdate()
+                    ->firstOrFail();
 
                 $bandaBloqueada->deleteOrFail();
             },
@@ -565,8 +556,8 @@ final class ControladorBanda extends Controller
 
             $identificadoresGenerosModelo =
                 $banda
-                    ->generos
-                    ->modelKeys();
+                ->generos
+                ->modelKeys();
         } else {
             $enderecoFormulario =
                 route(

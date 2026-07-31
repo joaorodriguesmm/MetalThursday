@@ -31,7 +31,7 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * @since 1.0.0
  *
- * @version 4.0.0
+ * @version 4.1.0
  */
 final class ControladorGenero extends Controller
 {
@@ -105,19 +105,7 @@ final class ControladorGenero extends Controller
                     'nome',
                 ])
                 ->with([
-                    'generosPais' => static fn (
-                        Builder $construtor,
-                    ): Builder => $construtor
-                        ->select([
-                            'generos.id',
-                            'generos.nome',
-                        ])
-                        ->orderBy(
-                            'generos.nome',
-                        )
-                        ->orderBy(
-                            'generos.id',
-                        ),
+                    'generosPais:id,nome',
                 ])
                 ->when(
                     $pesquisa !== null,
@@ -239,12 +227,16 @@ final class ControladorGenero extends Controller
                 self::TENTATIVAS_TRANSACAO,
             );
 
-        $genero->load([
-            'generosPais:id,nome',
-            'generosFilhos:id,nome',
-        ]);
-
         if ($pedido->expectsJson()) {
+            $genero
+                ->load(
+                    'generosPais:id,nome',
+                )
+                ->setRelation(
+                    'generosFilhos',
+                    new Collection,
+                );
+
             return response()->json(
                 [
                     'mensagem' => 'Género criado com sucesso.',
@@ -297,26 +289,8 @@ final class ControladorGenero extends Controller
                     'bandas.origem_geografica_id',
                 ])
                 ->with([
-                    'origemGeografica' => static fn (
-                        Builder $construtor,
-                    ): Builder => $construtor->select([
-                        'id',
-                        'nome',
-                    ]),
-
-                    'generos' => static fn (
-                        Builder $construtor,
-                    ): Builder => $construtor
-                        ->select([
-                            'generos.id',
-                            'generos.nome',
-                        ])
-                        ->orderBy(
-                            'generos.nome',
-                        )
-                        ->orderBy(
-                            'generos.id',
-                        ),
+                    'origemGeografica:id,nome',
+                    'generos:id,nome',
                 ])
                 ->orderBy(
                     'bandas.nome',
@@ -414,6 +388,11 @@ final class ControladorGenero extends Controller
         AtualizarGeneroRequest $pedido,
         Genero $genero,
     ): JsonResponse|RedirectResponse {
+        $this->authorize(
+            'update',
+            $genero,
+        );
+
         /**
          * @var array{
          *     nome: string,
@@ -439,11 +418,6 @@ final class ControladorGenero extends Controller
                             )
                             ->lockForUpdate()
                             ->firstOrFail();
-
-                    $this->authorize(
-                        'update',
-                        $generoBloqueado,
-                    );
 
                     $this->garantirGenerosPaisDisponiveis(
                         $dados['generos_pai'],
@@ -474,14 +448,12 @@ final class ControladorGenero extends Controller
                 self::TENTATIVAS_TRANSACAO,
             );
 
-        $generoAtualizado
-            ->refresh()
-            ->load([
+        if ($pedido->expectsJson()) {
+            $generoAtualizado->load([
                 'generosPais:id,nome',
                 'generosFilhos:id,nome',
             ]);
 
-        if ($pedido->expectsJson()) {
             return response()->json([
                 'mensagem' => 'Género atualizado com sucesso.',
 
@@ -517,6 +489,11 @@ final class ControladorGenero extends Controller
         Request $pedido,
         Genero $genero,
     ): JsonResponse|RedirectResponse {
+        $this->authorize(
+            'delete',
+            $genero,
+        );
+
         DB::transaction(
             function () use (
                 $genero,
@@ -530,11 +507,6 @@ final class ControladorGenero extends Controller
                         )
                         ->lockForUpdate()
                         ->firstOrFail();
-
-                $this->authorize(
-                    'delete',
-                    $generoBloqueado,
-                );
 
                 $generoBloqueado->deleteOrFail();
             },
@@ -652,7 +624,7 @@ final class ControladorGenero extends Controller
      * serializa todas as alterações da hierarquia realizadas pelo
      * controlador.
      *
-     * @return list<int> Identificadores dos géneros ativos bloqueados.
+     * @return array<int, true> Identificadores dos géneros ativos bloqueados.
      *
      * @since 4.0.0
      *
@@ -671,10 +643,12 @@ final class ControladorGenero extends Controller
             ->pluck(
                 'id',
             )
-            ->map(
+            ->mapWithKeys(
                 static fn (
                     mixed $identificador,
-                ): int => (int) $identificador,
+                ): array => [
+                    (int) $identificador => true,
+                ],
             )
             ->all();
     }
@@ -683,7 +657,8 @@ final class ControladorGenero extends Controller
      * Confirma que todos os géneros pais continuam ativos.
      *
      * @param  list<int>  $identificadoresGenerosPais  Géneros pais pedidos.
-     * @param  list<int>  $identificadoresAtivos  Géneros ativos bloqueados.
+     * @param  array<int, true>  $identificadoresAtivos  Géneros ativos
+     *                                                   bloqueados.
      *
      * @throws ValidationException Quando um género pai deixou de estar
      *                             disponível.
@@ -696,18 +671,21 @@ final class ControladorGenero extends Controller
         array $identificadoresGenerosPais,
         array $identificadoresAtivos,
     ): void {
-        if (
-            array_diff(
-                $identificadoresGenerosPais,
-                $identificadoresAtivos,
-            ) === []
+        foreach (
+            $identificadoresGenerosPais as $identificadorGeneroPai
         ) {
-            return;
-        }
+            if (
+                isset(
+                    $identificadoresAtivos[$identificadorGeneroPai],
+                )
+            ) {
+                continue;
+            }
 
-        throw ValidationException::withMessages([
-            'generos_pai' => 'Um dos géneros pais selecionados deixou de estar disponível.',
-        ]);
+            throw ValidationException::withMessages([
+                'generos_pai' => 'Um dos géneros pais selecionados deixou de estar disponível.',
+            ]);
+        }
     }
 
     /**
