@@ -30,7 +30,7 @@ use InvalidArgumentException;
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 1.1.0
  */
 class OrigemGeografica extends Model
 {
@@ -106,13 +106,16 @@ class OrigemGeografica extends Model
     /**
      * Normaliza e valida o nome da origem geográfica.
      *
+     * Os espaços exteriores e consecutivos são normalizados. Quebras de
+     * linha, tabulações e restantes caracteres de controlo não são aceites.
+     *
      * @return Attribute<string, string> Atributo do nome.
      *
      * @throws InvalidArgumentException Quando o nome não é válido.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     protected function nome(): Attribute
     {
@@ -120,8 +123,36 @@ class OrigemGeografica extends Model
             set: static function (
                 mixed $valor,
             ): string {
+                if (! is_string($valor)) {
+                    throw new InvalidArgumentException(
+                        'O nome da origem geográfica deve ser uma sequência de caracteres.',
+                    );
+                }
+
+                if (
+                    preg_match(
+                        '//u',
+                        $valor,
+                    ) !== 1
+                ) {
+                    throw new InvalidArgumentException(
+                        'O nome da origem geográfica contém texto inválido.',
+                    );
+                }
+
+                if (
+                    preg_match(
+                        '/[\x00-\x1F\x7F]/',
+                        $valor,
+                    ) === 1
+                ) {
+                    throw new InvalidArgumentException(
+                        'O nome da origem geográfica contém caracteres inválidos.',
+                    );
+                }
+
                 $nomeNormalizado = Str::squish(
-                    (string) $valor,
+                    $valor,
                 );
 
                 if ($nomeNormalizado === '') {
@@ -160,7 +191,7 @@ class OrigemGeografica extends Model
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     protected function codigo(): Attribute
     {
@@ -168,9 +199,15 @@ class OrigemGeografica extends Model
             set: static function (
                 mixed $valor,
             ): string {
+                if (! is_string($valor)) {
+                    throw new InvalidArgumentException(
+                        'O código da origem geográfica deve ser uma sequência de caracteres.',
+                    );
+                }
+
                 $codigoNormalizado = Str::upper(
                     trim(
-                        (string) $valor,
+                        $valor,
                     ),
                 );
 
@@ -187,7 +224,11 @@ class OrigemGeografica extends Model
                     ) !== 1
                 ) {
                     throw new InvalidArgumentException(
-                        'O código da origem geográfica deve conter entre 2 e 8 caracteres alfanuméricos, podendo incluir hífenes interiores.',
+                        sprintf(
+                            'O código da origem geográfica deve conter entre %d e %d caracteres alfanuméricos, podendo incluir hífenes interiores.',
+                            self::COMPRIMENTO_MINIMO_CODIGO,
+                            self::COMPRIMENTO_MAXIMO_CODIGO,
+                        ),
                     );
                 }
 

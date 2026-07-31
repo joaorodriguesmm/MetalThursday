@@ -19,46 +19,10 @@ use InvalidArgumentException;
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 final class TipoSeccaoFactory extends Factory
 {
-    /**
-     * Comprimento máximo do identificador.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const COMPRIMENTO_MAXIMO_IDENTIFICADOR = 32;
-
-    /**
-     * Comprimento máximo do nome.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const COMPRIMENTO_MAXIMO_NOME = 64;
-
-    /**
-     * Ordem mínima permitida.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const ORDEM_MINIMA = 1;
-
-    /**
-     * Ordem máxima permitida pela coluna unsigned tiny integer.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const ORDEM_MAXIMA = 255;
-
     /**
      * Modelo associado à factory.
      *
@@ -105,7 +69,7 @@ final class TipoSeccaoFactory extends Factory
                 $nome,
                 '_',
             ),
-            self::COMPRIMENTO_MAXIMO_IDENTIFICADOR
+            TipoSeccao::COMPRIMENTO_MAXIMO_IDENTIFICADOR
                 - strlen($sufixo)
                 - 1,
             '',
@@ -120,7 +84,7 @@ final class TipoSeccaoFactory extends Factory
 
             'nome' => Str::limit(
                 $nome,
-                self::COMPRIMENTO_MAXIMO_NOME,
+                TipoSeccao::COMPRIMENTO_MAXIMO_NOME,
                 '',
             ),
 
@@ -136,8 +100,8 @@ final class TipoSeccaoFactory extends Factory
                 ->faker
                 ->unique()
                 ->numberBetween(
-                    self::ORDEM_MINIMA,
-                    self::ORDEM_MAXIMA,
+                    TipoSeccao::ORDEM_MINIMA,
+                    TipoSeccao::ORDEM_MAXIMA,
                 ),
         ];
     }
@@ -153,11 +117,9 @@ final class TipoSeccaoFactory extends Factory
      */
     public function comDetalhes(): static
     {
-        return $this->state(
-            static fn (): array => [
-                'exige_detalhes' => true,
-            ],
-        );
+        return $this->state([
+            'exige_detalhes' => true,
+        ]);
     }
 
     /**
@@ -171,11 +133,9 @@ final class TipoSeccaoFactory extends Factory
      */
     public function semDetalhes(): static
     {
-        return $this->state(
-            static fn (): array => [
-                'exige_detalhes' => false,
-            ],
-        );
+        return $this->state([
+            'exige_detalhes' => false,
+        ]);
     }
 
     /**
@@ -221,12 +181,12 @@ final class TipoSeccaoFactory extends Factory
         if (
             strlen(
                 $identificadorNormalizado,
-            ) > self::COMPRIMENTO_MAXIMO_IDENTIFICADOR
+            ) > TipoSeccao::COMPRIMENTO_MAXIMO_IDENTIFICADOR
         ) {
             throw new InvalidArgumentException(
                 sprintf(
                     'O identificador do tipo de secção não pode exceder %d caracteres.',
-                    self::COMPRIMENTO_MAXIMO_IDENTIFICADOR,
+                    TipoSeccao::COMPRIMENTO_MAXIMO_IDENTIFICADOR,
                 ),
             );
         }
@@ -240,12 +200,12 @@ final class TipoSeccaoFactory extends Factory
         if (
             mb_strlen(
                 $nomeNormalizado,
-            ) > self::COMPRIMENTO_MAXIMO_NOME
+            ) > TipoSeccao::COMPRIMENTO_MAXIMO_NOME
         ) {
             throw new InvalidArgumentException(
                 sprintf(
                     'O nome do tipo de secção não pode exceder %d caracteres.',
-                    self::COMPRIMENTO_MAXIMO_NOME,
+                    TipoSeccao::COMPRIMENTO_MAXIMO_NOME,
                 ),
             );
         }
@@ -256,15 +216,13 @@ final class TipoSeccaoFactory extends Factory
             );
         }
 
-        return $this->state(
-            static fn (): array => [
-                'identificador' => $identificadorNormalizado,
+        return $this->state([
+            'identificador' => $identificadorNormalizado,
 
-                'nome' => $nomeNormalizado,
+            'nome' => $nomeNormalizado,
 
-                'descricao' => $descricaoNormalizada,
-            ],
-        );
+            'descricao' => $descricaoNormalizada,
+        ]);
     }
 
     /**
@@ -283,22 +241,20 @@ final class TipoSeccaoFactory extends Factory
         int $ordem,
     ): static {
         if (
-            $ordem < self::ORDEM_MINIMA
-            || $ordem > self::ORDEM_MAXIMA
+            $ordem < TipoSeccao::ORDEM_MINIMA
+            || $ordem > TipoSeccao::ORDEM_MAXIMA
         ) {
             throw new InvalidArgumentException(
                 sprintf(
                     'A ordem do tipo de secção deve estar entre %d e %d.',
-                    self::ORDEM_MINIMA,
-                    self::ORDEM_MAXIMA,
+                    TipoSeccao::ORDEM_MINIMA,
+                    TipoSeccao::ORDEM_MAXIMA,
                 ),
             );
         }
 
-        return $this->state(
-            static fn (): array => [
-                'ordem' => $ordem,
-            ],
-        );
+        return $this->state([
+            'ordem' => $ordem,
+        ]);
     }
 }

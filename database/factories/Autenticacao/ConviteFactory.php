@@ -20,7 +20,7 @@ use InvalidArgumentException;
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 final class ConviteFactory extends Factory
 {
@@ -42,11 +42,14 @@ final class ConviteFactory extends Factory
      * O código original não é persistido. É gerado um código aleatório e
      * guardado apenas o respetivo hash.
      *
+     * O nome `definition` permanece em inglês por corresponder ao método
+     * convencional das factories do Laravel.
+     *
      * @return array<string, mixed> Atributos do convite.
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function definition(): array
     {
@@ -95,20 +98,16 @@ final class ConviteFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function comCodigo(
         string $codigo,
     ): static {
-        $codigoHash = Convite::calcularHashCodigo(
-            $codigo,
-        );
-
-        return $this->state(
-            static fn (): array => [
-                'codigo_hash' => $codigoHash,
-            ],
-        );
+        return $this->state([
+            'codigo_hash' => Convite::calcularHashCodigo(
+                $codigo,
+            ),
+        ]);
     }
 
     /**
@@ -118,15 +117,13 @@ final class ConviteFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function semEmailDestino(): static
     {
-        return $this->state(
-            static fn (): array => [
-                'email_destino' => null,
-            ],
-        );
+        return $this->state([
+            'email_destino' => null,
+        ]);
     }
 
     /**
@@ -136,15 +133,13 @@ final class ConviteFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function semExpiracao(): static
     {
-        return $this->state(
-            static fn (): array => [
-                'expira_em' => null,
-            ],
-        );
+        return $this->state([
+            'expira_em' => null,
+        ]);
     }
 
     /**
@@ -154,21 +149,19 @@ final class ConviteFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function expirado(): static
     {
-        return $this->state(
-            static fn (): array => [
-                'expira_em' => now()->subMinute(),
+        return $this->state([
+            'expira_em' => now()->subMinute(),
 
-                'utilizado_por_id' => null,
+            'utilizado_por_id' => null,
 
-                'utilizado_em' => null,
+            'utilizado_em' => null,
 
-                'revogado_em' => null,
-            ],
-        );
+            'revogado_em' => null,
+        ]);
     }
 
     /**
@@ -178,19 +171,17 @@ final class ConviteFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function revogado(): static
     {
-        return $this->state(
-            static fn (): array => [
-                'utilizado_por_id' => null,
+        return $this->state([
+            'utilizado_por_id' => null,
 
-                'utilizado_em' => null,
+            'utilizado_em' => null,
 
-                'revogado_em' => now(),
-            ],
-        );
+            'revogado_em' => now(),
+        ]);
     }
 
     /**
@@ -200,25 +191,21 @@ final class ConviteFactory extends Factory
      * @return static Factory configurada.
      *
      * @throws InvalidArgumentException Quando o utilizador não está
-     *                                  persistido.
+     *                                  persistido ou não possui um
+     *                                  identificador válido.
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function criadoPor(
         Utilizador $utilizador,
     ): static {
-        $identificadorUtilizador =
-            $this->obterIdentificadorUtilizadorPersistido(
+        return $this->state([
+            'criado_por_id' => $this->obterIdentificadorUtilizadorPersistido(
                 $utilizador,
-            );
-
-        return $this->state(
-            static fn (): array => [
-                'criado_por_id' => $identificadorUtilizador,
-            ],
-        );
+            ),
+        ]);
     }
 
     /**
@@ -231,58 +218,78 @@ final class ConviteFactory extends Factory
      * @return static Factory configurada.
      *
      * @throws InvalidArgumentException Quando o utilizador não está
-     *                                  persistido.
+     *                                  persistido ou não possui um
+     *                                  identificador válido.
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function utilizadoPor(
         Utilizador $utilizador,
     ): static {
-        $identificadorUtilizador =
-            $this->obterIdentificadorUtilizadorPersistido(
+        return $this->state([
+            'utilizado_por_id' => $this->obterIdentificadorUtilizadorPersistido(
                 $utilizador,
-            );
+            ),
 
-        return $this->state(
-            static fn (): array => [
-                'utilizado_por_id' => $identificadorUtilizador,
+            'utilizado_em' => now(),
 
-                'utilizado_em' => now(),
-
-                'revogado_em' => null,
-            ],
-        );
+            'revogado_em' => null,
+        ]);
     }
 
     /**
-     * Obtém o identificador de um utilizador persistido.
+     * Obtém o identificador inteiro de um utilizador persistido.
      *
      * @param  Utilizador  $utilizador  Utilizador a validar.
-     * @return int|string Identificador do utilizador.
+     * @return int Identificador do utilizador.
      *
      * @throws InvalidArgumentException Quando o utilizador não está
-     *                                  persistido.
+     *                                  persistido ou não possui um
+     *                                  identificador válido.
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     private function obterIdentificadorUtilizadorPersistido(
         Utilizador $utilizador,
-    ): int|string {
-        $identificador = $utilizador->getKey();
-
-        if (
-            ! $utilizador->exists
-            || $identificador === null
-        ) {
+    ): int {
+        if (! $utilizador->exists) {
             throw new InvalidArgumentException(
                 'O utilizador associado ao convite deve estar persistido.',
             );
         }
 
-        return $identificador;
+        $identificador =
+            $utilizador->getKey();
+
+        if (
+            is_int($identificador)
+            && $identificador > 0
+        ) {
+            return $identificador;
+        }
+
+        if (is_string($identificador)) {
+            $identificadorNormalizado = trim(
+                $identificador,
+            );
+
+            if (
+                $identificadorNormalizado !== ''
+                && ctype_digit(
+                    $identificadorNormalizado,
+                )
+                && (int) $identificadorNormalizado > 0
+            ) {
+                return (int) $identificadorNormalizado;
+            }
+        }
+
+        throw new InvalidArgumentException(
+            'O utilizador associado ao convite deve possuir um identificador válido.',
+        );
     }
 }

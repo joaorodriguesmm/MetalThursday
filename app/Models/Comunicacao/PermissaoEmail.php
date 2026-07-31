@@ -32,7 +32,7 @@ use InvalidArgumentException;
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 3.1.0
  */
 class PermissaoEmail extends Model
 {
@@ -56,6 +56,17 @@ class PermissaoEmail extends Model
      * @version 1.0.0
      */
     public const COMPRIMENTO_MAXIMO_NOME = 100;
+
+    /**
+     * Comprimento máximo da descrição.
+     *
+     * O valor corresponde à capacidade da coluna SQL `TEXT`.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public const COMPRIMENTO_MAXIMO_DESCRICAO = 65_535;
 
     /**
      * Ordem mínima permitida.
@@ -129,13 +140,16 @@ class PermissaoEmail extends Model
     /**
      * Normaliza e valida o identificador da permissão.
      *
+     * Apenas letras ASCII minúsculas, números e sublinhados interiores são
+     * aceites.
+     *
      * @return Attribute<string, string> Atributo do identificador.
      *
      * @throws InvalidArgumentException Quando o identificador não é válido.
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     protected function identificador(): Attribute
     {
@@ -143,9 +157,25 @@ class PermissaoEmail extends Model
             set: static function (
                 mixed $valor,
             ): string {
-                $identificadorNormalizado = mb_strtolower(
+                if (! is_string($valor)) {
+                    throw new InvalidArgumentException(
+                        'O identificador da permissão deve ser uma sequência de caracteres.',
+                    );
+                }
+
+                self::validarTextoUtf8(
+                    $valor,
+                    'O identificador da permissão contém texto inválido.',
+                );
+
+                self::validarAusenciaCaracteresControlo(
+                    $valor,
+                    'O identificador da permissão contém caracteres inválidos.',
+                );
+
+                $identificadorNormalizado = strtolower(
                     trim(
-                        (string) $valor,
+                        $valor,
                     ),
                 );
 
@@ -172,13 +202,16 @@ class PermissaoEmail extends Model
     /**
      * Normaliza e valida o nome da permissão.
      *
+     * Os espaços exteriores e consecutivos são normalizados. Quebras de
+     * linha, tabulações e restantes caracteres de controlo não são aceites.
+     *
      * @return Attribute<string, string> Atributo do nome.
      *
      * @throws InvalidArgumentException Quando o nome não é válido.
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     protected function nome(): Attribute
     {
@@ -186,8 +219,24 @@ class PermissaoEmail extends Model
             set: static function (
                 mixed $valor,
             ): string {
+                if (! is_string($valor)) {
+                    throw new InvalidArgumentException(
+                        'O nome da permissão de e-mail deve ser uma sequência de caracteres.',
+                    );
+                }
+
+                self::validarTextoUtf8(
+                    $valor,
+                    'O nome da permissão de e-mail contém texto inválido.',
+                );
+
+                self::validarAusenciaCaracteresControlo(
+                    $valor,
+                    'O nome da permissão de e-mail contém caracteres inválidos.',
+                );
+
                 $nomeNormalizado = Str::squish(
-                    (string) $valor,
+                    $valor,
                 );
 
                 if ($nomeNormalizado === '') {
@@ -217,13 +266,17 @@ class PermissaoEmail extends Model
     /**
      * Normaliza e valida a descrição da permissão.
      *
+     * A descrição é persistida como texto de uma única linha. Os espaços
+     * exteriores e consecutivos são normalizados, mas caracteres de controlo
+     * não são silenciosamente removidos.
+     *
      * @return Attribute<string, string> Atributo da descrição.
      *
-     * @throws InvalidArgumentException Quando a descrição está vazia.
+     * @throws InvalidArgumentException Quando a descrição não é válida.
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     protected function descricao(): Attribute
     {
@@ -231,13 +284,42 @@ class PermissaoEmail extends Model
             set: static function (
                 mixed $valor,
             ): string {
+                if (! is_string($valor)) {
+                    throw new InvalidArgumentException(
+                        'A descrição da permissão de e-mail deve ser uma sequência de caracteres.',
+                    );
+                }
+
+                self::validarTextoUtf8(
+                    $valor,
+                    'A descrição da permissão de e-mail contém texto inválido.',
+                );
+
+                self::validarAusenciaCaracteresControlo(
+                    $valor,
+                    'A descrição da permissão de e-mail contém caracteres inválidos.',
+                );
+
                 $descricaoNormalizada = Str::squish(
-                    (string) $valor,
+                    $valor,
                 );
 
                 if ($descricaoNormalizada === '') {
                     throw new InvalidArgumentException(
                         'A descrição da permissão de e-mail não pode estar vazia.',
+                    );
+                }
+
+                if (
+                    mb_strlen(
+                        $descricaoNormalizada,
+                    ) > self::COMPRIMENTO_MAXIMO_DESCRICAO
+                ) {
+                    throw new InvalidArgumentException(
+                        sprintf(
+                            'A descrição da permissão de e-mail não pode exceder %d caracteres.',
+                            self::COMPRIMENTO_MAXIMO_DESCRICAO,
+                        ),
                     );
                 }
 
@@ -268,9 +350,7 @@ class PermissaoEmail extends Model
                 mixed $valor,
             ): int {
                 if (
-                    ! is_int(
-                        $valor,
-                    )
+                    ! is_int($valor)
                     || $valor < self::ORDEM_MINIMA
                     || $valor > self::ORDEM_MAXIMA
                 ) {
@@ -312,5 +392,66 @@ class PermissaoEmail extends Model
             ->orderBy(
                 'utilizadores.id',
             );
+    }
+
+    /**
+     * Valida que um texto utiliza uma codificação UTF-8 válida.
+     *
+     * @param  string  $valor  Texto recebido.
+     * @param  string  $mensagem  Mensagem utilizada em caso de erro.
+     *
+     * @throws InvalidArgumentException Quando o texto não é UTF-8 válido.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private static function validarTextoUtf8(
+        string $valor,
+        string $mensagem,
+    ): void {
+        if (
+            preg_match(
+                '//u',
+                $valor,
+            ) === 1
+        ) {
+            return;
+        }
+
+        throw new InvalidArgumentException(
+            $mensagem,
+        );
+    }
+
+    /**
+     * Valida que um texto não contém caracteres de controlo.
+     *
+     * @param  string  $valor  Texto recebido.
+     * @param  string  $mensagem  Mensagem utilizada em caso de erro.
+     *
+     * @throws InvalidArgumentException Quando o texto contém caracteres de
+     *                                  controlo.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private static function validarAusenciaCaracteresControlo(
+        string $valor,
+        string $mensagem,
+    ): void {
+        if (
+            preg_match(
+                '/[\x00-\x1F\x7F]/',
+                $valor,
+            ) !== 1
+        ) {
+            return;
+        }
+
+        throw new InvalidArgumentException(
+            $mensagem,
+        );
     }
 }

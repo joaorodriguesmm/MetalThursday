@@ -20,7 +20,7 @@ use InvalidArgumentException;
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 final class BandaFactory extends Factory
 {
@@ -86,7 +86,7 @@ final class BandaFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function comNome(
         string $nome,
@@ -114,11 +114,9 @@ final class BandaFactory extends Factory
             );
         }
 
-        return $this->state(
-            static fn (): array => [
-                'nome' => $nomeNormalizado,
-            ],
-        );
+        return $this->state([
+            'nome' => $nomeNormalizado,
+        ]);
     }
 
     /**

@@ -42,7 +42,7 @@ use InvalidArgumentException;
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 3.1.0
  */
 class Edicao extends Model
 {
@@ -248,7 +248,8 @@ class Edicao extends Model
      * Normaliza e valida a ligação da compilação.
      *
      * Um valor nulo ou vazio remove a ligação. Apenas endereços absolutos
-     * HTTP ou HTTPS são aceites.
+     * HTTP ou HTTPS, sem credenciais, espaços interiores, caracteres de
+     * controlo ou barras invertidas, são aceites.
      *
      * @return Attribute<string|null, string|null> Atributo da ligação.
      *
@@ -256,7 +257,7 @@ class Edicao extends Model
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     protected function ligacaoCompilacao(): Attribute
     {
@@ -283,31 +284,22 @@ class Edicao extends Model
                 }
 
                 if (
-                    mb_strlen(
+                    preg_match(
+                        '//u',
+                        $ligacaoNormalizada,
+                    ) !== 1
+                    || mb_strlen(
                         $ligacaoNormalizada,
                     ) > self::COMPRIMENTO_MAXIMO_LIGACAO_COMPILACAO
-                ) {
-                    throw new InvalidArgumentException(
-                        sprintf(
-                            'A ligação da compilação não pode ter mais de %d caracteres.',
-                            self::COMPRIMENTO_MAXIMO_LIGACAO_COMPILACAO,
-                        ),
-                    );
-                }
-
-                if (
-                    preg_match(
+                    || str_contains(
+                        $ligacaoNormalizada,
+                        '\\',
+                    )
+                    || preg_match(
                         '/[\x00-\x20\x7F]/',
                         $ligacaoNormalizada,
                     ) === 1
-                ) {
-                    throw new InvalidArgumentException(
-                        'A ligação da compilação contém caracteres inválidos.',
-                    );
-                }
-
-                if (
-                    filter_var(
+                    || filter_var(
                         $ligacaoNormalizada,
                         FILTER_VALIDATE_URL,
                     ) === false
@@ -317,21 +309,28 @@ class Edicao extends Model
                     );
                 }
 
-                $esquema = parse_url(
+                $componentes = parse_url(
                     $ligacaoNormalizada,
-                    PHP_URL_SCHEME,
-                );
-
-                $anfitriao = parse_url(
-                    $ligacaoNormalizada,
-                    PHP_URL_HOST,
                 );
 
                 if (
-                    ! is_string($esquema)
+                    ! is_array($componentes)
+                    || ! isset(
+                        $componentes['scheme'],
+                        $componentes['host'],
+                    )
+                    || isset(
+                        $componentes['user'],
+                    )
+                    || isset(
+                        $componentes['pass'],
+                    )
+                    || trim(
+                        (string) $componentes['host'],
+                    ) === ''
                     || ! in_array(
                         mb_strtolower(
-                            $esquema,
+                            (string) $componentes['scheme'],
                         ),
                         [
                             'http',
@@ -339,11 +338,9 @@ class Edicao extends Model
                         ],
                         true,
                     )
-                    || ! is_string($anfitriao)
-                    || trim($anfitriao) === ''
                 ) {
                     throw new InvalidArgumentException(
-                        'A ligação da compilação deve utilizar HTTP ou HTTPS.',
+                        'A ligação da compilação deve utilizar HTTP ou HTTPS, possuir um anfitrião válido e não pode incluir credenciais.',
                     );
                 }
 

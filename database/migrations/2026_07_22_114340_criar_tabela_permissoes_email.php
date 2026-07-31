@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -14,7 +15,7 @@ use Illuminate\Support\Facades\Schema;
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 return new class extends Migration
 {
@@ -23,7 +24,7 @@ return new class extends Migration
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function up(): void
     {
@@ -58,6 +59,14 @@ return new class extends Migration
 
                 $tabela->timestamps();
             },
+        );
+
+        DB::statement(
+            <<<'SQL'
+                ALTER TABLE `permissoes_email`
+                ADD CONSTRAINT `permissoes_email_ordem_positiva_verificacao`
+                CHECK (`ordem` >= 1)
+                SQL,
         );
     }
 

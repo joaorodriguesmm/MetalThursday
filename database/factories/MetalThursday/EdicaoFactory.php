@@ -21,30 +21,10 @@ use InvalidArgumentException;
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 final class EdicaoFactory extends Factory
 {
-    /**
-     * Comprimento máximo do nome.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const COMPRIMENTO_MAXIMO_NOME =
-        255;
-
-    /**
-     * Comprimento máximo da ligação da compilação.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const COMPRIMENTO_MAXIMO_LIGACAO =
-        2048;
-
     /**
      * Modelo associado à factory.
      *
@@ -134,21 +114,19 @@ final class EdicaoFactory extends Factory
         if (
             mb_strlen(
                 $nomeNormalizado,
-            ) > self::COMPRIMENTO_MAXIMO_NOME
+            ) > Edicao::COMPRIMENTO_MAXIMO_NOME
         ) {
             throw new InvalidArgumentException(
                 sprintf(
                     'O nome da edição não pode exceder %d caracteres.',
-                    self::COMPRIMENTO_MAXIMO_NOME,
+                    Edicao::COMPRIMENTO_MAXIMO_NOME,
                 ),
             );
         }
 
-        return $this->state(
-            static fn (): array => [
-                'nome' => $nomeNormalizado,
-            ],
-        );
+        return $this->state([
+            'nome' => $nomeNormalizado,
+        ]);
     }
 
     /**
@@ -165,15 +143,13 @@ final class EdicaoFactory extends Factory
      */
     public function emCurso(): static
     {
-        return $this->state(
-            static fn (): array => [
-                'data_inicio' => CarbonImmutable::now()
-                    ->subMonth()
-                    ->startOfDay(),
+        return $this->state([
+            'data_inicio' => CarbonImmutable::now()
+                ->subMonth()
+                ->startOfDay(),
 
-                'data_fim' => null,
-            ],
-        );
+            'data_fim' => null,
+        ]);
     }
 
     /**
@@ -215,13 +191,11 @@ final class EdicaoFactory extends Factory
             );
         }
 
-        return $this->state(
-            static fn (): array => [
-                'data_inicio' => $dataInicioNormalizada,
+        return $this->state([
+            'data_inicio' => $dataInicioNormalizada,
 
-                'data_fim' => $dataFimNormalizada,
-            ],
-        );
+            'data_fim' => $dataFimNormalizada,
+        ]);
     }
 
     /**
@@ -253,12 +227,12 @@ final class EdicaoFactory extends Factory
         if (
             mb_strlen(
                 $ligacaoNormalizada,
-            ) > self::COMPRIMENTO_MAXIMO_LIGACAO
+            ) > Edicao::COMPRIMENTO_MAXIMO_LIGACAO_COMPILACAO
         ) {
             throw new InvalidArgumentException(
                 sprintf(
                     'A ligação da compilação não pode exceder %d caracteres.',
-                    self::COMPRIMENTO_MAXIMO_LIGACAO,
+                    Edicao::COMPRIMENTO_MAXIMO_LIGACAO_COMPILACAO,
                 ),
             );
         }
@@ -299,10 +273,8 @@ final class EdicaoFactory extends Factory
             );
         }
 
-        return $this->state(
-            static fn (): array => [
-                'ligacao_compilacao' => $ligacaoNormalizada,
-            ],
-        );
+        return $this->state([
+            'ligacao_compilacao' => $ligacaoNormalizada,
+        ]);
     }
 }

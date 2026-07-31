@@ -7,7 +7,6 @@ namespace Database\Factories\Comunicacao;
 use App\Models\Comunicacao\PermissaoEmail;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
-use InvalidArgumentException;
 
 /**
  * Cria dados de teste para permissões de correio eletrónico.
@@ -19,46 +18,10 @@ use InvalidArgumentException;
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 final class PermissaoEmailFactory extends Factory
 {
-    /**
-     * Comprimento máximo do identificador.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const COMPRIMENTO_MAXIMO_IDENTIFICADOR = 64;
-
-    /**
-     * Comprimento máximo do nome.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const COMPRIMENTO_MAXIMO_NOME = 100;
-
-    /**
-     * Ordem mínima permitida.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const ORDEM_MINIMA = 1;
-
-    /**
-     * Ordem máxima permitida pela coluna unsigned tiny integer.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const ORDEM_MAXIMA = 255;
-
     /**
      * Modelo associado à factory.
      *
@@ -80,7 +43,7 @@ final class PermissaoEmailFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function definition(): array
     {
@@ -94,46 +57,36 @@ final class PermissaoEmailFactory extends Factory
                 ),
         );
 
-        $sufixo = Str::lower(
-            Str::random(
-                8,
-            ),
-        );
-
-        $baseIdentificador = Str::limit(
-            Str::slug(
-                $nome,
-                '_',
-            ),
-            self::COMPRIMENTO_MAXIMO_IDENTIFICADOR
-                - strlen($sufixo)
-                - 1,
-            '',
-        );
-
         return [
             'identificador' => sprintf(
-                '%s_%s',
-                $baseIdentificador,
-                $sufixo,
+                'permissao_%s',
+                Str::lower(
+                    Str::random(
+                        16,
+                    ),
+                ),
             ),
 
             'nome' => Str::limit(
                 $nome,
-                self::COMPRIMENTO_MAXIMO_NOME,
+                PermissaoEmail::COMPRIMENTO_MAXIMO_NOME,
                 '',
             ),
 
-            'descricao' => $this
-                ->faker
-                ->sentence(),
+            'descricao' => Str::limit(
+                $this
+                    ->faker
+                    ->sentence(),
+                PermissaoEmail::COMPRIMENTO_MAXIMO_DESCRICAO,
+                '',
+            ),
 
             'ordem' => $this
                 ->faker
                 ->unique()
                 ->numberBetween(
-                    self::ORDEM_MINIMA,
-                    self::ORDEM_MAXIMA,
+                    PermissaoEmail::ORDEM_MINIMA,
+                    PermissaoEmail::ORDEM_MAXIMA,
                 ),
         ];
     }
@@ -141,143 +94,84 @@ final class PermissaoEmailFactory extends Factory
     /**
      * Define o identificador da permissão.
      *
+     * A normalização e a validação são delegadas ao contrato definitivo do
+     * modelo.
+     *
      * @param  string  $identificador  Identificador pretendido.
      * @return static Factory configurada.
      *
-     * @throws InvalidArgumentException Quando o identificador não é válido.
-     *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function comIdentificador(
         string $identificador,
     ): static {
-        $identificadorNormalizado = Str::slug(
-            trim(
-                $identificador,
-            ),
-            '_',
-        );
+        $permissao = new PermissaoEmail;
 
-        if ($identificadorNormalizado === '') {
-            throw new InvalidArgumentException(
-                'O identificador da permissão não pode estar vazio.',
-            );
-        }
+        $permissao->identificador =
+            $identificador;
 
-        if (
-            strlen(
-                $identificadorNormalizado,
-            ) > self::COMPRIMENTO_MAXIMO_IDENTIFICADOR
-        ) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'O identificador da permissão não pode exceder %d caracteres.',
-                    self::COMPRIMENTO_MAXIMO_IDENTIFICADOR,
-                ),
-            );
-        }
-
-        return $this->state(
-            static fn (): array => [
-                'identificador' => $identificadorNormalizado,
-            ],
-        );
+        return $this->state([
+            'identificador' => $permissao->identificador,
+        ]);
     }
 
     /**
      * Define os dados apresentados ao utilizador.
      *
+     * A normalização e a validação são delegadas ao contrato definitivo do
+     * modelo.
+     *
      * @param  string  $nome  Nome da permissão.
      * @param  string  $descricao  Explicação da permissão.
      * @return static Factory configurada.
      *
-     * @throws InvalidArgumentException Quando o nome ou a descrição não são
-     *                                  válidos.
-     *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function comDados(
         string $nome,
         string $descricao,
     ): static {
-        $nomeNormalizado = Str::squish(
-            $nome,
-        );
+        $permissao = new PermissaoEmail;
 
-        $descricaoNormalizada = Str::squish(
-            $descricao,
-        );
+        $permissao->nome =
+            $nome;
 
-        if ($nomeNormalizado === '') {
-            throw new InvalidArgumentException(
-                'O nome da permissão não pode estar vazio.',
-            );
-        }
+        $permissao->descricao =
+            $descricao;
 
-        if (
-            mb_strlen(
-                $nomeNormalizado,
-            ) > self::COMPRIMENTO_MAXIMO_NOME
-        ) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'O nome da permissão não pode exceder %d caracteres.',
-                    self::COMPRIMENTO_MAXIMO_NOME,
-                ),
-            );
-        }
+        return $this->state([
+            'nome' => $permissao->nome,
 
-        if ($descricaoNormalizada === '') {
-            throw new InvalidArgumentException(
-                'A descrição da permissão não pode estar vazia.',
-            );
-        }
-
-        return $this->state(
-            static fn (): array => [
-                'nome' => $nomeNormalizado,
-
-                'descricao' => $descricaoNormalizada,
-            ],
-        );
+            'descricao' => $permissao->descricao,
+        ]);
     }
 
     /**
      * Define a ordem de apresentação da permissão.
      *
+     * A validação é delegada ao contrato definitivo do modelo.
+     *
      * @param  int  $ordem  Ordem pretendida.
      * @return static Factory configurada.
      *
-     * @throws InvalidArgumentException Quando a ordem não cabe na coluna.
-     *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function naOrdem(
         int $ordem,
     ): static {
-        if (
-            $ordem < self::ORDEM_MINIMA
-            || $ordem > self::ORDEM_MAXIMA
-        ) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'A ordem da permissão deve estar entre %d e %d.',
-                    self::ORDEM_MINIMA,
-                    self::ORDEM_MAXIMA,
-                ),
-            );
-        }
+        $permissao = new PermissaoEmail;
 
-        return $this->state(
-            static fn (): array => [
-                'ordem' => $ordem,
-            ],
-        );
+        $permissao->ordem =
+            $ordem;
+
+        return $this->state([
+            'ordem' => $permissao->ordem,
+        ]);
     }
 }

@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Schema;
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 return new class extends Migration
 {
@@ -39,7 +39,7 @@ return new class extends Migration
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function up(): void
     {
@@ -184,7 +184,7 @@ return new class extends Migration
             <<<'SQL'
                 ALTER TABLE `seccoes_metal_thursday`
                 ADD CONSTRAINT `seccoes_metal_thursday_ano_valido_verificacao`
-                CHECK (`ano` IS NULL OR `ano` >= 1900)
+                CHECK (`ano` IS NULL OR `ano` BETWEEN 1900 AND 2155)
                 SQL,
         );
 
@@ -192,7 +192,11 @@ return new class extends Migration
             <<<'SQL'
                 ALTER TABLE `seccoes_metal_thursday`
                 ADD CONSTRAINT `seccoes_metal_thursday_incorporacao_valida_verificacao`
-                CHECK (`tipo_incorporacao` IS NULL OR `ligacao` IS NOT NULL)
+                CHECK (
+                    (`ligacao` IS NULL AND `tipo_incorporacao` IS NULL)
+                    OR
+                    (`ligacao` IS NOT NULL AND `tipo_incorporacao` IS NOT NULL)
+                )
                 SQL,
         );
     }

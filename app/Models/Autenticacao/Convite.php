@@ -42,7 +42,7 @@ use SensitiveParameter;
  *
  * @since 2.0.0
  *
- * @version 3.0.0
+ * @version 3.1.0
  */
 class Convite extends Model
 {
@@ -405,17 +405,17 @@ class Convite extends Model
      *
      * Este escopo não verifica a expiração.
      *
-     * @param  Builder<Convite>  $consulta  Consulta dos convites.
+     * @param  Builder<Convite>  $construtor  Consulta dos convites.
      * @return Builder<Convite> Consulta dos convites pendentes.
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function scopePendentes(
-        Builder $consulta,
+        Builder $construtor,
     ): Builder {
-        return $consulta
+        return $construtor
             ->whereNull(
                 'utilizado_por_id',
             )
@@ -433,19 +433,19 @@ class Convite extends Model
      * Um convite está disponível quando não foi utilizado, não foi revogado
      * e ainda não expirou.
      *
-     * @param  Builder<Convite>  $consulta  Consulta dos convites.
+     * @param  Builder<Convite>  $construtor  Consulta dos convites.
      * @return Builder<Convite> Consulta dos convites disponíveis.
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function scopeDisponiveis(
-        Builder $consulta,
+        Builder $construtor,
     ): Builder {
         $momentoAtual = CarbonImmutable::now();
 
-        return $consulta
+        return $construtor
             ->whereNull(
                 'utilizado_por_id',
             )
@@ -457,11 +457,11 @@ class Convite extends Model
             )
             ->where(
                 static function (
-                    Builder $consultaExpiracao,
+                    Builder $construtorExpiracao,
                 ) use (
                     $momentoAtual,
                 ): void {
-                    $consultaExpiracao
+                    $construtorExpiracao
                         ->whereNull(
                             'expira_em',
                         )
@@ -477,7 +477,7 @@ class Convite extends Model
     /**
      * Limita a consulta ao convite correspondente ao código original.
      *
-     * @param  Builder<Convite>  $consulta  Consulta dos convites.
+     * @param  Builder<Convite>  $construtor  Consulta dos convites.
      * @param  string  $codigo  Código original recebido.
      * @return Builder<Convite> Consulta limitada ao hash.
      *
@@ -485,14 +485,14 @@ class Convite extends Model
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function scopeComCodigo(
-        Builder $consulta,
+        Builder $construtor,
         #[SensitiveParameter]
         string $codigo,
     ): Builder {
-        return $consulta->where(
+        return $construtor->where(
             'codigo_hash',
             self::calcularHashCodigo(
                 $codigo,

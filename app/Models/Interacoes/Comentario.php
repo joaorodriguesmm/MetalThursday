@@ -46,7 +46,7 @@ use InvalidArgumentException;
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 3.1.0
  */
 class Comentario extends Model
 {
@@ -324,17 +324,17 @@ class Comentario extends Model
      *
      * Um comentário principal não responde a qualquer outro comentário.
      *
-     * @param  Builder<Comentario>  $consulta  Consulta dos comentários.
+     * @param  Builder<Comentario>  $construtor  Consulta dos comentários.
      * @return Builder<Comentario> Consulta filtrada.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function scopePrincipais(
-        Builder $consulta,
+        Builder $construtor,
     ): Builder {
-        return $consulta->whereNull(
+        return $construtor->whereNull(
             'comentario_pai_id',
         );
     }
@@ -345,17 +345,17 @@ class Comentario extends Model
      * O identificador é utilizado como segundo critério para manter a ordem
      * estável quando vários comentários possuem a mesma data de criação.
      *
-     * @param  Builder<Comentario>  $consulta  Consulta dos comentários.
+     * @param  Builder<Comentario>  $construtor  Consulta dos comentários.
      * @return Builder<Comentario> Consulta ordenada.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function scopeOrdenadosCronologicamente(
-        Builder $consulta,
+        Builder $construtor,
     ): Builder {
-        return $consulta
+        return $construtor
             ->orderBy(
                 'created_at',
             )
@@ -371,7 +371,7 @@ class Comentario extends Model
      * existe autenticação, a indicação de que o utilizador atual atribuiu
      * gosto ao comentário.
      *
-     * @param  Builder<Comentario>  $consulta  Consulta dos comentários.
+     * @param  Builder<Comentario>  $construtor  Consulta dos comentários.
      * @param  int|null  $identificadorUtilizador  Utilizador autenticado.
      * @return Builder<Comentario> Consulta preparada.
      *
@@ -379,13 +379,13 @@ class Comentario extends Model
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function scopeComDadosApresentacao(
-        Builder $consulta,
+        Builder $construtor,
         ?int $identificadorUtilizador,
     ): Builder {
-        $consulta
+        $construtor
             ->with([
                 'utilizador:id,nome,fotografia',
             ])
@@ -394,7 +394,7 @@ class Comentario extends Model
             ]);
 
         if ($identificadorUtilizador === null) {
-            return $consulta;
+            return $construtor;
         }
 
         if ($identificadorUtilizador < 1) {
@@ -403,10 +403,10 @@ class Comentario extends Model
             );
         }
 
-        return $consulta->withExists([
+        return $construtor->withExists([
             'gostos as gostado_pelo_utilizador_autenticado' => static fn (
-                Builder $consultaGostos,
-            ): Builder => $consultaGostos->where(
+                Builder $construtor,
+            ): Builder => $construtor->where(
                 'utilizador_id',
                 $identificadorUtilizador,
             ),

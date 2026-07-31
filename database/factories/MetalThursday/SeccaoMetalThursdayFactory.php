@@ -25,55 +25,10 @@ use InvalidArgumentException;
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 2.2.0
  */
 final class SeccaoMetalThursdayFactory extends Factory
 {
-    /**
-     * Ordem mínima permitida para uma secção.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const ORDEM_MINIMA = 1;
-
-    /**
-     * Ordem máxima permitida pela coluna unsigned small integer.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const ORDEM_MAXIMA = 65535;
-
-    /**
-     * Primeiro ano aceite para os dados musicais da secção.
-     *
-     * @since 2.0.0
-     *
-     * @version 2.0.0
-     */
-    private const ANO_MINIMO = 1900;
-
-    /**
-     * Comprimento máximo do título.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const COMPRIMENTO_MAXIMO_TITULO = 255;
-
-    /**
-     * Comprimento máximo da ligação.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const COMPRIMENTO_MAXIMO_LIGACAO = 2048;
-
     /**
      * Modelo associado à factory.
      *
@@ -108,7 +63,7 @@ final class SeccaoMetalThursdayFactory extends Factory
             'tipo_seccao_id' => TipoSeccao::factory()
                 ->semDetalhes(),
 
-            'ordem' => self::ORDEM_MINIMA,
+            'ordem' => SeccaoMetalThursday::ORDEM_MINIMA,
 
             'titulo' => null,
 
@@ -221,29 +176,27 @@ final class SeccaoMetalThursdayFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function naOrdem(
         int $ordem,
     ): static {
         if (
-            $ordem < self::ORDEM_MINIMA
-            || $ordem > self::ORDEM_MAXIMA
+            $ordem < SeccaoMetalThursday::ORDEM_MINIMA
+            || $ordem > SeccaoMetalThursday::ORDEM_MAXIMA
         ) {
             throw new InvalidArgumentException(
                 sprintf(
                     'A ordem da secção deve estar entre %d e %d.',
-                    self::ORDEM_MINIMA,
-                    self::ORDEM_MAXIMA,
+                    SeccaoMetalThursday::ORDEM_MINIMA,
+                    SeccaoMetalThursday::ORDEM_MAXIMA,
                 ),
             );
         }
 
-        return $this->state(
-            static fn (): array => [
-                'ordem' => $ordem,
-            ],
-        );
+        return $this->state([
+            'ordem' => $ordem,
+        ]);
     }
 
     /**
@@ -258,14 +211,21 @@ final class SeccaoMetalThursdayFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function comConteudo(
         string $descricao,
         ?string $titulo = null,
     ): static {
-        $descricaoNormalizada = Str::squish(
-            $descricao,
+        $descricaoNormalizada = trim(
+            str_replace(
+                [
+                    "\r\n",
+                    "\r",
+                ],
+                "\n",
+                $descricao,
+            ),
         );
 
         $tituloNormalizado = $titulo !== null
@@ -281,28 +241,39 @@ final class SeccaoMetalThursdayFactory extends Factory
         }
 
         if (
-            $tituloNormalizado !== null
-            && mb_strlen(
-                $tituloNormalizado,
-            ) > self::COMPRIMENTO_MAXIMO_TITULO
+            mb_strlen(
+                $descricaoNormalizada,
+            ) > SeccaoMetalThursday::COMPRIMENTO_MAXIMO_DESCRICAO
         ) {
             throw new InvalidArgumentException(
                 sprintf(
-                    'O título da secção não pode exceder %d caracteres.',
-                    self::COMPRIMENTO_MAXIMO_TITULO,
+                    'A descrição da secção não pode exceder %d caracteres.',
+                    SeccaoMetalThursday::COMPRIMENTO_MAXIMO_DESCRICAO,
                 ),
             );
         }
 
-        return $this->state(
-            static fn (): array => [
-                'titulo' => $tituloNormalizado !== ''
-                    ? $tituloNormalizado
-                    : null,
+        if (
+            $tituloNormalizado !== null
+            && mb_strlen(
+                $tituloNormalizado,
+            ) > SeccaoMetalThursday::COMPRIMENTO_MAXIMO_TITULO
+        ) {
+            throw new InvalidArgumentException(
+                sprintf(
+                    'O título da secção não pode exceder %d caracteres.',
+                    SeccaoMetalThursday::COMPRIMENTO_MAXIMO_TITULO,
+                ),
+            );
+        }
 
-                'descricao' => $descricaoNormalizada,
-            ],
-        );
+        return $this->state([
+            'titulo' => $tituloNormalizado !== ''
+                ? $tituloNormalizado
+                : null,
+
+            'descricao' => $descricaoNormalizada,
+        ]);
     }
 
     /**
@@ -317,78 +288,19 @@ final class SeccaoMetalThursdayFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function comIncorporacao(
         string $ligacao,
         TipoIncorporacao $tipoIncorporacao,
     ): static {
-        $ligacaoNormalizada = trim(
-            $ligacao,
-        );
+        return $this->state([
+            'ligacao' => $this->normalizarLigacao(
+                $ligacao,
+            ),
 
-        if ($ligacaoNormalizada === '') {
-            throw new InvalidArgumentException(
-                'A ligação da secção não pode estar vazia.',
-            );
-        }
-
-        if (
-            mb_strlen(
-                $ligacaoNormalizada,
-            ) > self::COMPRIMENTO_MAXIMO_LIGACAO
-        ) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'A ligação da secção não pode exceder %d caracteres.',
-                    self::COMPRIMENTO_MAXIMO_LIGACAO,
-                ),
-            );
-        }
-
-        if (
-            filter_var(
-                $ligacaoNormalizada,
-                FILTER_VALIDATE_URL,
-            ) === false
-        ) {
-            throw new InvalidArgumentException(
-                'A ligação da secção deve ser um URL absoluto válido.',
-            );
-        }
-
-        $esquema = parse_url(
-            $ligacaoNormalizada,
-            PHP_URL_SCHEME,
-        );
-
-        if (
-            ! is_string(
-                $esquema,
-            )
-            || ! in_array(
-                strtolower(
-                    $esquema,
-                ),
-                [
-                    'http',
-                    'https',
-                ],
-                true,
-            )
-        ) {
-            throw new InvalidArgumentException(
-                'A ligação da secção deve utilizar HTTP ou HTTPS.',
-            );
-        }
-
-        return $this->state(
-            static fn (): array => [
-                'ligacao' => $ligacaoNormalizada,
-
-                'tipo_incorporacao' => $tipoIncorporacao->value,
-            ],
-        );
+            'tipo_incorporacao' => $tipoIncorporacao->value,
+        ]);
     }
 
     /**
@@ -396,6 +308,9 @@ final class SeccaoMetalThursdayFactory extends Factory
      *
      * É criado um tipo que exige detalhes. Quando nenhuma banda é fornecida,
      * é criada uma através da respetiva factory.
+     *
+     * O estado preenche todos os campos exigidos pelo contrato das secções
+     * detalhadas: título, banda, ligação, tipo de incorporação e ano.
      *
      * @param  Banda|null  $banda  Banda pretendida.
      * @return static Factory configurada.
@@ -405,7 +320,7 @@ final class SeccaoMetalThursdayFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function comDetalhes(
         ?Banda $banda = null,
@@ -430,12 +345,26 @@ final class SeccaoMetalThursdayFactory extends Factory
             ->faker
             ->paragraph();
 
+        $anoMaximo = min(
+            CarbonImmutable::now()->year,
+            SeccaoMetalThursday::ANO_MAXIMO,
+        );
+
         $ano = $this
             ->faker
             ->numberBetween(
-                self::ANO_MINIMO,
-                CarbonImmutable::now()->year,
+                SeccaoMetalThursday::ANO_MINIMO,
+                $anoMaximo,
             );
+
+        $ligacao = sprintf(
+            'https://example.com/musica/%s',
+            Str::lower(
+                Str::random(
+                    20,
+                ),
+            ),
+        );
 
         return $this
             ->for(
@@ -447,19 +376,114 @@ final class SeccaoMetalThursdayFactory extends Factory
                 $banda ?? Banda::factory(),
                 'banda',
             )
-            ->state(
-                static fn (): array => [
-                    'titulo' => $titulo,
+            ->state([
+                'titulo' => $titulo,
 
-                    'descricao' => $descricao,
+                'descricao' => $descricao,
 
-                    'ano' => $ano,
+                'ano' => $ano,
 
-                    'ligacao' => null,
+                'ligacao' => $ligacao,
 
-                    'tipo_incorporacao' => null,
-                ],
+                'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+            ]);
+    }
+
+    /**
+     * Normaliza e valida uma ligação HTTP ou HTTPS.
+     *
+     * A ligação deve ser absoluta, possuir um anfitrião, não incluir
+     * credenciais, espaços, caracteres de controlo ou barras invertidas.
+     *
+     * @param  string  $ligacao  Ligação recebida.
+     * @return string Ligação normalizada.
+     *
+     * @throws InvalidArgumentException Quando a ligação não é válida.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function normalizarLigacao(
+        string $ligacao,
+    ): string {
+        $ligacaoNormalizada = trim(
+            $ligacao,
+        );
+
+        if ($ligacaoNormalizada === '') {
+            throw new InvalidArgumentException(
+                'A ligação da secção não pode estar vazia.',
             );
+        }
+
+        if (
+            mb_strlen(
+                $ligacaoNormalizada,
+            ) > SeccaoMetalThursday::COMPRIMENTO_MAXIMO_LIGACAO
+            || str_contains(
+                $ligacaoNormalizada,
+                '\\',
+            )
+            || preg_match(
+                '/[\x00-\x20\x7F]/',
+                $ligacaoNormalizada,
+            ) === 1
+            || filter_var(
+                $ligacaoNormalizada,
+                FILTER_VALIDATE_URL,
+            ) === false
+        ) {
+            throw new InvalidArgumentException(
+                'A ligação da secção deve ser um URL absoluto válido.',
+            );
+        }
+
+        $componentes = parse_url(
+            $ligacaoNormalizada,
+        );
+
+        if (
+            ! is_array($componentes)
+            || ! isset(
+                $componentes['scheme'],
+                $componentes['host'],
+            )
+            || isset(
+                $componentes['user'],
+            )
+            || isset(
+                $componentes['pass'],
+            )
+            || trim(
+                (string) $componentes['host'],
+            ) === ''
+        ) {
+            throw new InvalidArgumentException(
+                'A ligação da secção deve possuir um anfitrião válido e não pode incluir credenciais.',
+            );
+        }
+
+        $esquema = mb_strtolower(
+            (string) $componentes['scheme'],
+        );
+
+        if (
+            ! in_array(
+                $esquema,
+                [
+                    'http',
+                    'https',
+                ],
+                true,
+            )
+        ) {
+            throw new InvalidArgumentException(
+                'A ligação da secção deve utilizar HTTP ou HTTPS.',
+            );
+        }
+
+        return $ligacaoNormalizada;
     }
 
     /**

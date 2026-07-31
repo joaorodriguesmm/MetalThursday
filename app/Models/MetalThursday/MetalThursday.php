@@ -15,6 +15,7 @@ use App\Traits\Interacoes\TemComentarios;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Database\Factories\MetalThursday\MetalThursdayFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -22,6 +23,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 /**
@@ -59,7 +61,7 @@ use InvalidArgumentException;
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 3.1.0
  */
 class MetalThursday extends Model
 {
@@ -80,6 +82,26 @@ class MetalThursday extends Model
      * @version 1.0.0
      */
     public const COMPRIMENTO_MAXIMO_NOME = 255;
+
+    /**
+     * Alias do número sequencial da MetalThursday dentro da edição.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public const COLUNA_NUMERO_SEMANA_NA_EDICAO =
+        'numero_semana_na_edicao';
+
+    /**
+     * Alias utilizado pela subconsulta que calcula a posição na edição.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const ALIAS_METAL_THURSDAYS_ANTERIORES =
+        'metal_thursdays_anteriores';
 
     /**
      * Nome físico da tabela associada ao modelo.
@@ -122,12 +144,14 @@ class MetalThursday extends Model
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 3.1.0
      */
     protected function casts(): array
     {
         return [
             'data' => 'immutable_date',
+
+            self::COLUNA_NUMERO_SEMANA_NA_EDICAO => 'integer',
 
             'edicao_id' => 'integer',
 
@@ -338,52 +362,120 @@ class MetalThursday extends Model
     }
 
     /**
-     * Obtém o número sequencial da MetalThursday dentro da edição.
+     * Acrescenta à consulta o número sequencial de cada MetalThursday na
+     * respetiva edição.
      *
-     * A posição é determinada pela data e considera apenas MetalThursdays não
-     * eliminadas logicamente da mesma edição.
+     * O cálculo é executado pela base de dados na mesma consulta dos
+     * registos. São consideradas apenas MetalThursdays ativas da mesma
+     * edição com data anterior ou igual à do registo exterior.
      *
-     * O valor é nulo para modelos ainda não persistidos, eliminados
-     * logicamente ou sem os atributos relacionais necessários.
+     * @param  Builder<MetalThursday>  $construtor  Consulta das
+     *                                              MetalThursdays.
+     * @return Builder<MetalThursday> Consulta com o agregado acrescentado.
      *
-     * @return Attribute<int|null, never> Número da semana na edição.
+     * @since 2.0.0
      *
-     * @since 1.0.0
-     *
-     * @version 3.0.0
+     * @version 1.0.0
      */
-    protected function numeroSemanaNaEdicao(): Attribute
+    public function scopeComNumeroSemanaNaEdicao(
+        Builder $construtor,
+    ): Builder {
+        $modelo = $construtor->getModel();
+
+        if ($construtor->getQuery()->columns === null) {
+            $construtor->select(
+                $modelo->qualifyColumn(
+                    '*',
+                ),
+            );
+        }
+
+        $subconsulta = DB::table(
+            sprintf(
+                '%s as %s',
+                $modelo->getTable(),
+                self::ALIAS_METAL_THURSDAYS_ANTERIORES,
+            ),
+        )
+            ->selectRaw(
+                'COUNT(*)',
+            )
+            ->whereColumn(
+                self::ALIAS_METAL_THURSDAYS_ANTERIORES.'.edicao_id',
+                $modelo->qualifyColumn(
+                    'edicao_id',
+                ),
+            )
+            ->whereColumn(
+                self::ALIAS_METAL_THURSDAYS_ANTERIORES.'.data',
+                '<=',
+                $modelo->qualifyColumn(
+                    'data',
+                ),
+            )
+            ->whereNull(
+                self::ALIAS_METAL_THURSDAYS_ANTERIORES.'.deleted_at',
+            );
+
+        return $construtor->addSelect([
+            self::COLUNA_NUMERO_SEMANA_NA_EDICAO => $subconsulta,
+        ]);
+    }
+
+    /**
+     * Carrega explicitamente o número sequencial desta MetalThursday na
+     * respetiva edição.
+     *
+     * O valor calculado é sincronizado como atributo original para impedir
+     * que uma gravação posterior tente persistir o alias da consulta.
+     *
+     * @return $this Modelo com o número da semana carregado.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function carregarNumeroSemanaNaEdicao(): self
     {
-        return Attribute::get(
-            function (): ?int {
-                if (
-                    ! $this->exists
-                    || $this->trashed()
-                    || ! is_int(
-                        $this->edicao_id,
-                    )
-                    || $this->edicao_id < 1
-                    || ! $this->data instanceof CarbonInterface
-                ) {
-                    return null;
+        $numeroSemana = null;
+
+        if (
+            $this->exists
+            && ! $this->trashed()
+            && is_numeric(
+                $this->getKey(),
+            )
+        ) {
+            $registoNumerado = self::query()
+                ->select([
+                    $this->getQualifiedKeyName(),
+                ])
+                ->comNumeroSemanaNaEdicao()
+                ->whereKey(
+                    $this->getKey(),
+                )
+                ->first();
+
+            if ($registoNumerado instanceof self) {
+                $valor = $registoNumerado->getAttribute(
+                    self::COLUNA_NUMERO_SEMANA_NA_EDICAO,
+                );
+
+                if (is_numeric($valor)) {
+                    $numeroSemana = (int) $valor;
                 }
+            }
+        }
 
-                $numeroSemana = self::query()
-                    ->where(
-                        'edicao_id',
-                        $this->edicao_id,
-                    )
-                    ->whereDate(
-                        'data',
-                        '<=',
-                        $this->data->toDateString(),
-                    )
-                    ->count();
-
-                return $numeroSemana > 0
-                    ? $numeroSemana
-                    : null;
-            },
+        $this->setAttribute(
+            self::COLUNA_NUMERO_SEMANA_NA_EDICAO,
+            $numeroSemana,
         );
+
+        $this->syncOriginalAttribute(
+            self::COLUNA_NUMERO_SEMANA_NA_EDICAO,
+        );
+
+        return $this;
     }
 }

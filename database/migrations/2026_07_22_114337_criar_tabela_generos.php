@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Schema;
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 return new class extends Migration
 {
@@ -23,7 +23,7 @@ return new class extends Migration
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function up(): void
     {
@@ -32,12 +32,10 @@ return new class extends Migration
             static function (Blueprint $tabela): void {
                 $tabela->id();
 
-                $tabela
-                    ->string(
-                        'nome',
-                        100,
-                    )
-                    ->unique();
+                $tabela->string(
+                    'nome',
+                    100,
+                );
 
                 $tabela
                     ->foreignId(
@@ -64,6 +62,25 @@ return new class extends Migration
                 $tabela->timestamps();
 
                 $tabela->softDeletes();
+
+                /*
+                 * Permite reutilizar o nome de um género eliminado
+                 * logicamente, mantendo a unicidade entre géneros ativos.
+                 */
+                $tabela
+                    ->string(
+                        'nome_ativo',
+                        100,
+                    )
+                    ->nullable()
+                    ->virtualAs(
+                        'if(`deleted_at` is null, `nome`, null)',
+                    );
+
+                $tabela->unique(
+                    'nome_ativo',
+                    'generos_nome_ativo_unico',
+                );
             },
         );
     }

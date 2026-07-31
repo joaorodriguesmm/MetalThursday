@@ -24,19 +24,10 @@ use InvalidArgumentException;
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 final class MetalThursdayFactory extends Factory
 {
-    /**
-     * Comprimento máximo do nome.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const COMPRIMENTO_MAXIMO_NOME = 255;
-
     /**
      * Modelo associado à factory.
      *
@@ -125,21 +116,19 @@ final class MetalThursdayFactory extends Factory
         if (
             mb_strlen(
                 $nomeNormalizado,
-            ) > self::COMPRIMENTO_MAXIMO_NOME
+            ) > MetalThursday::COMPRIMENTO_MAXIMO_NOME
         ) {
             throw new InvalidArgumentException(
                 sprintf(
                     'O nome da MetalThursday não pode exceder %d caracteres.',
-                    self::COMPRIMENTO_MAXIMO_NOME,
+                    MetalThursday::COMPRIMENTO_MAXIMO_NOME,
                 ),
             );
         }
 
-        return $this->state(
-            static fn (): array => [
-                'nome' => $nomeNormalizado,
-            ],
-        );
+        return $this->state([
+            'nome' => $nomeNormalizado,
+        ]);
     }
 
     /**
@@ -161,11 +150,9 @@ final class MetalThursdayFactory extends Factory
             $data,
         )->startOfDay();
 
-        return $this->state(
-            static fn (): array => [
-                'data' => $dataNormalizada,
-            ],
-        );
+        return $this->state([
+            'data' => $dataNormalizada,
+        ]);
     }
 
     /**

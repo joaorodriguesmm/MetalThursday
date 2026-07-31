@@ -22,28 +22,10 @@ use InvalidArgumentException;
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 final class OrigemGeograficaFactory extends Factory
 {
-    /**
-     * Comprimento máximo do nome.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const COMPRIMENTO_MAXIMO_NOME = 100;
-
-    /**
-     * Comprimento máximo do código.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const COMPRIMENTO_MAXIMO_CODIGO = 8;
-
     /**
      * Modelo associado à factory.
      *
@@ -98,7 +80,7 @@ final class OrigemGeograficaFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function comDados(
         string $nome,
@@ -123,46 +105,41 @@ final class OrigemGeograficaFactory extends Factory
         if (
             mb_strlen(
                 $nomeNormalizado,
-            ) > self::COMPRIMENTO_MAXIMO_NOME
+            ) > OrigemGeografica::COMPRIMENTO_MAXIMO_NOME
         ) {
             throw new InvalidArgumentException(
                 sprintf(
                     'O nome da origem geográfica não pode exceder %d caracteres.',
-                    self::COMPRIMENTO_MAXIMO_NOME,
+                    OrigemGeografica::COMPRIMENTO_MAXIMO_NOME,
                 ),
             );
         }
 
+        $comprimentoCodigo = strlen(
+            $codigoNormalizado,
+        );
+
         if (
-            strlen(
-                $codigoNormalizado,
-            ) > self::COMPRIMENTO_MAXIMO_CODIGO
+            $comprimentoCodigo < OrigemGeografica::COMPRIMENTO_MINIMO_CODIGO
+            || $comprimentoCodigo > OrigemGeografica::COMPRIMENTO_MAXIMO_CODIGO
             || preg_match(
-                '/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/',
+                '/\A[A-Z0-9]+(?:-[A-Z0-9]+)*\z/',
                 $codigoNormalizado,
             ) !== 1
         ) {
             throw new InvalidArgumentException(
-                'O código da origem geográfica deve conter entre 2 e 8 caracteres alfanuméricos, podendo incluir hífenes interiores.',
+                sprintf(
+                    'O código da origem geográfica deve conter entre %d e %d caracteres alfanuméricos, podendo incluir hífenes interiores.',
+                    OrigemGeografica::COMPRIMENTO_MINIMO_CODIGO,
+                    OrigemGeografica::COMPRIMENTO_MAXIMO_CODIGO,
+                ),
             );
         }
 
-        if (
-            strlen(
-                $codigoNormalizado,
-            ) < 2
-        ) {
-            throw new InvalidArgumentException(
-                'O código da origem geográfica deve conter pelo menos dois caracteres.',
-            );
-        }
+        return $this->state([
+            'nome' => $nomeNormalizado,
 
-        return $this->state(
-            static fn (): array => [
-                'nome' => $nomeNormalizado,
-
-                'codigo' => $codigoNormalizado,
-            ],
-        );
+            'codigo' => $codigoNormalizado,
+        ]);
     }
 }

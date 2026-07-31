@@ -66,7 +66,7 @@ use InvalidArgumentException;
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 3.1.0
  */
 class SeccaoMetalThursday extends Model
 {
@@ -87,6 +87,15 @@ class SeccaoMetalThursday extends Model
      * @version 1.0.0
      */
     public const ORDEM_MINIMA = 1;
+
+    /**
+     * Ordem máxima permitida pela coluna unsigned small integer.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public const ORDEM_MAXIMA = 65_535;
 
     /**
      * Comprimento máximo permitido para o título.
@@ -119,16 +128,16 @@ class SeccaoMetalThursday extends Model
     public const COMPRIMENTO_MAXIMO_LIGACAO = 2048;
 
     /**
-     * Primeiro ano representável pela coluna SQL `YEAR`.
+     * Primeiro ano permitido pelo domínio musical da aplicação.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    public const ANO_MINIMO = 1901;
+    public const ANO_MINIMO = 1900;
 
     /**
-     * Último ano representável pela coluna SQL `YEAR`.
+     * Último ano permitido pelo domínio e pela restrição da base de dados.
      *
      * @since 2.0.0
      *
@@ -190,7 +199,7 @@ class SeccaoMetalThursday extends Model
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     protected static function booted(): void
     {
@@ -210,7 +219,7 @@ class SeccaoMetalThursday extends Model
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 3.1.0
      */
     protected function casts(): array
     {
@@ -218,6 +227,8 @@ class SeccaoMetalThursday extends Model
             'metal_thursday_id' => 'integer',
 
             'tipo_seccao_id' => 'integer',
+
+            'ordem_ativa' => 'integer',
 
             'banda_id' => 'integer',
 
@@ -246,9 +257,10 @@ class SeccaoMetalThursday extends Model
     /**
      * Normaliza e valida a ordem da secção.
      *
-     * Apenas números inteiros positivos são aceites. A unicidade da posição
-     * entre secções ativas da mesma MetalThursday é garantida pela coluna
-     * gerada e pelo índice único da base de dados.
+     * Apenas números inteiros pertencentes ao intervalo da coluna são
+     * aceites. A unicidade da posição entre secções ativas da mesma
+     * MetalThursday é garantida pela coluna gerada e pelo índice único da
+     * base de dados.
      *
      * @return Attribute<int, int> Atributo da ordem.
      *
@@ -256,7 +268,7 @@ class SeccaoMetalThursday extends Model
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     protected function ordem(): Attribute
     {
@@ -271,9 +283,14 @@ class SeccaoMetalThursday extends Model
                 if (
                     ! is_int($valor)
                     || $valor < self::ORDEM_MINIMA
+                    || $valor > self::ORDEM_MAXIMA
                 ) {
                     throw new InvalidArgumentException(
-                        'A ordem da secção deve ser um número inteiro positivo.',
+                        sprintf(
+                            'A ordem da secção deve estar entre %d e %d.',
+                            self::ORDEM_MINIMA,
+                            self::ORDEM_MAXIMA,
+                        ),
                     );
                 }
 
@@ -456,7 +473,7 @@ class SeccaoMetalThursday extends Model
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     protected function ligacao(): Attribute
     {
@@ -486,6 +503,10 @@ class SeccaoMetalThursday extends Model
                     mb_strlen(
                         $ligacaoNormalizada,
                     ) > self::COMPRIMENTO_MAXIMO_LIGACAO
+                    || str_contains(
+                        $ligacaoNormalizada,
+                        '\\',
+                    )
                     || preg_match(
                         '/[\x00-\x20\x7F]/',
                         $ligacaoNormalizada,
@@ -543,8 +564,8 @@ class SeccaoMetalThursday extends Model
     /**
      * Normaliza e valida o ano opcional da secção.
      *
-     * Apenas valores inteiros pertencentes ao intervalo suportado pela coluna
-     * SQL `YEAR` são aceites.
+     * Apenas valores inteiros pertencentes ao intervalo definido pelo domínio
+     * e pela restrição da base de dados são aceites.
      *
      * @return Attribute<int|null, int|null> Atributo do ano.
      *
@@ -552,7 +573,7 @@ class SeccaoMetalThursday extends Model
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     protected function ano(): Attribute
     {
@@ -681,26 +702,31 @@ class SeccaoMetalThursday extends Model
     /**
      * Valida a coerência entre a ligação e o tipo de incorporação.
      *
-     * Um tipo de incorporação só pode ser persistido quando existe uma
-     * ligação associada. A mesma regra é garantida pela restrição `CHECK` da
-     * base de dados.
+     * A ligação e o tipo de incorporação devem existir em conjunto. A mesma
+     * regra é garantida pela restrição `CHECK` da base de dados.
      *
-     * @throws InvalidArgumentException Quando existe um tipo sem ligação.
+     * @throws InvalidArgumentException Quando apenas um dos dois atributos
+     *                                  está preenchido.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function validarIncorporacao(): void
     {
-        if (
-            $this->tipo_incorporacao !== null
-            && $this->ligacao === null
-        ) {
-            throw new InvalidArgumentException(
-                'O tipo de incorporação exige uma ligação associada.',
-            );
+        $temLigacao =
+            $this->ligacao !== null;
+
+        $temTipoIncorporacao =
+            $this->tipo_incorporacao !== null;
+
+        if ($temLigacao === $temTipoIncorporacao) {
+            return;
         }
+
+        throw new InvalidArgumentException(
+            'A ligação e o tipo de incorporação devem ser indicados em conjunto.',
+        );
     }
 
     /**

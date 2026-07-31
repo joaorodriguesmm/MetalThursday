@@ -24,8 +24,12 @@ use InvalidArgumentException;
  * Cada banda pertence a uma origem geográfica e pode estar associada a vários
  * géneros musicais.
  *
+ * A coluna gerada `nome_ativo` garante a unicidade do nome entre bandas não
+ * eliminadas logicamente e não constitui um atributo editável da aplicação.
+ *
  * @property int $id
  * @property string $nome
+ * @property string|null $nome_ativo
  * @property int $origem_geografica_id
  * @property int|null $criado_por_id
  * @property int|null $atualizado_por_id
@@ -37,7 +41,7 @@ use InvalidArgumentException;
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 3.1.0
  */
 class Banda extends Model
 {
@@ -64,7 +68,7 @@ class Banda extends Model
      * @version 1.0.0
      */
     private const TABELA_BANDA_GENERO =
-        'banda_genero';
+    'banda_genero';
 
     /**
      * Nome físico da tabela associada ao modelo.
@@ -81,16 +85,30 @@ class Banda extends Model
      * Atributos permitidos em operações de atribuição em massa.
      *
      * A origem geográfica deve ser associada explicitamente através da
-     * relação {@see OrigemGeografica()}.
+     * relação {@see origemGeografica()}. A coluna `nome_ativo` é gerada pela
+     * base de dados e não pode ser atribuída pela aplicação.
      *
      * @var list<string>
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 3.1.0
      */
     protected $fillable = [
         'nome',
+    ];
+
+    /**
+     * Atributos internos omitidos das representações serializadas.
+     *
+     * @var list<string>
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    protected $hidden = [
+        'nome_ativo',
     ];
 
     /**
@@ -136,7 +154,7 @@ class Banda extends Model
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     protected function nome(): Attribute
     {
@@ -144,8 +162,36 @@ class Banda extends Model
             set: static function (
                 mixed $valor,
             ): string {
+                if (! is_string($valor)) {
+                    throw new InvalidArgumentException(
+                        'O nome da banda deve ser uma sequência de caracteres.',
+                    );
+                }
+
+                if (
+                    preg_match(
+                        '//u',
+                        $valor,
+                    ) !== 1
+                ) {
+                    throw new InvalidArgumentException(
+                        'O nome da banda contém texto inválido.',
+                    );
+                }
+
+                if (
+                    preg_match(
+                        '/[\x00-\x1F\x7F]/',
+                        $valor,
+                    ) === 1
+                ) {
+                    throw new InvalidArgumentException(
+                        'O nome da banda contém caracteres inválidos.',
+                    );
+                }
+
                 $nomeNormalizado = Str::squish(
-                    (string) $valor,
+                    $valor,
                 );
 
                 if ($nomeNormalizado === '') {

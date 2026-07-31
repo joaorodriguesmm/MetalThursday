@@ -32,7 +32,7 @@ use InvalidArgumentException;
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 3.1.0
  */
 class TipoSeccao extends Model
 {
@@ -56,6 +56,17 @@ class TipoSeccao extends Model
      * @version 1.0.0
      */
     public const COMPRIMENTO_MAXIMO_NOME = 64;
+
+    /**
+     * Comprimento máximo da descrição.
+     *
+     * O valor corresponde à capacidade da coluna SQL `TEXT`.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public const COMPRIMENTO_MAXIMO_DESCRICAO = 65_535;
 
     /**
      * Ordem mínima permitida.
@@ -120,13 +131,16 @@ class TipoSeccao extends Model
     /**
      * Normaliza e valida o identificador do tipo.
      *
+     * Apenas letras ASCII minúsculas, números e sublinhados interiores são
+     * aceites.
+     *
      * @return Attribute<string, string> Atributo do identificador.
      *
      * @throws InvalidArgumentException Quando o identificador não é válido.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     protected function identificador(): Attribute
     {
@@ -134,9 +148,20 @@ class TipoSeccao extends Model
             set: static function (
                 mixed $valor,
             ): string {
-                $identificadorNormalizado = mb_strtolower(
+                if (! is_string($valor)) {
+                    throw new InvalidArgumentException(
+                        'O identificador do tipo de secção deve ser uma sequência de caracteres.',
+                    );
+                }
+
+                self::validarTextoUtf8(
+                    $valor,
+                    'O identificador do tipo de secção contém texto inválido.',
+                );
+
+                $identificadorNormalizado = strtolower(
                     trim(
-                        (string) $valor,
+                        $valor,
                     ),
                 );
 
@@ -163,13 +188,16 @@ class TipoSeccao extends Model
     /**
      * Normaliza e valida o nome do tipo.
      *
+     * Os espaços exteriores e consecutivos são normalizados. Quebras de
+     * linha, tabulações e restantes caracteres de controlo não são aceites.
+     *
      * @return Attribute<string, string> Atributo do nome.
      *
      * @throws InvalidArgumentException Quando o nome não é válido.
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     protected function nome(): Attribute
     {
@@ -177,8 +205,24 @@ class TipoSeccao extends Model
             set: static function (
                 mixed $valor,
             ): string {
+                if (! is_string($valor)) {
+                    throw new InvalidArgumentException(
+                        'O nome do tipo de secção deve ser uma sequência de caracteres.',
+                    );
+                }
+
+                self::validarTextoUtf8(
+                    $valor,
+                    'O nome do tipo de secção contém texto inválido.',
+                );
+
+                self::validarAusenciaCaracteresControlo(
+                    $valor,
+                    'O nome do tipo de secção contém caracteres inválidos.',
+                );
+
                 $nomeNormalizado = Str::squish(
-                    (string) $valor,
+                    $valor,
                 );
 
                 if ($nomeNormalizado === '') {
@@ -208,13 +252,17 @@ class TipoSeccao extends Model
     /**
      * Normaliza e valida a descrição do tipo.
      *
+     * A descrição é apresentada como texto de uma única linha. Espaços
+     * exteriores e consecutivos são normalizados, mas caracteres de controlo
+     * não são silenciosamente removidos.
+     *
      * @return Attribute<string, string> Atributo da descrição.
      *
-     * @throws InvalidArgumentException Quando a descrição está vazia.
+     * @throws InvalidArgumentException Quando a descrição não é válida.
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     protected function descricao(): Attribute
     {
@@ -222,13 +270,42 @@ class TipoSeccao extends Model
             set: static function (
                 mixed $valor,
             ): string {
+                if (! is_string($valor)) {
+                    throw new InvalidArgumentException(
+                        'A descrição do tipo de secção deve ser uma sequência de caracteres.',
+                    );
+                }
+
+                self::validarTextoUtf8(
+                    $valor,
+                    'A descrição do tipo de secção contém texto inválido.',
+                );
+
+                self::validarAusenciaCaracteresControlo(
+                    $valor,
+                    'A descrição do tipo de secção contém caracteres inválidos.',
+                );
+
                 $descricaoNormalizada = Str::squish(
-                    (string) $valor,
+                    $valor,
                 );
 
                 if ($descricaoNormalizada === '') {
                     throw new InvalidArgumentException(
                         'A descrição do tipo de secção não pode estar vazia.',
+                    );
+                }
+
+                if (
+                    mb_strlen(
+                        $descricaoNormalizada,
+                    ) > self::COMPRIMENTO_MAXIMO_DESCRICAO
+                ) {
+                    throw new InvalidArgumentException(
+                        sprintf(
+                            'A descrição do tipo de secção não pode exceder %d caracteres.',
+                            self::COMPRIMENTO_MAXIMO_DESCRICAO,
+                        ),
                     );
                 }
 
@@ -314,6 +391,8 @@ class TipoSeccao extends Model
     /**
      * Obtém as secções que utilizam este tipo.
      *
+     * As secções são devolvidas pela ordem definida.
+     *
      * @return HasMany<SeccaoMetalThursday, $this> Relação com as secções.
      *
      * @since 1.0.0
@@ -333,5 +412,66 @@ class TipoSeccao extends Model
             ->orderBy(
                 'id',
             );
+    }
+
+    /**
+     * Valida que um texto utiliza uma codificação UTF-8 válida.
+     *
+     * @param  string  $valor  Texto recebido.
+     * @param  string  $mensagem  Mensagem utilizada em caso de erro.
+     *
+     * @throws InvalidArgumentException Quando o texto não é UTF-8 válido.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private static function validarTextoUtf8(
+        string $valor,
+        string $mensagem,
+    ): void {
+        if (
+            preg_match(
+                '//u',
+                $valor,
+            ) === 1
+        ) {
+            return;
+        }
+
+        throw new InvalidArgumentException(
+            $mensagem,
+        );
+    }
+
+    /**
+     * Valida que um texto não contém caracteres de controlo.
+     *
+     * @param  string  $valor  Texto recebido.
+     * @param  string  $mensagem  Mensagem utilizada em caso de erro.
+     *
+     * @throws InvalidArgumentException Quando o texto contém caracteres de
+     *                                  controlo.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private static function validarAusenciaCaracteresControlo(
+        string $valor,
+        string $mensagem,
+    ): void {
+        if (
+            preg_match(
+                '/[\x00-\x1F\x7F]/',
+                $valor,
+            ) !== 1
+        ) {
+            return;
+        }
+
+        throw new InvalidArgumentException(
+            $mensagem,
+        );
     }
 }

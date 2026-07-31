@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use LogicException;
@@ -23,12 +24,16 @@ use LogicException;
  * Um género pode possuir vários géneros pais, vários géneros filhos e estar
  * associado a várias bandas.
  *
+ * A coluna gerada `nome_ativo` garante a unicidade do nome entre géneros não
+ * eliminados logicamente e não constitui um atributo editável da aplicação.
+ *
  * A base de dados impede que um género seja diretamente pai de si próprio.
  * A aplicação é responsável por impedir ciclos mais extensos durante a
  * sincronização da hierarquia.
  *
  * @property int $id
  * @property string $nome
+ * @property string|null $nome_ativo
  * @property int|null $criado_por_id
  * @property int|null $atualizado_por_id
  * @property CarbonInterface|null $created_at
@@ -40,7 +45,7 @@ use LogicException;
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 3.2.0
  */
 class Genero extends Model
 {
@@ -96,16 +101,30 @@ class Genero extends Model
      * Atributos permitidos em operações de atribuição em massa.
      *
      * Os campos de auditoria são preenchidos pelo trait
-     * {@see RegistaAutoria}.
+     * {@see RegistaAutoria}. A coluna `nome_ativo` é gerada pela base de dados
+     * e não pode ser atribuída pela aplicação.
      *
      * @var list<string>
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 3.1.0
      */
     protected $fillable = [
         'nome',
+    ];
+
+    /**
+     * Atributos internos omitidos das representações serializadas.
+     *
+     * @var list<string>
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    protected $hidden = [
+        'nome_ativo',
     ];
 
     /**
@@ -303,72 +322,68 @@ class Genero extends Model
     /**
      * Obtém os identificadores do género e de todos os seus descendentes.
      *
-     * A travessia utiliza um conjunto de identificadores já processados para
-     * impedir repetições e ciclos infinitos caso exista uma hierarquia
-     * inválida na base de dados.
+     * A expressão recursiva percorre apenas géneros ativos e utiliza união
+     * distinta para eliminar repetições e terminar mesmo perante uma
+     * hierarquia inválida com ciclos.
      *
-     * @return non-empty-list<int> Identificadores do género e descendentes.
+     * @return non-empty-list<int> Identificadores ordenados do género e dos
+     *                             descendentes ativos.
      *
-     * @throws LogicException Quando algum género ainda não foi persistido.
+     * @throws LogicException Quando o género ainda não foi persistido.
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function obterIdentificadoresComDescendentes(): array
     {
-        /** @var array<int, int> $identificadores */
-        $identificadores = [];
+        $identificador = $this->getKey();
 
-        /** @var list<Genero> $generosPorProcessar */
-        $generosPorProcessar = [
-            $this,
-        ];
-
-        while ($generosPorProcessar !== []) {
-            /** @var Genero $generoAtual */
-            $generoAtual = array_pop(
-                $generosPorProcessar,
+        if (
+            ! is_numeric($identificador)
+            || (int) $identificador < 1
+        ) {
+            throw new LogicException(
+                'Não é possível percorrer a hierarquia de um género ainda não persistido.',
             );
-
-            $identificador = $generoAtual->getKey();
-
-            if (
-                ! is_numeric($identificador)
-                || (int) $identificador < 1
-            ) {
-                throw new LogicException(
-                    'Não é possível percorrer a hierarquia de um género ainda não persistido.',
-                );
-            }
-
-            $identificadorInteiro =
-                (int) $identificador;
-
-            if (
-                isset(
-                    $identificadores[$identificadorInteiro],
-                )
-            ) {
-                continue;
-            }
-
-            $identificadores[$identificadorInteiro] = $identificadorInteiro;
-
-            $generoAtual->loadMissing(
-                'generosFilhos',
-            );
-
-            foreach (
-                $generoAtual->generosFilhos as $generoFilho
-            ) {
-                $generosPorProcessar[] =
-                    $generoFilho;
-            }
         }
 
-        return array_values(
-            $identificadores,
+        $consulta = sprintf(
+            <<<'SQL'
+                WITH RECURSIVE descendentes (id) AS (
+                    SELECT CAST(? AS UNSIGNED)
+
+                    UNION DISTINCT
+
+                    SELECT hierarquia.genero_id
+                    FROM %s AS hierarquia
+                    INNER JOIN descendentes
+                        ON descendentes.id = hierarquia.genero_pai_id
+                    INNER JOIN %s AS generos
+                        ON generos.id = hierarquia.genero_id
+                        AND generos.deleted_at IS NULL
+                )
+                SELECT id
+                FROM descendentes
+                ORDER BY id
+                SQL,
+            self::TABELA_HIERARQUIA,
+            $this->getTable(),
+        );
+
+        /** @var list<object{id: int|string}> $resultados */
+        $resultados = DB::select(
+            $consulta,
+            [
+                (int) $identificador,
+            ],
+        );
+
+        return array_map(
+            static fn (
+                object $resultado,
+            ): int => (int) $resultado->id,
+            $resultados,
         );
     }
 }

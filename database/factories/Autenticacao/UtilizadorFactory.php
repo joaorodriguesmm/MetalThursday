@@ -21,7 +21,7 @@ use InvalidArgumentException;
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 final class UtilizadorFactory extends Factory
 {
@@ -37,16 +37,6 @@ final class UtilizadorFactory extends Factory
      */
     public const PALAVRA_PASSE_PREDEFINIDA =
         'PalavraPasse#2026';
-
-    /**
-     * Comprimento máximo do caminho da fotografia.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const COMPRIMENTO_MAXIMO_FOTOGRAFIA =
-        255;
 
     /**
      * Hash reutilizado da palavra-passe predefinida.
@@ -122,15 +112,13 @@ final class UtilizadorFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function naoVerificado(): static
     {
-        return $this->state(
-            static fn (): array => [
-                'email_verified_at' => null,
-            ],
-        );
+        return $this->state([
+            'email_verified_at' => null,
+        ]);
     }
 
     /**
@@ -141,61 +129,54 @@ final class UtilizadorFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public function comPapel(
         PapelUtilizador $papel,
     ): static {
-        return $this->state(
-            static fn (): array => [
-                'papel' => $papel,
-            ],
-        );
+        return $this->state([
+            'papel' => $papel,
+        ]);
     }
 
     /**
      * Define uma fotografia para o utilizador.
      *
+     * A normalização e a validação são delegadas ao atributo definitivo do
+     * modelo, evitando duplicar limites ou regras de segurança na factory.
+     *
      * @param  string  $caminho  Caminho relativo da fotografia.
      * @return static Factory configurada.
      *
-     * @throws InvalidArgumentException Quando o caminho está vazio ou
-     *                                  ultrapassa o comprimento máximo.
+     * @throws InvalidArgumentException Quando o caminho não representa uma
+     *                                  fotografia válida.
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function comFotografia(
         string $caminho,
     ): static {
-        $caminhoNormalizado = trim(
-            $caminho,
-        );
+        $utilizador = new Utilizador;
 
-        if ($caminhoNormalizado === '') {
+        $utilizador->fotografia =
+            $caminho;
+
+        $caminhoNormalizado =
+            $utilizador->fotografia;
+
+        if (
+            ! is_string($caminhoNormalizado)
+            || $caminhoNormalizado === ''
+        ) {
             throw new InvalidArgumentException(
                 'O caminho da fotografia não pode estar vazio.',
             );
         }
 
-        if (
-            mb_strlen(
-                $caminhoNormalizado,
-            ) > self::COMPRIMENTO_MAXIMO_FOTOGRAFIA
-        ) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'O caminho da fotografia não pode exceder %d caracteres.',
-                    self::COMPRIMENTO_MAXIMO_FOTOGRAFIA,
-                ),
-            );
-        }
-
-        return $this->state(
-            static fn (): array => [
-                'fotografia' => $caminhoNormalizado,
-            ],
-        );
+        return $this->state([
+            'fotografia' => $caminhoNormalizado,
+        ]);
     }
 }

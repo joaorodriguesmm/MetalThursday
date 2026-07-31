@@ -22,37 +22,10 @@ use InvalidArgumentException;
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 final class MusicaFavoritaEdicaoFactory extends Factory
 {
-    /**
-     * Posição mínima permitida.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const POSICAO_MINIMA = 1;
-
-    /**
-     * Posição máxima permitida.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const POSICAO_MAXIMA = 3;
-
-    /**
-     * Comprimento máximo da identificação da música.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const COMPRIMENTO_MAXIMO_MUSICA = 255;
-
     /**
      * Modelo associado à factory.
      *
@@ -74,7 +47,7 @@ final class MusicaFavoritaEdicaoFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function definition(): array
     {
@@ -86,8 +59,8 @@ final class MusicaFavoritaEdicaoFactory extends Factory
             'posicao' => $this
                 ->faker
                 ->numberBetween(
-                    self::POSICAO_MINIMA,
-                    self::POSICAO_MAXIMA,
+                    MusicaFavoritaEdicao::POSICAO_MINIMA,
+                    MusicaFavoritaEdicao::POSICAO_MAXIMA,
                 ),
 
             'musica' => Str::limit(
@@ -110,7 +83,7 @@ final class MusicaFavoritaEdicaoFactory extends Factory
                             ),
                     ),
                 ),
-                self::COMPRIMENTO_MAXIMO_MUSICA,
+                MusicaFavoritaEdicao::COMPRIMENTO_MAXIMO_MUSICA,
                 '',
             ),
 
@@ -205,53 +178,87 @@ final class MusicaFavoritaEdicaoFactory extends Factory
      * @return static Factory configurada.
      *
      * @throws InvalidArgumentException Quando a posição não está compreendida
-     *                                  entre um e três.
+     *                                  no intervalo permitido pelo modelo.
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function comPosicao(
         int $posicao,
     ): static {
         if (
-            $posicao < self::POSICAO_MINIMA
-            || $posicao > self::POSICAO_MAXIMA
+            $posicao < MusicaFavoritaEdicao::POSICAO_MINIMA
+            || $posicao > MusicaFavoritaEdicao::POSICAO_MAXIMA
         ) {
             throw new InvalidArgumentException(
                 sprintf(
                     'A posição da música favorita deve estar compreendida entre %d e %d.',
-                    self::POSICAO_MINIMA,
-                    self::POSICAO_MAXIMA,
+                    MusicaFavoritaEdicao::POSICAO_MINIMA,
+                    MusicaFavoritaEdicao::POSICAO_MAXIMA,
                 ),
             );
         }
 
-        return $this->state(
-            static fn (): array => [
-                'posicao' => $posicao,
-            ],
-        );
+        return $this->state([
+            'posicao' => $posicao,
+        ]);
     }
 
     /**
      * Define a identificação da música favorita.
      *
+     * Tabulações, quebras de linha e sequências de espaços Unicode são
+     * convertidas num único espaço, reproduzindo o contrato do modelo.
+     *
      * @param  string  $musica  Identificação da música.
      * @return static Factory configurada.
      *
-     * @throws InvalidArgumentException Quando a identificação está vazia ou
-     *                                  ultrapassa o comprimento máximo.
+     * @throws InvalidArgumentException Quando a identificação não é válida.
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function comMusica(
         string $musica,
     ): static {
-        $musicaNormalizada = Str::squish(
+        if (
+            preg_match(
+                '//u',
+                $musica,
+            ) !== 1
+        ) {
+            throw new InvalidArgumentException(
+                'A identificação da música favorita contém texto inválido.',
+            );
+        }
+
+        if (
+            preg_match(
+                '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/',
+                $musica,
+            ) === 1
+        ) {
+            throw new InvalidArgumentException(
+                'A identificação da música favorita contém caracteres inválidos.',
+            );
+        }
+
+        $musicaNormalizada = preg_replace(
+            '/\s+/u',
+            ' ',
             $musica,
+        );
+
+        if (! is_string($musicaNormalizada)) {
+            throw new InvalidArgumentException(
+                'Não foi possível normalizar a identificação da música favorita.',
+            );
+        }
+
+        $musicaNormalizada = trim(
+            $musicaNormalizada,
         );
 
         if ($musicaNormalizada === '') {
@@ -263,21 +270,19 @@ final class MusicaFavoritaEdicaoFactory extends Factory
         if (
             mb_strlen(
                 $musicaNormalizada,
-            ) > self::COMPRIMENTO_MAXIMO_MUSICA
+            ) > MusicaFavoritaEdicao::COMPRIMENTO_MAXIMO_MUSICA
         ) {
             throw new InvalidArgumentException(
                 sprintf(
                     'A identificação da música favorita não pode exceder %d caracteres.',
-                    self::COMPRIMENTO_MAXIMO_MUSICA,
+                    MusicaFavoritaEdicao::COMPRIMENTO_MAXIMO_MUSICA,
                 ),
             );
         }
 
-        return $this->state(
-            static fn (): array => [
-                'musica' => $musicaNormalizada,
-            ],
-        );
+        return $this->state([
+            'musica' => $musicaNormalizada,
+        ]);
     }
 
     /**
@@ -290,15 +295,13 @@ final class MusicaFavoritaEdicaoFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function semRegistador(): static
     {
-        return $this->state(
-            static fn (): array => [
-                'registado_por_id' => null,
-            ],
-        );
+        return $this->state([
+            'registado_por_id' => null,
+        ]);
     }
 
     /**
