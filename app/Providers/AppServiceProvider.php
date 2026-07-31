@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Enumeracoes\Interacoes\TipoEntidadeInteracao;
 use App\Models\Autenticacao\Utilizador;
 use App\Regras\Autenticacao\RequisitosPalavraPasse;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\ServiceProvider;
@@ -20,7 +21,7 @@ use Illuminate\Validation\Rules\Password;
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 4.0.1
  */
 final class AppServiceProvider extends ServiceProvider
 {
@@ -42,13 +43,38 @@ final class AppServiceProvider extends ServiceProvider
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
     public function boot(): void
     {
+        $this->configurarModelosEloquent();
         $this->configurarMapaPolimorfico();
         $this->configurarRequisitosPalavraPasse();
         $this->configurarPaginacao();
+    }
+
+    /**
+     * Ativa as verificações estritas dos modelos fora de produção.
+     *
+     * Durante o desenvolvimento e os testes, o Eloquent rejeita carregamentos
+     * preguiçosos, atributos descartados silenciosamente e acessos a atributos
+     * que não tenham sido selecionados.
+     *
+     * Em produção, estas verificações permanecem desativadas para que uma
+     * violação não interrompa um pedido real. As violações devem ser detetadas
+     * previamente pela suite automatizada.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.1
+     */
+    private function configurarModelosEloquent(): void
+    {
+        Model::shouldBeStrict(
+            ! $this->app->environment(
+                'production',
+            ),
+        );
     }
 
     /**
