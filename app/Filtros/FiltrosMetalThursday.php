@@ -27,7 +27,7 @@ use Throwable;
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 3.1.0
  */
 final class FiltrosMetalThursday
 {
@@ -72,16 +72,16 @@ final class FiltrosMetalThursday
     ];
 
     /**
-     * Alias da classificação média calculada pela consulta.
+     * Alias do agregado médio carregado pelas consultas da listagem.
      *
      * @var string
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private const COLUNA_CLASSIFICACAO_MEDIA =
-        'classificacao_media';
+        'avaliacoes_avg_pontuacao';
 
     /**
      * Alias da classificação atribuída pelo utilizador autenticado.
@@ -257,34 +257,12 @@ final class FiltrosMetalThursday
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 1.2.0
      */
     private function ordenarPorClassificacaoMedia(
         DirecaoOrdenacao $direcao,
     ): void {
-        $modelo = $this
-            ->construtor
-            ->getModel();
-
-        $subconsulta = DB::table(
-            'avaliacoes',
-        )
-            ->selectRaw(
-                'AVG(pontuacao)',
-            )
-            ->whereColumn(
-                'avaliavel_id',
-                $modelo->getQualifiedKeyName(),
-            )
-            ->where(
-                'tipo_avaliavel',
-                $modelo->getMorphClass(),
-            );
-
         $this->construtor
-            ->addSelect([
-                self::COLUNA_CLASSIFICACAO_MEDIA => $subconsulta,
-            ])
             ->orderByRaw(
                 sprintf(
                     'CASE WHEN %s IS NULL THEN 1 ELSE 0 END ASC',
@@ -486,7 +464,7 @@ final class FiltrosMetalThursday
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 2.2.0
      */
     private function filtrarPorBanda(
         mixed $valor,
@@ -502,10 +480,11 @@ final class FiltrosMetalThursday
 
         if ($this->eConsultaDeMetalThursdays()) {
             $this->construtor->whereHas(
-                'seccoes.banda',
+                'seccoes',
                 static fn (
                     Builder $construtor,
-                ): Builder => $construtor->whereKey(
+                ): Builder => $construtor->where(
+                    'banda_id',
                     $identificadorBanda,
                 ),
             );
@@ -560,7 +539,7 @@ final class FiltrosMetalThursday
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 2.2.0
      */
     private function filtrarPorDataAte(
         mixed $valor,
@@ -576,7 +555,7 @@ final class FiltrosMetalThursday
         $this->aplicarRestricaoNaMetalThursday(
             static fn (
                 Builder $construtor,
-            ): Builder => $construtor->whereDate(
+            ): Builder => $construtor->where(
                 'data',
                 '<=',
                 $data->toDateString(),
@@ -591,7 +570,7 @@ final class FiltrosMetalThursday
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 2.2.0
      */
     private function filtrarPorDataDesde(
         mixed $valor,
@@ -607,7 +586,7 @@ final class FiltrosMetalThursday
         $this->aplicarRestricaoNaMetalThursday(
             static fn (
                 Builder $construtor,
-            ): Builder => $construtor->whereDate(
+            ): Builder => $construtor->where(
                 'data',
                 '>=',
                 $data->toDateString(),
@@ -622,7 +601,7 @@ final class FiltrosMetalThursday
      *
      * @since 1.0.0
      *
-     * @version 2.1.0
+     * @version 2.2.0
      */
     private function filtrarPorData(
         mixed $valor,
@@ -638,7 +617,7 @@ final class FiltrosMetalThursday
         $this->aplicarRestricaoNaMetalThursday(
             static fn (
                 Builder $construtor,
-            ): Builder => $construtor->whereDate(
+            ): Builder => $construtor->where(
                 'data',
                 $data->toDateString(),
             ),
@@ -1051,13 +1030,15 @@ final class FiltrosMetalThursday
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 1.2.0
      */
     private function obterIdentificadorUtilizador(): ?int
     {
         $identificador = $this
             ->pedido
-            ->user()
+            ->user(
+                'sessao',
+            )
             ?->getAuthIdentifier();
 
         if (! is_numeric($identificador)) {

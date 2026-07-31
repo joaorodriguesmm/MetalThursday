@@ -27,6 +27,7 @@ use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Query\JoinClause;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
@@ -45,7 +46,7 @@ use Throwable;
  *
  * @since 1.0.0
  *
- * @version 5.0.0
+ * @version 5.1.1
  */
 final class ControladorMetalThursday extends Controller
 {
@@ -493,8 +494,8 @@ final class ControladorMetalThursday extends Controller
     /**
      * Elimina logicamente uma MetalThursday.
      *
-     * O registo é novamente obtido e bloqueado dentro da transação antes da
-     * autorização e da eliminação.
+     * A autorização é verificada antes de abrir a transação. O registo é
+     * novamente obtido e bloqueado imediatamente antes da eliminação.
      *
      * @param  Request  $pedido  Pedido HTTP.
      * @param  MetalThursday  $metalThursday  MetalThursday eliminada.
@@ -502,12 +503,17 @@ final class ControladorMetalThursday extends Controller
      *
      * @since 1.0.0
      *
-     * @version 4.0.0
+     * @version 4.1.0
      */
     public function eliminar(
         Request $pedido,
         MetalThursday $metalThursday,
     ): JsonResponse|RedirectResponse {
+        $this->authorize(
+            'delete',
+            $metalThursday,
+        );
+
         DB::transaction(
             function () use (
                 $metalThursday,
@@ -519,11 +525,6 @@ final class ControladorMetalThursday extends Controller
                         )
                         ->lockForUpdate()
                         ->firstOrFail();
-
-                $this->authorize(
-                    'delete',
-                    $metalThursdayBloqueada,
-                );
 
                 $metalThursdayBloqueada->deleteOrFail();
             },
@@ -627,12 +628,13 @@ final class ControladorMetalThursday extends Controller
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.2.0
      */
     private function criarConsultaCompleta(
         ?int $identificadorUtilizador,
     ): Builder {
         return MetalThursday::query()
+            ->comNumeroSemanaNaEdicao()
             ->withCount([
                 'comentarios',
                 'avaliacoes',
@@ -643,30 +645,33 @@ final class ControladorMetalThursday extends Controller
                 'pontuacao',
             )
             ->with([
-                'edicao',
-                'autor',
-                'proximoNomeado',
-                'avaliacoes.utilizador',
-                'audicoes.utilizador',
+                'edicao:id,nome',
+                'autor:id,nome',
+                'proximoNomeado:id,nome',
+                'avaliacoes.utilizador:id,nome',
+                'audicoes.utilizador:id,nome',
                 'avaliacaoUtilizadorAutenticado',
                 'audicaoUtilizadorAutenticado',
 
                 'comentarios' => function (
-                    Builder $construtor,
+                    Relation $relacao,
                 ) use (
                     $identificadorUtilizador,
                 ): void {
                     $this->configurarComentariosParaApresentacao(
-                        $construtor,
+                        $relacao->getQuery(),
                         $identificadorUtilizador,
                     );
                 },
 
                 'seccoes' => function (
-                    Builder $construtor,
+                    Relation $relacao,
                 ) use (
                     $identificadorUtilizador,
                 ): void {
+                    $construtor =
+                        $relacao->getQuery();
+
                     $construtor
                         ->withCount([
                             'comentarios',
@@ -678,21 +683,20 @@ final class ControladorMetalThursday extends Controller
                             'pontuacao',
                         )
                         ->with([
-                            'tipoSeccao',
-                            'banda.origemGeografica',
-                            'banda.generos',
-                            'avaliacoes.utilizador',
-                            'audicoes.utilizador',
+                            'tipoSeccao:id,nome,exige_detalhes',
+                            'banda:id,nome',
+                            'avaliacoes.utilizador:id,nome',
+                            'audicoes.utilizador:id,nome',
                             'avaliacaoUtilizadorAutenticado',
                             'audicaoUtilizadorAutenticado',
 
                             'comentarios' => function (
-                                Builder $construtorComentarios,
+                                Relation $relacaoComentarios,
                             ) use (
                                 $identificadorUtilizador,
                             ): void {
                                 $this->configurarComentariosParaApresentacao(
-                                    $construtorComentarios,
+                                    $relacaoComentarios->getQuery(),
                                     $identificadorUtilizador,
                                 );
                             },
@@ -708,11 +712,20 @@ final class ControladorMetalThursday extends Controller
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     private function criarConsultaSimplificada(): Builder
     {
         return SeccaoMetalThursday::query()
+            ->select([
+                'id',
+                'metal_thursday_id',
+                'tipo_seccao_id',
+                'banda_id',
+                'titulo',
+                'ligacao',
+                'ano',
+            ])
             ->withCount([
                 'avaliacoes',
                 'audicoes',
@@ -722,12 +735,14 @@ final class ControladorMetalThursday extends Controller
                 'pontuacao',
             )
             ->with([
-                'metalThursday.autor',
-                'banda.origemGeografica',
-                'banda.generos',
-                'tipoSeccao',
-                'avaliacoes.utilizador',
-                'audicoes.utilizador',
+                'metalThursday:id,autor_id,data',
+                'metalThursday.autor:id,nome',
+                'banda:id,nome,origem_geografica_id',
+                'banda.origemGeografica:id,nome',
+                'banda.generos:id,nome',
+                'tipoSeccao:id,nome',
+                'avaliacoes.utilizador:id,nome',
+                'audicoes.utilizador:id,nome',
             ])
             ->whereHas(
                 'tipoSeccao',
@@ -748,13 +763,14 @@ final class ControladorMetalThursday extends Controller
      *
      * @since 2.1.0
      *
-     * @version 2.0.0
+     * @version 2.2.0
      */
     private function carregarDetalhes(
         MetalThursday $metalThursday,
         ?int $identificadorUtilizador,
     ): void {
         $metalThursday
+            ->carregarNumeroSemanaNaEdicao()
             ->loadCount([
                 'comentarios',
                 'avaliacoes',
@@ -765,31 +781,33 @@ final class ControladorMetalThursday extends Controller
                 'pontuacao',
             )
             ->load([
-                'edicao',
-                'autor',
-                'proximoNomeado',
-                'criadoPor',
-                'avaliacoes.utilizador',
-                'audicoes.utilizador',
+                'edicao:id,nome',
+                'autor:id,nome',
+                'proximoNomeado:id,nome',
+                'avaliacoes.utilizador:id,nome',
+                'audicoes.utilizador:id,nome',
                 'avaliacaoUtilizadorAutenticado',
                 'audicaoUtilizadorAutenticado',
 
                 'comentarios' => function (
-                    Builder $construtor,
+                    Relation $relacao,
                 ) use (
                     $identificadorUtilizador,
                 ): void {
                     $this->configurarComentariosParaApresentacao(
-                        $construtor,
+                        $relacao->getQuery(),
                         $identificadorUtilizador,
                     );
                 },
 
                 'seccoes' => function (
-                    Builder $construtor,
+                    Relation $relacao,
                 ) use (
                     $identificadorUtilizador,
                 ): void {
+                    $construtor =
+                        $relacao->getQuery();
+
                     $construtor
                         ->withCount([
                             'comentarios',
@@ -801,21 +819,20 @@ final class ControladorMetalThursday extends Controller
                             'pontuacao',
                         )
                         ->with([
-                            'tipoSeccao',
-                            'banda.origemGeografica',
-                            'banda.generos',
-                            'avaliacoes.utilizador',
-                            'audicoes.utilizador',
+                            'tipoSeccao:id,nome,exige_detalhes',
+                            'banda:id,nome',
+                            'avaliacoes.utilizador:id,nome',
+                            'audicoes.utilizador:id,nome',
                             'avaliacaoUtilizadorAutenticado',
                             'audicaoUtilizadorAutenticado',
 
                             'comentarios' => function (
-                                Builder $construtorComentarios,
+                                Relation $relacaoComentarios,
                             ) use (
                                 $identificadorUtilizador,
                             ): void {
                                 $this->configurarComentariosParaApresentacao(
-                                    $construtorComentarios,
+                                    $relacaoComentarios->getQuery(),
                                     $identificadorUtilizador,
                                 );
                             },
@@ -1212,20 +1229,29 @@ final class ControladorMetalThursday extends Controller
      * Uma falha no envio não transforma uma criação já persistida numa
      * resposta de erro.
      *
+     * As relações necessárias às notificações são carregadas antes do envio.
+     * As permissões de e-mail dos destinatários são obtidas uma vez por bloco,
+     * evitando consultas individuais durante a determinação dos canais.
+     *
+     * A notificação geral utiliza um retrato escalar e é criada uma única vez,
+     * sendo reutilizada em todos os blocos de destinatários.
+     *
      * @param  MetalThursday  $metalThursday  MetalThursday criada.
      * @param  int  $identificadorCriador  Criador autenticado.
      *
      * @since 2.0.0
      *
-     * @version 1.1.0
+     * @version 1.2.0
      */
     private function notificarCriacao(
         MetalThursday $metalThursday,
         int $identificadorCriador,
     ): void {
-        $metalThursday->loadMissing([
+        $metalThursday->load([
+            'edicao',
             'autor',
-            'proximoNomeado',
+            'criadoPor',
+            'proximoNomeado.permissoesEmail',
         ]);
 
         $nomeado =
@@ -1246,7 +1272,15 @@ final class ControladorMetalThursday extends Controller
         }
 
         try {
+            $notificacaoCriacao =
+                new NotificacaoMetalThursdayCriada(
+                    $metalThursday,
+                );
+
             $construtor = Utilizador::query()
+                ->with([
+                    'permissoesEmail',
+                ])
                 ->selecionaveis()
                 ->where(
                     'utilizadores.id',
@@ -1271,13 +1305,11 @@ final class ControladorMetalThursday extends Controller
                     static function (
                         Collection $destinatarios,
                     ) use (
-                        $metalThursday,
+                        $notificacaoCriacao,
                     ): void {
                         Notification::send(
                             $destinatarios,
-                            new NotificacaoMetalThursdayCriada(
-                                $metalThursday,
-                            ),
+                            $notificacaoCriacao,
                         );
                     },
                     'utilizadores.id',
@@ -1303,7 +1335,7 @@ final class ControladorMetalThursday extends Controller
      *
      * @since 3.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function configurarComentariosParaApresentacao(
         Builder $construtor,
@@ -1317,10 +1349,13 @@ final class ControladorMetalThursday extends Controller
             ->ordenadosCronologicamente()
             ->with([
                 'respostas' => static function (
-                    Builder $construtorRespostas,
+                    Relation $relacao,
                 ) use (
                     $identificadorUtilizador,
                 ): void {
+                    $construtorRespostas =
+                        $relacao->getQuery();
+
                     $construtorRespostas
                         ->comDadosApresentacao(
                             $identificadorUtilizador,
@@ -1672,19 +1707,17 @@ final class ControladorMetalThursday extends Controller
      * Obtém as secções apresentadas no formulário de edição.
      *
      * Quando existe uma submissão anterior inválida, são utilizados os dados
-     * guardados na sessão. Caso contrário, são utilizados os modelos associados
-     * à MetalThursday.
+     * guardados na sessão. Caso contrário, são utilizados os modelos
+     * associados à MetalThursday.
      *
      * @param  Request  $pedido  Pedido HTTP atual.
-     * @param  MetalThursday  $metalThursday  Metal
-     *                                        à MetalThursday.
-     * @param  Request  $pedido  Thursday editada.
-     * @return array<int, SeccaoMetalThursday|array<string, mixed>>
-     *                                                              Secções utilizadas pelo formulário.
+     * @param  MetalThursday  $metalThursday  MetalThursday editada.
+     * @return array<int, SeccaoMetalThursday|array<string, mixed>> Secções
+     *                                                              utilizadas pelo formulário.
      *
      * @since 3.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     private function obterSeccoesFormulario(
         Request $pedido,

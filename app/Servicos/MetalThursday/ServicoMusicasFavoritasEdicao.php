@@ -9,6 +9,7 @@ use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MusicaFavoritaEdicao;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use Throwable;
@@ -24,7 +25,7 @@ use Throwable;
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 final class ServicoMusicasFavoritasEdicao
 {
@@ -223,7 +224,7 @@ final class ServicoMusicasFavoritasEdicao
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     private function normalizarMusicasUtilizador(
         int $identificadorUtilizador,
@@ -269,9 +270,10 @@ final class ServicoMusicasFavoritasEdicao
                 continue;
             }
 
-            $chaveMusica = mb_strtolower(
-                $musica,
-            );
+            $chaveMusica =
+                $this->normalizarChaveComparacaoMusica(
+                    $musica,
+                );
 
             if (
                 array_key_exists(
@@ -293,6 +295,31 @@ final class ServicoMusicasFavoritasEdicao
         }
 
         return $musicas;
+    }
+
+    /**
+     * Normaliza uma música para comparação de unicidade.
+     *
+     * A base de dados utiliza a collation `utf8mb4_unicode_ci`, que não
+     * distingue maiúsculas nem acentos. A chave reproduz esse contrato antes
+     * da escrita, evitando que uma repetição previsível seja convertida numa
+     * exceção de integridade da base de dados.
+     *
+     * @param  string  $musica  Música já normalizada para persistência.
+     * @return string Chave utilizada na comparação.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function normalizarChaveComparacaoMusica(
+        string $musica,
+    ): string {
+        return Str::lower(
+            Str::ascii(
+                $musica,
+            ),
+        );
     }
 
     /**

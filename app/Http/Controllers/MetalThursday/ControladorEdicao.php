@@ -35,7 +35,7 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * @since 1.0.0
  *
- * @version 4.0.0
+ * @version 4.1.0
  */
 final class ControladorEdicao extends Controller
 {
@@ -263,18 +263,26 @@ final class ControladorEdicao extends Controller
     /**
      * Atualiza uma edição sob bloqueio transacional.
      *
+     * A autorização é verificada antes de abrir a transação. A edição é
+     * novamente obtida e bloqueada imediatamente antes da atualização.
+     *
      * @param  AtualizarEdicaoRequest  $pedido  Pedido validado.
      * @param  Edicao  $edicao  Edição atualizada.
      * @return JsonResponse|RedirectResponse Resposta da operação.
      *
      * @since 1.0.0
      *
-     * @version 4.0.0
+     * @version 4.1.0
      */
     public function atualizar(
         AtualizarEdicaoRequest $pedido,
         Edicao $edicao,
     ): JsonResponse|RedirectResponse {
+        $this->authorize(
+            'update',
+            $edicao,
+        );
+
         $dados =
             $pedido->safe()->only([
                 'nome',
@@ -292,11 +300,6 @@ final class ControladorEdicao extends Controller
                         $edicao,
                     );
 
-                $this->authorize(
-                    'update',
-                    $edicaoBloqueada,
-                );
-
                 $edicaoBloqueada->updateOrFail(
                     $dados,
                 );
@@ -305,8 +308,6 @@ final class ControladorEdicao extends Controller
             },
             self::TENTATIVAS_TRANSACAO,
         );
-
-        $edicaoAtualizada->refresh();
 
         if ($pedido->expectsJson()) {
             return response()->json([
@@ -329,7 +330,8 @@ final class ControladorEdicao extends Controller
     /**
      * Elimina logicamente uma edição sem MetalThursdays associadas.
      *
-     * A edição é bloqueada antes da verificação das associações. O serviço de
+     * A autorização é verificada antes de abrir a transação. A edição é
+     * bloqueada antes da verificação das associações. O serviço de
      * persistência das MetalThursdays bloqueia a mesma edição durante a
      * criação, impedindo uma associação concorrente entre a verificação e a
      * eliminação.
@@ -340,12 +342,17 @@ final class ControladorEdicao extends Controller
      *
      * @since 1.0.0
      *
-     * @version 4.0.0
+     * @version 4.1.0
      */
     public function eliminar(
         Request $pedido,
         Edicao $edicao,
     ): JsonResponse|RedirectResponse {
+        $this->authorize(
+            'delete',
+            $edicao,
+        );
+
         $foiEliminada = DB::transaction(
             function () use (
                 $edicao,
@@ -354,11 +361,6 @@ final class ControladorEdicao extends Controller
                     $this->bloquearEdicao(
                         $edicao,
                     );
-
-                $this->authorize(
-                    'delete',
-                    $edicaoBloqueada,
-                );
 
                 $possuiMetalThursdays =
                     MetalThursday::query()
@@ -458,18 +460,26 @@ final class ControladorEdicao extends Controller
     /**
      * Atualiza a ligação da compilação sob bloqueio transacional.
      *
+     * A autorização é verificada antes de abrir a transação. A edição é
+     * novamente obtida e bloqueada imediatamente antes da atualização.
+     *
      * @param  AtualizarLigacaoCompilacaoEdicaoRequest  $pedido  Pedido validado.
      * @param  Edicao  $edicao  Edição atualizada.
      * @return JsonResponse|RedirectResponse Resposta da operação.
      *
      * @since 1.0.0
      *
-     * @version 4.0.0
+     * @version 4.1.0
      */
     public function atualizarLigacaoCompilacao(
         AtualizarLigacaoCompilacaoEdicaoRequest $pedido,
         Edicao $edicao,
     ): JsonResponse|RedirectResponse {
+        $this->authorize(
+            'update',
+            $edicao,
+        );
+
         $ligacaoCompilacao =
             $pedido->obterLigacaoCompilacao();
 
@@ -483,11 +493,6 @@ final class ControladorEdicao extends Controller
                         $edicao,
                     );
 
-                $this->authorize(
-                    'update',
-                    $edicaoBloqueada,
-                );
-
                 $edicaoBloqueada->updateOrFail([
                     'ligacao_compilacao' => $ligacaoCompilacao,
                 ]);
@@ -496,8 +501,6 @@ final class ControladorEdicao extends Controller
             },
             self::TENTATIVAS_TRANSACAO,
         );
-
-        $edicaoAtualizada->refresh();
 
         if ($pedido->expectsJson()) {
             return response()->json([

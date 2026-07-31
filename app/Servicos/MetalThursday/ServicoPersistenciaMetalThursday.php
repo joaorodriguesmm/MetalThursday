@@ -11,6 +11,7 @@ use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
 use App\Models\Musica\Banda;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection as ColecaoEloquent;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
@@ -27,7 +28,7 @@ use Throwable;
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 final class ServicoPersistenciaMetalThursday
 {
@@ -41,15 +42,6 @@ final class ServicoPersistenciaMetalThursday
     private const TENTATIVAS_TRANSACAO = 3;
 
     /**
-     * Comprimento máximo do nome de uma MetalThursday.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const COMPRIMENTO_MAXIMO_NOME = 255;
-
-    /**
      * Cria uma MetalThursday e as respetivas secções.
      *
      * @param  array<string, mixed>  $dados  Dados recebidos.
@@ -61,7 +53,7 @@ final class ServicoPersistenciaMetalThursday
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function criar(
         array $dados,
@@ -145,7 +137,7 @@ final class ServicoPersistenciaMetalThursday
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     public function atualizar(
         MetalThursday $metalThursday,
@@ -237,7 +229,8 @@ final class ServicoPersistenciaMetalThursday
                         $indice
                         + SeccaoMetalThursday::ORDEM_MINIMA;
 
-                    $identificadorSeccao = $dadosSeccao['id'];
+                    $identificadorSeccao =
+                        $dadosSeccao['id'];
 
                     if ($identificadorSeccao === null) {
                         $this->criarSeccao(
@@ -313,7 +306,8 @@ final class ServicoPersistenciaMetalThursday
     private function normalizarDados(
         array $dados,
     ): array {
-        $seccoesRecebidas = $dados['seccoes']
+        $seccoesRecebidas =
+            $dados['seccoes']
             ?? null;
 
         if (
@@ -418,7 +412,7 @@ final class ServicoPersistenciaMetalThursday
                 $dados['nome']
                     ?? null,
                 'nome',
-                self::COMPRIMENTO_MAXIMO_NOME,
+                MetalThursday::COMPRIMENTO_MAXIMO_NOME,
             ),
 
             'autor_id' => $this->normalizarIdentificadorOpcional(
@@ -445,14 +439,17 @@ final class ServicoPersistenciaMetalThursday
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function preencherMetalThursday(
         MetalThursday $metalThursday,
         array $dados,
     ): void {
-        $metalThursday->edicao_id =
-            $dados['edicao_id'];
+        $metalThursday
+            ->edicao()
+            ->associate(
+                $dados['edicao_id'],
+            );
 
         $metalThursday->data =
             $dados['data'];
@@ -460,11 +457,29 @@ final class ServicoPersistenciaMetalThursday
         $metalThursday->nome =
             $dados['nome'];
 
-        $metalThursday->autor_id =
-            $dados['autor_id'];
+        if ($dados['autor_id'] === null) {
+            $metalThursday
+                ->autor()
+                ->dissociate();
+        } else {
+            $metalThursday
+                ->autor()
+                ->associate(
+                    $dados['autor_id'],
+                );
+        }
 
-        $metalThursday->proximo_nomeado_id =
-            $dados['proximo_nomeado_id'];
+        if ($dados['proximo_nomeado_id'] === null) {
+            $metalThursday
+                ->proximoNomeado()
+                ->dissociate();
+        } else {
+            $metalThursday
+                ->proximoNomeado()
+                ->associate(
+                    $dados['proximo_nomeado_id'],
+                );
+        }
     }
 
     /**
@@ -478,7 +493,7 @@ final class ServicoPersistenciaMetalThursday
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     private function criarSeccao(
         int $identificadorMetalThursday,
@@ -486,10 +501,14 @@ final class ServicoPersistenciaMetalThursday
         TipoSeccao $tipoSeccao,
         int $ordem,
     ): void {
-        $seccao = new SeccaoMetalThursday;
+        $seccao =
+            new SeccaoMetalThursday;
 
-        $seccao->metal_thursday_id =
-            $identificadorMetalThursday;
+        $seccao
+            ->metalThursday()
+            ->associate(
+                $identificadorMetalThursday,
+            );
 
         $this->preencherSeccao(
             $seccao,
@@ -504,8 +523,9 @@ final class ServicoPersistenciaMetalThursday
     /**
      * Preenche os atributos persistíveis de uma secção.
      *
-     * Os campos específicos são eliminados quando o tipo não exige detalhes.
-     * A descrição permanece obrigatória para todos os tipos de secção.
+     * Tipos detalhados exigem todos os campos musicais. Tipos simples
+     * rejeitam esses campos e removem relações detalhadas que existissem numa
+     * versão anterior da secção. A descrição permanece sempre obrigatória.
      *
      * @param  SeccaoMetalThursday  $seccao  Secção a preencher.
      * @param  array<string, mixed>  $dados  Dados normalizados.
@@ -517,7 +537,7 @@ final class ServicoPersistenciaMetalThursday
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     private function preencherSeccao(
         SeccaoMetalThursday $seccao,
@@ -525,8 +545,11 @@ final class ServicoPersistenciaMetalThursday
         TipoSeccao $tipoSeccao,
         int $ordem,
     ): void {
-        $seccao->tipo_secao_id =
-            (int) $tipoSeccao->getKey();
+        $seccao
+            ->tipoSeccao()
+            ->associate(
+                $tipoSeccao,
+            );
 
         $seccao->ordem =
             $ordem;
@@ -535,7 +558,14 @@ final class ServicoPersistenciaMetalThursday
             $dados['descricao'];
 
         if (! $tipoSeccao->exige_detalhes) {
-            $seccao->banda_id = null;
+            $this->garantirAusenciaDetalhes(
+                $dados,
+            );
+
+            $seccao
+                ->banda()
+                ->dissociate();
+
             $seccao->titulo = null;
             $seccao->ligacao = null;
             $seccao->tipo_incorporacao = null;
@@ -544,8 +574,15 @@ final class ServicoPersistenciaMetalThursday
             return;
         }
 
-        $seccao->banda_id =
-            $dados['banda_id'];
+        $this->garantirDetalhesObrigatorios(
+            $dados,
+        );
+
+        $seccao
+            ->banda()
+            ->associate(
+                $dados['banda_id'],
+            );
 
         $seccao->titulo =
             $dados['titulo'];
@@ -566,10 +603,8 @@ final class ServicoPersistenciaMetalThursday
     /**
      * Resolve o tipo de incorporação persistido.
      *
-     * Sem ligação não o tipo de incorporação persistido.
-     *
      * Sem ligação não pode existir um tipo de incorporação. Quando existe uma
-     * ligação sem tipo explícito, é utilizada uma ligação externa comum.
+     * ligação, o tipo deve ser indicado explicitamente.
      *
      * @param  string|null  $ligacao  Ligação recebida.
      * @param  TipoIncorporacao|null  $tipoRecebido  Tipo recebido.
@@ -579,7 +614,7 @@ final class ServicoPersistenciaMetalThursday
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     private function resolverTipoIncorporacao(
         ?string $ligacao,
@@ -595,8 +630,13 @@ final class ServicoPersistenciaMetalThursday
             return null;
         }
 
-        return $tipoRecebido
-            ?? TipoIncorporacao::Ligacao;
+        if (! $tipoRecebido instanceof TipoIncorporacao) {
+            throw new InvalidArgumentException(
+                'Uma ligação exige um tipo de incorporação explícito.',
+            );
+        }
+
+        return $tipoRecebido;
     }
 
     /**
@@ -608,7 +648,7 @@ final class ServicoPersistenciaMetalThursday
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 2.1.0
      */
     private function bloquearRelacoesPrincipais(
         array $dados,
@@ -625,6 +665,11 @@ final class ServicoPersistenciaMetalThursday
                 'A edição indicada não existe ou não está disponível.',
             );
         }
+
+        $this->garantirDataDentroDaEdicao(
+            $dados['data'],
+            $edicao,
+        );
 
         $identificadoresUtilizadores = array_values(
             array_unique(
@@ -678,6 +723,121 @@ final class ServicoPersistenciaMetalThursday
     }
 
     /**
+     * Confirma que a data pertence ao período da edição.
+     *
+     * @param  string  $data  Data normalizada no formato AAAA-MM-DD.
+     * @param  Edicao  $edicao  Edição bloqueada.
+     *
+     * @throws InvalidArgumentException Quando a data não pertence à edição.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function garantirDataDentroDaEdicao(
+        string $data,
+        Edicao $edicao,
+    ): void {
+        $dataInicio =
+            $edicao->data_inicio;
+
+        if (
+            $dataInicio instanceof CarbonInterface
+            && $data < $dataInicio->format(
+                'Y-m-d',
+            )
+        ) {
+            throw new InvalidArgumentException(
+                'A data da MetalThursday não pode ser anterior ao início da edição.',
+            );
+        }
+
+        $dataFim =
+            $edicao->data_fim;
+
+        if (
+            $dataFim instanceof CarbonInterface
+            && $data > $dataFim->format(
+                'Y-m-d',
+            )
+        ) {
+            throw new InvalidArgumentException(
+                'A data da MetalThursday não pode ser posterior ao fim da edição.',
+            );
+        }
+    }
+
+    /**
+     * Confirma os detalhes obrigatórios de uma secção detalhada.
+     *
+     * @param  array<string, mixed>  $dados  Dados normalizados da secção.
+     *
+     * @throws InvalidArgumentException Quando falta algum detalhe obrigatório.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function garantirDetalhesObrigatorios(
+        array $dados,
+    ): void {
+        $camposObrigatorios = [
+            'titulo' => 'O título é obrigatório numa secção detalhada.',
+
+            'banda_id' => 'A banda é obrigatória numa secção detalhada.',
+
+            'ligacao' => 'A ligação é obrigatória numa secção detalhada.',
+
+            'tipo_incorporacao' => 'O tipo de incorporação é obrigatório numa secção detalhada.',
+
+            'ano' => 'O ano é obrigatório numa secção detalhada.',
+        ];
+
+        foreach ($camposObrigatorios as $campo => $mensagem) {
+            if ($dados[$campo] !== null) {
+                continue;
+            }
+
+            throw new InvalidArgumentException(
+                $mensagem,
+            );
+        }
+    }
+
+    /**
+     * Confirma que um tipo simples não recebeu detalhes musicais.
+     *
+     * @param  array<string, mixed>  $dados  Dados normalizados da secção.
+     *
+     * @throws InvalidArgumentException Quando existe um detalhe incompatível.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function garantirAusenciaDetalhes(
+        array $dados,
+    ): void {
+        foreach (
+            [
+                'titulo',
+                'banda_id',
+                'ligacao',
+                'tipo_incorporacao',
+                'ano',
+            ] as $campo
+        ) {
+            if ($dados[$campo] === null) {
+                continue;
+            }
+
+            throw new InvalidArgumentException(
+                'Uma secção sem detalhes não pode conter informação musical detalhada.',
+            );
+        }
+    }
+
+    /**
      * Obtém e bloqueia os tipos utilizados pelas secções.
      *
      * @param  list<array<string, mixed>>  $seccoes  Secções normalizadas.
@@ -726,7 +886,9 @@ final class ServicoPersistenciaMetalThursday
 
         if (
             $tipos->count()
-            !== count($identificadores)
+            !== count(
+                $identificadores,
+            )
         ) {
             throw new InvalidArgumentException(
                 'Foi indicado um tipo de secção inexistente.',
@@ -770,8 +932,8 @@ final class ServicoPersistenciaMetalThursday
     /**
      * Bloqueia e confirma a existência das bandas relevantes.
      *
-     * Bandas enviadas em secções cujo tipo não exige detalhes são ignoradas,
-     * porque esses campos são eliminados antes da persistência.
+     * Apenas são consideradas bandas de secções cujo tipo exige detalhes. Os
+     * contratos dos restantes campos são verificados antes da persistência.
      *
      * @param  list<array<string, mixed>>  $seccoes  Secções normalizadas.
      * @param  ColecaoEloquent<int, TipoSeccao>  $tiposSeccao  Tipos
@@ -802,7 +964,8 @@ final class ServicoPersistenciaMetalThursday
                 continue;
             }
 
-            $identificadores[] = $seccao['banda_id'];
+            $identificadores[] =
+                $seccao['banda_id'];
         }
 
         $identificadores = array_values(
@@ -869,7 +1032,8 @@ final class ServicoPersistenciaMetalThursday
         $identificadoresRecebidos = [];
 
         foreach ($seccoes as $seccao) {
-            $identificador = $seccao['id'];
+            $identificador =
+                $seccao['id'];
 
             if ($identificador === null) {
                 continue;
@@ -892,7 +1056,8 @@ final class ServicoPersistenciaMetalThursday
                 );
             }
 
-            $identificadoresRecebidos[$identificador] = true;
+            $identificadoresRecebidos[$identificador] =
+                true;
         }
     }
 
@@ -939,7 +1104,9 @@ final class ServicoPersistenciaMetalThursday
             + SeccaoMetalThursday::ORDEM_MINIMA;
 
         foreach (
-            $seccoes->sortKeys()->values() as $indice => $seccao
+            $seccoes
+                ->sortKeys()
+                ->values() as $indice => $seccao
         ) {
             $seccao->ordem =
                 $primeiraOrdemTemporaria
@@ -1018,7 +1185,8 @@ final class ServicoPersistenciaMetalThursday
             );
         }
 
-        $identificador = $modelo->getKey();
+        $identificador =
+            $modelo->getKey();
 
         if (
             is_int($identificador)
@@ -1609,7 +1777,8 @@ final class ServicoPersistenciaMetalThursday
                     $valorNormalizado,
                 )
             ) {
-                $ano = (int) $valorNormalizado;
+                $ano =
+                    (int) $valorNormalizado;
 
                 if (
                     $ano >= SeccaoMetalThursday::ANO_MINIMO
