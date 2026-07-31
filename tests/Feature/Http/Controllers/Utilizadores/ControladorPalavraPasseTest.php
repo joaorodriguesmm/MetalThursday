@@ -16,7 +16,7 @@ use Tests\TestCase;
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 final class ControladorPalavraPasseTest extends TestCase
 {
@@ -47,12 +47,23 @@ final class ControladorPalavraPasseTest extends TestCase
         'NovaPalavraPasse#2026';
 
     /**
-     * Impede visitantes de alterarem a palavra-passe.
+     * Mensagem apresentada depois da atualização bem-sucedida.
      *
+     * @var string
      *
      * @since 2.0.0
      *
      * @version 1.0.0
+     */
+    private const MENSAGEM_SUCESSO =
+        'Palavra-passe atualizada com sucesso.';
+
+    /**
+     * Impede visitantes de alterarem a palavra-passe.
+     *
+     * @since 2.0.0
+     *
+     * @version 2.0.0
      */
     #[Test]
     public function visitante_nao_pode_alterar_palavra_passe(): void
@@ -71,17 +82,22 @@ final class ControladorPalavraPasseTest extends TestCase
         );
 
         $resposta->assertRedirect(
-            route('login'),
+            route(
+                'login',
+            ),
+        );
+
+        $this->assertGuest(
+            'sessao',
         );
     }
 
     /**
      * Altera a palavra-passe e mantém a sessão autenticada.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function altera_palavra_passe_com_sucesso(): void
@@ -92,9 +108,14 @@ final class ControladorPalavraPasseTest extends TestCase
             $utilizador->getAuthPassword();
 
         $resposta = $this
-            ->actingAs($utilizador)
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
             ->from(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->put(
                 route(
@@ -111,14 +132,19 @@ final class ControladorPalavraPasseTest extends TestCase
 
         $resposta
             ->assertRedirect(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
-            ->assertSessionHas('estado')
+            ->assertSessionHas(
+                'sucesso',
+                self::MENSAGEM_SUCESSO,
+            )
             ->assertSessionHasNoErrors();
 
         $this->assertAuthenticatedAs(
             $utilizador,
-            'web',
+            'sessao',
         );
 
         $utilizador->refresh();
@@ -155,10 +181,9 @@ final class ControladorPalavraPasseTest extends TestCase
      *
      * A palavra-passe persistida deve permanecer inalterada.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function rejeita_palavra_passe_atual_incorreta(): void
@@ -169,9 +194,14 @@ final class ControladorPalavraPasseTest extends TestCase
             $utilizador->getAuthPassword();
 
         $resposta = $this
-            ->actingAs($utilizador)
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
             ->from(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->put(
                 route(
@@ -188,7 +218,9 @@ final class ControladorPalavraPasseTest extends TestCase
 
         $resposta
             ->assertRedirect(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->assertSessionHasErrors(
                 [
@@ -200,7 +232,7 @@ final class ControladorPalavraPasseTest extends TestCase
 
         $this->assertAuthenticatedAs(
             $utilizador,
-            'web',
+            'sessao',
         );
 
         $utilizador->refresh();
@@ -221,10 +253,9 @@ final class ControladorPalavraPasseTest extends TestCase
     /**
      * Impede a reutilização da palavra-passe atual.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function rejeita_nova_palavra_passe_igual_a_atual(): void
@@ -235,9 +266,14 @@ final class ControladorPalavraPasseTest extends TestCase
             $utilizador->getAuthPassword();
 
         $resposta = $this
-            ->actingAs($utilizador)
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
             ->from(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->put(
                 route(
@@ -254,7 +290,9 @@ final class ControladorPalavraPasseTest extends TestCase
 
         $resposta
             ->assertRedirect(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->assertSessionHasErrors(
                 [
@@ -266,7 +304,7 @@ final class ControladorPalavraPasseTest extends TestCase
 
         $this->assertAuthenticatedAs(
             $utilizador,
-            'web',
+            'sessao',
         );
 
         $utilizador->refresh();
@@ -285,14 +323,13 @@ final class ControladorPalavraPasseTest extends TestCase
     }
 
     /**
-     * Rejeita uma nova palavra-passe que não cumpra a política.
+     * Rejeita uma nova palavra-passe que não cumpra os requisitos.
      *
      * Os erros devem ser colocados no saco exclusivo do formulário.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function rejeita_nova_palavra_passe_insegura(): void
@@ -303,9 +340,14 @@ final class ControladorPalavraPasseTest extends TestCase
             $utilizador->getAuthPassword();
 
         $resposta = $this
-            ->actingAs($utilizador)
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
             ->from(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->put(
                 route(
@@ -322,7 +364,9 @@ final class ControladorPalavraPasseTest extends TestCase
 
         $resposta
             ->assertRedirect(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->assertSessionHasErrors(
                 [
@@ -331,6 +375,11 @@ final class ControladorPalavraPasseTest extends TestCase
                 null,
                 'palavraPasse',
             );
+
+        $this->assertAuthenticatedAs(
+            $utilizador,
+            'sessao',
+        );
 
         $utilizador->refresh();
 
@@ -343,10 +392,9 @@ final class ControladorPalavraPasseTest extends TestCase
     /**
      * Rejeita uma confirmação diferente da nova palavra-passe.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function rejeita_confirmacao_diferente(): void
@@ -357,9 +405,14 @@ final class ControladorPalavraPasseTest extends TestCase
             $utilizador->getAuthPassword();
 
         $resposta = $this
-            ->actingAs($utilizador)
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
             ->from(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->put(
                 route(
@@ -376,7 +429,9 @@ final class ControladorPalavraPasseTest extends TestCase
 
         $resposta
             ->assertRedirect(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->assertSessionHasErrors(
                 [
@@ -385,6 +440,11 @@ final class ControladorPalavraPasseTest extends TestCase
                 null,
                 'palavraPasse',
             );
+
+        $this->assertAuthenticatedAs(
+            $utilizador,
+            'sessao',
+        );
 
         $utilizador->refresh();
 
@@ -397,10 +457,9 @@ final class ControladorPalavraPasseTest extends TestCase
     /**
      * Rejeita o pedido quando os campos obrigatórios estão vazios.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function rejeita_campos_obrigatorios_vazios(): void
@@ -411,9 +470,14 @@ final class ControladorPalavraPasseTest extends TestCase
             $utilizador->getAuthPassword();
 
         $resposta = $this
-            ->actingAs($utilizador)
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
             ->from(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->put(
                 route(
@@ -428,7 +492,9 @@ final class ControladorPalavraPasseTest extends TestCase
 
         $resposta
             ->assertRedirect(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->assertSessionHasErrors(
                 [
@@ -439,6 +505,11 @@ final class ControladorPalavraPasseTest extends TestCase
                 null,
                 'palavraPasse',
             );
+
+        $this->assertAuthenticatedAs(
+            $utilizador,
+            'sessao',
+        );
 
         $utilizador->refresh();
 
@@ -474,7 +545,9 @@ final class ControladorPalavraPasseTest extends TestCase
             PapelUtilizador::Utilizador;
 
         $utilizador->email_verified_at =
-            now()->subDay()->startOfSecond();
+            now()
+                ->subDay()
+                ->startOfSecond();
 
         $utilizador->saveOrFail();
 

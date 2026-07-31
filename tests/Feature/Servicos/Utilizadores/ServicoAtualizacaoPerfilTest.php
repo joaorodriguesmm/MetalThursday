@@ -23,15 +23,50 @@ use Tests\TestCase;
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 final class ServicoAtualizacaoPerfilTest extends TestCase
 {
     use RefreshDatabase;
 
     /**
-     * Serviço testado.
+     * Disco público utilizado pelas fotografias.
      *
+     * @var string
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const DISCO_PUBLICO =
+        'publico';
+
+    /**
+     * Diretório das fotografias dos utilizadores.
+     *
+     * @var string
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const DIRETORIO_FOTOGRAFIAS =
+        'fotografias/utilizadores';
+
+    /**
+     * Palavra-passe utilizada nos utilizadores de teste.
+     *
+     * @var string
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const PALAVRA_PASSE =
+        'PalavraPasse#Segura2026';
+
+    /**
+     * Serviço testado.
      *
      * @since 2.0.0
      *
@@ -42,16 +77,17 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
     /**
      * Prepara cada teste.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     protected function setUp(): void
     {
         parent::setUp();
 
-        Storage::fake('public');
+        Storage::fake(
+            self::DISCO_PUBLICO,
+        );
 
         $this->servicoPerfil =
             new ServicoAtualizacaoPerfil(
@@ -65,37 +101,43 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
      * O endereço recebido utiliza maiúsculas para confirmar que a comparação
      * ocorre depois da normalização aplicada pelo objeto de valor.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function atualiza_nome_sem_invalidar_email_inalterado(): void
     {
         $caminhoFotografia =
-            'fotografias/utilizadores/existente.jpg';
+            self::DIRETORIO_FOTOGRAFIAS
+            .'/existente.jpg';
 
-        Storage::disk('public')->put(
+        Storage::disk(
+            self::DISCO_PUBLICO,
+        )->put(
             $caminhoFotografia,
             'fotografia-existente',
         );
 
-        $utilizador = $this->criarUtilizador(
-            nome: 'Nome Original',
-            email: 'utilizador@exemplo.pt',
-            fotografia: $caminhoFotografia,
-            emailVerificado: true,
-        );
+        $utilizador =
+            $this->criarUtilizador(
+                nome: 'Nome Original',
+                email: 'utilizador@exemplo.pt',
+                fotografia: $caminhoFotografia,
+                emailVerificado: true,
+            );
 
         $dataVerificacaoOriginal =
             $utilizador->email_verified_at;
 
-        $resultado = $this->servicoPerfil->atualizar(
-            utilizador: $utilizador,
-            nome: '  João   Rodrigues  ',
-            email: 'UTILIZADOR@EXEMPLO.PT',
-        );
+        $resultado =
+            $this
+                ->servicoPerfil
+                ->atualizar(
+                    utilizador: $utilizador,
+                    nome: '  João   Rodrigues  ',
+                    email: 'UTILIZADOR@EXEMPLO.PT',
+                );
 
         self::assertInstanceOf(
             PerfilAtualizado::class,
@@ -106,9 +148,10 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
             $resultado->emailFoiAlterado(),
         );
 
-        $utilizadorAtualizado = $resultado
-            ->obterUtilizador()
-            ->refresh();
+        $utilizadorAtualizado =
+            $resultado
+                ->obterUtilizador()
+                ->refresh();
 
         self::assertSame(
             'João Rodrigues',
@@ -139,17 +182,26 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
             ),
         );
 
-        Storage::disk('public')->assertExists(
+        Storage::disk(
+            self::DISCO_PUBLICO,
+        )->assertExists(
             $caminhoFotografia,
         );
 
         $this->assertDatabaseHas(
-            'users',
+            'utilizadores',
             [
                 'id' => $utilizador->getKey(),
-                'name' => 'João Rodrigues',
+
+                'nome' => 'João Rodrigues',
+
                 'email' => 'utilizador@exemplo.pt',
-                'photo' => $caminhoFotografia,
+
+                'fotografia' => $caminhoFotografia,
+
+                'email_verified_at' => $dataVerificacaoOriginal->format(
+                    'Y-m-d H:i:s',
+                ),
             ],
         );
     }
@@ -157,37 +209,41 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
     /**
      * Invalida a verificação quando o endereço de e-mail é alterado.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function altera_email_e_invalida_verificacao(): void
     {
-        $utilizador = $this->criarUtilizador(
-            nome: 'Utilizador Teste',
-            email: 'anterior@exemplo.pt',
-            emailVerificado: true,
-        );
+        $utilizador =
+            $this->criarUtilizador(
+                nome: 'Utilizador Teste',
+                email: 'anterior@exemplo.pt',
+                emailVerificado: true,
+            );
 
         self::assertNotNull(
             $utilizador->email_verified_at,
         );
 
-        $resultado = $this->servicoPerfil->atualizar(
-            utilizador: $utilizador,
-            nome: 'Utilizador Teste',
-            email: 'novo@exemplo.pt',
-        );
+        $resultado =
+            $this
+                ->servicoPerfil
+                ->atualizar(
+                    utilizador: $utilizador,
+                    nome: 'Utilizador Teste',
+                    email: 'novo@exemplo.pt',
+                );
 
         self::assertTrue(
             $resultado->emailFoiAlterado(),
         );
 
-        $utilizadorAtualizado = $resultado
-            ->obterUtilizador()
-            ->refresh();
+        $utilizadorAtualizado =
+            $resultado
+                ->obterUtilizador()
+                ->refresh();
 
         self::assertSame(
             'novo@exemplo.pt',
@@ -199,11 +255,24 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
         );
 
         $this->assertDatabaseHas(
-            'users',
+            'utilizadores',
             [
                 'id' => $utilizador->getKey(),
+
+                'nome' => 'Utilizador Teste',
+
                 'email' => 'novo@exemplo.pt',
+
                 'email_verified_at' => null,
+            ],
+        );
+
+        $this->assertDatabaseMissing(
+            'utilizadores',
+            [
+                'id' => $utilizador->getKey(),
+
+                'email' => 'anterior@exemplo.pt',
             ],
         );
     }
@@ -212,49 +281,63 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
      * Substitui a fotografia depois de confirmar a atualização da base de
      * dados.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function substitui_fotografia_e_elimina_a_anterior(): void
     {
         $caminhoAnterior =
-            'fotografias/utilizadores/anterior.jpg';
+            self::DIRETORIO_FOTOGRAFIAS
+            .'/anterior.jpg';
 
-        Storage::disk('public')->put(
+        Storage::disk(
+            self::DISCO_PUBLICO,
+        )->put(
             $caminhoAnterior,
             'fotografia-anterior',
         );
 
-        $utilizador = $this->criarUtilizador(
-            nome: 'Utilizador Teste',
-            email: 'utilizador@exemplo.pt',
-            fotografia: $caminhoAnterior,
+        $utilizador =
+            $this->criarUtilizador(
+                nome: 'Utilizador Teste',
+                email: 'utilizador@exemplo.pt',
+                fotografia: $caminhoAnterior,
+            );
+
+        $novaFotografia =
+            UploadedFile::fake()->create(
+                name: 'nova-fotografia.webp',
+                kilobytes: 256,
+                mimeType: 'image/webp',
+            );
+
+        $resultado =
+            $this
+                ->servicoPerfil
+                ->atualizar(
+                    utilizador: $utilizador,
+                    nome: 'Utilizador Teste',
+                    email: 'utilizador@exemplo.pt',
+                    fotografia: $novaFotografia,
+                );
+
+        self::assertFalse(
+            $resultado->emailFoiAlterado(),
         );
 
-        $novaFotografia = UploadedFile::fake()->create(
-            name: 'nova-fotografia.webp',
-            kilobytes: 256,
-            mimeType: 'image/webp',
-        );
-
-        $resultado = $this->servicoPerfil->atualizar(
-            utilizador: $utilizador,
-            nome: 'Utilizador Teste',
-            email: 'utilizador@exemplo.pt',
-            fotografia: $novaFotografia,
-        );
-
-        $utilizadorAtualizado = $resultado
-            ->obterUtilizador()
-            ->refresh();
+        $utilizadorAtualizado =
+            $resultado
+                ->obterUtilizador()
+                ->refresh();
 
         $caminhoNovo =
             $utilizadorAtualizado->fotografia;
 
-        self::assertIsString($caminhoNovo);
+        self::assertIsString(
+            $caminhoNovo,
+        );
 
         self::assertNotSame(
             $caminhoAnterior,
@@ -262,23 +345,53 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
         );
 
         self::assertStringStartsWith(
-            'fotografias/utilizadores/',
+            self::DIRETORIO_FOTOGRAFIAS
+                .'/',
             $caminhoNovo,
         );
 
-        Storage::disk('public')->assertMissing(
+        Storage::disk(
+            self::DISCO_PUBLICO,
+        )->assertMissing(
             $caminhoAnterior,
         );
 
-        Storage::disk('public')->assertExists(
+        Storage::disk(
+            self::DISCO_PUBLICO,
+        )->assertExists(
             $caminhoNovo,
         );
 
+        self::assertSame(
+            [
+                $caminhoNovo,
+            ],
+            Storage::disk(
+                self::DISCO_PUBLICO,
+            )->allFiles(
+                self::DIRETORIO_FOTOGRAFIAS,
+            ),
+        );
+
         $this->assertDatabaseHas(
-            'users',
+            'utilizadores',
             [
                 'id' => $utilizador->getKey(),
-                'photo' => $caminhoNovo,
+
+                'nome' => 'Utilizador Teste',
+
+                'email' => 'utilizador@exemplo.pt',
+
+                'fotografia' => $caminhoNovo,
+            ],
+        );
+
+        $this->assertDatabaseMissing(
+            'utilizadores',
+            [
+                'id' => $utilizador->getKey(),
+
+                'fotografia' => $caminhoAnterior,
             ],
         );
     }
@@ -287,50 +400,59 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
      * Reverte os dados e elimina a fotografia nova quando o e-mail colide
      * com outro utilizador.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function conflito_de_email_reverte_atualizacao_e_limpa_fotografia_nova(): void
     {
         $caminhoAnterior =
-            'photos/fotografia-historica.jpg';
+            self::DIRETORIO_FOTOGRAFIAS
+            .'/fotografia-historica.jpg';
 
-        Storage::disk('public')->put(
+        Storage::disk(
+            self::DISCO_PUBLICO,
+        )->put(
             $caminhoAnterior,
             'fotografia-historica',
         );
 
-        $utilizador = $this->criarUtilizador(
-            nome: 'Nome Original',
-            email: 'original@exemplo.pt',
-            fotografia: $caminhoAnterior,
-            emailVerificado: true,
-        );
+        $utilizador =
+            $this->criarUtilizador(
+                nome: 'Nome Original',
+                email: 'original@exemplo.pt',
+                fotografia: $caminhoAnterior,
+                emailVerificado: true,
+            );
+
+        $dataVerificacaoOriginal =
+            $utilizador->email_verified_at;
 
         $this->criarUtilizador(
             nome: 'Outro Utilizador',
             email: 'ocupado@exemplo.pt',
         );
 
-        $novaFotografia = UploadedFile::fake()->create(
-            name: 'nova.jpg',
-            kilobytes: 128,
-            mimeType: 'image/jpeg',
-        );
-
-        try {
-            $this->servicoPerfil->atualizar(
-                utilizador: $utilizador,
-                nome: 'Nome Alterado',
-                email: 'ocupado@exemplo.pt',
-                fotografia: $novaFotografia,
+        $novaFotografia =
+            UploadedFile::fake()->create(
+                name: 'nova.jpg',
+                kilobytes: 128,
+                mimeType: 'image/jpeg',
             );
 
+        try {
+            $this
+                ->servicoPerfil
+                ->atualizar(
+                    utilizador: $utilizador,
+                    nome: 'Nome Alterado',
+                    email: 'ocupado@exemplo.pt',
+                    fotografia: $novaFotografia,
+                );
+
             self::fail(
-                'Era esperada uma exceção devido ao e-mail duplicado.',
+                'Era esperada uma exceção devido ao endereço de e-mail duplicado.',
             );
         } catch (DomainException $excecao) {
             self::assertSame(
@@ -357,27 +479,61 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
         );
 
         self::assertNotNull(
+            $dataVerificacaoOriginal,
+        );
+
+        self::assertNotNull(
             $utilizador->email_verified_at,
         );
 
-        Storage::disk('public')->assertExists(
+        self::assertTrue(
+            $dataVerificacaoOriginal->equalTo(
+                $utilizador->email_verified_at,
+            ),
+        );
+
+        Storage::disk(
+            self::DISCO_PUBLICO,
+        )->assertExists(
             $caminhoAnterior,
         );
 
         self::assertSame(
-            [],
-            Storage::disk('public')->allFiles(
-                'fotografias/utilizadores',
+            [
+                $caminhoAnterior,
+            ],
+            Storage::disk(
+                self::DISCO_PUBLICO,
+            )->allFiles(
+                self::DIRETORIO_FOTOGRAFIAS,
             ),
         );
 
         $this->assertDatabaseHas(
-            'users',
+            'utilizadores',
             [
                 'id' => $utilizador->getKey(),
-                'name' => 'Nome Original',
+
+                'nome' => 'Nome Original',
+
                 'email' => 'original@exemplo.pt',
-                'photo' => $caminhoAnterior,
+
+                'fotografia' => $caminhoAnterior,
+
+                'email_verified_at' => $dataVerificacaoOriginal->format(
+                    'Y-m-d H:i:s',
+                ),
+            ],
+        );
+
+        $this->assertDatabaseMissing(
+            'utilizadores',
+            [
+                'id' => $utilizador->getKey(),
+
+                'nome' => 'Nome Alterado',
+
+                'email' => 'ocupado@exemplo.pt',
             ],
         );
     }
@@ -385,12 +541,12 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
     /**
      * Rejeita os dados inválidos antes de guardar uma fotografia.
      *
-     * @param  string  $nome  - Nome recebido.
-     * @param  string  $email  - Endereço recebido.
+     * @param  string  $nome  Nome recebido.
+     * @param  string  $email  Endereço recebido.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     #[DataProvider('fornecerDadosInvalidos')]
@@ -398,30 +554,36 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
         string $nome,
         string $email,
     ): void {
-        $utilizador = $this->criarUtilizador(
-            nome: 'Utilizador Teste',
-            email: 'utilizador@exemplo.pt',
-        );
+        $utilizador =
+            $this->criarUtilizador(
+                nome: 'Utilizador Teste',
+                email: 'utilizador@exemplo.pt',
+            );
 
-        $fotografia = UploadedFile::fake()->create(
-            name: 'fotografia.jpg',
-            kilobytes: 128,
-            mimeType: 'image/jpeg',
-        );
+        $fotografia =
+            UploadedFile::fake()->create(
+                name: 'fotografia.jpg',
+                kilobytes: 128,
+                mimeType: 'image/jpeg',
+            );
 
         try {
-            $this->servicoPerfil->atualizar(
-                utilizador: $utilizador,
-                nome: $nome,
-                email: $email,
-                fotografia: $fotografia,
-            );
+            $this
+                ->servicoPerfil
+                ->atualizar(
+                    utilizador: $utilizador,
+                    nome: $nome,
+                    email: $email,
+                    fotografia: $fotografia,
+                );
 
             self::fail(
                 'Era esperada uma exceção para os dados inválidos.',
             );
         } catch (InvalidArgumentException) {
-            self::assertTrue(true);
+            self::assertTrue(
+                true,
+            );
         }
 
         $utilizador->refresh();
@@ -436,10 +598,16 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
             $utilizador->email,
         );
 
+        self::assertNull(
+            $utilizador->fotografia,
+        );
+
         self::assertSame(
             [],
-            Storage::disk('public')->allFiles(
-                'fotografias/utilizadores',
+            Storage::disk(
+                self::DISCO_PUBLICO,
+            )->allFiles(
+                self::DIRETORIO_FOTOGRAFIAS,
             ),
         );
     }
@@ -447,23 +615,25 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
     /**
      * Fornece dados inválidos do perfil.
      *
-     * @return array<string, array{nome: string, email: string}> - Dados
+     * @return array<string, array{nome: string, email: string}> Dados
      *                                                           inválidos.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public static function fornecerDadosInvalidos(): array
     {
         return [
             'nome demasiado curto' => [
                 'nome' => 'A',
+
                 'email' => 'valido@exemplo.pt',
             ],
 
             'endereço de e-mail inválido' => [
                 'nome' => 'Nome Válido',
+
                 'email' => 'endereco-invalido',
             ],
         ];
@@ -472,18 +642,20 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
     /**
      * Rejeita a atualização de um utilizador ainda não persistido.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function rejeita_utilizador_nao_persistido(): void
     {
         $utilizador = new Utilizador;
 
-        $utilizador->nome = 'Utilizador Teste';
-        $utilizador->email = 'utilizador@exemplo.pt';
+        $utilizador->nome =
+            'Utilizador Teste';
+
+        $utilizador->email =
+            'utilizador@exemplo.pt';
 
         $this->expectException(
             InvalidArgumentException::class,
@@ -493,25 +665,27 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
             'O utilizador deve estar persistido para atualizar o perfil.',
         );
 
-        $this->servicoPerfil->atualizar(
-            utilizador: $utilizador,
-            nome: 'Nome Atualizado',
-            email: 'atualizado@exemplo.pt',
-        );
+        $this
+            ->servicoPerfil
+            ->atualizar(
+                utilizador: $utilizador,
+                nome: 'Nome Atualizado',
+                email: 'atualizado@exemplo.pt',
+            );
     }
 
     /**
      * Cria um utilizador persistido para os testes.
      *
-     * @param  string  $nome  - Nome do utilizador.
-     * @param  string  $email  - Endereço de e-mail.
-     * @param  string|null  $fotografia  - Caminho opcional da fotografia.
-     * @param  bool  $emailVerificado  - Indicação de verificação do e-mail.
-     * @return Utilizador - Utilizador criado.
+     * @param  string  $nome  Nome do utilizador.
+     * @param  string  $email  Endereço de e-mail.
+     * @param  string|null  $fotografia  Caminho opcional da fotografia.
+     * @param  bool  $emailVerificado  Indicação de verificação do e-mail.
+     * @return Utilizador Utilizador criado.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function criarUtilizador(
         string $nome,
@@ -521,10 +695,14 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
     ): Utilizador {
         $utilizador = new Utilizador;
 
-        $utilizador->nome = $nome;
-        $utilizador->email = $email;
+        $utilizador->nome =
+            $nome;
+
+        $utilizador->email =
+            $email;
+
         $utilizador->password =
-            'PalavraPasse#Segura2026';
+            self::PALAVRA_PASSE;
 
         $utilizador->papel =
             PapelUtilizador::Utilizador;
@@ -534,7 +712,9 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
 
         $utilizador->email_verified_at =
             $emailVerificado
-            ? now()->subDay()->startOfSecond()
+            ? now()
+                ->subDay()
+                ->startOfSecond()
             : null;
 
         $utilizador->saveOrFail();

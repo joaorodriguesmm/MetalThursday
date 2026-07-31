@@ -5,7 +5,7 @@
     App\View\Components\LayoutAplicacao, através da classe LayoutBase.
 
     @since 1.0.0
-    @version 4.0.0
+    @version 4.1.0
 --}}
 
 <!DOCTYPE html>
@@ -84,7 +84,7 @@
                 id="formulario-terminar-sessao"
                 class="d-none"
                 method="POST"
-                action="{{ route('autenticacao.sair') }}"
+                action="{{ route('logout') }}"
             >
                 @csrf
             </form>

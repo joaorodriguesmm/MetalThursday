@@ -6,10 +6,11 @@ namespace Tests\Feature\Http\Controllers\Utilizadores;
 
 use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\Utilizador;
-use App\Notifications\CustomVerifyEmailNotification;
+use App\Models\Comunicacao\PermissaoEmail;
+use App\Notifications\NotificacaoVerificacaoEmail;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
@@ -21,25 +22,67 @@ use Tests\TestCase;
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.1.0
  */
 final class ControladorPerfilTest extends TestCase
 {
     use RefreshDatabase;
 
     /**
-     * Prepara cada teste.
+     * Mensagem apresentada depois de atualizar o perfil sem alterar o e-mail.
      *
+     * @var string
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
+    private const MENSAGEM_PERFIL_ATUALIZADO =
+        'O perfil foi atualizado com sucesso.';
+
+    /**
+     * Mensagem apresentada depois de alterar o endereço de e-mail.
+     *
+     * @var string
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private const MENSAGEM_EMAIL_ALTERADO =
+        'O perfil foi atualizado. Verifica o novo endereço de e-mail antes de iniciares sessão novamente.';
+
+    /**
+     * Disco público falso utilizado pelos testes.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private FilesystemAdapter $discoPublico;
+
+    /**
+     * Prepara cada teste.
+     *
+     * @since 2.0.0
+     *
+     * @version 2.0.0
+     */
     protected function setUp(): void
     {
         parent::setUp();
 
-        Storage::fake('public');
+        Storage::fake(
+            'publico',
+        );
+
+        /** @var FilesystemAdapter $discoPublico */
+        $discoPublico = Storage::disk(
+            'publico',
+        );
+
+        $this->discoPublico =
+            $discoPublico;
 
         /*
          * Evita que os testes das vistas dependam dos ficheiros produzidos
@@ -51,47 +94,64 @@ final class ControladorPerfilTest extends TestCase
     /**
      * Impede visitantes de aceder à edição do perfil.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function visitante_nao_pode_aceder_ao_perfil(): void
     {
         $resposta = $this->get(
-            route('perfil.editar'),
+            route(
+                'perfil.editar',
+            ),
         );
 
         $resposta->assertRedirect(
-            route('login'),
+            route(
+                'login',
+            ),
+        );
+
+        $this->assertGuest(
+            'sessao',
         );
     }
 
     /**
      * Apresenta a página com o utilizador e as permissões de e-mail.
      *
+     * As permissões devem respeitar a ordem persistida e indicar quais estão
+     * selecionadas e qual representa todas as comunicações.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function apresenta_pagina_de_edicao_do_perfil(): void
     {
         $utilizador = $this->criarUtilizador();
 
-        $identificadorPermissaoNovidades =
+        $permissaoTodas =
+            $this->criarPermissaoEmail(
+                nome: 'Todas',
+                identificador: 'todas',
+                ordem: 1,
+            );
+
+        $permissaoNovidades =
             $this->criarPermissaoEmail(
                 nome: 'Novidades',
-                slug: 'novidades',
+                identificador: 'novidades',
+                ordem: 2,
             );
 
         $identificadorPermissaoTodas =
-            $this->criarPermissaoEmail(
-                nome: 'Todas',
-                slug: 'all',
-            );
+            (int) $permissaoTodas->getKey();
+
+        $identificadorPermissaoNovidades =
+            (int) $permissaoNovidades->getKey();
 
         $utilizador
             ->permissoesEmail()
@@ -100,9 +160,14 @@ final class ControladorPerfilTest extends TestCase
             ]);
 
         $resposta = $this
-            ->actingAs($utilizador)
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
             ->get(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             );
 
         $resposta
@@ -116,58 +181,52 @@ final class ControladorPerfilTest extends TestCase
                     mixed $valor,
                 ): bool => (
                     $valor instanceof Utilizador
-                    && $valor->is($utilizador)
+                    && $valor->is(
+                        $utilizador,
+                    )
                 ),
             )
             ->assertViewHas(
-                'permissoesEmail',
-                static function (
-                    mixed $permissoes,
-                ) use (
-                    $identificadorPermissaoNovidades,
-                    $identificadorPermissaoTodas,
-                ): bool {
-                    if (! method_exists($permissoes, 'pluck')) {
-                        return false;
-                    }
-
-                    $identificadoresObtidos = $permissoes
-                        ->pluck('id')
-                        ->map(
-                            static fn (
-                                mixed $identificador,
-                            ): int => (int) $identificador,
-                        )
-                        ->sort()
-                        ->values()
-                        ->all();
-
-                    $identificadoresEsperados = [
-                        $identificadorPermissaoNovidades,
-                        $identificadorPermissaoTodas,
-                    ];
-
-                    sort($identificadoresEsperados);
-
-                    return $identificadoresObtidos
-                        === $identificadoresEsperados;
-                },
-            )
-            ->assertViewHas(
-                'identificadoresPermissoesEmail',
+                'permissoesEmailFormulario',
                 [
-                    $identificadorPermissaoNovidades,
+                    [
+                        'identificador' => $identificadorPermissaoTodas,
+
+                        'nome' => 'Todas',
+
+                        'descricao' => 'Permissão de teste: todas.',
+
+                        'ePermissaoTodas' => true,
+
+                        'selecionada' => false,
+                    ],
+
+                    [
+                        'identificador' => $identificadorPermissaoNovidades,
+
+                        'nome' => 'Novidades',
+
+                        'descricao' => 'Permissão de teste: novidades.',
+
+                        'ePermissaoTodas' => false,
+
+                        'selecionada' => true,
+                    ],
                 ],
             );
+
+        $this->assertAuthenticatedAs(
+            $utilizador,
+            'sessao',
+        );
     }
 
     /**
      * Atualiza o nome sem terminar a sessão quando o e-mail não muda.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function atualiza_perfil_sem_alterar_email(): void
@@ -184,27 +243,36 @@ final class ControladorPerfilTest extends TestCase
             $utilizador->email_verified_at;
 
         $resposta = $this
-            ->actingAs($utilizador)
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
             ->patch(
-                route('perfil.atualizar'),
+                route(
+                    'perfil.atualizar',
+                ),
                 [
                     'nome' => '  João   Rodrigues  ',
+
                     'email' => 'UTILIZADOR@EXEMPLO.PT',
                 ],
             );
 
         $resposta
             ->assertRedirect(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->assertSessionHas(
-                'estado',
-                'perfil-atualizado',
-            );
+                'sucesso',
+                self::MENSAGEM_PERFIL_ATUALIZADO,
+            )
+            ->assertSessionHasNoErrors();
 
         $this->assertAuthenticatedAs(
             $utilizador,
-            'web',
+            'sessao',
         );
 
         $utilizador->refresh();
@@ -236,10 +304,12 @@ final class ControladorPerfilTest extends TestCase
         Notification::assertNothingSent();
 
         $this->assertDatabaseHas(
-            'users',
+            'utilizadores',
             [
                 'id' => $utilizador->getKey(),
-                'name' => 'João Rodrigues',
+
+                'nome' => 'João Rodrigues',
+
                 'email' => 'utilizador@exemplo.pt',
             ],
         );
@@ -248,10 +318,9 @@ final class ControladorPerfilTest extends TestCase
     /**
      * Termina a sessão e envia uma nova verificação quando o e-mail muda.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.1.0
      */
     #[Test]
     public function alteracao_do_email_termina_sessao_e_envia_verificacao(): void
@@ -265,25 +334,36 @@ final class ControladorPerfilTest extends TestCase
         );
 
         $resposta = $this
-            ->actingAs($utilizador)
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
             ->patch(
-                route('perfil.atualizar'),
+                route(
+                    'perfil.atualizar',
+                ),
                 [
                     'nome' => 'Utilizador Teste',
+
                     'email' => 'novo@exemplo.pt',
                 ],
             );
 
         $resposta
             ->assertRedirect(
-                route('login'),
+                route(
+                    'login',
+                ),
             )
             ->assertSessionHas(
-                'estado',
-                'O perfil foi atualizado. Verifica o novo endereço de e-mail antes de iniciares sessão novamente.',
-            );
+                'sucesso',
+                self::MENSAGEM_EMAIL_ALTERADO,
+            )
+            ->assertSessionHasNoErrors();
 
-        $this->assertGuest('web');
+        $this->assertGuest(
+            'sessao',
+        );
 
         $utilizador->refresh();
 
@@ -298,14 +378,16 @@ final class ControladorPerfilTest extends TestCase
 
         Notification::assertSentTo(
             $utilizador,
-            CustomVerifyEmailNotification::class,
+            NotificacaoVerificacaoEmail::class,
         );
 
         $this->assertDatabaseHas(
-            'users',
+            'utilizadores',
             [
                 'id' => $utilizador->getKey(),
+
                 'email' => 'novo@exemplo.pt',
+
                 'email_verified_at' => null,
             ],
         );
@@ -314,18 +396,17 @@ final class ControladorPerfilTest extends TestCase
     /**
      * Guarda a fotografia nova e elimina a fotografia anterior.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function substitui_fotografia_do_perfil(): void
     {
         $caminhoAnterior =
-            'photos/fotografia-anterior.jpg';
+            'fotografias/utilizadores/fotografia-anterior.jpg';
 
-        Storage::disk('public')->put(
+        $this->discoPublico->put(
             $caminhoAnterior,
             'fotografia-anterior',
         );
@@ -338,30 +419,48 @@ final class ControladorPerfilTest extends TestCase
             $this->criarFotografiaPngValida();
 
         $resposta = $this
-            ->actingAs($utilizador)
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
             ->patch(
-                route('perfil.atualizar'),
+                route(
+                    'perfil.atualizar',
+                ),
                 [
                     'nome' => $utilizador->nome,
+
                     'email' => $utilizador->email,
+
                     'fotografia' => $fotografiaNova,
                 ],
             );
 
         $resposta
             ->assertRedirect(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->assertSessionHas(
-                'estado',
-                'perfil-atualizado',
-            );
+                'sucesso',
+                self::MENSAGEM_PERFIL_ATUALIZADO,
+            )
+            ->assertSessionHasNoErrors();
+
+        $this->assertAuthenticatedAs(
+            $utilizador,
+            'sessao',
+        );
 
         $utilizador->refresh();
 
-        $caminhoNovo = $utilizador->fotografia;
+        $caminhoNovo =
+            $utilizador->fotografia;
 
-        self::assertIsString($caminhoNovo);
+        self::assertIsString(
+            $caminhoNovo,
+        );
 
         self::assertStringStartsWith(
             'fotografias/utilizadores/',
@@ -373,12 +472,21 @@ final class ControladorPerfilTest extends TestCase
             $caminhoNovo,
         );
 
-        Storage::disk('public')->assertMissing(
+        $this->discoPublico->assertMissing(
             $caminhoAnterior,
         );
 
-        Storage::disk('public')->assertExists(
+        $this->discoPublico->assertExists(
             $caminhoNovo,
+        );
+
+        $this->assertDatabaseHas(
+            'utilizadores',
+            [
+                'id' => $utilizador->getKey(),
+
+                'fotografia' => $caminhoNovo,
+            ],
         );
     }
 
@@ -387,10 +495,9 @@ final class ControladorPerfilTest extends TestCase
      *
      * Os dados persistidos devem permanecer inalterados.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function rejeita_dados_invalidos_no_saco_do_perfil(): void
@@ -401,21 +508,31 @@ final class ControladorPerfilTest extends TestCase
         );
 
         $resposta = $this
-            ->actingAs($utilizador)
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
             ->from(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->patch(
-                route('perfil.atualizar'),
+                route(
+                    'perfil.atualizar',
+                ),
                 [
                     'nome' => 'A',
+
                     'email' => 'email-invalido',
                 ],
             );
 
         $resposta
             ->assertRedirect(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->assertSessionHasErrors(
                 [
@@ -425,6 +542,11 @@ final class ControladorPerfilTest extends TestCase
                 null,
                 'perfil',
             );
+
+        $this->assertAuthenticatedAs(
+            $utilizador,
+            'sessao',
+        );
 
         $utilizador->refresh();
 
@@ -437,20 +559,31 @@ final class ControladorPerfilTest extends TestCase
             'original@exemplo.pt',
             $utilizador->email,
         );
+
+        $this->assertDatabaseHas(
+            'utilizadores',
+            [
+                'id' => $utilizador->getKey(),
+
+                'nome' => 'Nome Original',
+
+                'email' => 'original@exemplo.pt',
+            ],
+        );
     }
 
     /**
      * Cria um utilizador persistido.
      *
-     * @param  string  $nome  - Nome do utilizador.
-     * @param  string  $email  - Endereço de e-mail.
-     * @param  string|null  $fotografia  - Caminho opcional da fotografia.
-     * @param  bool  $emailVerificado  - Indicação de verificação do e-mail.
-     * @return Utilizador - Utilizador criado.
+     * @param  string  $nome  Nome do utilizador.
+     * @param  string  $email  Endereço de e-mail.
+     * @param  string|null  $fotografia  Caminho opcional da fotografia.
+     * @param  bool  $emailVerificado  Indicação de verificação do e-mail.
+     * @return Utilizador Utilizador criado.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function criarUtilizador(
         string $nome = 'Utilizador Teste',
@@ -460,19 +593,26 @@ final class ControladorPerfilTest extends TestCase
     ): Utilizador {
         $utilizador = new Utilizador;
 
-        $utilizador->nome = $nome;
-        $utilizador->email = $email;
+        $utilizador->nome =
+            $nome;
+
+        $utilizador->email =
+            $email;
+
         $utilizador->password =
             'PalavraPasse#Segura2026';
 
         $utilizador->papel =
             PapelUtilizador::Utilizador;
 
-        $utilizador->fotografia = $fotografia;
+        $utilizador->fotografia =
+            $fotografia;
 
         $utilizador->email_verified_at =
             $emailVerificado
-            ? now()->subDay()->startOfSecond()
+            ? now()
+                ->subDay()
+                ->startOfSecond()
             : null;
 
         $utilizador->saveOrFail();
@@ -481,48 +621,58 @@ final class ControladorPerfilTest extends TestCase
     }
 
     /**
-     * Cria uma permissão de e-mail.
+     * Cria uma permissão de e-mail persistida.
      *
-     * A tabela não possui colunas de data.
-     *
-     * @param  string  $nome  - Nome da permissão.
-     * @param  string  $slug  - Identificador textual.
-     * @return int - Identificador criado.
+     * @param  string  $nome  Nome apresentado ao utilizador.
+     * @param  string  $identificador  Identificador técnico da permissão.
+     * @param  int  $ordem  Ordem de apresentação.
+     * @return PermissaoEmail Permissão criada.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function criarPermissaoEmail(
         string $nome,
-        string $slug,
-    ): int {
-        return (int) DB::table(
-            'email_permissions',
-        )->insertGetId([
-            'name' => $nome,
-            'slug' => $slug,
-            'description' => sprintf(
+        string $identificador,
+        int $ordem,
+    ): PermissaoEmail {
+        $permissao = new PermissaoEmail;
+
+        $permissao->nome =
+            $nome;
+
+        $permissao->identificador =
+            $identificador;
+
+        $permissao->descricao =
+            sprintf(
                 'Permissão de teste: %s.',
-                $slug,
-            ),
-        ]);
+                $identificador,
+            );
+
+        $permissao->ordem =
+            $ordem;
+
+        $permissao->saveOrFail();
+
+        return $permissao->refresh();
     }
 
     /**
      * Cria uma fotografia PNG válida sem depender da extensão GD.
      *
      * O conteúdo corresponde a uma imagem PNG real de um píxel. O ficheiro é
-     * marcado como upload de teste para poder ser processado pelo Laravel e pelo
-     * Symfony sem ter sido enviado através de HTTP.
+     * marcado como carregamento de teste para poder ser processado pelo
+     * Laravel e pelo Symfony sem ter sido enviado através de HTTP.
      *
-     * @return UploadedFile - Fotografia temporária válida.
+     * @return UploadedFile Fotografia temporária válida.
      *
      * @throws RuntimeException Quando não é possível criar o ficheiro.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function criarFotografiaPngValida(): UploadedFile
     {
@@ -554,7 +704,9 @@ final class ControladorPerfilTest extends TestCase
         );
 
         if ($bytesEscritos === false) {
-            @unlink($caminhoTemporario);
+            @unlink(
+                $caminhoTemporario,
+            );
 
             throw new RuntimeException(
                 'Não foi possível escrever a fotografia temporária.',

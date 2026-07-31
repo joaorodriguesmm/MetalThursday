@@ -6,8 +6,8 @@ namespace Tests\Feature\Http\Controllers\Utilizadores;
 
 use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\Utilizador;
+use App\Models\Comunicacao\PermissaoEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -16,19 +16,30 @@ use Tests\TestCase;
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 final class ControladorPermissoesEmailTest extends TestCase
 {
     use RefreshDatabase;
 
     /**
-     * Impede visitantes de atualizarem as permissões de e-mail.
+     * Mensagem apresentada depois da atualização das permissões.
      *
+     * @var string
      *
      * @since 2.0.0
      *
      * @version 1.0.0
+     */
+    private const MENSAGEM_SUCESSO =
+        'Permissões de e-mail atualizadas com sucesso.';
+
+    /**
+     * Impede visitantes de atualizarem as permissões de e-mail.
+     *
+     * @since 2.0.0
+     *
+     * @version 2.0.0
      */
     #[Test]
     public function visitante_nao_pode_atualizar_permissoes_email(): void
@@ -43,51 +54,74 @@ final class ControladorPermissoesEmailTest extends TestCase
         );
 
         $resposta->assertRedirect(
-            route('login'),
+            route(
+                'login',
+            ),
+        );
+
+        $this->assertGuest(
+            'sessao',
         );
     }
 
     /**
      * Substitui as permissões atuais pelas permissões selecionadas.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function atualiza_permissoes_email_selecionadas(): void
     {
-        $utilizador = $this->criarUtilizador();
+        $utilizador =
+            $this->criarUtilizador();
 
         $permissaoAnterior =
             $this->criarPermissaoEmail(
                 nome: 'Permissão anterior',
-                slug: 'permissao-anterior',
+                identificador: 'permissao_anterior',
+                ordem: 1,
             );
 
         $permissaoInteracoes =
             $this->criarPermissaoEmail(
                 nome: 'Interações',
-                slug: 'interacoes',
+                identificador: 'interacoes',
+                ordem: 2,
             );
 
         $permissaoMetalThursday =
             $this->criarPermissaoEmail(
                 nome: 'Novas Metal Thursdays',
-                slug: 'novas-metal-thursdays',
+                identificador: 'novas_metal_thursdays',
+                ordem: 3,
             );
+
+        $identificadorPermissaoAnterior =
+            (int) $permissaoAnterior->getKey();
+
+        $identificadorPermissaoInteracoes =
+            (int) $permissaoInteracoes->getKey();
+
+        $identificadorPermissaoMetalThursday =
+            (int) $permissaoMetalThursday->getKey();
 
         $utilizador
             ->permissoesEmail()
             ->sync([
-                $permissaoAnterior,
+                $identificadorPermissaoAnterior,
             ]);
 
         $resposta = $this
-            ->actingAs($utilizador)
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
             ->from(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->patch(
                 route(
@@ -95,31 +129,33 @@ final class ControladorPermissoesEmailTest extends TestCase
                 ),
                 [
                     'permissoes_email' => [
-                        $permissaoInteracoes,
-                        $permissaoMetalThursday,
+                        $identificadorPermissaoInteracoes,
+                        $identificadorPermissaoMetalThursday,
                     ],
                 ],
             );
 
         $resposta
             ->assertRedirect(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->assertSessionHas(
-                'estado',
-                'permissoes-email-atualizadas',
+                'sucesso',
+                self::MENSAGEM_SUCESSO,
             )
             ->assertSessionHasNoErrors();
 
         $this->assertAuthenticatedAs(
             $utilizador,
-            'web',
+            'sessao',
         );
 
         self::assertSame(
             [
-                $permissaoInteracoes,
-                $permissaoMetalThursday,
+                $identificadorPermissaoInteracoes,
+                $identificadorPermissaoMetalThursday,
             ],
             $this->obterIdentificadoresPermissoes(
                 $utilizador,
@@ -127,29 +163,29 @@ final class ControladorPermissoesEmailTest extends TestCase
         );
 
         $this->assertDatabaseMissing(
-            'email_permission_user',
+            'permissao_email_utilizador',
             [
-                'user_id' => $utilizador->getKey(),
+                'utilizador_id' => $utilizador->getKey(),
 
-                'email_permission_id' => $permissaoAnterior,
+                'permissao_email_id' => $identificadorPermissaoAnterior,
             ],
         );
 
         $this->assertDatabaseHas(
-            'email_permission_user',
+            'permissao_email_utilizador',
             [
-                'user_id' => $utilizador->getKey(),
+                'utilizador_id' => $utilizador->getKey(),
 
-                'email_permission_id' => $permissaoInteracoes,
+                'permissao_email_id' => $identificadorPermissaoInteracoes,
             ],
         );
 
         $this->assertDatabaseHas(
-            'email_permission_user',
+            'permissao_email_utilizador',
             [
-                'user_id' => $utilizador->getKey(),
+                'utilizador_id' => $utilizador->getKey(),
 
-                'email_permission_id' => $permissaoMetalThursday,
+                'permissao_email_id' => $identificadorPermissaoMetalThursday,
             ],
         );
     }
@@ -157,39 +193,47 @@ final class ControladorPermissoesEmailTest extends TestCase
     /**
      * Remove todas as permissões quando é enviada uma lista vazia.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function lista_vazia_remove_todas_as_permissoes(): void
     {
-        $utilizador = $this->criarUtilizador();
+        $utilizador =
+            $this->criarUtilizador();
 
         $primeiraPermissao =
             $this->criarPermissaoEmail(
                 nome: 'Primeira permissão',
-                slug: 'primeira-permissao',
+                identificador: 'primeira_permissao',
+                ordem: 1,
             );
 
         $segundaPermissao =
             $this->criarPermissaoEmail(
                 nome: 'Segunda permissão',
-                slug: 'segunda-permissao',
+                identificador: 'segunda_permissao',
+                ordem: 2,
             );
+
+        $identificadorPrimeiraPermissao =
+            (int) $primeiraPermissao->getKey();
+
+        $identificadorSegundaPermissao =
+            (int) $segundaPermissao->getKey();
 
         $utilizador
             ->permissoesEmail()
             ->sync([
-                $primeiraPermissao,
-                $segundaPermissao,
+                $identificadorPrimeiraPermissao,
+                $identificadorSegundaPermissao,
             ]);
 
         self::assertSame(
             [
-                $primeiraPermissao,
-                $segundaPermissao,
+                $identificadorPrimeiraPermissao,
+                $identificadorSegundaPermissao,
             ],
             $this->obterIdentificadoresPermissoes(
                 $utilizador,
@@ -197,9 +241,14 @@ final class ControladorPermissoesEmailTest extends TestCase
         );
 
         $resposta = $this
-            ->actingAs($utilizador)
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
             ->from(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->patch(
                 route(
@@ -212,13 +261,20 @@ final class ControladorPermissoesEmailTest extends TestCase
 
         $resposta
             ->assertRedirect(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->assertSessionHas(
-                'estado',
-                'permissoes-email-atualizadas',
+                'sucesso',
+                self::MENSAGEM_SUCESSO,
             )
             ->assertSessionHasNoErrors();
+
+        $this->assertAuthenticatedAs(
+            $utilizador,
+            'sessao',
+        );
 
         self::assertSame(
             [],
@@ -228,9 +284,9 @@ final class ControladorPermissoesEmailTest extends TestCase
         );
 
         $this->assertDatabaseMissing(
-            'email_permission_user',
+            'permissao_email_utilizador',
             [
-                'user_id' => $utilizador->getKey(),
+                'utilizador_id' => $utilizador->getKey(),
             ],
         );
     }
@@ -238,35 +294,44 @@ final class ControladorPermissoesEmailTest extends TestCase
     /**
      * Remove todas as permissões quando o campo não é enviado.
      *
-     * Este comportamento representa um formulário em que nenhum checkbox
-     * está selecionado.
-     *
+     * Este comportamento representa um formulário em que nenhum campo de
+     * seleção está marcado.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function campo_ausente_remove_todas_as_permissoes(): void
     {
-        $utilizador = $this->criarUtilizador();
+        $utilizador =
+            $this->criarUtilizador();
 
         $permissaoExistente =
             $this->criarPermissaoEmail(
                 nome: 'Permissão existente',
-                slug: 'permissao-existente',
+                identificador: 'permissao_existente',
+                ordem: 1,
             );
+
+        $identificadorPermissaoExistente =
+            (int) $permissaoExistente->getKey();
 
         $utilizador
             ->permissoesEmail()
             ->sync([
-                $permissaoExistente,
+                $identificadorPermissaoExistente,
             ]);
 
         $resposta = $this
-            ->actingAs($utilizador)
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
             ->from(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->patch(
                 route(
@@ -277,13 +342,20 @@ final class ControladorPermissoesEmailTest extends TestCase
 
         $resposta
             ->assertRedirect(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->assertSessionHas(
-                'estado',
-                'permissoes-email-atualizadas',
+                'sucesso',
+                self::MENSAGEM_SUCESSO,
             )
             ->assertSessionHasNoErrors();
+
+        $this->assertAuthenticatedAs(
+            $utilizador,
+            'sessao',
+        );
 
         self::assertSame(
             [],
@@ -291,40 +363,56 @@ final class ControladorPermissoesEmailTest extends TestCase
                 $utilizador,
             ),
         );
+
+        $this->assertDatabaseMissing(
+            'permissao_email_utilizador',
+            [
+                'utilizador_id' => $utilizador->getKey(),
+            ],
+        );
     }
 
     /**
      * Rejeita uma permissão inexistente sem alterar as associações atuais.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function rejeita_permissao_inexistente_sem_alterar_associacoes(): void
     {
-        $utilizador = $this->criarUtilizador();
+        $utilizador =
+            $this->criarUtilizador();
 
         $permissaoExistente =
             $this->criarPermissaoEmail(
                 nome: 'Permissão existente',
-                slug: 'permissao-existente',
+                identificador: 'permissao_existente',
+                ordem: 1,
             );
+
+        $identificadorPermissaoExistente =
+            (int) $permissaoExistente->getKey();
 
         $utilizador
             ->permissoesEmail()
             ->sync([
-                $permissaoExistente,
+                $identificadorPermissaoExistente,
             ]);
 
         $identificadorInexistente =
-            $permissaoExistente + 999999;
+            $identificadorPermissaoExistente + 999999;
 
         $resposta = $this
-            ->actingAs($utilizador)
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
             ->from(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->patch(
                 route(
@@ -339,7 +427,9 @@ final class ControladorPermissoesEmailTest extends TestCase
 
         $resposta
             ->assertRedirect(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->assertSessionHasErrors(
                 [
@@ -349,45 +439,68 @@ final class ControladorPermissoesEmailTest extends TestCase
                 'permissoesEmail',
             );
 
+        $this->assertAuthenticatedAs(
+            $utilizador,
+            'sessao',
+        );
+
         self::assertSame(
             [
-                $permissaoExistente,
+                $identificadorPermissaoExistente,
             ],
             $this->obterIdentificadoresPermissoes(
                 $utilizador,
             ),
+        );
+
+        $this->assertDatabaseHas(
+            'permissao_email_utilizador',
+            [
+                'utilizador_id' => $utilizador->getKey(),
+
+                'permissao_email_id' => $identificadorPermissaoExistente,
+            ],
         );
     }
 
     /**
      * Rejeita valores que não sejam identificadores inteiros.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function rejeita_identificador_com_formato_invalido(): void
     {
-        $utilizador = $this->criarUtilizador();
+        $utilizador =
+            $this->criarUtilizador();
 
         $permissaoExistente =
             $this->criarPermissaoEmail(
                 nome: 'Permissão existente',
-                slug: 'permissao-existente',
+                identificador: 'permissao_existente',
+                ordem: 1,
             );
+
+        $identificadorPermissaoExistente =
+            (int) $permissaoExistente->getKey();
 
         $utilizador
             ->permissoesEmail()
             ->sync([
-                $permissaoExistente,
+                $identificadorPermissaoExistente,
             ]);
 
         $resposta = $this
-            ->actingAs($utilizador)
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
             ->from(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->patch(
                 route(
@@ -402,7 +515,9 @@ final class ControladorPermissoesEmailTest extends TestCase
 
         $resposta
             ->assertRedirect(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->assertSessionHasErrors(
                 [
@@ -412,9 +527,14 @@ final class ControladorPermissoesEmailTest extends TestCase
                 'permissoesEmail',
             );
 
+        $this->assertAuthenticatedAs(
+            $utilizador,
+            'sessao',
+        );
+
         self::assertSame(
             [
-                $permissaoExistente,
+                $identificadorPermissaoExistente,
             ],
             $this->obterIdentificadoresPermissoes(
                 $utilizador,
@@ -425,32 +545,41 @@ final class ControladorPermissoesEmailTest extends TestCase
     /**
      * Rejeita um valor que não seja uma lista.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function rejeita_permissoes_quando_nao_sao_uma_lista(): void
     {
-        $utilizador = $this->criarUtilizador();
+        $utilizador =
+            $this->criarUtilizador();
 
         $permissaoExistente =
             $this->criarPermissaoEmail(
                 nome: 'Permissão existente',
-                slug: 'permissao-existente',
+                identificador: 'permissao_existente',
+                ordem: 1,
             );
+
+        $identificadorPermissaoExistente =
+            (int) $permissaoExistente->getKey();
 
         $utilizador
             ->permissoesEmail()
             ->sync([
-                $permissaoExistente,
+                $identificadorPermissaoExistente,
             ]);
 
         $resposta = $this
-            ->actingAs($utilizador)
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
             ->from(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->patch(
                 route(
@@ -463,7 +592,9 @@ final class ControladorPermissoesEmailTest extends TestCase
 
         $resposta
             ->assertRedirect(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->assertSessionHasErrors(
                 [
@@ -473,9 +604,14 @@ final class ControladorPermissoesEmailTest extends TestCase
                 'permissoesEmail',
             );
 
+        $this->assertAuthenticatedAs(
+            $utilizador,
+            'sessao',
+        );
+
         self::assertSame(
             [
-                $permissaoExistente,
+                $identificadorPermissaoExistente,
             ],
             $this->obterIdentificadoresPermissoes(
                 $utilizador,
@@ -486,32 +622,41 @@ final class ControladorPermissoesEmailTest extends TestCase
     /**
      * Rejeita permissões repetidas.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function rejeita_permissoes_repetidas(): void
     {
-        $utilizador = $this->criarUtilizador();
+        $utilizador =
+            $this->criarUtilizador();
 
         $permissaoExistente =
             $this->criarPermissaoEmail(
                 nome: 'Permissão existente',
-                slug: 'permissao-existente',
+                identificador: 'permissao_existente',
+                ordem: 1,
             );
+
+        $identificadorPermissaoExistente =
+            (int) $permissaoExistente->getKey();
 
         $utilizador
             ->permissoesEmail()
             ->sync([
-                $permissaoExistente,
+                $identificadorPermissaoExistente,
             ]);
 
         $resposta = $this
-            ->actingAs($utilizador)
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
             ->from(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->patch(
                 route(
@@ -519,15 +664,17 @@ final class ControladorPermissoesEmailTest extends TestCase
                 ),
                 [
                     'permissoes_email' => [
-                        $permissaoExistente,
-                        $permissaoExistente,
+                        $identificadorPermissaoExistente,
+                        $identificadorPermissaoExistente,
                     ],
                 ],
             );
 
         $resposta
             ->assertRedirect(
-                route('perfil.editar'),
+                route(
+                    'perfil.editar',
+                ),
             )
             ->assertSessionHasErrors(
                 [
@@ -538,9 +685,14 @@ final class ControladorPermissoesEmailTest extends TestCase
                 'permissoesEmail',
             );
 
+        $this->assertAuthenticatedAs(
+            $utilizador,
+            'sessao',
+        );
+
         self::assertSame(
             [
-                $permissaoExistente,
+                $identificadorPermissaoExistente,
             ],
             $this->obterIdentificadoresPermissoes(
                 $utilizador,
@@ -551,11 +703,11 @@ final class ControladorPermissoesEmailTest extends TestCase
     /**
      * Cria um utilizador persistido.
      *
-     * @return Utilizador - Utilizador criado.
+     * @return Utilizador Utilizador criado.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function criarUtilizador(): Utilizador
     {
@@ -574,7 +726,9 @@ final class ControladorPermissoesEmailTest extends TestCase
             PapelUtilizador::Utilizador;
 
         $utilizador->email_verified_at =
-            now()->subDay()->startOfSecond();
+            now()
+                ->subDay()
+                ->startOfSecond();
 
         $utilizador->saveOrFail();
 
@@ -582,48 +736,62 @@ final class ControladorPermissoesEmailTest extends TestCase
     }
 
     /**
-     * Cria uma permissão de e-mail.
+     * Cria uma permissão de e-mail persistida.
      *
-     * @param  string  $nome  Nome da permissão.
-     * @param  string  $slug  Identificador textual.
-     * @return int - Identificador criado.
+     * @param  string  $nome  Nome apresentado ao utilizador.
+     * @param  string  $identificador  Identificador técnico da permissão.
+     * @param  int  $ordem  Ordem de apresentação.
+     * @return PermissaoEmail Permissão criada.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function criarPermissaoEmail(
         string $nome,
-        string $slug,
-    ): int {
-        return (int) DB::table(
-            'email_permissions',
-        )->insertGetId([
-            'name' => $nome,
-            'slug' => $slug,
-            'description' => sprintf(
+        string $identificador,
+        int $ordem,
+    ): PermissaoEmail {
+        $permissao = new PermissaoEmail;
+
+        $permissao->nome =
+            $nome;
+
+        $permissao->identificador =
+            $identificador;
+
+        $permissao->descricao =
+            sprintf(
                 'Permissão de teste: %s.',
-                $slug,
-            ),
-        ]);
+                $identificador,
+            );
+
+        $permissao->ordem =
+            $ordem;
+
+        $permissao->saveOrFail();
+
+        return $permissao->refresh();
     }
 
     /**
      * Obtém os identificadores atuais das permissões do utilizador.
      *
      * @param  Utilizador  $utilizador  Utilizador consultado.
-     * @return array<int, int> - Identificadores ordenados.
+     * @return list<int> Identificadores ordenados.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function obterIdentificadoresPermissoes(
         Utilizador $utilizador,
     ): array {
         return $utilizador
             ->permissoesEmail()
-            ->pluck('email_permissions.id')
+            ->pluck(
+                'permissoes_email.id',
+            )
             ->map(
                 static fn (
                     mixed $identificador,

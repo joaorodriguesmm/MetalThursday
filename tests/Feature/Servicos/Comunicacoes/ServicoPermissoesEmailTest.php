@@ -6,10 +6,11 @@ namespace Tests\Feature\Servicos\Comunicacoes;
 
 use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\Utilizador;
+use App\Models\Comunicacao\PermissaoEmail;
 use App\Servicos\Comunicacoes\ServicoPermissoesEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 /**
@@ -17,7 +18,7 @@ use Tests\TestCase;
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 final class ServicoPermissoesEmailTest extends TestCase
 {
@@ -25,7 +26,6 @@ final class ServicoPermissoesEmailTest extends TestCase
 
     /**
      * Serviço testado.
-     *
      *
      * @since 2.0.0
      *
@@ -36,10 +36,9 @@ final class ServicoPermissoesEmailTest extends TestCase
     /**
      * Prepara cada teste.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     protected function setUp(): void
     {
@@ -54,24 +53,32 @@ final class ServicoPermissoesEmailTest extends TestCase
      * Confirma que os identificadores são convertidos, deduplicados e
      * ordenados.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    public function test_normaliza_identificadores_das_permissoes(): void
+    #[Test]
+    public function normaliza_identificadores_das_permissoes(): void
     {
-        $resultado = $this->servico
-            ->normalizarIdentificadores([
-                '3',
-                1,
-                '2',
-                3,
-                1,
-            ]);
+        $resultado =
+            $this
+                ->servico
+                ->normalizarIdentificadores(
+                    [
+                        '3',
+                        1,
+                        '2',
+                        3,
+                        1,
+                    ],
+                );
 
         self::assertSame(
-            [1, 2, 3],
+            [
+                1,
+                2,
+                3,
+            ],
             $resultado,
         );
     }
@@ -79,116 +86,197 @@ final class ServicoPermissoesEmailTest extends TestCase
     /**
      * Confirma que valores inválidos são rejeitados.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    public function test_rejeita_identificadores_invalidos(): void
+    #[Test]
+    public function rejeita_identificadores_invalidos(): void
     {
         $this->expectException(
             InvalidArgumentException::class,
         );
 
-        $this->servico
-            ->normalizarIdentificadores([
-                1,
-                'invalido',
-            ]);
+        $this->expectExceptionMessage(
+            'Foi recebida uma permissão de e-mail inválida.',
+        );
+
+        $this
+            ->servico
+            ->normalizarIdentificadores(
+                [
+                    1,
+                    'invalido',
+                ],
+            );
     }
 
     /**
      * Confirma que as permissões são associadas ao utilizador.
      *
+     * Os identificadores devolvidos devem estar normalizados e a relação
+     * previamente carregada deve ser invalidada depois da sincronização.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    public function test_sincroniza_permissoes_do_utilizador(): void
+    #[Test]
+    public function sincroniza_permissoes_do_utilizador(): void
     {
-        $utilizador = $this->criarUtilizador();
+        $utilizador =
+            $this->criarUtilizador();
 
-        $primeiraPermissao = $this->criarPermissao(
-            'novidades',
+        $primeiraPermissao =
+            $this->criarPermissao(
+                nome: 'Novidades',
+                identificador: 'novidades',
+                ordem: 1,
+            );
+
+        $segundaPermissao =
+            $this->criarPermissao(
+                nome: 'Lembretes',
+                identificador: 'lembretes',
+                ordem: 2,
+            );
+
+        $identificadorPrimeiraPermissao =
+            (int) $primeiraPermissao->getKey();
+
+        $identificadorSegundaPermissao =
+            (int) $segundaPermissao->getKey();
+
+        $utilizador->load(
+            'permissoesEmail',
         );
 
-        $segundaPermissao = $this->criarPermissao(
-            'lembretes',
+        self::assertTrue(
+            $utilizador->relationLoaded(
+                'permissoesEmail',
+            ),
         );
 
-        $resultado = $this->servico->sincronizar(
-            $utilizador,
-            [
-                (string) $segundaPermissao,
-                $primeiraPermissao,
-                $segundaPermissao,
-            ],
-        );
+        $resultado =
+            $this
+                ->servico
+                ->sincronizar(
+                    $utilizador,
+                    [
+                        (string) $identificadorSegundaPermissao,
+                        $identificadorPrimeiraPermissao,
+                        $identificadorSegundaPermissao,
+                    ],
+                );
 
         self::assertSame(
             [
-                $primeiraPermissao,
-                $segundaPermissao,
+                $identificadorPrimeiraPermissao,
+                $identificadorSegundaPermissao,
             ],
             $resultado,
         );
 
+        self::assertFalse(
+            $utilizador->relationLoaded(
+                'permissoesEmail',
+            ),
+        );
+
         $this->assertDatabaseHas(
-            'email_permission_user',
+            'permissao_email_utilizador',
             [
-                'user_id' => $utilizador->getKey(),
-                'email_permission_id' => $primeiraPermissao,
+                'utilizador_id' => $utilizador->getKey(),
+
+                'permissao_email_id' => $identificadorPrimeiraPermissao,
             ],
         );
 
         $this->assertDatabaseHas(
-            'email_permission_user',
+            'permissao_email_utilizador',
             [
-                'user_id' => $utilizador->getKey(),
-                'email_permission_id' => $segundaPermissao,
+                'utilizador_id' => $utilizador->getKey(),
+
+                'permissao_email_id' => $identificadorSegundaPermissao,
             ],
         );
 
         $this->assertDatabaseCount(
-            'email_permission_user',
+            'permissao_email_utilizador',
             2,
+        );
+
+        self::assertSame(
+            [
+                $identificadorPrimeiraPermissao,
+                $identificadorSegundaPermissao,
+            ],
+            $this->obterIdentificadoresPermissoes(
+                $utilizador,
+            ),
         );
     }
 
     /**
-     * Confirma que uma lista vazia remove as permissões existentes.
-     *
+     * Confirma que uma lista vazia remove todas as permissões existentes.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    public function test_lista_vazia_remove_todas_as_permissoes(): void
+    #[Test]
+    public function lista_vazia_remove_todas_as_permissoes(): void
     {
-        $utilizador = $this->criarUtilizador();
-        $permissao = $this->criarPermissao('eventos');
+        $utilizador =
+            $this->criarUtilizador();
 
-        $this->servico->sincronizar(
-            $utilizador,
-            [$permissao],
-        );
+        $permissao =
+            $this->criarPermissao(
+                nome: 'Eventos',
+                identificador: 'eventos',
+                ordem: 1,
+            );
+
+        $identificadorPermissao =
+            (int) $permissao->getKey();
+
+        $this
+            ->servico
+            ->sincronizar(
+                $utilizador,
+                [
+                    $identificadorPermissao,
+                ],
+            );
 
         $this->assertDatabaseCount(
-            'email_permission_user',
+            'permissao_email_utilizador',
             1,
         );
 
-        $resultado = $this->servico->sincronizar(
-            $utilizador,
+        $resultado =
+            $this
+                ->servico
+                ->sincronizar(
+                    $utilizador,
+                    [],
+                );
+
+        self::assertSame(
             [],
+            $resultado,
         );
 
-        self::assertSame([], $resultado);
-
         $this->assertDatabaseCount(
-            'email_permission_user',
+            'permissao_email_utilizador',
             0,
+        );
+
+        self::assertSame(
+            [],
+            $this->obterIdentificadoresPermissoes(
+                $utilizador,
+            ),
         );
     }
 
@@ -196,57 +284,89 @@ final class ServicoPermissoesEmailTest extends TestCase
      * Confirma que uma permissão inexistente é rejeitada sem alterar as
      * associações atuais.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    public function test_permissao_inexistente_nao_altera_as_associacoes(): void
+    #[Test]
+    public function permissao_inexistente_nao_altera_as_associacoes(): void
     {
-        $utilizador = $this->criarUtilizador();
-        $permissao = $this->criarPermissao('resumos');
+        $utilizador =
+            $this->criarUtilizador();
 
-        $this->servico->sincronizar(
-            $utilizador,
-            [$permissao],
-        );
+        $permissao =
+            $this->criarPermissao(
+                nome: 'Resumos',
+                identificador: 'resumos',
+                ordem: 1,
+            );
+
+        $identificadorPermissao =
+            (int) $permissao->getKey();
+
+        $this
+            ->servico
+            ->sincronizar(
+                $utilizador,
+                [
+                    $identificadorPermissao,
+                ],
+            );
 
         try {
-            $this->servico->sincronizar(
-                $utilizador,
-                [$permissao, 999999],
-            );
+            $this
+                ->servico
+                ->sincronizar(
+                    $utilizador,
+                    [
+                        $identificadorPermissao,
+                        999999,
+                    ],
+                );
 
             self::fail(
                 'Era esperada uma exceção para a permissão inexistente.',
             );
-        } catch (InvalidArgumentException) {
-            // A exceção esperada confirma a validação.
+        } catch (InvalidArgumentException $excecao) {
+            self::assertSame(
+                'As seguintes permissões de e-mail não existem: 999999.',
+                $excecao->getMessage(),
+            );
         }
 
         $this->assertDatabaseHas(
-            'email_permission_user',
+            'permissao_email_utilizador',
             [
-                'user_id' => $utilizador->getKey(),
-                'email_permission_id' => $permissao,
+                'utilizador_id' => $utilizador->getKey(),
+
+                'permissao_email_id' => $identificadorPermissao,
             ],
         );
 
         $this->assertDatabaseCount(
-            'email_permission_user',
+            'permissao_email_utilizador',
             1,
+        );
+
+        self::assertSame(
+            [
+                $identificadorPermissao,
+            ],
+            $this->obterIdentificadoresPermissoes(
+                $utilizador,
+            ),
         );
     }
 
     /**
      * Confirma que um utilizador não persistido é rejeitado.
      *
-     *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    public function test_rejeita_utilizador_nao_persistido(): void
+    #[Test]
+    public function rejeita_utilizador_nao_persistido(): void
     {
         $utilizador = new Utilizador;
 
@@ -254,57 +374,117 @@ final class ServicoPermissoesEmailTest extends TestCase
             InvalidArgumentException::class,
         );
 
-        $this->servico->sincronizar(
-            $utilizador,
-            [],
+        $this->expectExceptionMessage(
+            'O utilizador deve estar persistido antes de sincronizar as permissões.',
         );
+
+        $this
+            ->servico
+            ->sincronizar(
+                $utilizador,
+                [],
+            );
     }
 
     /**
      * Cria um utilizador válido para os testes.
      *
-     * @return Utilizador - Utilizador persistido.
+     * @return Utilizador Utilizador persistido.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     private function criarUtilizador(): Utilizador
     {
         $utilizador = new Utilizador;
 
-        $utilizador->nome = 'Utilizador de Teste';
-        $utilizador->email = 'utilizador@exemplo.pt';
-        $utilizador->password = 'MetalThursday#2026';
+        $utilizador->nome =
+            'Utilizador de Teste';
+
+        $utilizador->email =
+            'utilizador@exemplo.pt';
+
+        $utilizador->password =
+            'MetalThursday#2026';
+
         $utilizador->papel =
             PapelUtilizador::Utilizador;
 
+        $utilizador->email_verified_at =
+            now()
+                ->subDay()
+                ->startOfSecond();
+
         $utilizador->saveOrFail();
 
-        return $utilizador;
+        return $utilizador->refresh();
     }
 
     /**
-     * Cria uma permissão de e-mail.
+     * Cria uma permissão de e-mail persistida.
      *
-     * @param  string  $slug  - Identificador textual da permissão.
-     * @return int - Identificador da permissão criada.
+     * @param  string  $nome  Nome apresentado.
+     * @param  string  $identificador  Identificador técnico.
+     * @param  int  $ordem  Ordem de apresentação.
+     * @return PermissaoEmail Permissão persistida.
+     *
+     * @since 2.0.0
+     *
+     * @version 2.0.0
+     */
+    private function criarPermissao(
+        string $nome,
+        string $identificador,
+        int $ordem,
+    ): PermissaoEmail {
+        $permissao = new PermissaoEmail;
+
+        $permissao->nome =
+            $nome;
+
+        $permissao->identificador =
+            $identificador;
+
+        $permissao->descricao =
+            sprintf(
+                'Permissão de teste: %s.',
+                $identificador,
+            );
+
+        $permissao->ordem =
+            $ordem;
+
+        $permissao->saveOrFail();
+
+        return $permissao->refresh();
+    }
+
+    /**
+     * Obtém os identificadores das permissões atualmente atribuídas.
+     *
+     * @param  Utilizador  $utilizador  Utilizador consultado.
+     * @return list<int> Identificadores ordenados.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
-    private function criarPermissao(string $slug): int
-    {
-        return (int) DB::table(
-            'email_permissions',
-        )->insertGetId([
-            'name' => ucfirst($slug),
-            'slug' => $slug,
-            'description' => sprintf(
-                'Permissão de teste: %s.',
-                $slug,
-            ),
-        ]);
+    private function obterIdentificadoresPermissoes(
+        Utilizador $utilizador,
+    ): array {
+        return $utilizador
+            ->permissoesEmail()
+            ->pluck(
+                'permissoes_email.id',
+            )
+            ->map(
+                static fn (
+                    mixed $identificador,
+                ): int => (int) $identificador,
+            )
+            ->sort()
+            ->values()
+            ->all();
     }
 }
