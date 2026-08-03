@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Autenticacao;
 
+use App\Models\Autenticacao\Utilizador;
 use App\ObjetosValor\Utilizadores\EnderecoEmail;
 use App\Regras\Autenticacao\RequisitosPalavraPasse;
 use Closure;
 use Illuminate\Auth\Events\Lockout;
+use Illuminate\Auth\SessionGuard;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
@@ -26,9 +29,13 @@ use LogicException;
  * de autenticação do Laravel. O campo recebido pelo formulário mantém o nome
  * português `palavra_passe`.
  *
+ * Uma conta suspensa só é identificada depois de o Laravel confirmar as
+ * credenciais. Desta forma, o estado da conta não é revelado a quem não
+ * conhece a palavra-passe correta.
+ *
  * @since 1.0.0
  *
- * @version 4.0.0
+ * @version 5.0.1
  */
 final class AutenticarUtilizadorRequest extends FormRequest
 {
@@ -218,30 +225,74 @@ final class AutenticarUtilizadorRequest extends FormRequest
     }
 
     /**
-     * Autentica o utilizador através do guard da sessão.
+     * Autentica um utilizador com acesso ativo através do guard da sessão.
      *
-     * @throws ValidationException Quando as credenciais são inválidas ou o
-     *                             limite de tentativas foi excedido.
+     * O callback de `attemptWhen` é executado apenas depois de as credenciais
+     * serem confirmadas. Uma conta suspensa recebe uma mensagem específica,
+     * mas uma palavra-passe incorreta continua a produzir apenas o erro
+     * genérico de autenticação.
+     *
+     * Tentativas com credenciais corretas de uma conta suspensa não aumentam
+     * o limitador de tentativas falhadas.
+     *
+     * @throws ValidationException Quando as credenciais são inválidas, a
+     *                             conta está suspensa ou o limite de
+     *                             tentativas foi excedido.
+     * @throws LogicException Quando o guard `sessao` não utiliza o driver de
+     *                        sessões configurado pela aplicação.
      *
      * @since 1.0.0
      *
-     * @version 4.0.0
+     * @version 5.0.1
      */
     public function autenticar(): void
     {
         $this->garantirAusenciaDeLimitacao();
 
+        $chaveLimitacao =
+            $this->obterChaveLimitacao();
+
+        $utilizadorSuspenso =
+            false;
+
+        $guardaSessao =
+            $this->obterGuardaSessao();
+
         $autenticado =
-            Auth::guard(
-                'sessao',
-            )->attempt(
+            $guardaSessao->attemptWhen(
                 $this->obterCredenciais(),
+
+                static function (
+                    Authenticatable $utilizador,
+                ) use (
+                    &$utilizadorSuspenso,
+                ): bool {
+                    if (! $utilizador instanceof Utilizador) {
+                        return false;
+                    }
+
+                    $utilizadorSuspenso =
+                        $utilizador->estaSuspenso();
+
+                    return ! $utilizadorSuspenso;
+                },
+
                 $this->manterSessaoIniciada(),
             );
 
         if (! $autenticado) {
+            if ($utilizadorSuspenso) {
+                RateLimiter::clear(
+                    $chaveLimitacao,
+                );
+
+                throw ValidationException::withMessages([
+                    'email' => 'A tua conta encontra-se suspensa.',
+                ]);
+            }
+
             RateLimiter::hit(
-                $this->obterChaveLimitacao(),
+                $chaveLimitacao,
                 self::DURACAO_BLOQUEIO_SEGUNDOS,
             );
 
@@ -253,7 +304,7 @@ final class AutenticarUtilizadorRequest extends FormRequest
         }
 
         RateLimiter::clear(
-            $this->obterChaveLimitacao(),
+            $chaveLimitacao,
         );
     }
 
@@ -317,6 +368,39 @@ final class AutenticarUtilizadorRequest extends FormRequest
     {
         return $this->boolean(
             'manter_sessao_iniciada',
+        );
+    }
+
+    /**
+     * Obtém o guard de sessões utilizado pela aplicação.
+     *
+     * A facade de autenticação declara um tipo genérico para os guards. A
+     * verificação explícita restringe esse contrato à implementação
+     * `SessionGuard`, exigida pela configuração do guard `sessao` e necessária
+     * para utilizar `attemptWhen`.
+     *
+     * @return SessionGuard Guard de autenticação baseado em sessões.
+     *
+     * @throws LogicException Quando o guard utiliza uma implementação
+     *                        diferente da configurada.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function obterGuardaSessao(): SessionGuard
+    {
+        $guarda =
+            Auth::guard(
+                'sessao',
+            );
+
+        if ($guarda instanceof SessionGuard) {
+            return $guarda;
+        }
+
+        throw new LogicException(
+            'O guard "sessao" deve utilizar a implementação de autenticação por sessão.',
         );
     }
 

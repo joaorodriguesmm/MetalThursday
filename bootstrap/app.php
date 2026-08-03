@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\GarantirAcessoAtivo;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -11,7 +12,7 @@ use Illuminate\Foundation\Configuration\Middleware;
  *
  * @since 1.0.0
  *
- * @version 2.1.0
+ * @version 3.0.0
  */
 return Application::configure(
     basePath: dirname(__DIR__),
@@ -26,9 +27,17 @@ return Application::configure(
             Middleware $middleware,
         ): void {
             /*
-             * Os middlewares personalizados serão registados aqui quando
-             * existirem.
+             * O middleware é acrescentado ao grupo web para que uma conta
+             * suspensa seja rejeitada mesmo quando a autenticação resulta de
+             * uma sessão antiga ou de um cookie persistente.
+             *
+             * A posição no grupo garante que a sessão já foi inicializada.
              */
+            $middleware->web(
+                append: [
+                    GarantirAcessoAtivo::class,
+                ],
+            );
         },
     )
     ->withExceptions(
