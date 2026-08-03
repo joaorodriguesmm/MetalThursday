@@ -1,43 +1,93 @@
 <?php
 
+declare(strict_types=1);
+
 /**
- * Retorna as configurações de armazenamento
+ * Define os sistemas de ficheiros utilizados pela aplicação.
  *
- * @since 1.0
- * @version 1.0
+ * Os nomes das chaves e drivers permanecem em inglês por corresponderem aos
+ * contratos internos de configuração do Laravel e do Flysystem. Os nomes dos
+ * discos definidos pelo MetalThursday utilizam português.
+ *
+ * @return array<string, mixed> Configurações dos sistemas de ficheiros.
+ *
+ * @since 1.0.0
+ *
+ * @version 3.0.0
  */
 return [
-    'default' => env('FILESYSTEM_DISK', 'local'),
-    'disks'   => [
-        'local' => [
+    /*
+    |--------------------------------------------------------------------------
+    | Disco predefinido
+    |--------------------------------------------------------------------------
+    */
+
+    'default' => env(
+        'FILESYSTEM_DISK',
+        'privado',
+    ),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Discos de armazenamento
+    |--------------------------------------------------------------------------
+    */
+
+    'disks' => [
+        /*
+         * Disco destinado a ficheiros que não podem ser acedidos
+         * diretamente através da Internet.
+         */
+        'privado' => [
             'driver' => 'local',
-            'root'   => storage_path('app/private'),
-            'serve'  => true,
-            'throw'  => false,
+
+            'root' => storage_path(
+                'app/private',
+            ),
+
+            'throw' => true,
+
             'report' => false,
         ],
-        'public' => [
-            'driver'     => 'local',
-            'root'       => storage_path('app/public'),
-            'url'        => env('APP_URL').'/storage',
+
+        /*
+         * Disco destinado a ficheiros publicamente acessíveis através da
+         * ligação simbólica public/storage.
+         */
+        'publico' => [
+            'driver' => 'local',
+
+            'root' => storage_path(
+                'app/public',
+            ),
+
+            'url' => rtrim(
+                (string) env(
+                    'APP_URL',
+                    'http://localhost',
+                ),
+                '/',
+            ).'/storage',
+
             'visibility' => 'public',
-            'throw'      => false,
-            'report'     => false,
-        ],
-        's3' => [
-            'driver'                  => 's3',
-            'key'                     => env('AWS_ACCESS_KEY_ID'),
-            'secret'                  => env('AWS_SECRET_ACCESS_KEY'),
-            'region'                  => env('AWS_DEFAULT_REGION'),
-            'bucket'                  => env('AWS_BUCKET'),
-            'url'                     => env('AWS_URL'),
-            'endpoint'                => env('AWS_ENDPOINT'),
-            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
-            'throw'                   => false,
-            'report'                  => false,
+
+            'throw' => true,
+
+            'report' => false,
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ligações simbólicas
+    |--------------------------------------------------------------------------
+    */
+
     'links' => [
-        public_path('storage') => storage_path('app/public'),
+        public_path(
+            'storage',
+        ) => storage_path(
+            'app/public',
+        ),
     ],
 ];

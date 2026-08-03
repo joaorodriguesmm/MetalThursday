@@ -1,49 +1,54 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Providers;
 
-use App\Models\Band;
-use App\Models\Comment;
-use App\Models\Genre;
-use App\Models\MetalThursday;
-use App\Models\MtEdition;
-use App\Policies\BandPolicy;
-use App\Policies\CommentPolicy;
-use App\Policies\GenrePolicy;
-use App\Policies\MetalThursdayPolicy;
-use App\Policies\MtEditionPolicy;
+use App\Models\Interacoes\Comentario;
+use App\Models\MetalThursday\Edicao;
+use App\Models\MetalThursday\MetalThursday;
+use App\Models\Musica\Banda;
+use App\Models\Musica\Genero;
+use App\Policies\PoliticaBanda;
+use App\Policies\PoliticaComentario;
+use App\Policies\PoliticaEdicao;
+use App\Policies\PoliticaGenero;
+use App\Policies\PoliticaMetalThursday;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 /**
- * Define as permissões dependentes de autenticação para executar ações na aplicação.
+ * Regista as políticas de autorização da aplicação.
  *
- * @since 1.0
- * @version 1.0
+ * O nome desta classe permanece em inglês por corresponder ao provider
+ * convencional de autorização do Laravel.
+ *
+ * @since 1.0.0
+ *
+ * @version 2.0.0
  */
-class AuthServiceProvider extends ServiceProvider
+final class AuthServiceProvider extends ServiceProvider
 {
     /**
-     * Define as permissões para ações nos modelos.
+     * Associa os modelos às respetivas políticas de autorização.
      *
-     * @since 1.0
-     * @version 1.0
+     * O nome da propriedade permanece em inglês porque pertence ao contrato
+     * disponibilizado pelo provider de autorização do Laravel.
+     *
+     * @var array<class-string, class-string>
+     *
+     * @since 1.0.0
+     *
+     * @version 2.0.0
      */
     protected $policies = [
-        Band::class          => BandPolicy::class,
-        Comment::class       => CommentPolicy::class,
-        Genre::class         => GenrePolicy::class,
-        MetalThursday::class => MetalThursdayPolicy::class,
-        MtEdition::class     => MtEditionPolicy::class,
-    ];
+        Banda::class => PoliticaBanda::class,
 
-    /**
-     * Regista os serviços de autenticação.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    public function boot(): void
-    {
-        //
-    }
+        Comentario::class => PoliticaComentario::class,
+
+        Genero::class => PoliticaGenero::class,
+
+        Edicao::class => PoliticaEdicao::class,
+
+        MetalThursday::class => PoliticaMetalThursday::class,
+    ];
 }

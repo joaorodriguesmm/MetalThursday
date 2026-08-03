@@ -1,87 +1,194 @@
 <?php
 
+declare(strict_types=1);
+
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
-use Monolog\Handler\SyslogUdpHandler;
 use Monolog\Processor\PsrLogMessageProcessor;
 
 /**
- * Retorna as configurações de logging.
+ * Define os canais de registo de eventos da aplicação.
  *
- * @since 1.0
- * @version 1.0
+ * Os nomes das chaves e drivers permanecem em inglês por corresponderem aos
+ * contratos internos de configuração do Laravel e do Monolog. Os nomes dos
+ * canais definidos pelo MetalThursday utilizam português.
+ *
+ * @return array<string, mixed> Configurações de registo de eventos.
+ *
+ * @since 1.0.0
+ *
+ * @version 3.0.0
  */
 return [
-    'default'      => env('LOG_CHANNEL', 'stack'),
+    /*
+    |--------------------------------------------------------------------------
+    | Canal predefinido
+    |--------------------------------------------------------------------------
+    */
+
+    'default' => env(
+        'LOG_CHANNEL',
+        'pilha',
+    ),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Registo de funcionalidades obsoletas
+    |--------------------------------------------------------------------------
+    */
+
     'deprecations' => [
-        'channel' => env('LOG_DEPRECATIONS_CHANNEL', 'null'),
-        'trace'   => env('LOG_DEPRECATIONS_TRACE', false),
+        'channel' => env(
+            'LOG_DEPRECATIONS_CHANNEL',
+            'obsolescencias',
+        ),
+
+        'trace' => (bool) env(
+            'LOG_DEPRECATIONS_TRACE',
+            false,
+        ),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Canais de registo
+    |--------------------------------------------------------------------------
+    */
+
     'channels' => [
-        'stack' => [
-            'driver'            => 'stack',
-            'channels'          => explode(',', (string) env('LOG_STACK', 'single')),
+        /*
+         * Agrega os canais definidos em LOG_STACK.
+         */
+        'pilha' => [
+            'driver' => 'stack',
+
+            'channels' => array_values(
+                array_filter(
+                    array_map(
+                        static fn (
+                            string $canal,
+                        ): string => trim(
+                            $canal,
+                        ),
+                        explode(
+                            ',',
+                            (string) env(
+                                'LOG_STACK',
+                                'diario',
+                            ),
+                        ),
+                    ),
+                    static fn (
+                        string $canal,
+                    ): bool => $canal !== '',
+                ),
+            ),
+
             'ignore_exceptions' => false,
         ],
-        'single' => [
-            'driver'               => 'single',
-            'path'                 => storage_path('logs/laravel.log'),
-            'level'                => env('LOG_LEVEL', 'debug'),
+
+        /*
+         * Mantém todos os eventos num único ficheiro.
+         */
+        'unico' => [
+            'driver' => 'single',
+
+            'path' => storage_path(
+                'logs/laravel.log',
+            ),
+
+            'level' => env(
+                'LOG_LEVEL',
+                'debug',
+            ),
+
             'replace_placeholders' => true,
         ],
-        'daily' => [
-            'driver'               => 'daily',
-            'path'                 => storage_path('logs/laravel.log'),
-            'level'                => env('LOG_LEVEL', 'debug'),
-            'days'                 => env('LOG_DAILY_DAYS', 14),
+
+        /*
+         * Cria um ficheiro por dia e elimina os mais antigos após o período
+         * de retenção configurado.
+         */
+        'diario' => [
+            'driver' => 'daily',
+
+            'path' => storage_path(
+                'logs/laravel.log',
+            ),
+
+            'level' => env(
+                'LOG_LEVEL',
+                'debug',
+            ),
+
+            'days' => (int) env(
+                'LOG_DAILY_DAYS',
+                14,
+            ),
+
             'replace_placeholders' => true,
         ],
-        'slack' => [
-            'driver'               => 'slack',
-            'url'                  => env('LOG_SLACK_WEBHOOK_URL'),
-            'username'             => env('LOG_SLACK_USERNAME', 'Laravel Log'),
-            'emoji'                => env('LOG_SLACK_EMOJI', ':boom:'),
-            'level'                => env('LOG_LEVEL', 'critical'),
+
+        /*
+         * Regista separadamente avisos relacionados com funcionalidades
+         * obsoletas.
+         */
+        'obsolescencias' => [
+            'driver' => 'daily',
+
+            'path' => storage_path(
+                'logs/obsolescencias.log',
+            ),
+
+            'level' => 'notice',
+
+            'days' => (int) env(
+                'LOG_DAILY_DAYS',
+                14,
+            ),
+
             'replace_placeholders' => true,
         ],
-        'papertrail' => [
-            'driver'       => 'monolog',
-            'level'        => env('LOG_LEVEL', 'debug'),
-            'handler'      => env('LOG_PAPERTRAIL_HANDLER', SyslogUdpHandler::class),
-            'handler_with' => [
-                'host'             => env('PAPERTRAIL_URL'),
-                'port'             => env('PAPERTRAIL_PORT'),
-                'connectionString' => 'tls://'.env('PAPERTRAIL_URL').':'.env('PAPERTRAIL_PORT'),
-            ],
-            'processors'   => [PsrLogMessageProcessor::class],
-        ],
-        'stderr' => [
-            'driver'       => 'monolog',
-            'level'        => env('LOG_LEVEL', 'debug'),
-            'handler'      => StreamHandler::class,
+
+        /*
+         * Escreve no fluxo de erros padrão do processo.
+         */
+        'erro_padrao' => [
+            'driver' => 'monolog',
+
+            'level' => env(
+                'LOG_LEVEL',
+                'debug',
+            ),
+
+            'handler' => StreamHandler::class,
+
             'handler_with' => [
                 'stream' => 'php://stderr',
             ],
-            'formatter'  => env('LOG_STDERR_FORMATTER'),
-            'processors' => [PsrLogMessageProcessor::class],
+
+            'processors' => [
+                PsrLogMessageProcessor::class,
+            ],
         ],
-        'syslog' => [
-            'driver'               => 'syslog',
-            'level'                => env('LOG_LEVEL', 'debug'),
-            'facility'             => env('LOG_SYSLOG_FACILITY', LOG_USER),
-            'replace_placeholders' => true,
-        ],
-        'errorlog' => [
-            'driver'               => 'errorlog',
-            'level'                => env('LOG_LEVEL', 'debug'),
-            'replace_placeholders' => true,
-        ],
-        'null' => [
-            'driver'  => 'monolog',
+
+        /*
+         * Descarta deliberadamente os eventos recebidos.
+         */
+        'nulo' => [
+            'driver' => 'monolog',
+
             'handler' => NullHandler::class,
         ],
+
+        /*
+         * O nome `emergency` é um contrato interno do Laravel e não pode ser
+         * traduzido.
+         */
         'emergency' => [
-            'path' => storage_path('logs/laravel.log'),
+            'path' => storage_path(
+                'logs/laravel.log',
+            ),
         ],
     ],
 ];

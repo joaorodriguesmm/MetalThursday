@@ -1,13 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 /**
- * Retorna os textos de autenticação em português.
+ * Retorna as mensagens de autenticação em português.
  *
- * @since 1.0
- * @version 1.0
+ * As chaves permanecem em inglês por corresponderem às convenções utilizadas
+ * pelo sistema de autenticação do Laravel.
+ *
+ * @since 1.0.0
+ *
+ * @version 1.1.0
  */
 return [
-    'failed'   => 'As credenciais indicadas não existem na base de dados.',
-    'password' => 'A password fornecida está incorreta.',
-    'throttle' => 'Demasiadas tentativas de login. Por favor, tenta novamente em :seconds segundos.',
+    'failed' => 'As credenciais indicadas estão incorretas.',
+
+    'password' => 'A palavra-passe indicada está incorreta.',
+
+    'throttle' => 'Demasiadas tentativas de início de sessão. Tenta novamente dentro de :seconds segundos.',
 ];

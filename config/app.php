@@ -1,29 +1,123 @@
 <?php
 
+declare(strict_types=1);
+
 /**
- * Retorna as configurações da aplicação.
+ * Define as configurações gerais da aplicação.
  *
- * @since 1.0
- * @version 1.0
+ * Os nomes das chaves permanecem em inglês por corresponderem aos contratos
+ * internos de configuração do Laravel.
+ *
+ * @return array<string, mixed> Configurações gerais da aplicação.
+ *
+ * @since 1.0.0
+ *
+ * @version 3.0.0
  */
 return [
-    'name'            => env('APP_NAME', 'MetalThursday'),
-    'env'             => env('APP_ENV', 'production'),
-    'debug'           => (bool) env('APP_DEBUG', false),
-    'url'             => env('APP_URL', 'http://localhost'),
-    'timezone'        => 'Europe/Lisbon',
-    'locale'          => env('APP_LOCALE', 'pt'),
-    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
-    'faker_locale'    => env('APP_FAKER_LOCALE', 'pt_PT'),
-    'cipher'          => 'AES-256-CBC',
-    'key'             => env('APP_KEY'),
-    'previous_keys'   => [
-        ...array_filter(
-            explode(',', (string) env('APP_PREVIOUS_KEYS', ''))
+    /*
+    |--------------------------------------------------------------------------
+    | Identificação e ambiente
+    |--------------------------------------------------------------------------
+    */
+
+    'name' => env(
+        'APP_NAME',
+        'MetalThursday',
+    ),
+
+    'env' => env(
+        'APP_ENV',
+        'production',
+    ),
+
+    'debug' => (bool) env(
+        'APP_DEBUG',
+        false,
+    ),
+
+    'url' => env(
+        'APP_URL',
+        'http://localhost',
+    ),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Localização
+    |--------------------------------------------------------------------------
+    */
+
+    'timezone' => env(
+        'APP_TIMEZONE',
+        'Europe/Lisbon',
+    ),
+
+    'locale' => env(
+        'APP_LOCALE',
+        'pt',
+    ),
+
+    'fallback_locale' => env(
+        'APP_FALLBACK_LOCALE',
+        'pt',
+    ),
+
+    'faker_locale' => env(
+        'APP_FAKER_LOCALE',
+        'pt_PT',
+    ),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Encriptação
+    |--------------------------------------------------------------------------
+    */
+
+    'cipher' => 'AES-256-CBC',
+
+    'key' => env(
+        'APP_KEY',
+    ),
+
+    'previous_keys' => [
+        ...array_values(
+            array_filter(
+                array_map(
+                    static fn (
+                        string $chave,
+                    ): string => trim(
+                        $chave,
+                    ),
+                    explode(
+                        ',',
+                        (string) env(
+                            'APP_PREVIOUS_KEYS',
+                            '',
+                        ),
+                    ),
+                ),
+                static fn (
+                    string $chave,
+                ): bool => $chave !== '',
+            ),
         ),
     ],
-    'maintenance'     => [
-        'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
-        'store'  => env('APP_MAINTENANCE_STORE', 'database'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Modo de manutenção
+    |--------------------------------------------------------------------------
+    */
+
+    'maintenance' => [
+        'driver' => env(
+            'APP_MAINTENANCE_DRIVER',
+            'file',
+        ),
+
+        'store' => env(
+            'APP_MAINTENANCE_STORE',
+            'database',
+        ),
     ],
 ];

@@ -1,31 +1,129 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Support\Str;
 
 /**
- * Retorna as configurações de sessão.
+ * Define as sessões utilizadas pela aplicação.
  *
- * @since 1.0
- * @version 1.0
+ * Os nomes das chaves e drivers permanecem em inglês por corresponderem aos
+ * contratos de configuração utilizados pelo Laravel.
+ *
+ * @return array<string, mixed> Configuração das sessões.
+ *
+ * @since 1.0.0
+ *
+ * @version 3.1.0
  */
 return [
-    'driver'          => env('SESSION_DRIVER', 'database'),
-    'lifetime'        => (int) env('SESSION_LIFETIME', 120),
-    'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
-    'encrypt'         => env('SESSION_ENCRYPT', false),
-    'files'           => storage_path('framework/sessions'),
-    'connection'      => env('SESSION_CONNECTION'),
-    'table'           => env('SESSION_TABLE', 'sessions'),
-    'store'           => env('SESSION_STORE'),
-    'lottery'         => [2, 100],
-    'cookie'          => env(
-        'SESSION_COOKIE',
-        Str::slug(env('APP_NAME', 'laravel')).'-session'
+    /*
+    |--------------------------------------------------------------------------
+    | Driver de sessão
+    |--------------------------------------------------------------------------
+    */
+
+    'driver' => env(
+        'SESSION_DRIVER',
+        'database',
     ),
-    'path'            => env('SESSION_PATH', '/'),
-    'domain'          => env('SESSION_DOMAIN'),
-    'secure'          => env('SESSION_SECURE_COOKIE'),
-    'http_only'       => env('SESSION_HTTP_ONLY', true),
-    'same_site'       => env('SESSION_SAME_SITE', 'lax'),
-    'partitioned'     => env('SESSION_PARTITIONED_COOKIE', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Duração da sessão
+    |--------------------------------------------------------------------------
+    */
+
+    'lifetime' => (int) env(
+        'SESSION_LIFETIME',
+        120,
+    ),
+
+    'expire_on_close' => (bool) env(
+        'SESSION_EXPIRE_ON_CLOSE',
+        false,
+    ),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Encriptação
+    |--------------------------------------------------------------------------
+    */
+
+    'encrypt' => (bool) env(
+        'SESSION_ENCRYPT',
+        true,
+    ),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Armazenamento
+    |--------------------------------------------------------------------------
+    */
+
+    'files' => storage_path(
+        'framework/sessions',
+    ),
+
+    'connection' => 'mariadb',
+
+    'table' => 'sessoes',
+
+    'store' => null,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Limpeza de sessões expiradas
+    |--------------------------------------------------------------------------
+    */
+
+    'lottery' => [
+        2,
+        100,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cookie da sessão
+    |--------------------------------------------------------------------------
+    */
+
+    'cookie' => env(
+        'SESSION_COOKIE',
+        Str::slug(
+            (string) env(
+                'APP_NAME',
+                'MetalThursday',
+            ),
+        ).'-sessao',
+    ),
+
+    'path' => env(
+        'SESSION_PATH',
+        '/',
+    ),
+
+    'domain' => env(
+        'SESSION_DOMAIN',
+    ),
+
+    'secure' => (bool) env(
+        'SESSION_SECURE_COOKIE',
+        false,
+    ),
+
+    'http_only' => (bool) env(
+        'SESSION_HTTP_ONLY',
+        true,
+    ),
+
+    'same_site' => env(
+        'SESSION_SAME_SITE',
+        'lax',
+    ),
+
+    'partitioned' => (bool) env(
+        'SESSION_PARTITIONED_COOKIE',
+        false,
+    ),
 ];

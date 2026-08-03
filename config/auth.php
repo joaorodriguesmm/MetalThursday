@@ -1,35 +1,98 @@
 <?php
 
+declare(strict_types=1);
+
+use App\Models\Autenticacao\Utilizador;
+
 /**
- * Retorna as configurações de autenticação.
+ * Define as configurações de autenticação da aplicação.
  *
- * @since 1.0
- * @version 1.0
+ * Os nomes das chaves, drivers e propriedades permanecem em inglês por
+ * corresponderem aos contratos internos de configuração do Laravel. Os
+ * identificadores definidos pelo MetalThursday utilizam português.
+ *
+ * @return array<string, mixed> Configurações de autenticação.
+ *
+ * @since 1.0.0
+ *
+ * @version 3.0.0
  */
 return [
+    /*
+    |--------------------------------------------------------------------------
+    | Configurações predefinidas
+    |--------------------------------------------------------------------------
+    */
+
     'defaults' => [
-        'guard'     => env('AUTH_GUARD', 'web'),
-        'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
+        'guard' => 'sessao',
+
+        'passwords' => 'utilizadores',
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Guards de autenticação
+    |--------------------------------------------------------------------------
+    */
+
     'guards' => [
-        'web' => [
-            'driver'   => 'session',
-            'provider' => 'users',
+        'sessao' => [
+            'driver' => 'session',
+
+            'provider' => 'utilizadores',
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Providers de utilizadores
+    |--------------------------------------------------------------------------
+    */
+
     'providers' => [
-        'users' => [
+        'utilizadores' => [
             'driver' => 'eloquent',
-            'model'  => env('AUTH_MODEL', App\Models\User::class),
+
+            'model' => Utilizador::class,
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Redefinição de palavras-passe
+    |--------------------------------------------------------------------------
+    */
+
     'passwords' => [
-        'users' => [
-            'provider' => 'users',
-            'table'    => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
-            'expire'   => 60,
+        'utilizadores' => [
+            'provider' => 'utilizadores',
+
+            'table' => 'tokens_redefinicao_palavra_passe',
+
+            /*
+             * Número de minutos durante os quais um token de redefinição
+             * permanece válido.
+             */
+            'expire' => 60,
+
+            /*
+             * Número de segundos que devem decorrer antes de poder ser
+             * solicitado outro token para o mesmo endereço.
+             */
             'throttle' => 60,
         ],
     ],
-    'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Confirmação da palavra-passe
+    |--------------------------------------------------------------------------
+    */
+
+    /*
+     * Número de segundos durante os quais uma confirmação recente da
+     * palavra-passe permanece válida.
+     */
+    'password_timeout' => 10800,
 ];

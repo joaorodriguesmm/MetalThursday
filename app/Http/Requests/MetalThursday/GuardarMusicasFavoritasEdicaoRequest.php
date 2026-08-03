@@ -1,0 +1,289 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Requests\MetalThursday;
+
+use App\Models\Autenticacao\Utilizador;
+use App\Models\MetalThursday\Edicao;
+use App\Models\MetalThursday\MusicaFavoritaEdicao;
+use Illuminate\Foundation\Http\FormRequest;
+use LogicException;
+
+/**
+ * Valida as músicas favoritas dos utilizadores numa edição.
+ *
+ * Cada chave do primeiro nível representa um utilizador e contém uma lista
+ * ordenada com o número de posições definido pelo modelo
+ * {@see MusicaFavoritaEdicao}.
+ *
+ * As posições ainda não preenchidas podem ser enviadas como strings vazias,
+ * sendo normalizadas para nulo antes da validação.
+ *
+ * @since 2.0.0
+ *
+ * @version 2.1.0
+ */
+final class GuardarMusicasFavoritasEdicaoRequest extends FormRequest
+{
+    /**
+     * Determina se o utilizador autenticado pode alterar a edição.
+     *
+     * A política é aplicada antes da normalização das músicas e da execução
+     * das regras de validação.
+     *
+     * @return bool Verdadeiro quando a alteração é autorizada.
+     *
+     * @since 2.0.0
+     *
+     * @version 2.0.0
+     */
+    public function authorize(): bool
+    {
+        $utilizador = $this->user(
+            'sessao',
+        );
+
+        $edicao = $this->route(
+            'edicao',
+        );
+
+        return $utilizador instanceof Utilizador
+            && $edicao instanceof Edicao
+            && $utilizador->can(
+                'update',
+                $edicao,
+            );
+    }
+
+    /**
+     * Normaliza os nomes das músicas antes da validação.
+     *
+     * Os espaços exteriores são removidos. Strings vazias são convertidas
+     * para nulo, permitindo que uma posição ainda não preenchida seja
+     * enviada pelo formulário.
+     *
+     * Valores com estruturas ou tipos inesperados permanecem inalterados
+     * para que sejam rejeitados pelas regras de validação correspondentes.
+     *
+     * @since 2.0.0
+     *
+     * @version 2.0.0
+     */
+    protected function prepareForValidation(): void
+    {
+        $musicasFavoritas = $this->input(
+            'musicas_favoritas',
+        );
+
+        if (! is_array($musicasFavoritas)) {
+            return;
+        }
+
+        $musicasFavoritasNormalizadas = [];
+
+        foreach (
+            $musicasFavoritas as $identificadorUtilizador => $musicas
+        ) {
+            if (! is_array($musicas)) {
+                $musicasFavoritasNormalizadas[$identificadorUtilizador] =
+                    $musicas;
+
+                continue;
+            }
+
+            $musicasNormalizadas = [];
+
+            foreach ($musicas as $indice => $musica) {
+                $musicasNormalizadas[$indice] =
+                    $this->normalizarMusica(
+                        $musica,
+                    );
+            }
+
+            $musicasFavoritasNormalizadas[$identificadorUtilizador] =
+                $musicasNormalizadas;
+        }
+
+        $this->merge([
+            'musicas_favoritas' => $musicasFavoritasNormalizadas,
+        ]);
+    }
+
+    /**
+     * Obtém as regras de validação.
+     *
+     * Os limites e o número de posições pertencem exclusivamente ao modelo
+     * {@see MusicaFavoritaEdicao}.
+     *
+     * A existência e a disponibilidade dos utilizadores indicados são
+     * verificadas pelo serviço responsável pela sincronização.
+     *
+     * @return array<string, list<string>> Regras de validação.
+     *
+     * @since 2.0.0
+     *
+     * @version 2.0.0
+     */
+    public function rules(): array
+    {
+        return [
+            'musicas_favoritas' => [
+                'bail',
+                'required',
+                'array',
+                'min:1',
+            ],
+
+            'musicas_favoritas.*' => [
+                'bail',
+                'required',
+                'array',
+                'list',
+                'size:'.MusicaFavoritaEdicao::NUMERO_POSICOES,
+            ],
+
+            'musicas_favoritas.*.*' => [
+                'bail',
+                'nullable',
+                'string',
+                'max:'.MusicaFavoritaEdicao::COMPRIMENTO_MAXIMO_MUSICA,
+            ],
+        ];
+    }
+
+    /**
+     * Obtém as mensagens de validação.
+     *
+     * @return array<string, string> Mensagens de validação.
+     *
+     * @since 2.0.0
+     *
+     * @version 2.0.0
+     */
+    public function messages(): array
+    {
+        return [
+            'musicas_favoritas.required' => 'Não foram recebidas as músicas favoritas.',
+
+            'musicas_favoritas.array' => 'As músicas favoritas devem ser enviadas numa lista.',
+
+            'musicas_favoritas.min' => 'Deve existir, pelo menos, um conjunto de músicas favoritas.',
+
+            'musicas_favoritas.*.required' => 'Não foram recebidas as posições de um dos utilizadores.',
+
+            'musicas_favoritas.*.array' => 'As posições de um dos utilizadores não são válidas.',
+
+            'musicas_favoritas.*.list' => 'As posições devem ser enviadas numa lista ordenada.',
+
+            'musicas_favoritas.*.size' => sprintf(
+                'Cada utilizador deve possuir exatamente %d posições.',
+                MusicaFavoritaEdicao::NUMERO_POSICOES,
+            ),
+
+            'musicas_favoritas.*.*.string' => 'O nome de uma das músicas não é válido.',
+
+            'musicas_favoritas.*.*.max' => sprintf(
+                'O nome de uma música não pode ter mais de %d caracteres.',
+                MusicaFavoritaEdicao::COMPRIMENTO_MAXIMO_MUSICA,
+            ),
+        ];
+    }
+
+    /**
+     * Obtém os nomes apresentados para os atributos.
+     *
+     * @return array<string, string> Nomes legíveis dos atributos.
+     *
+     * @since 2.0.0
+     *
+     * @version 2.0.0
+     */
+    public function attributes(): array
+    {
+        return [
+            'musicas_favoritas' => 'músicas favoritas',
+
+            'musicas_favoritas.*' => 'músicas favoritas do utilizador',
+
+            'musicas_favoritas.*.*' => 'música',
+        ];
+    }
+
+    /**
+     * Obtém as músicas favoritas validadas.
+     *
+     * @return array<int|string, list<string|null>> Músicas favoritas
+     *                                              organizadas por utilizador.
+     *
+     * @throws LogicException Quando o resultado validado não possui a
+     *                        estrutura esperada.
+     *
+     * @since 2.0.0
+     *
+     * @version 2.0.0
+     */
+    public function obterMusicasFavoritas(): array
+    {
+        $musicasFavoritas = $this->validated(
+            'musicas_favoritas',
+        );
+
+        if (! is_array($musicasFavoritas)) {
+            throw new LogicException(
+                'O pedido validado não contém as músicas favoritas.',
+            );
+        }
+
+        foreach ($musicasFavoritas as $musicas) {
+            if (
+                ! is_array($musicas)
+                || ! array_is_list($musicas)
+            ) {
+                throw new LogicException(
+                    'O pedido validado contém uma lista de músicas inválida.',
+                );
+            }
+
+            foreach ($musicas as $musica) {
+                if (
+                    $musica !== null
+                    && ! is_string($musica)
+                ) {
+                    throw new LogicException(
+                        'O pedido validado contém uma música inválida.',
+                    );
+                }
+            }
+        }
+
+        /** @var array<int|string, list<string|null>> $musicasFavoritas */
+        return $musicasFavoritas;
+    }
+
+    /**
+     * Normaliza o nome de uma música.
+     *
+     * @param  mixed  $musica  Valor recebido.
+     * @return mixed Nome normalizado, nulo ou valor original.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function normalizarMusica(
+        mixed $musica,
+    ): mixed {
+        if (! is_string($musica)) {
+            return $musica;
+        }
+
+        $musicaNormalizada = trim(
+            $musica,
+        );
+
+        return $musicaNormalizada !== ''
+            ? $musicaNormalizada
+            : null;
+    }
+}

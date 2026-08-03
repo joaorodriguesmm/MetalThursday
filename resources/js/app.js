@@ -1,80 +1,134 @@
 /**
- * Ponto de entrada principal para o JavaScript global da aplicação.
- * Inicializa funcionalidades que devem estar disponíveis em todas as páginas.
+ * Ponto de entrada principal do JavaScript global da aplicação.
  *
- * @since 1.0
- * @version 1.0
- */
-/**
- * Importa o Bootstrap, o TomSelect e o SweetAlert.
+ * Carrega o JavaScript completo do Bootstrap e inicializa os comportamentos
+ * que devem estar disponíveis em todas as páginas.
  *
- * @since 1.0
- * @version 1.0
+ * @since 1.0.0
+ * @version 3.0.0
  */
+
 import './bootstrap';
-import * as bootstrap from 'bootstrap';
-window.bootstrap = bootstrap;
-import TomSelect from 'tom-select';
-window.TomSelect = TomSelect;
-import Swal from 'sweetalert2';
-window.Swal = Swal;
+import 'bootstrap';
+
+import GestorInteracoes
+    from './modulos/GestorInteracoes';
+
+import LimpadorFormulariosModais
+    from './modulos/LimpadorFormulariosModais';
 
 /**
- * Importa os módulos AjaxFormHandler e InteractionHandler.
+ * Seletores utilizados pelos comportamentos globais.
  *
- * @since 1.0
- * @version 1.0
- */
-import AjaxFormHandler from './modules/AjaxFormHandler';
-import InteractionHandler from './modules/InteractionHandler';
-import ModalFormCleaner from './modules/ModalFormCleaner';
-
-/**
- * Define comportamentos globais da aplicação após o carregamento do DOM.
+ * @type {Readonly<Record<string, string>>}
  *
- * @since 1.0
- * @version 1.0
+ * @since 2.0.0
+ * @version 2.0.0
  */
-document.addEventListener('DOMContentLoaded', () => {
-    /**
-     * Inicia os módulos AjaxFormHandler e InteractionHandler.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    new AjaxFormHandler();
-    new InteractionHandler();
-    new ModalFormCleaner();
+const SELETORES = Object.freeze({
+    ligacaoTerminarSessao:
+        '[data-terminar-sessao]',
 
-    /**
-     * Define o comportamento dos links de logout.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    document.querySelectorAll('.logout-link').forEach(link => {
-        link.addEventListener('click', e => {
-            e.preventDefault();
-            document.getElementById('logout-form').submit();
-        });
-    });
-
-    /**
-     * Ativa o lazy loading para os vídeos do YouTube.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    document.body.addEventListener('click', function(e) {
-        const lazyLoadContainer = e.target.closest('.video-lazy-load');
-        if (lazyLoadContainer) {
-            const videoUrl = lazyLoadContainer.dataset.videoUrl;
-            const iframe = `
-                <div class='ratio ratio-16x9'>
-                    <iframe src='${videoUrl}' frameborder='0' allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture' allowfullscreen></iframe>
-                </div>
-            `;
-            lazyLoadContainer.innerHTML = iframe;
-        }
-    });
+    formularioTerminarSessao:
+        '#formulario-terminar-sessao',
 });
+
+/**
+ * Inicia os módulos globais da aplicação.
+ *
+ * @returns {void}
+ *
+ * @since 1.0.0
+ * @version 2.0.0
+ */
+function iniciarModulosGlobais() {
+    new GestorInteracoes();
+    new LimpadorFormulariosModais();
+}
+
+/**
+ * Submete o formulário responsável por terminar a sessão.
+ *
+ * @param {HTMLFormElement} formulario Formulário de término da sessão.
+ *
+ * @returns {void}
+ *
+ * @since 2.0.0
+ * @version 2.0.0
+ */
+function submeterFormularioTerminarSessao(
+    formulario,
+) {
+    formulario.requestSubmit();
+}
+
+/**
+ * Inicia o comportamento dos elementos que terminam a sessão.
+ *
+ * @returns {void}
+ *
+ * @since 1.0.0
+ * @version 3.0.0
+ */
+function iniciarTerminoSessao() {
+    const formulario =
+        document.querySelector(
+            SELETORES.formularioTerminarSessao,
+        );
+
+    if (!(formulario instanceof HTMLFormElement)) {
+        return;
+    }
+
+    document.addEventListener(
+        'click',
+        (evento) => {
+            const elementoClicado =
+                evento.target;
+
+            if (!(elementoClicado instanceof Element)) {
+                return;
+            }
+
+            const acionador =
+                elementoClicado.closest(
+                    SELETORES.ligacaoTerminarSessao,
+                );
+
+            if (!(acionador instanceof HTMLElement)) {
+                return;
+            }
+
+            evento.preventDefault();
+
+            submeterFormularioTerminarSessao(
+                formulario,
+            );
+        },
+    );
+}
+
+/**
+ * Inicia os comportamentos globais da aplicação.
+ *
+ * @returns {void}
+ *
+ * @since 1.0.0
+ * @version 3.0.0
+ */
+function iniciarAplicacao() {
+    iniciarModulosGlobais();
+    iniciarTerminoSessao();
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener(
+        'DOMContentLoaded',
+        iniciarAplicacao,
+        {
+            once: true,
+        },
+    );
+} else {
+    iniciarAplicacao();
+}

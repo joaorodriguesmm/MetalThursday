@@ -1,12 +1,25 @@
-@props(['url'])
+{{--
+    Apresenta o cabeçalho de um e-mail Markdown.
+
+    O conteúdo visual do cabeçalho é fornecido através do slot do componente.
+
+    @since 1.0.0
+    @version 2.0.0
+--}}
+
+@props([
+    'url',
+])
+
 <tr>
     <td class="header">
-        <a href="{{ $url }}" style="display: inline-block;">
-            @if (trim($slot) === 'Laravel')
-                <img src="https://laravel.com/img/notification-logo.png" class="logo" alt="Laravel Logo">
-            @else
-                {!! $slot !!}
-            @endif
+        <a
+            href="{{ $url }}"
+            target="_blank"
+            rel="noopener noreferrer"
+            style="display: inline-block;"
+        >
+            {!! $slot !!}
         </a>
     </td>
 </tr>

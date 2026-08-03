@@ -1,172 +1,274 @@
 <?php
 
-use App\Http\Controllers\Auth\AuthenticatedSessionController;
-use App\Http\Controllers\Auth\NewPasswordController;
-use App\Http\Controllers\Auth\PasswordResetLinkController;
-use App\Http\Controllers\User\ProfileController;
-use App\Http\Controllers\Auth\RegisteredUserController;
-use App\Http\Controllers\Auth\HandleEmailVerificationController;
+declare(strict_types=1);
+
+use App\Http\Controllers\Autenticacao\ControladorLigacaoRedefinicaoPalavraPasse;
+use App\Http\Controllers\Autenticacao\ControladorRedefinicaoPalavraPasse;
+use App\Http\Controllers\Autenticacao\ControladorRegistoConvite;
+use App\Http\Controllers\Autenticacao\ControladorSessaoAutenticada;
+use App\Http\Controllers\Autenticacao\ControladorVerificacaoEmail;
+use App\Http\Controllers\Utilizadores\ControladorPalavraPasse;
+use App\Http\Controllers\Utilizadores\ControladorPerfil;
+use App\Http\Controllers\Utilizadores\ControladorPermissoesEmail;
+use App\Models\Autenticacao\Convite;
 use Illuminate\Support\Facades\Route;
 
 /**
- * Rotas de autenticação.
+ * Define as rotas de autenticação e de gestão do perfil.
  *
- * @since 1.0
- * @version 1.0
+ * Os nomes técnicos exigidos por contratos do Laravel, como `login`, `logout`
+ * e `verification.verify`, mantêm a nomenclatura convencional. As rotas
+ * próprias da aplicação utilizam nomes em português.
+ *
+ * Todos os middlewares de autenticação indicam explicitamente o guard
+ * `sessao`.
+ *
+ * @since 1.0.0
+ *
+ * @version 5.0.0
  */
 
-/**
- * Rotas de autenticação para utilizadores sem sessão iniciada.
- *
- * @since 1.0
- * @version 1.0
- */
-Route::middleware('guest')->group(function () {
-    /**
-     * Rota /convite/{codigo_convite} (GET).
-     * Apresenta o formulário de registo por convite.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::get('/convite/{codigo_convite}', [RegisteredUserController::class, 'create'])
-         ->name('registo.convite');
+/*
+|--------------------------------------------------------------------------
+| Rotas exclusivas para visitantes
+|--------------------------------------------------------------------------
+*/
 
-    /**
-     * Rota /convite (POST).
-     * Processa o formulário de registo por convite.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::post('/convite', [RegisteredUserController::class, 'store'])
-         ->name('registo.finalizar');
+Route::middleware(
+    'guest:sessao',
+)->group(
+    static function (): void {
+        /*
+        |--------------------------------------------------------------------------
+        | Aceitação de convites
+        |--------------------------------------------------------------------------
+        */
 
-    /**
-     * Rota /password-esquecida (GET).
-     * Apresenta o formulário de recuperação de password.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::get('password-esquecida', [PasswordResetLinkController::class, 'create'])
-         ->name('password.request');
+        Route::get(
+            'convites/{codigoConvite}',
+            [
+                ControladorRegistoConvite::class,
+                'apresentar',
+            ],
+        )
+            ->where(
+                'codigoConvite',
+                Convite::PADRAO_CODIGO,
+            )
+            ->name(
+                'convites.aceitar',
+            );
 
-    /**
-     * Rota /forgot-password (POST).
-     * Processa o formulário de recuperação de password.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
-         ->name('password.email');
+        Route::post(
+            'convites/aceitar',
+            [
+                ControladorRegistoConvite::class,
+                'registar',
+            ],
+        )
+            ->middleware(
+                'throttle:6,1',
+            )
+            ->name(
+                'convites.registar',
+            );
 
-    /**
-     * Rota /redefinir-password/{token} (GET).
-     * Apresenta o formulário de redefinição de password.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::get('redefinir-password/{token}', [NewPasswordController::class, 'create'])
-         ->name('password.reset');
+        /*
+        |--------------------------------------------------------------------------
+        | Recuperação da palavra-passe
+        |--------------------------------------------------------------------------
+        */
 
-    /**
-     * Rota /reset-password (POST).
-     * Processa o formulário de redefinição de password.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::post('reset-password', [NewPasswordController::class, 'store'])
-         ->name('password.store');
+        Route::get(
+            'palavra-passe/esquecida',
+            [
+                ControladorLigacaoRedefinicaoPalavraPasse::class,
+                'apresentar',
+            ],
+        )->name(
+            'autenticacao.recuperar-palavra-passe',
+        );
 
-    /**
-     * Rota /login (GET).
-     * Apresenta o formulário de login.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::get('login', [AuthenticatedSessionController::class, 'create'])
-         ->name('login');
+        Route::post(
+            'palavra-passe/esquecida',
+            [
+                ControladorLigacaoRedefinicaoPalavraPasse::class,
+                'enviar',
+            ],
+        )
+            ->middleware(
+                'throttle:6,1',
+            )
+            ->name(
+                'autenticacao.enviar-ligacao-redefinicao',
+            );
 
-    /**
-     * Rota /login (POST).
-     * Processa o formulário de login.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::post('login', [AuthenticatedSessionController::class, 'store']);
-});
+        Route::get(
+            'palavra-passe/redefinir/{token}',
+            [
+                ControladorRedefinicaoPalavraPasse::class,
+                'apresentar',
+            ],
+        )->name(
+            'autenticacao.redefinir-palavra-passe',
+        );
 
-/**
- * Rotas de autenticação para utilizadores com sessão iniciada.
- *
- * @since 1.0
- * @version 1.0
- */
-Route::middleware('auth')->group(function () {
-    /**
-     * Rota /logout (POST).
-     * Processa o logout.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
-         ->name('logout');
+        Route::post(
+            'palavra-passe/redefinir',
+            [
+                ControladorRedefinicaoPalavraPasse::class,
+                'redefinir',
+            ],
+        )
+            ->middleware(
+                'throttle:6,1',
+            )
+            ->name(
+                'autenticacao.atualizar-palavra-passe',
+            );
 
-    /**
-     * Rota /profile (GET).
-     * Apresenta o formulário de edição de perfil.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::get('/perfil', [ProfileController::class, 'edit'])
-         ->name('profile.edit');
+        /*
+        |--------------------------------------------------------------------------
+        | Início de sessão
+        |--------------------------------------------------------------------------
+        */
 
-    /**
-     * Rota /profile (PATCH).
-     * Processa o formulário de edição de perfil.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::patch('/perfil', [ProfileController::class, 'update'])
-         ->name('profile.update');
+        Route::get(
+            'entrar',
+            [
+                ControladorSessaoAutenticada::class,
+                'apresentar',
+            ],
+        )->name(
+            'login',
+        );
 
-    /**
-     * Rota /profile/email-permissions (PATCH).
-     * Processa o formulário de edição de permissões de e-mail.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::patch('/perfil/email-permissions', [ProfileController::class, 'updateEmailPermissions'])
-         ->name('profile.email_permissions.update');
+        Route::post(
+            'entrar',
+            [
+                ControladorSessaoAutenticada::class,
+                'autenticar',
+            ],
+        )
+            ->middleware(
+                'throttle:6,1',
+            )
+            ->name(
+                'autenticacao.iniciar',
+            );
+    },
+);
 
-    /**
-     * Rota /profile/password (PUT).
-     * Processa o formulário de edição de password.
-     *
-     * @since 1.0
-     * @version 1.0
-     */
-    Route::put('/perfil/password', [ProfileController::class, 'updatePassword'])
-         ->name('profile.password.update');
-});
+/*
+|--------------------------------------------------------------------------
+| Verificação do endereço de e-mail
+|--------------------------------------------------------------------------
+|
+| A verificação pode ocorrer antes de o utilizador iniciar sessão, mas exige
+| uma ligação assinada e válida.
+|
+*/
 
-/**
- * Rota /verificar-email/{id}/{hash} (GET).
- * Processa a verificação de e-mail.
- *
- * @since 1.0
- * @version 1.0
- */
-Route::get('/verificar-email/{id}/{hash}', HandleEmailVerificationController::class)
-     ->middleware(['signed'])
-     ->name('verification.verify');
+Route::get(
+    'verificar-email/{id}/{hash}',
+    ControladorVerificacaoEmail::class,
+)
+    ->whereNumber(
+        'id',
+    )
+    ->where(
+        'hash',
+        '[a-fA-F0-9]{40}',
+    )
+    ->middleware([
+        'signed',
+        'throttle:6,1',
+    ])
+    ->name(
+        'verification.verify',
+    );
+
+/*
+|--------------------------------------------------------------------------
+| Rotas exclusivas para utilizadores autenticados
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware([
+    'auth:sessao',
+    'auth.session',
+])->group(
+    static function (): void {
+        /*
+        |--------------------------------------------------------------------------
+        | Encerramento da sessão
+        |--------------------------------------------------------------------------
+        */
+
+        Route::post(
+            'sair',
+            [
+                ControladorSessaoAutenticada::class,
+                'terminar',
+            ],
+        )->name(
+            'logout',
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Gestão do perfil
+        |--------------------------------------------------------------------------
+        */
+
+        Route::prefix(
+            'perfil',
+        )
+            ->name(
+                'perfil.',
+            )
+            ->group(
+                static function (): void {
+                    Route::get(
+                        '/',
+                        [
+                            ControladorPerfil::class,
+                            'editar',
+                        ],
+                    )->name(
+                        'editar',
+                    );
+
+                    Route::patch(
+                        '/',
+                        [
+                            ControladorPerfil::class,
+                            'atualizar',
+                        ],
+                    )->name(
+                        'atualizar',
+                    );
+
+                    Route::patch(
+                        'permissoes-email',
+                        [
+                            ControladorPermissoesEmail::class,
+                            'atualizar',
+                        ],
+                    )->name(
+                        'permissoes-email.atualizar',
+                    );
+
+                    Route::put(
+                        'palavra-passe',
+                        [
+                            ControladorPalavraPasse::class,
+                            'atualizar',
+                        ],
+                    )->name(
+                        'palavra-passe.atualizar',
+                    );
+                },
+            );
+    },
+);

@@ -1,40 +1,127 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Providers;
 
-use App\View\Composers\NavigationComposer;
+use App\Enumeracoes\Interacoes\TipoEntidadeInteracao;
+use App\Models\Autenticacao\Utilizador;
+use App\Regras\Autenticacao\RequisitosPalavraPasse;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Pagination\Paginator;
-use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\Rules\Password;
 
 /**
- * Define os serviços da aplicação.
+ * Regista e configura os serviços gerais da aplicação.
  *
- * @version 1.0
- * @since 1.0
+ * O nome desta classe permanece em inglês por corresponder ao provider geral
+ * convencional do Laravel.
+ *
+ * @since 1.0.0
+ *
+ * @version 4.0.1
  */
-class AppServiceProvider extends ServiceProvider
+final class AppServiceProvider extends ServiceProvider
 {
     /**
-     * Regista os serviços da aplicação.
+     * Alias polimórfico persistido para os utilizadores notificáveis.
      *
-     * @version 1.0
-     * @since 1.0
+     * @since 2.0.0
+     *
+     * @version 1.0.0
      */
-    public function register(): void
-    {
-        //
-    }
+    private const ALIAS_POLIMORFICO_UTILIZADOR =
+        'utilizador';
 
     /**
-     * Executa os serviços da aplicação.
+     * Inicia os serviços e as configurações gerais da aplicação.
      *
-     * @version 1.0
-     * @since 1.0
+     * O nome permanece em inglês por corresponder ao método definido pelo
+     * ciclo de vida dos providers do Laravel.
+     *
+     * @since 1.0.0
+     *
+     * @version 4.0.0
      */
     public function boot(): void
     {
-        Paginator::useBootstrap();
-        View::composer('layouts.navigation', NavigationComposer::class);
+        $this->configurarModelosEloquent();
+        $this->configurarMapaPolimorfico();
+        $this->configurarRequisitosPalavraPasse();
+        $this->configurarPaginacao();
+    }
+
+    /**
+     * Ativa as verificações estritas dos modelos fora de produção.
+     *
+     * Durante o desenvolvimento e os testes, o Eloquent rejeita carregamentos
+     * preguiçosos, atributos descartados silenciosamente e acessos a atributos
+     * que não tenham sido selecionados.
+     *
+     * Em produção, estas verificações permanecem desativadas para que uma
+     * violação não interrompa um pedido real. As violações devem ser detetadas
+     * previamente pela suite automatizada.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.1
+     */
+    private function configurarModelosEloquent(): void
+    {
+        Model::shouldBeStrict(
+            ! $this->app->environment(
+                'production',
+            ),
+        );
+    }
+
+    /**
+     * Configura os aliases obrigatórios das relações polimórficas.
+     *
+     * Os aliases impedem que os valores persistidos dependam diretamente dos
+     * namespaces PHP dos modelos.
+     *
+     * O alias do utilizador pertence ao mapa geral porque é utilizado pelas
+     * notificações persistidas, mas não representa uma entidade de interação.
+     *
+     * @since 2.0.0
+     *
+     * @version 3.0.0
+     */
+    private function configurarMapaPolimorfico(): void
+    {
+        Relation::enforceMorphMap([
+            ...TipoEntidadeInteracao::obterMapaPolimorfico(),
+
+            self::ALIAS_POLIMORFICO_UTILIZADOR => Utilizador::class,
+        ]);
+    }
+
+    /**
+     * Configura os requisitos predefinidos das palavras-passe.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function configurarRequisitosPalavraPasse(): void
+    {
+        Password::defaults(
+            static fn (): Password => RequisitosPalavraPasse::regra(),
+        );
+    }
+
+    /**
+     * Configura as vistas de paginação para Bootstrap 5.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function configurarPaginacao(): void
+    {
+        Paginator::useBootstrapFive();
     }
 }

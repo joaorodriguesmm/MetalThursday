@@ -1,15 +1,14 @@
 <?php
 
-use App\Http\Controllers\MetalThursday\MetalThursdayController;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Route;
+declare(strict_types=1);
 
 /**
- * Inclui os ficheiros de rotas separados por funcionalidade.
+ * Inclui os ficheiros de rotas HTTP separados por funcionalidade.
  *
- * @since 1.0
- * @version 1.0
+ * @since 1.0.0
+ *
+ * @version 2.0.0
  */
-require __DIR__ . '/auth.php';
-require __DIR__ . '/metalthursday.php';
+
+require __DIR__.'/auth.php';
+require __DIR__.'/metalthursday.php';

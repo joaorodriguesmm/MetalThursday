@@ -1,55 +1,605 @@
 <?php
 
-use App\Http\Controllers\Entities\BandController;
-use App\Http\Controllers\Entities\GenreController;
-use App\Http\Controllers\MetalThursday\MetalThursdayController;
-use App\Http\Controllers\MetalThursday\MtEditionController;
-use App\Http\Controllers\Interactions\CommentController;
-use App\Http\Controllers\Interactions\LikeController;
-use App\Http\Controllers\Interactions\ListenController;
-use App\Http\Controllers\Interactions\RatingController;
-use App\Http\Controllers\User\NotificationController;
+declare(strict_types=1);
+
+use App\Enumeracoes\Interacoes\TipoEntidadeInteracao;
+use App\Http\Controllers\Interacoes\ControladorAudicao;
+use App\Http\Controllers\Interacoes\ControladorAvaliacao;
+use App\Http\Controllers\Interacoes\ControladorComentario;
+use App\Http\Controllers\Interacoes\ControladorGosto;
+use App\Http\Controllers\MetalThursday\ControladorEdicao;
+use App\Http\Controllers\MetalThursday\ControladorMetalThursday;
+use App\Http\Controllers\Musica\ControladorBanda;
+use App\Http\Controllers\Musica\ControladorGenero;
+use App\Http\Controllers\Utilizadores\ControladorNotificacao;
 use Illuminate\Support\Facades\Route;
 
 /**
- * Rotas para a funcionalidade principal da aplicação (MetalThursday).
- * Estas rotas requerem que o utilizador esteja autenticado e com o e-mail verificado.
+ * Define as rotas principais da aplicação MetalThursday.
  *
- * @since 1.0
- * @version 1.0
+ * Todas as rotas deste ficheiro exigem autenticação através do guard
+ * `sessao`, uma sessão autenticada válida e um endereço de e-mail verificado.
+ *
+ * @since 1.0.0
+ *
+ * @version 4.0.0
  */
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/', [MetalThursdayController::class, 'index'])->name('home');
+Route::middleware([
+    'auth:sessao',
+    'auth.session',
+    'verified',
+])->group(
+    static function (): void {
+        /*
+        |--------------------------------------------------------------------------
+        | Página inicial
+        |--------------------------------------------------------------------------
+        */
 
-    Route::get('/metalthursday/criar', [MetalThursdayController::class, 'create'])->name('metalthursday.create');
-    Route::post('/metalthursday', [MetalThursdayController::class, 'store'])->name('metalthursday.store');
-    Route::get('/metalthursday/{metalThursday}', [MetalThursdayController::class, 'show'])->name('metalthursday.show');
-    Route::get('/metalthursday/{metalthursday}/editar', [MetalThursdayController::class, 'edit'])->name('metalthursday.edit');
-    Route::patch('/metalthursday/{metalthursday}', [MetalThursdayController::class, 'update'])->name('metalthursday.update');
-    Route::delete('/metalthursday/{metalthursday}', [MetalThursdayController::class, 'destroy'])->name('metalthursday.destroy');
+        Route::get(
+            '/',
+            [
+                ControladorMetalThursday::class,
+                'indice',
+            ],
+        )->name(
+            'inicio',
+        );
 
-    // Rotas de recursos
-    Route::resource('bands', BandController::class);
-    Route::resource('editions', MtEditionController::class);
-    Route::post('/editions/{edition}/rankings', [MtEditionController::class, 'storeRanking'])->name('editions.rankings.store');
-    Route::patch('/editions/{edition}/link', [MtEditionController::class, 'updateLink'])->name('editions.link.update');
-    Route::resource('genres', GenreController::class);
+        /*
+        |--------------------------------------------------------------------------
+        | MetalThursday
+        |--------------------------------------------------------------------------
+        */
 
-    // Rotas de utilizadores
-    Route::get('/users/longest-not-nominated', [MetalThursdayController::class, 'getLongestNotNominatedUser'])->name('users.longest-not-nominated');
+        Route::controller(
+            ControladorMetalThursday::class,
+        )
+            ->prefix(
+                'metal-thursday',
+            )
+            ->name(
+                'metal-thursday.',
+            )
+            ->group(
+                static function (): void {
+                    Route::get(
+                        'criar',
+                        'criar',
+                    )->name(
+                        'criar',
+                    );
 
-    // Rotas de interações
-    Route::post('/{commentableType}/{commentableId}/comments', [CommentController::class, 'store'])->name('comments.store');
-    Route::post('/comments/{comment}/replies', [CommentController::class, 'storeReply'])->name('comments.reply.store');
-    Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
-    Route::patch('/comments/{comment}', [CommentController::class, 'update'])->name('comments.update');
-    Route::post('/comments/{comment}/like', [LikeController::class, 'toggleLike'])->name('likes.toggle');
-    Route::post('/{rateableType}/{rateableId}/rate', [RatingController::class, 'store'])->name('ratings.store');
-    Route::post('/{listenableType}/{listenableId}/listen', [ListenController::class, 'toggleListen'])->name('listens.toggle');
-    Route::get('/comments/{comment}/likers', [LikeController::class, 'getLikers'])->name('comments.likers');
+                    Route::post(
+                        '/',
+                        'guardar',
+                    )->name(
+                        'guardar',
+                    );
 
-    // Rotas de Notificações
-    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
-    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
-    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.markAllAsRead');
-});
+                    Route::get(
+                        '{metalThursday}',
+                        'detalhes',
+                    )
+                        ->whereNumber(
+                            'metalThursday',
+                        )
+                        ->name(
+                            'detalhes',
+                        );
+
+                    Route::get(
+                        '{metalThursday}/editar',
+                        'editar',
+                    )
+                        ->whereNumber(
+                            'metalThursday',
+                        )
+                        ->name(
+                            'editar',
+                        );
+
+                    Route::patch(
+                        '{metalThursday}',
+                        'atualizar',
+                    )
+                        ->whereNumber(
+                            'metalThursday',
+                        )
+                        ->name(
+                            'atualizar',
+                        );
+
+                    Route::delete(
+                        '{metalThursday}',
+                        'eliminar',
+                    )
+                        ->whereNumber(
+                            'metalThursday',
+                        )
+                        ->name(
+                            'eliminar',
+                        );
+                },
+            );
+
+        Route::get(
+            'utilizadores/ha-mais-tempo-sem-nomeacao',
+            [
+                ControladorMetalThursday::class,
+                'obterUtilizadorHaMaisTempoSemNomeacao',
+            ],
+        )->name(
+            'utilizadores.ha-mais-tempo-sem-nomeacao',
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Bandas
+        |--------------------------------------------------------------------------
+        */
+
+        Route::controller(
+            ControladorBanda::class,
+        )
+            ->prefix(
+                'bandas',
+            )
+            ->name(
+                'bandas.',
+            )
+            ->group(
+                static function (): void {
+                    Route::get(
+                        '/',
+                        'indice',
+                    )->name(
+                        'indice',
+                    );
+
+                    Route::get(
+                        'criar',
+                        'criar',
+                    )->name(
+                        'criar',
+                    );
+
+                    Route::post(
+                        '/',
+                        'guardar',
+                    )->name(
+                        'guardar',
+                    );
+
+                    Route::get(
+                        '{banda}',
+                        'detalhes',
+                    )
+                        ->whereNumber(
+                            'banda',
+                        )
+                        ->name(
+                            'detalhes',
+                        );
+
+                    Route::get(
+                        '{banda}/editar',
+                        'editar',
+                    )
+                        ->whereNumber(
+                            'banda',
+                        )
+                        ->name(
+                            'editar',
+                        );
+
+                    Route::patch(
+                        '{banda}',
+                        'atualizar',
+                    )
+                        ->whereNumber(
+                            'banda',
+                        )
+                        ->name(
+                            'atualizar',
+                        );
+
+                    Route::delete(
+                        '{banda}',
+                        'eliminar',
+                    )
+                        ->whereNumber(
+                            'banda',
+                        )
+                        ->name(
+                            'eliminar',
+                        );
+                },
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Edições
+        |--------------------------------------------------------------------------
+        */
+
+        Route::controller(
+            ControladorEdicao::class,
+        )
+            ->prefix(
+                'edicoes',
+            )
+            ->name(
+                'edicoes.',
+            )
+            ->group(
+                static function (): void {
+                    Route::get(
+                        '/',
+                        'indice',
+                    )->name(
+                        'indice',
+                    );
+
+                    Route::get(
+                        'criar',
+                        'criar',
+                    )->name(
+                        'criar',
+                    );
+
+                    Route::post(
+                        '/',
+                        'guardar',
+                    )->name(
+                        'guardar',
+                    );
+
+                    Route::post(
+                        '{edicao}/musicas-favoritas',
+                        'guardarMusicasFavoritas',
+                    )
+                        ->whereNumber(
+                            'edicao',
+                        )
+                        ->name(
+                            'musicas-favoritas.guardar',
+                        );
+
+                    Route::patch(
+                        '{edicao}/ligacao-compilacao',
+                        'atualizarLigacaoCompilacao',
+                    )
+                        ->whereNumber(
+                            'edicao',
+                        )
+                        ->name(
+                            'ligacao-compilacao.atualizar',
+                        );
+
+                    Route::get(
+                        '{edicao}',
+                        'detalhes',
+                    )
+                        ->whereNumber(
+                            'edicao',
+                        )
+                        ->name(
+                            'detalhes',
+                        );
+
+                    Route::get(
+                        '{edicao}/editar',
+                        'editar',
+                    )
+                        ->whereNumber(
+                            'edicao',
+                        )
+                        ->name(
+                            'editar',
+                        );
+
+                    Route::patch(
+                        '{edicao}',
+                        'atualizar',
+                    )
+                        ->whereNumber(
+                            'edicao',
+                        )
+                        ->name(
+                            'atualizar',
+                        );
+
+                    Route::delete(
+                        '{edicao}',
+                        'eliminar',
+                    )
+                        ->whereNumber(
+                            'edicao',
+                        )
+                        ->name(
+                            'eliminar',
+                        );
+                },
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Géneros musicais
+        |--------------------------------------------------------------------------
+        */
+
+        Route::controller(
+            ControladorGenero::class,
+        )
+            ->prefix(
+                'generos',
+            )
+            ->name(
+                'generos.',
+            )
+            ->group(
+                static function (): void {
+                    Route::get(
+                        '/',
+                        'indice',
+                    )->name(
+                        'indice',
+                    );
+
+                    Route::get(
+                        'criar',
+                        'criar',
+                    )->name(
+                        'criar',
+                    );
+
+                    Route::post(
+                        '/',
+                        'guardar',
+                    )->name(
+                        'guardar',
+                    );
+
+                    Route::get(
+                        '{genero}',
+                        'detalhes',
+                    )
+                        ->whereNumber(
+                            'genero',
+                        )
+                        ->name(
+                            'detalhes',
+                        );
+
+                    Route::get(
+                        '{genero}/editar',
+                        'editar',
+                    )
+                        ->whereNumber(
+                            'genero',
+                        )
+                        ->name(
+                            'editar',
+                        );
+
+                    Route::patch(
+                        '{genero}',
+                        'atualizar',
+                    )
+                        ->whereNumber(
+                            'genero',
+                        )
+                        ->name(
+                            'atualizar',
+                        );
+
+                    Route::delete(
+                        '{genero}',
+                        'eliminar',
+                    )
+                        ->whereNumber(
+                            'genero',
+                        )
+                        ->name(
+                            'eliminar',
+                        );
+                },
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Comentários
+        |--------------------------------------------------------------------------
+        */
+
+        Route::post(
+            '{tipoComentavel}/{identificadorComentavel}/comentarios',
+            [
+                ControladorComentario::class,
+                'guardar',
+            ],
+        )
+            ->whereIn(
+                'tipoComentavel',
+                TipoEntidadeInteracao::obterSlugs(),
+            )
+            ->whereNumber(
+                'identificadorComentavel',
+            )
+            ->name(
+                'comentarios.guardar',
+            );
+
+        Route::post(
+            'comentarios/{comentario}/respostas',
+            [
+                ControladorComentario::class,
+                'responder',
+            ],
+        )
+            ->whereNumber(
+                'comentario',
+            )
+            ->name(
+                'comentarios.respostas.guardar',
+            );
+
+        Route::patch(
+            'comentarios/{comentario}',
+            [
+                ControladorComentario::class,
+                'atualizar',
+            ],
+        )
+            ->whereNumber(
+                'comentario',
+            )
+            ->name(
+                'comentarios.atualizar',
+            );
+
+        Route::delete(
+            'comentarios/{comentario}',
+            [
+                ControladorComentario::class,
+                'eliminar',
+            ],
+        )
+            ->whereNumber(
+                'comentario',
+            )
+            ->name(
+                'comentarios.eliminar',
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Gostos dos comentários
+        |--------------------------------------------------------------------------
+        */
+
+        Route::post(
+            'comentarios/{comentario}/gosto',
+            [
+                ControladorGosto::class,
+                'alternar',
+            ],
+        )
+            ->whereNumber(
+                'comentario',
+            )
+            ->name(
+                'gostos.alternar',
+            );
+
+        Route::get(
+            'comentarios/{comentario}/utilizadores-gosto',
+            [
+                ControladorGosto::class,
+                'listarUtilizadores',
+            ],
+        )
+            ->whereNumber(
+                'comentario',
+            )
+            ->name(
+                'comentarios.utilizadores-gosto',
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Avaliações
+        |--------------------------------------------------------------------------
+        */
+
+        Route::post(
+            'avaliacoes/{tipoAvaliavel}/{identificadorAvaliavel}',
+            [
+                ControladorAvaliacao::class,
+                'guardar',
+            ],
+        )
+            ->whereIn(
+                'tipoAvaliavel',
+                TipoEntidadeInteracao::obterSlugs(),
+            )
+            ->whereNumber(
+                'identificadorAvaliavel',
+            )
+            ->name(
+                'avaliacoes.guardar',
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Audições
+        |--------------------------------------------------------------------------
+        */
+
+        Route::post(
+            'audicoes/{tipoAudivel}/{identificadorAudivel}',
+            [
+                ControladorAudicao::class,
+                'alternar',
+            ],
+        )
+            ->whereIn(
+                'tipoAudivel',
+                TipoEntidadeInteracao::obterSlugs(),
+            )
+            ->whereNumber(
+                'identificadorAudivel',
+            )
+            ->name(
+                'audicoes.alternar',
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Notificações
+        |--------------------------------------------------------------------------
+        |
+        | A ação estática deve ser declarada antes da rota que recebe o UUID.
+        |
+        */
+
+        Route::controller(
+            ControladorNotificacao::class,
+        )
+            ->prefix(
+                'notificacoes',
+            )
+            ->name(
+                'notificacoes.',
+            )
+            ->group(
+                static function (): void {
+                    Route::get(
+                        '/',
+                        'indice',
+                    )->name(
+                        'indice',
+                    );
+
+                    Route::post(
+                        'marcar-todas-como-lidas',
+                        'marcarTodasComoLidas',
+                    )->name(
+                        'marcar-todas-como-lidas',
+                    );
+
+                    Route::post(
+                        '{identificadorNotificacao}/marcar-como-lida',
+                        'marcarComoLida',
+                    )
+                        ->whereUuid(
+                            'identificadorNotificacao',
+                        )
+                        ->name(
+                            'marcar-como-lida',
+                        );
+                },
+            );
+    },
+);

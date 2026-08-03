@@ -1,13 +1,24 @@
-body, body *:not(html):not(style):not(br):not(tr):not(code) {
+body,
+body *:not(html):not(style):not(br):not(tr):not(code) {
     box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Helvetica,
+        Arial,
+        sans-serif,
+        "Apple Color Emoji",
+        "Segoe UI Emoji",
+        "Segoe UI Symbol";
     position: relative;
 }
 
 body {
     -webkit-text-size-adjust: none;
-    background-color: #ffffff;
-    color: #718096;
+    background-color: #111827;
+    color: #4b5563;
     height: 100%;
     line-height: 1.4;
     margin: 0;
@@ -15,13 +26,16 @@ body {
     width: 100% !important;
 }
 
-p, ul, ol, blockquote {
-    line-height: 1.4;
+p,
+ul,
+ol,
+blockquote {
+    line-height: 1.5;
     text-align: left;
 }
 
 a {
-    color: #3869d4;
+    color: #2563eb;
 }
 
 a img {
@@ -29,30 +43,32 @@ a img {
 }
 
 h1 {
-    color: #3d4852;
-    font-size: 18px;
-    font-weight: bold;
+    color: #111827;
+    font-size: 20px;
+    font-weight: 700;
     margin-top: 0;
     text-align: left;
 }
 
 h2 {
-    font-size: 16px;
-    font-weight: bold;
+    color: #1f2937;
+    font-size: 17px;
+    font-weight: 700;
     margin-top: 0;
     text-align: left;
 }
 
 h3 {
-    font-size: 14px;
-    font-weight: bold;
+    color: #374151;
+    font-size: 15px;
+    font-weight: 700;
     margin-top: 0;
     text-align: left;
 }
 
 p {
     font-size: 16px;
-    line-height: 1.5em;
+    line-height: 1.5;
     margin-top: 0;
     text-align: left;
 }
@@ -69,7 +85,7 @@ img {
     -premailer-cellpadding: 0;
     -premailer-cellspacing: 0;
     -premailer-width: 100%;
-    background-color: #edf2f7;
+    background-color: #111827;
     margin: 0;
     padding: 0;
     width: 100%;
@@ -85,20 +101,21 @@ img {
 }
 
 .header {
-    padding: 25px 0;
+    padding: 28px 0;
     text-align: center;
 }
 
 .header a {
-    color: #3d4852;
-    font-size: 19px;
-    font-weight: bold;
+    color: #f9fafb;
+    font-size: 20px;
+    font-weight: 700;
     text-decoration: none;
 }
 
 .logo {
     height: 75px;
     max-height: 75px;
+    max-width: 75px;
     width: 75px;
 }
 
@@ -106,9 +123,9 @@ img {
     -premailer-cellpadding: 0;
     -premailer-cellspacing: 0;
     -premailer-width: 100%;
-    background-color: #edf2f7;
-    border-bottom: 1px solid #edf2f7;
-    border-top: 1px solid #edf2f7;
+    background-color: #111827;
+    border-bottom: 1px solid #1f2937;
+    border-top: 1px solid #1f2937;
     margin: 0;
     padding: 0;
     width: 100%;
@@ -119,21 +136,23 @@ img {
     -premailer-cellspacing: 0;
     -premailer-width: 570px;
     background-color: #ffffff;
-    border-color: #e8e5ef;
-    border-radius: 2px;
-    border-width: 1px;
-    box-shadow: 0 2px 0 rgba(0, 0, 150, 0.025), 2px 4px 0 rgba(0, 0, 150, 0.015);
+    border: 1px solid #374151;
+    border-radius: 6px;
+    box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.08),
+        0 4px 12px rgba(0, 0, 0, 0.08);
     margin: 0 auto;
     padding: 0;
     width: 570px;
 }
 
 .inner-body a {
-    word-break: break-all;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 .subcopy {
-    border-top: 1px solid #e8e5ef;
+    border-top: 1px solid #e5e7eb;
     margin-top: 25px;
     padding-top: 25px;
 }
@@ -153,13 +172,13 @@ img {
 }
 
 .footer p {
-    color: #b0adc5;
+    color: #9ca3af;
     font-size: 12px;
     text-align: center;
 }
 
 .footer a {
-    color: #b0adc5;
+    color: #d1d5db;
     text-decoration: underline;
 }
 
@@ -172,15 +191,17 @@ img {
 }
 
 .table th {
-    border-bottom: 1px solid #edeff2;
+    border-bottom: 1px solid #e5e7eb;
+    color: #111827;
     margin: 0;
-    padding-bottom: 8px;
+    padding: 0 0 8px;
+    text-align: left;
 }
 
 .table td {
-    color: #74787e;
+    color: #4b5563;
     font-size: 15px;
-    line-height: 18px;
+    line-height: 1.4;
     margin: 0;
     padding: 10px 0;
 }
@@ -198,55 +219,59 @@ img {
     padding: 0;
     text-align: center;
     width: 100%;
-    float: unset;
 }
 
 .button {
     -webkit-text-size-adjust: none;
     border-radius: 4px;
-    color: #fff;
+    color: #ffffff;
     display: inline-block;
+    font-weight: 600;
     overflow: hidden;
+    text-align: center;
     text-decoration: none;
 }
 
-.button-blue, .button-primary {
-    background-color: #2d3748;
-    border-bottom: 8px solid #2d3748;
-    border-left: 18px solid #2d3748;
-    border-right: 18px solid #2d3748;
-    border-top: 8px solid #2d3748;
+.button-blue,
+.button-primary {
+    background-color: #1f2937;
+    border-bottom: 8px solid #1f2937;
+    border-left: 18px solid #1f2937;
+    border-right: 18px solid #1f2937;
+    border-top: 8px solid #1f2937;
 }
 
-.button-green, .button-success {
-    background-color: #48bb78;
-    border-bottom: 8px solid #48bb78;
-    border-left: 18px solid #48bb78;
-    border-right: 18px solid #48bb78;
-    border-top: 8px solid #48bb78;
+.button-green,
+.button-success {
+    background-color: #15803d;
+    border-bottom: 8px solid #15803d;
+    border-left: 18px solid #15803d;
+    border-right: 18px solid #15803d;
+    border-top: 8px solid #15803d;
 }
 
-.button-red, .button-error {
-    background-color: #e53e3e;
-    border-bottom: 8px solid #e53e3e;
-    border-left: 18px solid #e53e3e;
-    border-right: 18px solid #e53e3e;
-    border-top: 8px solid #e53e3e;
+.button-red,
+.button-error {
+    background-color: #b91c1c;
+    border-bottom: 8px solid #b91c1c;
+    border-left: 18px solid #b91c1c;
+    border-right: 18px solid #b91c1c;
+    border-top: 8px solid #b91c1c;
 }
 
 .panel {
-    border-left: #2d3748 solid 4px;
+    border-left: 4px solid #1f2937;
     margin: 21px 0;
 }
 
 .panel-content {
-    background-color: #edf2f7;
-    color: #718096;
+    background-color: #f3f4f6;
+    color: #4b5563;
     padding: 16px;
 }
 
 .panel-content p {
-    color: #718096;
+    color: #4b5563;
 }
 
 .panel-item {
@@ -260,4 +285,29 @@ img {
 
 .break-all {
     word-break: break-all;
+}
+
+@media only screen and (max-width: 600px) {
+    .inner-body {
+        width: 100% !important;
+    }
+
+    .footer {
+        width: 100% !important;
+    }
+
+    .content-cell {
+        padding: 24px !important;
+    }
+}
+
+@media only screen and (max-width: 400px) {
+    .content-cell {
+        padding: 20px !important;
+    }
+
+    .button {
+        display: block !important;
+        width: auto !important;
+    }
 }

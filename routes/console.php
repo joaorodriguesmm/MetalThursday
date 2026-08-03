@@ -1,11 +1,13 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
+declare(strict_types=1);
 
 /**
- * Rotas para a consola
+ * Define os comandos de consola baseados em closures.
  *
- * @version 1.0
- * @since 1.0
+ * Atualmente, a aplicação não possui comandos deste tipo.
+ *
+ * @since 1.0.0
+ *
+ * @version 2.0.0
  */

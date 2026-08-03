@@ -1,9 +1,35 @@
+import axios
+    from 'axios';
+
 /**
- * Importa bibliotecas externas.
+ * Configura globalmente a instância partilhada do Axios.
  *
- * @version 1.0
- * @since 1.0
+ * Todos os módulos importam diretamente o cliente HTTP. As predefinições
+ * configuradas neste ponto são partilhadas pela mesma instância do módulo,
+ * sem expor o Axios através do objeto Window.
+ *
+ * @since 1.0.0
+ * @version 3.0.0
  */
-import axios from 'axios';
-window.axios = axios;
-window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+
+/**
+ * Configura os cabeçalhos e a proteção contra pedidos entre origens.
+ *
+ * @returns {void}
+ *
+ * @since 1.0.0
+ * @version 3.0.0
+ */
+function configurarClienteHttp() {
+    axios.defaults.headers.common[
+        'X-Requested-With'
+    ] = 'XMLHttpRequest';
+
+    axios.defaults.headers.common.Accept =
+        'application/json';
+
+    axios.defaults.withXSRFToken =
+        true;
+}
+
+configurarClienteHttp();

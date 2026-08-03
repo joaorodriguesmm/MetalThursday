@@ -1,12 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
+use App\Providers\AppServiceProvider;
+use App\Providers\AuthServiceProvider;
+
 /**
- * Retorna os serviços da aplicação
+ * Define os providers específicos da aplicação.
  *
- * @since 1.0
- * @version 1.0
+ * Os nomes das classes permanecem em inglês por seguirem as convenções dos
+ * providers do Laravel.
+ *
+ * @since 1.0.0
+ *
+ * @version 2.0.0
  */
 return [
-    App\Providers\AppServiceProvider::class,
-    App\Providers\AuthServiceProvider::class,
+    AppServiceProvider::class,
+    AuthServiceProvider::class,
 ];

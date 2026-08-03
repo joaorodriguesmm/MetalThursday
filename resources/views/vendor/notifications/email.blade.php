@@ -1,54 +1,67 @@
+{{--
+    Define a estrutura comum das notificações enviadas por e-mail.
+
+    Os nomes das variáveis pertencem ao contrato interno das notificações
+    do Laravel e, por isso, devem permanecer inalterados.
+
+    @since 1.0.0
+    @version 2.0.0
+--}}
+
 <x-mail::message>
 @if (! empty($greeting))
 # {{ $greeting }}
+@elseif ($level === 'error')
+# Ocorreu um problema!
 @else
-@if ($level === 'error')
-# @lang('Whoops!')
-@else
-# @lang('Hello!')
-@endif
+# Olá!
 @endif
 
-{{-- Intro Lines --}}
+{{-- Linhas introdutórias --}}
 @foreach ($introLines as $line)
 {{ $line }}
 
 @endforeach
 
-{{-- Action Button --}}
+{{-- Botão de ação --}}
 @isset($actionText)
-<?php
-    $color = match ($level) {
-        'success', 'error' => $level,
-        default => 'primary',
-    };
-?>
-<x-mail::button :url="$actionUrl" :color="$color">
+<x-mail::button
+    :url="$actionUrl"
+    :color="
+        in_array(
+            $level,
+            [
+                'success',
+                'error',
+            ],
+            true,
+        )
+            ? $level
+            : 'primary'
+    "
+>
 {{ $actionText }}
 </x-mail::button>
 @endisset
 
-{{-- Outro Lines --}}
+{{-- Linhas finais --}}
 @foreach ($outroLines as $line)
 {{ $line }}
 
 @endforeach
 
-{{-- Salutation --}}
+{{-- Despedida --}}
 @if (! empty($salutation))
 {{ $salutation }}
 @endif
 
-{{-- Subcopy --}}
+{{-- Ligação alternativa --}}
 @isset($actionText)
 <x-slot:subcopy>
-@lang(
-    "Se estás a ter problemas a clicar no botão \":actionText\", copia e cola o seguinte URL\n".
-    'no teu navegador:',
-    [
-        'actionText' => $actionText,
-    ]
-) <span class="break-all">[{{ $displayableActionUrl }}]({{ $actionUrl }})</span>
+Se estás a ter problemas ao clicar no botão "{{ $actionText }}",
+copia e cola o seguinte endereço no teu navegador:
+
+<span class="break-all">[{{ $displayableActionUrl }}]({{ $actionUrl }})</span>
 </x-slot:subcopy>
 @endisset
 </x-mail::message>
