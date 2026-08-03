@@ -6,6 +6,7 @@ namespace Database\Factories\Autenticacao;
 
 use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\Utilizador;
+use App\ObjetosValor\Utilizadores\MotivoSuspensaoUtilizador;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -21,7 +22,7 @@ use InvalidArgumentException;
  *
  * @since 2.0.0
  *
- * @version 2.1.0
+ * @version 3.0.0
  */
 final class UtilizadorFactory extends Factory
 {
@@ -73,7 +74,7 @@ final class UtilizadorFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function definition(): array
     {
@@ -97,6 +98,12 @@ final class UtilizadorFactory extends Factory
             'fotografia' => null,
 
             'papel' => PapelUtilizador::Utilizador,
+
+            'suspenso_em' => null,
+
+            'motivo_suspensao' => null,
+
+            'suspenso_por_id' => null,
 
             'remember_token' => Str::random(
                 10,
@@ -140,6 +147,41 @@ final class UtilizadorFactory extends Factory
     }
 
     /**
+     * Configura um utilizador com o acesso suspenso.
+     *
+     * O estado não cria automaticamente um registo histórico. Os testes que
+     * necessitem do histórico devem criá-lo explicitamente através da factory
+     * de `RegistoAcessoUtilizador`.
+     *
+     * @param  Utilizador  $responsavel  Superadministrador responsável.
+     * @param  string  $motivo  Motivo da suspensão.
+     * @return static Factory configurada.
+     *
+     * @throws InvalidArgumentException Quando o responsável não está
+     *                                  persistido ou o motivo não é válido.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function suspensoPor(
+        Utilizador $responsavel,
+        string $motivo = 'Suspensão criada para testes.',
+    ): static {
+        return $this->state([
+            'suspenso_em' => now(),
+
+            'motivo_suspensao' => MotivoSuspensaoUtilizador::deTexto(
+                $motivo,
+            )->valor(),
+
+            'suspenso_por_id' => self::obterIdentificadorUtilizadorPersistido(
+                $responsavel,
+            ),
+        ]);
+    }
+
+    /**
      * Define uma fotografia para o utilizador.
      *
      * A normalização e a validação são delegadas ao atributo definitivo do
@@ -178,5 +220,50 @@ final class UtilizadorFactory extends Factory
         return $this->state([
             'fotografia' => $caminhoNormalizado,
         ]);
+    }
+
+    /**
+     * Obtém o identificador de um utilizador persistido.
+     *
+     * @param  Utilizador  $utilizador  Utilizador recebido.
+     * @return int Identificador válido.
+     *
+     * @throws InvalidArgumentException Quando o utilizador não está
+     *                                  persistido ou não possui um
+     *                                  identificador válido.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private static function obterIdentificadorUtilizadorPersistido(
+        Utilizador $utilizador,
+    ): int {
+        if (! $utilizador->exists) {
+            throw new InvalidArgumentException(
+                'O utilizador responsável deve estar persistido.',
+            );
+        }
+
+        $identificador = $utilizador->getKey();
+
+        if (
+            is_int($identificador)
+            && $identificador > 0
+        ) {
+            return $identificador;
+        }
+
+        if (
+            is_string($identificador)
+            && ctype_digit($identificador)
+            && (int) $identificador > 0
+        ) {
+            return (int) $identificador;
+        }
+
+        throw new InvalidArgumentException(
+            'O utilizador responsável não possui um identificador válido.',
+        );
     }
 }

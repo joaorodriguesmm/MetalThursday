@@ -17,6 +17,7 @@ use App\Models\Notificacoes\NotificacaoPersistida;
 use App\Notifications\NotificacaoRedefinicaoPalavraPasse;
 use App\Notifications\NotificacaoVerificacaoEmail;
 use App\ObjetosValor\Utilizadores\EnderecoEmail;
+use App\ObjetosValor\Utilizadores\MotivoSuspensaoUtilizador;
 use App\ObjetosValor\Utilizadores\NomeUtilizador;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -26,6 +27,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -52,6 +54,9 @@ use SensitiveParameter;
  * @property string $password
  * @property string|null $fotografia
  * @property PapelUtilizador $papel
+ * @property CarbonImmutable|null $suspenso_em
+ * @property string|null $motivo_suspensao
+ * @property int|null $suspenso_por_id
  * @property string|null $remember_token
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
@@ -67,6 +72,9 @@ use SensitiveParameter;
  * @property-read Collection<int, NotificacaoPersistida> $unreadNotifications
  * @property-read Collection<int, Convite> $convitesCriados
  * @property-read Convite|null $conviteUtilizado
+ * @property-read Utilizador|null $responsavelSuspensao
+ * @property-read Collection<int, RegistoAcessoUtilizador> $registosAcesso
+ * @property-read Collection<int, RegistoAcessoUtilizador> $registosAcessoEfetuados
  * @property-read Collection<int, Edicao> $edicoesCriadas
  * @property-read Collection<int, MetalThursday> $metalThursdaysComoAutor
  * @property-read Collection<int, MetalThursday> $metalThursdaysComoNomeado
@@ -80,7 +88,7 @@ use SensitiveParameter;
  *
  * @since 1.0.0
  *
- * @version 3.0.0
+ * @version 4.0.0
  */
 class Utilizador extends Authenticatable implements MustVerifyEmail
 {
@@ -133,15 +141,14 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
     /**
      * Atributos permitidos em operações de atribuição em massa.
      *
-     * O papel não é preenchível em massa para impedir que dados externos
-     * possam atribuir privilégios administrativos. Deve ser definido
-     * explicitamente pelo serviço responsável.
+     * O papel e os campos administrativos de suspensão não são preenchíveis
+     * em massa. Devem ser definidos explicitamente pelo serviço responsável.
      *
      * @var list<string>
      *
      * @since 1.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
     protected $fillable = [
         'nome',
@@ -153,15 +160,21 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
     /**
      * Atributos omitidos nas representações serializadas.
      *
+     * Os dados administrativos da suspensão não devem ser expostos
+     * acidentalmente por respostas JSON destinadas a outros contextos.
+     *
      * @var list<string>
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     protected $hidden = [
         'password',
         'remember_token',
+        'suspenso_em',
+        'motivo_suspensao',
+        'suspenso_por_id',
     ];
 
     /**
@@ -186,7 +199,7 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     protected function casts(): array
     {
@@ -196,6 +209,10 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
 
             'papel' => PapelUtilizador::class,
+
+            'suspenso_em' => 'immutable_datetime',
+
+            'suspenso_por_id' => 'integer',
         ];
     }
 
@@ -298,6 +315,41 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
             ): ?string => self::normalizarCaminhoFotografia(
                 $valor,
             ),
+        );
+    }
+
+    /**
+     * Normaliza e valida o motivo da suspensão atual.
+     *
+     * @return Attribute<string|null, string|null> Atributo do motivo.
+     *
+     * @throws InvalidArgumentException Quando o motivo não é textual ou não é
+     *                                  válido.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    protected function motivoSuspensao(): Attribute
+    {
+        return Attribute::make(
+            set: static function (
+                mixed $valor,
+            ): ?string {
+                if ($valor === null) {
+                    return null;
+                }
+
+                if (! is_string($valor)) {
+                    throw new InvalidArgumentException(
+                        'O motivo da suspensão deve ser uma sequência de caracteres.',
+                    );
+                }
+
+                return MotivoSuspensaoUtilizador::deTexto(
+                    $valor,
+                )->valor();
+            },
         );
     }
 
@@ -678,10 +730,78 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Determina se o utilizador possui acesso ativo à aplicação.
+     *
+     * @return bool Verdadeiro quando o utilizador não está suspenso.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function temAcessoAtivo(): bool
+    {
+        return $this->suspenso_em === null;
+    }
+
+    /**
+     * Determina se o utilizador está suspenso.
+     *
+     * @return bool Verdadeiro quando existe uma suspensão atual.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function estaSuspenso(): bool
+    {
+        return ! $this->temAcessoAtivo();
+    }
+
+    /**
+     * Limita a consulta aos utilizadores com acesso ativo.
+     *
+     * @param  Builder<Utilizador>  $construtor  Consulta dos utilizadores.
+     * @return Builder<Utilizador> Consulta filtrada.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function scopeComAcessoAtivo(
+        Builder $construtor,
+    ): Builder {
+        return $construtor->whereNull(
+            'suspenso_em',
+        );
+    }
+
+    /**
+     * Limita a consulta aos utilizadores suspensos.
+     *
+     * @param  Builder<Utilizador>  $construtor  Consulta dos utilizadores.
+     * @return Builder<Utilizador> Consulta filtrada.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function scopeSuspensos(
+        Builder $construtor,
+    ): Builder {
+        return $construtor->whereNotNull(
+            'suspenso_em',
+        );
+    }
+
+    /**
      * Limita a consulta aos utilizadores selecionáveis.
      *
      * O superadministrador não pode ser selecionado como autor ou próximo
      * nomeado.
+     *
+     * Este scope mantém temporariamente o seu contrato existente. A separação
+     * entre autores, nomeados e destinatários será feita na fase própria da
+     * disponibilidade para nomeações.
      *
      * @param  Builder<Utilizador>  $construtor  Consulta dos utilizadores.
      * @return Builder<Utilizador> Consulta filtrada.
@@ -739,6 +859,72 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
             Convite::class,
             'utilizado_por_id',
         );
+    }
+
+    /**
+     * Obtém o superadministrador responsável pela suspensão atual.
+     *
+     * @return BelongsTo<Utilizador, $this> Relação com o responsável.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function responsavelSuspensao(): BelongsTo
+    {
+        return $this->belongsTo(
+            self::class,
+            'suspenso_por_id',
+        );
+    }
+
+    /**
+     * Obtém o histórico de alterações do acesso do utilizador.
+     *
+     * @return HasMany<RegistoAcessoUtilizador, $this> Relação com o histórico.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function registosAcesso(): HasMany
+    {
+        return $this
+            ->hasMany(
+                RegistoAcessoUtilizador::class,
+                'utilizador_id',
+            )
+            ->orderByDesc(
+                'registado_em',
+            )
+            ->orderByDesc(
+                'id',
+            );
+    }
+
+    /**
+     * Obtém as alterações de acesso realizadas pelo utilizador.
+     *
+     * @return HasMany<RegistoAcessoUtilizador, $this> Relação com as ações
+     *                                                 realizadas.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function registosAcessoEfetuados(): HasMany
+    {
+        return $this
+            ->hasMany(
+                RegistoAcessoUtilizador::class,
+                'responsavel_id',
+            )
+            ->orderByDesc(
+                'registado_em',
+            )
+            ->orderByDesc(
+                'id',
+            );
     }
 
     /**
