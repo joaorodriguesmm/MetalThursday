@@ -4,8 +4,11 @@
     O endereço, os valores selecionados e o texto do botão são preparados
     pelo controlador responsável pelos géneros.
 
+    O campo oculto dos géneros pais garante que é enviada uma lista vazia
+    quando não é selecionada qualquer relação hierárquica.
+
     @since 1.0.0
-    @version 4.0.0
+    @version 4.1.0
 --}}
 
 <form
@@ -74,6 +77,12 @@
                 (opcional)
             </span>
         </label>
+
+        <input
+            type="hidden"
+            name="generos_pai[]"
+            value=""
+        >
 
         <select
             id="generos-pai"

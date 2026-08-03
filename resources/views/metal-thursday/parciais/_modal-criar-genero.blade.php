@@ -5,8 +5,11 @@
     O formulário é enviado assincronamente. Os erros de validação são
     associados aos respetivos campos pelo gestor global de formulários AJAX.
 
+    O campo oculto dos géneros pais garante que é enviada uma lista vazia
+    quando não é selecionada qualquer relação hierárquica.
+
     @since 1.0.0
-    @version 4.0.0
+    @version 4.1.0
 --}}
 
 @can(
@@ -101,6 +104,12 @@
                                     (opcional)
                                 </span>
                             </label>
+
+                            <input
+                                type="hidden"
+                                name="generos_pai[]"
+                                value=""
+                            >
 
                             <select
                                 id="generos-pai-novo-genero"

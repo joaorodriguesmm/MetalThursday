@@ -15,7 +15,7 @@ use Tests\TestCase;
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 1.1.0
  */
 final class ControladorGeneroTest extends TestCase
 {
@@ -33,6 +33,115 @@ final class ControladorGeneroTest extends TestCase
         parent::setUp();
 
         $this->withoutVite();
+    }
+
+    /**
+     * Confirma que o formulário envia o campo dos géneros pais mesmo quando
+     * nenhuma opção é selecionada.
+     *
+     * Um elemento `select` múltiplo sem opções selecionadas não é incluído
+     * pelo navegador no pedido. O campo oculto garante que `generos_pai`
+     * permanece presente e pode ser normalizado para uma lista vazia.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    #[Test]
+    public function formulario_de_criacao_inclui_campo_oculto_dos_generos_pais(): void
+    {
+        $utilizador = $this->criarUtilizador();
+
+        $resposta = $this
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
+            ->get(
+                route(
+                    'generos.criar',
+                ),
+            );
+
+        $resposta->assertOk();
+
+        $conteudo =
+            $resposta->getContent();
+
+        self::assertMatchesRegularExpression(
+            '/<input\s+[^>]*type="hidden"[^>]*name="generos_pai\[\]"[^>]*value=""[^>]*>/s',
+            $conteudo,
+        );
+
+        self::assertGreaterThanOrEqual(
+            2,
+            substr_count(
+                $conteudo,
+                'name="generos_pai[]"',
+            ),
+        );
+    }
+
+    /**
+     * Confirma que um género de topo pode ser criado sem géneros pais.
+     *
+     * O valor vazio enviado pelo campo oculto deve ser removido durante a
+     * normalização, produzindo uma lista vazia válida.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    #[Test]
+    public function cria_genero_sem_generos_pais(): void
+    {
+        $utilizador = $this->criarUtilizador();
+
+        $resposta = $this
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
+            ->post(
+                route(
+                    'generos.guardar',
+                ),
+                [
+                    'nome' => 'Heavy Metal',
+
+                    'generos_pai' => [
+                        '',
+                    ],
+                ],
+            );
+
+        $resposta
+            ->assertRedirect(
+                route(
+                    'generos.indice',
+                ),
+            )
+            ->assertSessionHas(
+                'sucesso',
+                'Género criado com sucesso.',
+            )
+            ->assertSessionHasNoErrors();
+
+        $genero = Genero::query()
+            ->where(
+                'nome',
+                'Heavy Metal',
+            )
+            ->firstOrFail();
+
+        $genero->load(
+            'generosPais',
+        );
+
+        self::assertCount(
+            0,
+            $genero->generosPais,
+        );
     }
 
     /**
