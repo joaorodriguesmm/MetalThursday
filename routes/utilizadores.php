@@ -9,12 +9,12 @@ use Illuminate\Support\Facades\Route;
  * Define as rotas da área administrativa dos utilizadores.
  *
  * Todas as rotas exigem autenticação, uma sessão válida e um endereço de
- * e-mail verificado. A autorização específica é aplicada pelo controlador
- * através da política dos utilizadores.
+ * e-mail verificado. A autorização específica é aplicada através da política
+ * dos utilizadores.
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 3.0.0
  */
 Route::middleware([
     'auth:sessao',
@@ -51,6 +51,34 @@ Route::middleware([
                 )
                 ->name(
                     'detalhes',
+                );
+
+            Route::patch(
+                '/{utilizador}/suspender',
+                [
+                    ControladorUtilizador::class,
+                    'suspender',
+                ],
+            )
+                ->whereNumber(
+                    'utilizador',
+                )
+                ->name(
+                    'suspender',
+                );
+
+            Route::patch(
+                '/{utilizador}/reativar',
+                [
+                    ControladorUtilizador::class,
+                    'reativar',
+                ],
+            )
+                ->whereNumber(
+                    'utilizador',
+                )
+                ->name(
+                    'reativar',
                 );
         },
     );

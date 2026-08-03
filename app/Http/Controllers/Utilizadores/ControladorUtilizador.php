@@ -6,24 +6,33 @@ namespace App\Http\Controllers\Utilizadores;
 
 use App\Enumeracoes\PapelUtilizador;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Utilizadores\ReativarUtilizadorRequest;
+use App\Http\Requests\Utilizadores\SuspenderUtilizadorRequest;
 use App\Models\Autenticacao\Utilizador;
+use App\Servicos\Utilizadores\ServicoAcessoUtilizadores;
+use DomainException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Throwable;
 
 /**
- * Gere a consulta administrativa dos utilizadores.
+ * Gere a consulta e o acesso administrativo dos utilizadores.
  *
  * A listagem permite pesquisar pelo nome ou endereço de e-mail e filtrar pelo
  * papel e pelo estado atual do acesso. A página de detalhes apresenta os
  * dados administrativos, o convite utilizado e o histórico do acesso.
  *
+ * A suspensão e a reativação são delegadas ao serviço transacional
+ * responsável pela proteção das regras de domínio e das sessões.
+ *
  * @since 2.0.0
  *
- * @version 2.0.1
+ * @version 3.0.0
  */
 final class ControladorUtilizador extends Controller
 {
@@ -72,6 +81,23 @@ final class ControladorUtilizador extends Controller
      */
     private const ESTADO_SUSPENSO =
         'suspenso';
+
+    /**
+     * Cria o controlador.
+     *
+     * @param  ServicoAcessoUtilizadores  $servicoAcessoUtilizadores  Serviço
+     *                                                                de
+     *                                                                gestão
+     *                                                                do
+     *                                                                acesso.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function __construct(
+        private readonly ServicoAcessoUtilizadores $servicoAcessoUtilizadores,
+    ) {}
 
     /**
      * Apresenta a lista paginada dos utilizadores.
@@ -275,6 +301,123 @@ final class ControladorUtilizador extends Controller
             [
                 'utilizador' => $utilizador,
             ],
+        );
+    }
+
+    /**
+     * Suspende o acesso de um utilizador.
+     *
+     * O pedido fornece o responsável e o motivo já autorizados e validados.
+     * O estado atual, o histórico, o token persistente e as sessões são
+     * alterados atomicamente pelo serviço.
+     *
+     * @param  SuspenderUtilizadorRequest  $pedido  Pedido validado.
+     * @param  Utilizador  $utilizador  Utilizador a suspender.
+     * @return RedirectResponse Redirecionamento para os detalhes.
+     *
+     * @throws Throwable Quando ocorre um erro técnico inesperado.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function suspender(
+        SuspenderUtilizadorRequest $pedido,
+        Utilizador $utilizador,
+    ): RedirectResponse {
+        $responsavel =
+            $pedido->obterUtilizadorAutenticado();
+
+        $motivo =
+            $pedido->obterMotivo();
+
+        try {
+            $this
+                ->servicoAcessoUtilizadores
+                ->suspender(
+                    utilizador: $utilizador,
+                    responsavel: $responsavel,
+                    motivo: $motivo,
+                );
+        } catch (DomainException $excecao) {
+            return to_route(
+                'utilizadores.detalhes',
+                $utilizador,
+            )
+                ->withInput([
+                    'motivo' => $motivo,
+                ])
+                ->withErrors(
+                    [
+                        'motivo' => $excecao->getMessage(),
+                    ],
+                    'suspensao',
+                );
+        }
+
+        return to_route(
+            'utilizadores.detalhes',
+            $utilizador,
+        )->with(
+            'sucesso',
+            sprintf(
+                'O acesso de %s foi suspenso com sucesso.',
+                $utilizador->nome,
+            ),
+        );
+    }
+
+    /**
+     * Reativa o acesso de um utilizador.
+     *
+     * A reativação limpa o estado atual de suspensão, cria o respetivo
+     * histórico, renova o token persistente e elimina sessões concorrentes.
+     *
+     * @param  ReativarUtilizadorRequest  $pedido  Pedido validado.
+     * @param  Utilizador  $utilizador  Utilizador a reativar.
+     * @return RedirectResponse Redirecionamento para os detalhes.
+     *
+     * @throws Throwable Quando ocorre um erro técnico inesperado.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function reativar(
+        ReativarUtilizadorRequest $pedido,
+        Utilizador $utilizador,
+    ): RedirectResponse {
+        $responsavel =
+            $pedido->obterUtilizadorAutenticado();
+
+        try {
+            $this
+                ->servicoAcessoUtilizadores
+                ->reativar(
+                    utilizador: $utilizador,
+                    responsavel: $responsavel,
+                );
+        } catch (DomainException $excecao) {
+            return to_route(
+                'utilizadores.detalhes',
+                $utilizador,
+            )->withErrors(
+                [
+                    'confirmar_reativacao' => $excecao->getMessage(),
+                ],
+                'reativacao',
+            );
+        }
+
+        return to_route(
+            'utilizadores.detalhes',
+            $utilizador,
+        )->with(
+            'sucesso',
+            sprintf(
+                'O acesso de %s foi reativado com sucesso.',
+                $utilizador->nome,
+            ),
         );
     }
 

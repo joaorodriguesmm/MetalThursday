@@ -14,31 +14,48 @@ use App\Models\Autenticacao\Utilizador;
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 final class PoliticaUtilizador
 {
     /**
-     * Autoriza antecipadamente todas as ações do superadministrador ativo.
+     * Autoriza antecipadamente as operações de consulta do
+     * superadministrador ativo.
+     *
+     * As alterações do acesso não são autorizadas antecipadamente porque
+     * dependem também do utilizador afetado e do respetivo estado atual.
      *
      * O nome permanece em inglês por corresponder ao método especial
      * reconhecido pelo sistema de autorização do Laravel.
      *
      * @param  Utilizador  $utilizador  Utilizador autenticado.
      * @param  string  $capacidade  Capacidade que está a ser verificada.
-     * @return bool|null Verdadeiro para um superadministrador ativo ou nulo
-     *                   para continuar a avaliação normal.
+     * @return bool|null Verdadeiro para as consultas autorizadas ou nulo para
+     *                   continuar a avaliação normal.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function before(
         Utilizador $utilizador,
         string $capacidade,
     ): ?bool {
-        return $utilizador->eSuperAdministrador()
-            && $utilizador->temAcessoAtivo()
+        if (
+            ! $utilizador->eSuperAdministrador()
+            || ! $utilizador->temAcessoAtivo()
+        ) {
+            return null;
+        }
+
+        return in_array(
+            $capacidade,
+            [
+                'viewAny',
+                'view',
+            ],
+            true,
+        )
             ? true
             : null;
     }
@@ -89,5 +106,96 @@ final class PoliticaUtilizador
         Utilizador $utilizadorConsultado,
     ): bool {
         return false;
+    }
+
+    /**
+     * Determina se o utilizador pode suspender o acesso de outro utilizador.
+     *
+     * O responsável deve ser um superadministrador ativo, não pode alterar o
+     * próprio acesso e o utilizador afetado deve possuir acesso ativo.
+     *
+     * @param  Utilizador  $utilizador  Utilizador autenticado.
+     * @param  Utilizador  $utilizadorAfetado  Utilizador a suspender.
+     * @return bool Verdadeiro quando a suspensão pode ser iniciada.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function suspender(
+        Utilizador $utilizador,
+        Utilizador $utilizadorAfetado,
+    ): bool {
+        return $this->podeGerirAcesso(
+            $utilizador,
+            $utilizadorAfetado,
+        )
+            && $utilizadorAfetado->temAcessoAtivo();
+    }
+
+    /**
+     * Determina se o utilizador pode reativar o acesso de outro utilizador.
+     *
+     * O responsável deve ser um superadministrador ativo, não pode alterar o
+     * próprio acesso e o utilizador afetado deve estar suspenso.
+     *
+     * @param  Utilizador  $utilizador  Utilizador autenticado.
+     * @param  Utilizador  $utilizadorAfetado  Utilizador a reativar.
+     * @return bool Verdadeiro quando a reativação pode ser iniciada.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function reativar(
+        Utilizador $utilizador,
+        Utilizador $utilizadorAfetado,
+    ): bool {
+        return $this->podeGerirAcesso(
+            $utilizador,
+            $utilizadorAfetado,
+        )
+            && $utilizadorAfetado->estaSuspenso();
+    }
+
+    /**
+     * Determina se o responsável pode gerir o acesso do utilizador afetado.
+     *
+     * @param  Utilizador  $responsavel  Utilizador responsável.
+     * @param  Utilizador  $utilizadorAfetado  Utilizador afetado.
+     * @return bool Verdadeiro quando ambos estão persistidos, são distintos e
+     *              o responsável é um superadministrador ativo.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function podeGerirAcesso(
+        Utilizador $responsavel,
+        Utilizador $utilizadorAfetado,
+    ): bool {
+        if (
+            ! $responsavel->exists
+            || ! $utilizadorAfetado->exists
+            || ! $responsavel->eSuperAdministrador()
+            || ! $responsavel->temAcessoAtivo()
+        ) {
+            return false;
+        }
+
+        $identificadorResponsavel =
+            $responsavel->getKey();
+
+        $identificadorAfetado =
+            $utilizadorAfetado->getKey();
+
+        return is_numeric(
+            $identificadorResponsavel,
+        )
+            && is_numeric(
+                $identificadorAfetado,
+            )
+            && (int) $identificadorResponsavel
+            !== (int) $identificadorAfetado;
     }
 }

@@ -1,12 +1,15 @@
 {{--
-    Apresenta os detalhes administrativos de um utilizador.
+    Apresenta os detalhes e as operações administrativas de um utilizador.
 
     Os dados do utilizador, a suspensão atual, o convite utilizado e o
     histórico do acesso são carregados explicitamente pelo
     App\Http\Controllers\Utilizadores\ControladorUtilizador.
 
+    A suspensão e a reativação são autorizadas pela política e executadas pelo
+    serviço transacional de gestão do acesso.
+
     @since 2.0.0
-    @version 1.0.0
+    @version 2.0.0
 --}}
 
 <x-layout-aplicacao>
@@ -424,6 +427,176 @@
             </section>
         </div>
     </div>
+
+        @can('suspender', $utilizador)
+        <section class="card shadow-sm mt-4 border-danger">
+            <div class="card-header">
+                <h2 class="h5 mb-0">
+                    Suspender acesso
+                </h2>
+            </div>
+
+            <div class="card-body">
+                <div
+                    class="alert alert-warning"
+                    role="alert"
+                >
+                    A suspensão encerra todas as sessões do utilizador e impede
+                    novos inícios de sessão até que o acesso seja reativado.
+                </div>
+
+                <form
+                    method="POST"
+                    action="{{
+                        route(
+                            'utilizadores.suspender',
+                            $utilizador,
+                        )
+                    }}"
+                    novalidate
+                >
+                    @csrf
+                    @method('PATCH')
+
+                    <div class="mb-3">
+                        <label
+                            class="form-label"
+                            for="motivo-suspensao"
+                        >
+                            Motivo da suspensão
+                        </label>
+
+                        <textarea
+                            id="motivo-suspensao"
+                            class="form-control @error('motivo', 'suspensao') is-invalid @enderror"
+                            name="motivo"
+                            rows="4"
+                            maxlength="{{ App\ObjetosValor\Utilizadores\MotivoSuspensaoUtilizador::COMPRIMENTO_MAXIMO }}"
+                            aria-describedby="ajuda-motivo-suspensao erro-motivo-suspensao"
+                            @error('motivo', 'suspensao')
+                                aria-invalid="true"
+                            @enderror
+                            required
+                        >{{ old('motivo') }}</textarea>
+
+                        <div
+                            id="ajuda-motivo-suspensao"
+                            class="form-text"
+                        >
+                            O motivo ficará registado permanentemente no
+                            histórico administrativo.
+                        </div>
+
+                        <div
+                            id="erro-motivo-suspensao"
+                            class="invalid-feedback @error('motivo', 'suspensao') d-block @enderror"
+                            aria-live="polite"
+                        >
+                            @error('motivo', 'suspensao')
+                                {{ $message }}
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="text-end">
+                        <button
+                            class="btn btn-danger"
+                            type="submit"
+                        >
+                            <i
+                                class="bi bi-person-lock me-2"
+                                aria-hidden="true"
+                            ></i>
+
+                            Suspender acesso
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+    @endcan
+
+    @can('reativar', $utilizador)
+        <section class="card shadow-sm mt-4 border-success">
+            <div class="card-header">
+                <h2 class="h5 mb-0">
+                    Reativar acesso
+                </h2>
+            </div>
+
+            <div class="card-body">
+                <div
+                    class="alert alert-info"
+                    role="status"
+                >
+                    A reativação permite que o utilizador volte a iniciar
+                    sessão. As sessões anteriores não serão restauradas.
+                </div>
+
+                <form
+                    method="POST"
+                    action="{{
+                        route(
+                            'utilizadores.reativar',
+                            $utilizador,
+                        )
+                    }}"
+                    novalidate
+                >
+                    @csrf
+                    @method('PATCH')
+
+                    <div class="form-check mb-3">
+                        <input
+                            id="confirmar-reativacao"
+                            class="form-check-input @error('confirmar_reativacao', 'reativacao') is-invalid @enderror"
+                            type="checkbox"
+                            name="confirmar_reativacao"
+                            value="1"
+                            @checked(old('confirmar_reativacao'))
+                            aria-describedby="erro-confirmar-reativacao"
+                            @error('confirmar_reativacao', 'reativacao')
+                                aria-invalid="true"
+                            @enderror
+                            required
+                        >
+
+                        <label
+                            class="form-check-label"
+                            for="confirmar-reativacao"
+                        >
+                            Confirmo que pretendo reativar o acesso deste
+                            utilizador.
+                        </label>
+
+                        <div
+                            id="erro-confirmar-reativacao"
+                            class="invalid-feedback @error('confirmar_reativacao', 'reativacao') d-block @enderror"
+                            aria-live="polite"
+                        >
+                            @error('confirmar_reativacao', 'reativacao')
+                                {{ $message }}
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="text-end">
+                        <button
+                            class="btn btn-success"
+                            type="submit"
+                        >
+                            <i
+                                class="bi bi-person-check me-2"
+                                aria-hidden="true"
+                            ></i>
+
+                            Reativar acesso
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+    @endcan
 
     <div class="mt-4">
         <a
