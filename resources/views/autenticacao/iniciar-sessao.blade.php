@@ -2,7 +2,7 @@
     Apresenta o formulário de autenticação de um utilizador.
 
     @since 1.0.0
-    @version 2.1.0
+    @version 2.2.0
 --}}
 
 <x-layout-convidado>
@@ -174,7 +174,7 @@
                 class="small text-decoration-none text-end"
                 href="{{
                     route(
-                        'password.request',
+                        'autenticacao.recuperar-palavra-passe',
                     )
                 }}"
             >

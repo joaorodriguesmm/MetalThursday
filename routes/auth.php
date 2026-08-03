@@ -16,13 +16,16 @@ use Illuminate\Support\Facades\Route;
 /**
  * Define as rotas de autenticação e de gestão do perfil.
  *
- * Os nomes de rota exigidos pelos contratos técnicos do Laravel mantêm
- * a nomenclatura convencional. Todos os middlewares de autenticação indicam
- * explicitamente o guard `sessao`.
+ * Os nomes técnicos exigidos por contratos do Laravel, como `login`, `logout`
+ * e `verification.verify`, mantêm a nomenclatura convencional. As rotas
+ * próprias da aplicação utilizam nomes em português.
+ *
+ * Todos os middlewares de autenticação indicam explicitamente o guard
+ * `sessao`.
  *
  * @since 1.0.0
  *
- * @version 4.0.0
+ * @version 5.0.0
  */
 
 /*
@@ -83,7 +86,7 @@ Route::middleware(
                 'apresentar',
             ],
         )->name(
-            'password.request',
+            'autenticacao.recuperar-palavra-passe',
         );
 
         Route::post(
@@ -97,7 +100,7 @@ Route::middleware(
                 'throttle:6,1',
             )
             ->name(
-                'password.email',
+                'autenticacao.enviar-ligacao-redefinicao',
             );
 
         Route::get(
@@ -107,7 +110,7 @@ Route::middleware(
                 'apresentar',
             ],
         )->name(
-            'password.reset',
+            'autenticacao.redefinir-palavra-passe',
         );
 
         Route::post(
@@ -121,7 +124,7 @@ Route::middleware(
                 'throttle:6,1',
             )
             ->name(
-                'password.store',
+                'autenticacao.atualizar-palavra-passe',
             );
 
         /*

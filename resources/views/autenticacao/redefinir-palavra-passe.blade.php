@@ -3,7 +3,7 @@
     de uma ligação de redefinição válida.
 
     @since 1.0.0
-    @version 3.0.0
+    @version 3.1.0
 --}}
 
 <x-layout-convidado>
@@ -200,7 +200,7 @@
                 class="small text-decoration-none"
                 href="{{
                     route(
-                        'password.request',
+                        'autenticacao.recuperar-palavra-passe',
                     )
                 }}"
             >

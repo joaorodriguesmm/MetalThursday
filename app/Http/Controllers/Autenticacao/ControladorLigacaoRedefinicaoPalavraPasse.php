@@ -18,7 +18,7 @@ use Illuminate\View\View;
  *
  * @since 1.0.0
  *
- * @version 4.0.0
+ * @version 4.1.0
  */
 final class ControladorLigacaoRedefinicaoPalavraPasse extends Controller
 {
@@ -69,7 +69,7 @@ final class ControladorLigacaoRedefinicaoPalavraPasse extends Controller
      *
      * @since 1.0.0
      *
-     * @version 4.0.0
+     * @version 4.1.0
      */
     public function enviar(
         SolicitarRedefinicaoPalavraPasseRequest $pedido,
@@ -87,7 +87,7 @@ final class ControladorLigacaoRedefinicaoPalavraPasse extends Controller
             ]);
 
         return to_route(
-            'password.request',
+            'autenticacao.recuperar-palavra-passe',
         )
             ->withInput([
                 'email' => $email,

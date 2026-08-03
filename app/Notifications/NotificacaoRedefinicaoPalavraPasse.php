@@ -17,7 +17,7 @@ use LogicException;
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 final class NotificacaoRedefinicaoPalavraPasse extends ResetPassword
 {
@@ -89,14 +89,14 @@ final class NotificacaoRedefinicaoPalavraPasse extends ResetPassword
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 1.1.0
      */
     private function obterUrlRedefinicao(
         Utilizador $utilizador,
     ): string {
         return url(
             route(
-                'password.reset',
+                'autenticacao.redefinir-palavra-passe',
                 [
                     'token' => $this->token,
 
