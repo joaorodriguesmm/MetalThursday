@@ -1,12 +1,12 @@
 {{--
     Apresenta a navegação principal da aplicação.
 
-    A identificação do utilizador, as páginas ativas e a quantidade de
-    notificações por ler são preparadas pela classe
-    App\View\Components\Navegacao.
+    A identificação do utilizador, as páginas ativas, a autorização para gerir
+    utilizadores e a quantidade de notificações por ler são preparadas pela
+    classe App\View\Components\Navegacao.
 
     @since 1.0.0
-    @version 4.0.0
+    @version 5.0.0
 --}}
 
 <nav
@@ -88,6 +88,24 @@
                         Início
                     </a>
                 </li>
+
+                @if ($podeGerirUtilizadores)
+                    <li class="nav-item">
+                        <a
+                            class="nav-link {{
+                                $paginaUtilizadoresAtiva
+                                    ? 'active'
+                                    : ''
+                            }}"
+                            href="{{ route('utilizadores.indice') }}"
+                            @if ($paginaUtilizadoresAtiva)
+                                aria-current="page"
+                            @endif
+                        >
+                            Utilizadores
+                        </a>
+                    </li>
+                @endif
 
                 <li
                     class="nav-item d-md-none"

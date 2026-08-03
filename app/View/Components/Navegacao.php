@@ -6,6 +6,7 @@ namespace App\View\Components;
 
 use App\Models\Autenticacao\Utilizador;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Contracts\Auth\Access\Gate as Autorizacao;
 use Illuminate\Contracts\Auth\Factory as FabricaAutenticacao;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
@@ -15,11 +16,12 @@ use Illuminate\View\Component;
  * Prepara a navegação principal da aplicação.
  *
  * O componente identifica o utilizador autenticado, determina as páginas
- * ativas e obtém a quantidade de notificações por ler.
+ * ativas, verifica o acesso à gestão dos utilizadores e obtém a quantidade de
+ * notificações por ler.
  *
  * @since 1.0.0
  *
- * @version 4.0.0
+ * @version 5.0.0
  */
 final class Navegacao extends Component
 {
@@ -32,11 +34,11 @@ final class Navegacao extends Component
      *
      * @version 1.0.0
      */
-    private const NOME_APLICACAO_PREDEFINIDO = 'MetalThursday';
+    private const NOME_APLICACAO_PREDEFINIDO =
+        'MetalThursday';
 
     /**
      * Nome apresentado para a aplicação.
-     *
      *
      * @since 3.0.0
      *
@@ -47,7 +49,6 @@ final class Navegacao extends Component
     /**
      * Utilizador autenticado.
      *
-     *
      * @since 3.0.0
      *
      * @version 2.0.0
@@ -56,7 +57,6 @@ final class Navegacao extends Component
 
     /**
      * Quantidade de notificações por ler.
-     *
      *
      * @since 3.0.0
      *
@@ -67,7 +67,6 @@ final class Navegacao extends Component
     /**
      * Indica se a página inicial está ativa.
      *
-     *
      * @since 3.0.0
      *
      * @version 2.0.0
@@ -77,7 +76,6 @@ final class Navegacao extends Component
     /**
      * Indica se uma página do perfil está ativa.
      *
-     *
      * @since 3.0.0
      *
      * @version 2.0.0
@@ -85,10 +83,29 @@ final class Navegacao extends Component
     public readonly bool $paginaPerfilAtiva;
 
     /**
+     * Indica se uma página da gestão dos utilizadores está ativa.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public readonly bool $paginaUtilizadoresAtiva;
+
+    /**
+     * Indica se o utilizador pode aceder à gestão dos utilizadores.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public readonly bool $podeGerirUtilizadores;
+
+    /**
      * Cria uma nova instância do componente.
      *
      * @param  Request  $pedido  Pedido HTTP atual.
      * @param  FabricaAutenticacao  $autenticacao  Gestor de autenticação.
+     * @param  Autorizacao  $autorizacao  Gestor de autorização.
      * @param  string  $nomeAplicacao  Nome fornecido pelo layout.
      *
      * @throws AuthenticationException Quando não existe um utilizador
@@ -96,11 +113,12 @@ final class Navegacao extends Component
      *
      * @since 1.0.0
      *
-     * @version 4.0.0
+     * @version 5.0.0
      */
     public function __construct(
         Request $pedido,
         FabricaAutenticacao $autenticacao,
+        Autorizacao $autorizacao,
         string $nomeAplicacao,
     ) {
         $this->nomeAplicacao =
@@ -128,6 +146,21 @@ final class Navegacao extends Component
             $pedido->routeIs(
                 'perfil.*',
             );
+
+        $this->paginaUtilizadoresAtiva =
+            $pedido->routeIs(
+                'utilizadores.*',
+            );
+
+        $this->podeGerirUtilizadores =
+            $autorizacao
+                ->forUser(
+                    $this->utilizadorAutenticado,
+                )
+                ->allows(
+                    'viewAny',
+                    Utilizador::class,
+                );
     }
 
     /**

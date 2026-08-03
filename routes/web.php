@@ -7,8 +7,9 @@ declare(strict_types=1);
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 3.0.0
  */
 
 require __DIR__.'/auth.php';
 require __DIR__.'/metalthursday.php';
+require __DIR__.'/utilizadores.php';

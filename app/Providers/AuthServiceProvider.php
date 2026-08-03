@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Models\Autenticacao\Utilizador;
 use App\Models\Interacoes\Comentario;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
@@ -14,6 +15,7 @@ use App\Policies\PoliticaComentario;
 use App\Policies\PoliticaEdicao;
 use App\Policies\PoliticaGenero;
 use App\Policies\PoliticaMetalThursday;
+use App\Policies\PoliticaUtilizador;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 /**
@@ -24,7 +26,7 @@ use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvid
  *
  * @since 1.0.0
  *
- * @version 2.0.0
+ * @version 3.0.0
  */
 final class AuthServiceProvider extends ServiceProvider
 {
@@ -38,9 +40,11 @@ final class AuthServiceProvider extends ServiceProvider
      *
      * @since 1.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     protected $policies = [
+        Utilizador::class => PoliticaUtilizador::class,
+
         Banda::class => PoliticaBanda::class,
 
         Comentario::class => PoliticaComentario::class,
