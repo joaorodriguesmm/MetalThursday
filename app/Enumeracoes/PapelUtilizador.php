@@ -12,7 +12,7 @@ namespace App\Enumeracoes;
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 3.0.0
  */
 enum PapelUtilizador: string
 {
@@ -42,6 +42,54 @@ enum PapelUtilizador: string
      * @version 1.0.0
      */
     case SuperAdministrador = 'super_administrador';
+
+    /**
+     * Tenta criar um papel a partir de um valor textual.
+     *
+     * A normalização limita-se à remoção de espaços exteriores e à conversão
+     * para minúsculas. Apenas os valores públicos definidos pela própria
+     * enumeração são aceites.
+     *
+     * @param  mixed  $valor  Valor recebido.
+     * @return self|null Papel correspondente ou nulo.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public static function tentarCriar(
+        mixed $valor,
+    ): ?self {
+        if (! is_string($valor)) {
+            return null;
+        }
+
+        return self::tryFrom(
+            mb_strtolower(
+                trim(
+                    $valor,
+                ),
+            ),
+        );
+    }
+
+    /**
+     * Obtém a etiqueta apresentada ao utilizador.
+     *
+     * @return string Etiqueta do papel.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function etiqueta(): string
+    {
+        return match ($this) {
+            self::Utilizador => 'Utilizador',
+            self::Administrador => 'Administrador',
+            self::SuperAdministrador => 'Superadministrador',
+        };
+    }
 
     /**
      * Determina se o papel possui privilégios administrativos.
