@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Route;
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 Route::middleware([
     'auth:sessao',
@@ -38,5 +38,19 @@ Route::middleware([
             )->name(
                 'indice',
             );
+
+            Route::get(
+                '/{utilizador}',
+                [
+                    ControladorUtilizador::class,
+                    'detalhes',
+                ],
+            )
+                ->whereNumber(
+                    'utilizador',
+                )
+                ->name(
+                    'detalhes',
+                );
         },
     );

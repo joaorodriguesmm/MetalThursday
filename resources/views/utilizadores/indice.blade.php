@@ -1,14 +1,14 @@
 {{--
     Apresenta a listagem administrativa dos utilizadores.
 
-    Permite pesquisar pelo nome ou endereço de e-mail e filtrar pelo papel e
-    pelo estado atual do acesso.
+    Permite pesquisar pelo nome ou endereço de e-mail, filtrar pelo papel e
+    pelo estado atual do acesso e consultar os detalhes de cada utilizador.
 
     Os utilizadores, os filtros reconhecidos e as opções disponíveis são
     preparados por App\Http\Controllers\Utilizadores\ControladorUtilizador.
 
     @since 2.0.0
-    @version 1.0.0
+    @version 2.0.0
 --}}
 
 <x-layout-aplicacao>
@@ -169,12 +169,19 @@
                             <th scope="col">
                                 Registo
                             </th>
+
+                            <th
+                                class="text-end"
+                                scope="col"
+                            >
+                                Ações
+                            </th>
                         </tr>
                     </thead>
 
                     <tbody>
                         @forelse ($utilizadores as $utilizador)
-                            <tr>
+                            <tr id="utilizador-{{ $utilizador->getKey() }}">
                                 <th scope="row">
                                     <div class="d-flex align-items-center gap-2">
                                         <x-avatar
@@ -231,12 +238,33 @@
                                         ?? 'Indisponível'
                                     }}
                                 </td>
+
+                                <td class="text-end text-nowrap">
+                                    @can('view', $utilizador)
+                                        <a
+                                            class="btn btn-sm btn-info"
+                                            href="{{
+                                                route(
+                                                    'utilizadores.detalhes',
+                                                    $utilizador,
+                                                )
+                                            }}"
+                                            aria-label="Ver detalhes de {{ $utilizador->nome }}"
+                                            title="Ver detalhes"
+                                        >
+                                            <i
+                                                class="bi bi-eye"
+                                                aria-hidden="true"
+                                            ></i>
+                                        </a>
+                                    @endcan
+                                </td>
                             </tr>
                         @empty
                             <tr>
                                 <td
                                     class="py-4 text-center"
-                                    colspan="6"
+                                    colspan="7"
                                 >
                                     @if ($filtrosAtivos)
                                         Nenhum utilizador corresponde aos filtros.

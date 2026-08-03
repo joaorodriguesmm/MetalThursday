@@ -8,6 +8,8 @@ use App\Enumeracoes\PapelUtilizador;
 use App\Http\Controllers\Controller;
 use App\Models\Autenticacao\Utilizador;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -16,11 +18,12 @@ use Illuminate\View\View;
  * Gere a consulta administrativa dos utilizadores.
  *
  * A listagem permite pesquisar pelo nome ou endereço de e-mail e filtrar pelo
- * papel e pelo estado atual do acesso.
+ * papel e pelo estado atual do acesso. A página de detalhes apresenta os
+ * dados administrativos, o convite utilizado e o histórico do acesso.
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.1
  */
 final class ControladorUtilizador extends Controller
 {
@@ -203,6 +206,74 @@ final class ControladorUtilizador extends Controller
                 'filtrosAtivos' => $pesquisa !== null
                     || $papel !== null
                     || $estado !== null,
+            ],
+        );
+    }
+
+    /**
+     * Apresenta os detalhes administrativos de um utilizador.
+     *
+     * Todas as relações utilizadas pela vista são carregadas explicitamente
+     * para impedir consultas preguiçosas durante a apresentação.
+     *
+     * @param  Utilizador  $utilizador  Utilizador consultado.
+     * @return View Página de detalhes do utilizador.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.1
+     */
+    public function detalhes(
+        Utilizador $utilizador,
+    ): View {
+        $this->authorize(
+            'view',
+            $utilizador,
+        );
+
+        $utilizador->load([
+            'responsavelSuspensao:id,nome,email',
+
+            'registosAcesso' => static function (
+                HasMany $relacao,
+            ): void {
+                $relacao
+                    ->select([
+                        'id',
+                        'utilizador_id',
+                        'acao',
+                        'motivo',
+                        'responsavel_id',
+                        'registado_em',
+                    ])
+                    ->with([
+                        'responsavel:id,nome,email',
+                    ]);
+            },
+
+            'conviteUtilizado' => static function (
+                HasOne $relacao,
+            ): void {
+                $relacao
+                    ->select([
+                        'id',
+                        'nome_convidado',
+                        'email_destino',
+                        'criado_por_id',
+                        'utilizado_por_id',
+                        'utilizado_em',
+                        'created_at',
+                    ])
+                    ->with([
+                        'criador:id,nome,email',
+                    ]);
+            },
+        ]);
+
+        return view(
+            'utilizadores.detalhes',
+            [
+                'utilizador' => $utilizador,
             ],
         );
     }
