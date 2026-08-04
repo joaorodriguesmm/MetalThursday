@@ -6,11 +6,13 @@ namespace App\Http\Controllers\Utilizadores;
 
 use App\Enumeracoes\PapelUtilizador;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Utilizadores\AlterarPapelUtilizadorRequest;
 use App\Http\Requests\Utilizadores\EncerrarSessoesUtilizadorRequest;
 use App\Http\Requests\Utilizadores\ReativarUtilizadorRequest;
 use App\Http\Requests\Utilizadores\SuspenderUtilizadorRequest;
 use App\Models\Autenticacao\Utilizador;
 use App\Servicos\Utilizadores\ServicoAcessoUtilizadores;
+use App\Servicos\Utilizadores\ServicoPapeisUtilizadores;
 use DomainException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -22,18 +24,19 @@ use Illuminate\View\View;
 use Throwable;
 
 /**
- * Gere a consulta e o acesso administrativo dos utilizadores.
+ * Gere a consulta e as operações administrativas dos utilizadores.
  *
  * A listagem permite pesquisar pelo nome ou endereço de e-mail e filtrar pelo
  * papel e pelo estado atual do acesso. A página de detalhes apresenta os
- * dados administrativos, o convite utilizado e o histórico do acesso.
+ * dados administrativos, o convite utilizado e os históricos do acesso e dos
+ * papéis.
  *
- * A suspensão, a reativação e o encerramento das sessões são delegados ao
- * serviço transacional responsável pela proteção das regras de domínio.
+ * A suspensão, a reativação, o encerramento das sessões e a alteração do
+ * papel são delegados aos respetivos serviços transacionais.
  *
  * @since 2.0.0
  *
- * @version 4.0.0
+ * @version 5.0.0
  */
 final class ControladorUtilizador extends Controller
 {
@@ -91,13 +94,19 @@ final class ControladorUtilizador extends Controller
      *                                                                gestão
      *                                                                do
      *                                                                acesso.
+     * @param  ServicoPapeisUtilizadores  $servicoPapeisUtilizadores  Serviço
+     *                                                                de
+     *                                                                gestão
+     *                                                                dos
+     *                                                                papéis.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function __construct(
         private readonly ServicoAcessoUtilizadores $servicoAcessoUtilizadores,
+        private readonly ServicoPapeisUtilizadores $servicoPapeisUtilizadores,
     ) {}
 
     /**
@@ -248,7 +257,7 @@ final class ControladorUtilizador extends Controller
      *
      * @since 2.0.0
      *
-     * @version 1.0.1
+     * @version 2.0.0
      */
     public function detalhes(
         Utilizador $utilizador,
@@ -270,6 +279,23 @@ final class ControladorUtilizador extends Controller
                         'utilizador_id',
                         'acao',
                         'motivo',
+                        'responsavel_id',
+                        'registado_em',
+                    ])
+                    ->with([
+                        'responsavel:id,nome,email',
+                    ]);
+            },
+
+            'registosPapel' => static function (
+                HasMany $relacao,
+            ): void {
+                $relacao
+                    ->select([
+                        'id',
+                        'utilizador_id',
+                        'papel_anterior',
+                        'papel_novo',
                         'responsavel_id',
                         'registado_em',
                     ])
@@ -301,6 +327,8 @@ final class ControladorUtilizador extends Controller
             'utilizadores.detalhes',
             [
                 'utilizador' => $utilizador,
+
+                'papeisDisponiveis' => PapelUtilizador::cases(),
             ],
         );
     }
@@ -491,6 +519,69 @@ final class ControladorUtilizador extends Controller
         )->with(
             'sucesso',
             $mensagem,
+        );
+    }
+
+    /**
+     * Altera o papel de um utilizador.
+     *
+     * O serviço altera o papel e o histórico, renova o token persistente e
+     * encerra todas as sessões do utilizador afetado na mesma transação.
+     *
+     * @param  AlterarPapelUtilizadorRequest  $pedido  Pedido validado.
+     * @param  Utilizador  $utilizador  Utilizador afetado.
+     * @return RedirectResponse Redirecionamento para os detalhes.
+     *
+     * @throws Throwable Quando ocorre um erro técnico inesperado.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function alterarPapel(
+        AlterarPapelUtilizadorRequest $pedido,
+        Utilizador $utilizador,
+    ): RedirectResponse {
+        $responsavel =
+            $pedido->obterUtilizadorAutenticado();
+
+        $papelNovo =
+            $pedido->obterPapelNovo();
+
+        try {
+            $this
+                ->servicoPapeisUtilizadores
+                ->alterar(
+                    utilizador: $utilizador,
+                    responsavel: $responsavel,
+                    papelNovo: $papelNovo,
+                );
+        } catch (DomainException $excecao) {
+            return to_route(
+                'utilizadores.detalhes',
+                $utilizador,
+            )
+                ->withInput([
+                    'papel' => $papelNovo->value,
+                ])
+                ->withErrors(
+                    [
+                        'papel' => $excecao->getMessage(),
+                    ],
+                    'papel',
+                );
+        }
+
+        return to_route(
+            'utilizadores.detalhes',
+            $utilizador,
+        )->with(
+            'sucesso',
+            sprintf(
+                'O papel de %s foi alterado para %s com sucesso.',
+                $utilizador->nome,
+                $papelNovo->etiqueta(),
+            ),
         );
     }
 

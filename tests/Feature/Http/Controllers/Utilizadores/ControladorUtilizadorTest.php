@@ -7,8 +7,10 @@ namespace Tests\Feature\Http\Controllers\Utilizadores;
 use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\Convite;
 use App\Models\Autenticacao\RegistoAcessoUtilizador;
+use App\Models\Autenticacao\RegistoPapelUtilizador;
 use App\Models\Autenticacao\Utilizador;
 use App\Servicos\Utilizadores\ServicoAcessoUtilizadores;
+use App\Servicos\Utilizadores\ServicoPapeisUtilizadores;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -19,7 +21,7 @@ use Tests\TestCase;
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 3.0.0
  */
 final class ControladorUtilizadorTest extends TestCase
 {
@@ -72,8 +74,9 @@ final class ControladorUtilizadorTest extends TestCase
     #[Test]
     public function utilizador_comum_nao_pode_consultar_os_utilizadores(): void
     {
-        $utilizador = Utilizador::factory()
-            ->create();
+        $utilizador =
+            Utilizador::factory()
+                ->create();
 
         $this
             ->actingAs(
@@ -99,11 +102,12 @@ final class ControladorUtilizadorTest extends TestCase
     #[Test]
     public function administrador_nao_pode_consultar_os_utilizadores(): void
     {
-        $administrador = Utilizador::factory()
-            ->comPapel(
-                PapelUtilizador::Administrador,
-            )
-            ->create();
+        $administrador =
+            Utilizador::factory()
+                ->comPapel(
+                    PapelUtilizador::Administrador,
+                )
+                ->create();
 
         $this
             ->actingAs(
@@ -131,15 +135,16 @@ final class ControladorUtilizadorTest extends TestCase
         $responsavel =
             $this->criarSuperAdministrador();
 
-        $superAdministradorSuspenso = Utilizador::factory()
-            ->comPapel(
-                PapelUtilizador::SuperAdministrador,
-            )
-            ->suspensoPor(
-                $responsavel,
-                'Suspensão administrativa.',
-            )
-            ->create();
+        $superAdministradorSuspenso =
+            Utilizador::factory()
+                ->comPapel(
+                    PapelUtilizador::SuperAdministrador,
+                )
+                ->suspensoPor(
+                    $responsavel,
+                    'Suspensão administrativa.',
+                )
+                ->create();
 
         $this
             ->actingAs(
@@ -178,12 +183,13 @@ final class ControladorUtilizadorTest extends TestCase
         $superAdministrador =
             $this->criarSuperAdministrador();
 
-        $utilizador = Utilizador::factory()
-            ->create([
-                'nome' => 'Ana Metal',
+        $utilizador =
+            Utilizador::factory()
+                ->create([
+                    'nome' => 'Ana Metal',
 
-                'email' => 'ana.metal@example.test',
-            ]);
+                    'email' => 'ana.metal@example.test',
+                ]);
 
         $this
             ->actingAs(
@@ -236,19 +242,21 @@ final class ControladorUtilizadorTest extends TestCase
         $superAdministrador =
             $this->criarSuperAdministrador();
 
-        $encontrado = Utilizador::factory()
-            ->create([
-                'nome' => 'Beatriz Doom',
+        $encontrado =
+            Utilizador::factory()
+                ->create([
+                    'nome' => 'Beatriz Doom',
 
-                'email' => 'beatriz.doom@example.test',
-            ]);
+                    'email' => 'beatriz.doom@example.test',
+                ]);
 
-        $excluido = Utilizador::factory()
-            ->create([
-                'nome' => 'Carlos Thrash',
+        $excluido =
+            Utilizador::factory()
+                ->create([
+                    'nome' => 'Carlos Thrash',
 
-                'email' => 'carlos.thrash@example.test',
-            ]);
+                    'email' => 'carlos.thrash@example.test',
+                ]);
 
         $this
             ->actingAs(
@@ -285,19 +293,21 @@ final class ControladorUtilizadorTest extends TestCase
         $superAdministrador =
             $this->criarSuperAdministrador();
 
-        $encontrado = Utilizador::factory()
-            ->create([
-                'nome' => 'Daniel Black',
+        $encontrado =
+            Utilizador::factory()
+                ->create([
+                    'nome' => 'Daniel Black',
 
-                'email' => 'daniel.black@example.test',
-            ]);
+                    'email' => 'daniel.black@example.test',
+                ]);
 
-        $excluido = Utilizador::factory()
-            ->create([
-                'nome' => 'Eduardo Death',
+        $excluido =
+            Utilizador::factory()
+                ->create([
+                    'nome' => 'Eduardo Death',
 
-                'email' => 'eduardo.death@example.test',
-            ]);
+                    'email' => 'eduardo.death@example.test',
+                ]);
 
         $this
             ->actingAs(
@@ -334,18 +344,20 @@ final class ControladorUtilizadorTest extends TestCase
         $superAdministrador =
             $this->criarSuperAdministrador();
 
-        $administrador = Utilizador::factory()
-            ->comPapel(
-                PapelUtilizador::Administrador,
-            )
-            ->create([
-                'email' => 'administrador@example.test',
-            ]);
+        $administrador =
+            Utilizador::factory()
+                ->comPapel(
+                    PapelUtilizador::Administrador,
+                )
+                ->create([
+                    'email' => 'administrador@example.test',
+                ]);
 
-        $utilizador = Utilizador::factory()
-            ->create([
-                'email' => 'utilizador@example.test',
-            ]);
+        $utilizador =
+            Utilizador::factory()
+                ->create([
+                    'email' => 'utilizador@example.test',
+                ]);
 
         $this
             ->actingAs(
@@ -385,19 +397,21 @@ final class ControladorUtilizadorTest extends TestCase
         $superAdministrador =
             $this->criarSuperAdministrador();
 
-        $suspenso = Utilizador::factory()
-            ->suspensoPor(
-                $superAdministrador,
-                'Suspensão administrativa.',
-            )
-            ->create([
-                'email' => 'suspenso@example.test',
-            ]);
+        $suspenso =
+            Utilizador::factory()
+                ->suspensoPor(
+                    $superAdministrador,
+                    'Suspensão administrativa.',
+                )
+                ->create([
+                    'email' => 'suspenso@example.test',
+                ]);
 
-        $ativo = Utilizador::factory()
-            ->create([
-                'email' => 'ativo@example.test',
-            ]);
+        $ativo =
+            Utilizador::factory()
+                ->create([
+                    'email' => 'ativo@example.test',
+                ]);
 
         $this
             ->actingAs(
@@ -437,8 +451,9 @@ final class ControladorUtilizadorTest extends TestCase
     #[Test]
     public function visitante_nao_pode_consultar_os_detalhes(): void
     {
-        $utilizador = Utilizador::factory()
-            ->create();
+        $utilizador =
+            Utilizador::factory()
+                ->create();
 
         $this
             ->get(
@@ -465,11 +480,13 @@ final class ControladorUtilizadorTest extends TestCase
     #[Test]
     public function utilizador_comum_nao_pode_consultar_os_detalhes(): void
     {
-        $utilizadorAutenticado = Utilizador::factory()
-            ->create();
+        $utilizadorAutenticado =
+            Utilizador::factory()
+                ->create();
 
-        $utilizadorConsultado = Utilizador::factory()
-            ->create();
+        $utilizadorConsultado =
+            Utilizador::factory()
+                ->create();
 
         $this
             ->actingAs(
@@ -486,11 +503,11 @@ final class ControladorUtilizadorTest extends TestCase
     }
 
     /**
-     * Confirma os detalhes de um utilizador sem convite nem histórico.
+     * Confirma os detalhes de um utilizador sem convite nem históricos.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function superadministrador_consulta_utilizador_ativo_sem_historico(): void
@@ -498,12 +515,13 @@ final class ControladorUtilizadorTest extends TestCase
         $superAdministrador =
             $this->criarSuperAdministrador();
 
-        $utilizador = Utilizador::factory()
-            ->create([
-                'nome' => 'Fátima Progressive',
+        $utilizador =
+            Utilizador::factory()
+                ->create([
+                    'nome' => 'Fátima Progressive',
 
-                'email' => 'fatima.progressive@example.test',
-            ]);
+                    'email' => 'fatima.progressive@example.test',
+                ]);
 
         $this
             ->actingAs(
@@ -534,34 +552,68 @@ final class ControladorUtilizadorTest extends TestCase
             )
             ->assertSeeText(
                 'Ainda não existem alterações do acesso.',
+            )
+            ->assertSeeText(
+                'Ainda não existem alterações do papel.',
+            )
+            ->assertSee(
+                route(
+                    'utilizadores.alterar-papel',
+                    $utilizador,
+                ),
+                false,
             );
     }
 
     /**
-     * Confirma a apresentação da suspensão atual, do convite utilizado e do
-     * histórico ordenado.
+     * Confirma a apresentação da suspensão, do convite e dos históricos
+     * ordenados.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
-    public function apresenta_suspensao_convite_e_historico_ordenado(): void
+    public function apresenta_suspensao_convite_e_historicos_ordenados(): void
     {
         $superAdministrador =
             $this->criarSuperAdministrador();
 
-        $utilizador = Utilizador::factory()
-            ->naoVerificado()
-            ->create([
-                'nome' => 'Gonçalo Sludge',
+        $utilizador =
+            Utilizador::factory()
+                ->naoVerificado()
+                ->create([
+                    'nome' => 'Gonçalo Sludge',
 
-                'email' => 'goncalo.sludge@example.test',
-            ]);
+                    'email' => 'goncalo.sludge@example.test',
+                ]);
 
         $this->criarConviteUtilizado(
             $utilizador,
             $superAdministrador,
+        );
+
+        $servicoPapeis =
+            $this->app->make(
+                ServicoPapeisUtilizadores::class,
+            );
+
+        $utilizador = $servicoPapeis->alterar(
+            $utilizador,
+            $superAdministrador,
+            PapelUtilizador::Administrador,
+            CarbonImmutable::parse(
+                '2026-05-02 11:00:00',
+            ),
+        );
+
+        $utilizador = $servicoPapeis->alterar(
+            $utilizador,
+            $superAdministrador,
+            PapelUtilizador::Utilizador,
+            CarbonImmutable::parse(
+                '2026-05-03 12:00:00',
+            ),
         );
 
         $servicoAcesso =
@@ -625,10 +677,17 @@ final class ControladorUtilizadorTest extends TestCase
             ->assertSeeText(
                 $superAdministrador->nome,
             )
+            ->assertSeeText(
+                'Histórico dos papéis',
+            )
             ->assertSeeTextInOrder([
                 'Suspensão administrativa atual.',
                 'Sem motivo aplicável',
                 'Primeira suspensão administrativa.',
+            ])
+            ->assertSeeTextInOrder([
+                '03/05/2026 12:00',
+                '02/05/2026 11:00',
             ]);
     }
 
@@ -638,7 +697,7 @@ final class ControladorUtilizadorTest extends TestCase
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function carrega_explicitamente_as_relacoes_dos_detalhes(): void
@@ -646,12 +705,24 @@ final class ControladorUtilizadorTest extends TestCase
         $superAdministrador =
             $this->criarSuperAdministrador();
 
-        $utilizador = Utilizador::factory()
-            ->create();
+        $utilizador =
+            Utilizador::factory()
+                ->create();
 
         $this->criarConviteUtilizado(
             $utilizador,
             $superAdministrador,
+        );
+
+        $servicoPapeis =
+            $this->app->make(
+                ServicoPapeisUtilizadores::class,
+            );
+
+        $utilizador = $servicoPapeis->alterar(
+            $utilizador,
+            $superAdministrador,
+            PapelUtilizador::Administrador,
         );
 
         $servicoAcesso =
@@ -678,6 +749,12 @@ final class ControladorUtilizadorTest extends TestCase
             )
             ->assertOk()
             ->assertViewHas(
+                'papeisDisponiveis',
+                static fn (
+                    mixed $valor,
+                ): bool => $valor === PapelUtilizador::cases(),
+            )
+            ->assertViewHas(
                 'utilizador',
                 static function (
                     mixed $valor,
@@ -692,6 +769,9 @@ final class ControladorUtilizadorTest extends TestCase
                         )
                         || ! $valor->relationLoaded(
                             'registosAcesso',
+                        )
+                        || ! $valor->relationLoaded(
+                            'registosPapel',
                         )
                         || ! $valor->relationLoaded(
                             'conviteUtilizado',
@@ -712,15 +792,30 @@ final class ControladorUtilizadorTest extends TestCase
                         return false;
                     }
 
-                    return $valor
-                        ->registosAcesso
-                        ->every(
-                            static fn (
-                                RegistoAcessoUtilizador $registo,
-                            ): bool => $registo->relationLoaded(
-                                'responsavel',
-                            ),
-                        );
+                    $acessosCarregados =
+                        $valor
+                            ->registosAcesso
+                            ->every(
+                                static fn (
+                                    RegistoAcessoUtilizador $registo,
+                                ): bool => $registo->relationLoaded(
+                                    'responsavel',
+                                ),
+                            );
+
+                    $papeisCarregados =
+                        $valor
+                            ->registosPapel
+                            ->every(
+                                static fn (
+                                    RegistoPapelUtilizador $registo,
+                                ): bool => $registo->relationLoaded(
+                                    'responsavel',
+                                ),
+                            );
+
+                    return $acessosCarregados
+                        && $papeisCarregados;
                 },
             );
     }
@@ -769,15 +864,16 @@ final class ControladorUtilizadorTest extends TestCase
         Utilizador $utilizador,
         Utilizador $criador,
     ): Convite {
-        $convite = new Convite([
-            'nome_convidado' => 'Nome original do convite',
+        $convite =
+            new Convite([
+                'nome_convidado' => 'Nome original do convite',
 
-            'email_destino' => $utilizador->email,
+                'email_destino' => $utilizador->email,
 
-            'expira_em' => CarbonImmutable::parse(
-                '2026-12-31 23:59:59',
-            ),
-        ]);
+                'expira_em' => CarbonImmutable::parse(
+                    '2026-12-31 23:59:59',
+                ),
+            ]);
 
         $convite->definirCodigo(
             'ConviteDetalhes2026',

@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Http\Requests\Utilizadores;
 
+use App\Enumeracoes\PapelUtilizador;
+use App\Http\Requests\Utilizadores\AlterarPapelUtilizadorRequest;
 use App\Http\Requests\Utilizadores\AtualizarPalavraPasseRequest;
 use App\Http\Requests\Utilizadores\AtualizarPerfilRequest;
 use App\Http\Requests\Utilizadores\AtualizarPermissoesEmailRequest;
 use App\Models\Autenticacao\Utilizador;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Route;
 use LogicException;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -18,10 +23,12 @@ use Tests\TestCase;
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 final class GuardaSessaoRequestsTest extends TestCase
 {
+    use RefreshDatabase;
+
     /**
      * Confirma que o pedido da palavra-passe utiliza apenas o guard `sessao`.
      *
@@ -155,6 +162,77 @@ final class GuardaSessaoRequestsTest extends TestCase
     }
 
     /**
+     * Confirma que o pedido da alteração do papel utiliza apenas o guard
+     * `sessao`.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    #[Test]
+    public function pedido_alteracao_papel_utiliza_guarda_sessao(): void
+    {
+        $superAdministrador =
+            Utilizador::factory()
+                ->comPapel(
+                    PapelUtilizador::SuperAdministrador,
+                )
+                ->create();
+
+        $utilizadorAfetado =
+            Utilizador::factory()
+                ->create();
+
+        $pedidoComSessao =
+            new AlterarPapelUtilizadorRequest;
+
+        $this->configurarUtilizadores(
+            $pedidoComSessao,
+            utilizadorSessao: $superAdministrador,
+            utilizadorPredefinido: null,
+        );
+
+        $this->configurarUtilizadorDaRota(
+            $pedidoComSessao,
+            $utilizadorAfetado,
+        );
+
+        self::assertTrue(
+            $pedidoComSessao->authorize(),
+        );
+
+        self::assertSame(
+            $superAdministrador,
+            $pedidoComSessao->obterUtilizadorAutenticado(),
+        );
+
+        $pedidoApenasPredefinido =
+            new AlterarPapelUtilizadorRequest;
+
+        $this->configurarUtilizadores(
+            $pedidoApenasPredefinido,
+            utilizadorSessao: null,
+            utilizadorPredefinido: $superAdministrador,
+        );
+
+        $this->configurarUtilizadorDaRota(
+            $pedidoApenasPredefinido,
+            $utilizadorAfetado,
+        );
+
+        self::assertFalse(
+            $pedidoApenasPredefinido->authorize(),
+        );
+
+        $this->expectException(
+            LogicException::class,
+        );
+
+        $pedidoApenasPredefinido
+            ->obterUtilizadorAutenticado();
+    }
+
+    /**
      * Configura utilizadores diferentes para o guard `sessao` e para a
      * resolução sem indicação explícita de guard.
      *
@@ -178,6 +256,46 @@ final class GuardaSessaoRequestsTest extends TestCase
             ): ?Utilizador => $guarda === 'sessao'
                 ? $utilizadorSessao
                 : $utilizadorPredefinido,
+        );
+    }
+
+    /**
+     * Configura o utilizador associado ao parâmetro da rota.
+     *
+     * @param  FormRequest  $pedido  Pedido configurado.
+     * @param  Utilizador  $utilizador  Utilizador da rota.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function configurarUtilizadorDaRota(
+        FormRequest $pedido,
+        Utilizador $utilizador,
+    ): void {
+        $rota =
+            new Route(
+                [
+                    'PATCH',
+                ],
+                'utilizadores/{utilizador}/papel',
+                static fn () => null,
+            );
+
+        $rota->bind(
+            Request::create(
+                '/utilizadores/'.$utilizador->getKey().'/papel',
+                'PATCH',
+            ),
+        );
+
+        $rota->setParameter(
+            'utilizador',
+            $utilizador,
+        );
+
+        $pedido->setRouteResolver(
+            static fn (): Route => $rota,
         );
     }
 }

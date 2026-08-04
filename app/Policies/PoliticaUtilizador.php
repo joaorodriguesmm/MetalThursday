@@ -14,7 +14,7 @@ use App\Models\Autenticacao\Utilizador;
  *
  * @since 2.0.0
  *
- * @version 3.0.0
+ * @version 4.0.0
  */
 final class PoliticaUtilizador
 {
@@ -22,7 +22,7 @@ final class PoliticaUtilizador
      * Autoriza antecipadamente as operações de consulta do
      * superadministrador ativo.
      *
-     * As alterações do acesso e das sessões não são autorizadas
+     * As alterações do acesso, das sessões e dos papéis não são autorizadas
      * antecipadamente porque dependem também do utilizador afetado e, quando
      * aplicável, do respetivo estado atual.
      *
@@ -36,7 +36,7 @@ final class PoliticaUtilizador
      *
      * @since 2.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
     public function before(
         Utilizador $utilizador,
@@ -127,7 +127,7 @@ final class PoliticaUtilizador
         Utilizador $utilizador,
         Utilizador $utilizadorAfetado,
     ): bool {
-        return $this->podeGerirAcesso(
+        return $this->podeGerirUtilizador(
             $utilizador,
             $utilizadorAfetado,
         )
@@ -152,7 +152,7 @@ final class PoliticaUtilizador
         Utilizador $utilizador,
         Utilizador $utilizadorAfetado,
     ): bool {
-        return $this->podeGerirAcesso(
+        return $this->podeGerirUtilizador(
             $utilizador,
             $utilizadorAfetado,
         )
@@ -179,14 +179,41 @@ final class PoliticaUtilizador
         Utilizador $utilizador,
         Utilizador $utilizadorAfetado,
     ): bool {
-        return $this->podeGerirAcesso(
+        return $this->podeGerirUtilizador(
             $utilizador,
             $utilizadorAfetado,
         );
     }
 
     /**
-     * Determina se o responsável pode gerir o acesso do utilizador afetado.
+     * Determina se o utilizador pode alterar o papel de outro utilizador.
+     *
+     * A autorização permite iniciar a operação para utilizadores ativos ou
+     * suspensos. A validade da transição, a rejeição de alterações sem efeito
+     * e a proteção dos superadministradores permanecem no serviço
+     * transacional.
+     *
+     * @param  Utilizador  $utilizador  Utilizador autenticado.
+     * @param  Utilizador  $utilizadorAfetado  Utilizador cujo papel será
+     *                                         alterado.
+     * @return bool Verdadeiro quando a alteração pode ser iniciada.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function alterarPapel(
+        Utilizador $utilizador,
+        Utilizador $utilizadorAfetado,
+    ): bool {
+        return $this->podeGerirUtilizador(
+            $utilizador,
+            $utilizadorAfetado,
+        );
+    }
+
+    /**
+     * Determina se o responsável pode gerir o utilizador afetado.
      *
      * @param  Utilizador  $responsavel  Utilizador responsável.
      * @param  Utilizador  $utilizadorAfetado  Utilizador afetado.
@@ -195,9 +222,9 @@ final class PoliticaUtilizador
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
-    private function podeGerirAcesso(
+    private function podeGerirUtilizador(
         Utilizador $responsavel,
         Utilizador $utilizadorAfetado,
     ): bool {

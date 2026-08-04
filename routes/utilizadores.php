@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Route;
  *
  * @since 2.0.0
  *
- * @version 4.0.0
+ * @version 5.0.0
  */
 Route::middleware([
     'auth:sessao',
@@ -51,6 +51,20 @@ Route::middleware([
                 )
                 ->name(
                     'detalhes',
+                );
+
+            Route::patch(
+                '/{utilizador}/papel',
+                [
+                    ControladorUtilizador::class,
+                    'alterarPapel',
+                ],
+            )
+                ->whereNumber(
+                    'utilizador',
+                )
+                ->name(
+                    'alterar-papel',
                 );
 
             Route::patch(

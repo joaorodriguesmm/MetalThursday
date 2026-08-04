@@ -1,15 +1,16 @@
 {{--
     Apresenta os detalhes e as operações administrativas de um utilizador.
 
-    Os dados do utilizador, a suspensão atual, o convite utilizado e o
-    histórico do acesso são carregados explicitamente pelo
+    Os dados do utilizador, a suspensão atual, o convite utilizado e os
+    históricos do acesso e dos papéis são carregados explicitamente pelo
     App\Http\Controllers\Utilizadores\ControladorUtilizador.
 
-    A suspensão, a reativação e o encerramento das sessões são autorizados
-    pela política e executados pelo serviço transacional de gestão do acesso.
+    A alteração do papel, a suspensão, a reativação e o encerramento das
+    sessões são autorizados pela política e executados pelos respetivos
+    serviços transacionais.
 
     @since 2.0.0
-    @version 3.0.0
+    @version 4.0.0
 --}}
 
 <x-layout-aplicacao>
@@ -426,7 +427,239 @@
                 </div>
             </section>
         </div>
+
+        <div class="col-12">
+            <section class="card shadow-sm">
+                <div
+                    class="card-header d-flex justify-content-between align-items-center gap-3"
+                >
+                    <h2 class="h5 mb-0">
+                        Histórico dos papéis
+                    </h2>
+
+                    <span class="badge text-bg-secondary">
+                        {{ $utilizador->registosPapel->count() }}
+                    </span>
+                </div>
+
+                <div class="card-body p-0">
+                    @if ($utilizador->registosPapel->isEmpty())
+                        <div
+                            class="alert alert-info m-3"
+                            role="status"
+                        >
+                            Ainda não existem alterações do papel.
+                        </div>
+                    @else
+                        <div class="table-responsive">
+                            <table
+                                class="table table-striped table-hover align-middle mb-0"
+                            >
+                                <caption class="visually-hidden">
+                                    Histórico das alterações do papel
+                                </caption>
+
+                                <thead>
+                                    <tr>
+                                        <th scope="col">
+                                            Papel anterior
+                                        </th>
+
+                                        <th scope="col">
+                                            Novo papel
+                                        </th>
+
+                                        <th scope="col">
+                                            Data
+                                        </th>
+
+                                        <th scope="col">
+                                            Responsável
+                                        </th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    @foreach ($utilizador->registosPapel as $registo)
+                                        <tr>
+                                            <td>
+                                                {{ $registo->papel_anterior->etiqueta() }}
+                                            </td>
+
+                                            <td>
+                                                <span class="badge text-bg-primary">
+                                                    {{ $registo->papel_novo->etiqueta() }}
+                                                </span>
+                                            </td>
+
+                                            <td class="text-nowrap">
+                                                {{
+                                                    $registo
+                                                        ->registado_em
+                                                        ->format(
+                                                            'd/m/Y H:i',
+                                                        )
+                                                }}
+                                            </td>
+
+                                            <td>
+                                                <span class="d-block">
+                                                    {{ $registo->responsavel->nome }}
+                                                </span>
+
+                                                <span class="small text-muted text-break">
+                                                    {{ $registo->responsavel->email }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </div>
+            </section>
+        </div>
     </div>
+
+    @can('alterarPapel', $utilizador)
+        <section class="card shadow-sm mt-4 border-primary">
+            <div class="card-header">
+                <h2 class="h5 mb-0">
+                    Alterar papel
+                </h2>
+            </div>
+
+            <div class="card-body">
+                <div
+                    class="alert alert-warning"
+                    role="alert"
+                >
+                    A alteração do papel encerra todas as sessões atuais e
+                    invalida a autenticação persistente do utilizador. O estado
+                    ativo ou suspenso da conta não será alterado.
+                </div>
+
+                <form
+                    method="POST"
+                    action="{{
+                        route(
+                            'utilizadores.alterar-papel',
+                            $utilizador,
+                        )
+                    }}"
+                    novalidate
+                >
+                    @csrf
+                    @method('PATCH')
+
+                    <div class="mb-3">
+                        <label
+                            class="form-label"
+                            for="papel-utilizador"
+                        >
+                            Novo papel
+                        </label>
+
+                        <select
+                            id="papel-utilizador"
+                            class="form-select @error('papel', 'papel') is-invalid @enderror"
+                            name="papel"
+                            aria-describedby="ajuda-papel-utilizador erro-papel-utilizador"
+                            @error('papel', 'papel')
+                                aria-invalid="true"
+                            @enderror
+                            required
+                        >
+                            @foreach ($papeisDisponiveis as $papelDisponivel)
+                                <option
+                                    value="{{ $papelDisponivel->value }}"
+                                    @selected(
+                                        old(
+                                            'papel',
+                                            $utilizador->papel->value,
+                                        ) === $papelDisponivel->value
+                                    )
+                                >
+                                    {{ $papelDisponivel->etiqueta() }}
+
+                                    @if ($papelDisponivel === $utilizador->papel)
+                                        (atual)
+                                    @endif
+                                </option>
+                            @endforeach
+                        </select>
+
+                        <div
+                            id="ajuda-papel-utilizador"
+                            class="form-text"
+                        >
+                            A alteração ficará registada permanentemente no
+                            histórico administrativo.
+                        </div>
+
+                        <div
+                            id="erro-papel-utilizador"
+                            class="invalid-feedback @error('papel', 'papel') d-block @enderror"
+                            aria-live="polite"
+                        >
+                            @error('papel', 'papel')
+                                {{ $message }}
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input
+                            id="confirmar-alteracao-papel"
+                            class="form-check-input @error('confirmar_alteracao_papel', 'papel') is-invalid @enderror"
+                            type="checkbox"
+                            name="confirmar_alteracao_papel"
+                            value="1"
+                            @checked(old('confirmar_alteracao_papel'))
+                            aria-describedby="erro-confirmar-alteracao-papel"
+                            @error('confirmar_alteracao_papel', 'papel')
+                                aria-invalid="true"
+                            @enderror
+                            required
+                        >
+
+                        <label
+                            class="form-check-label"
+                            for="confirmar-alteracao-papel"
+                        >
+                            Confirmo que pretendo alterar o papel deste
+                            utilizador.
+                        </label>
+
+                        <div
+                            id="erro-confirmar-alteracao-papel"
+                            class="invalid-feedback @error('confirmar_alteracao_papel', 'papel') d-block @enderror"
+                            aria-live="polite"
+                        >
+                            @error('confirmar_alteracao_papel', 'papel')
+                                {{ $message }}
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="text-end">
+                        <button
+                            class="btn btn-primary"
+                            type="submit"
+                        >
+                            <i
+                                class="bi bi-person-gear me-2"
+                                aria-hidden="true"
+                            ></i>
+
+                            Alterar papel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+    @endcan
 
     @can('suspender', $utilizador)
         <section class="card shadow-sm mt-4 border-danger">
