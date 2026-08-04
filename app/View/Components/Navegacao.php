@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\View\Components;
 
+use App\Models\Autenticacao\Convite;
 use App\Models\Autenticacao\Utilizador;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Contracts\Auth\Access\Gate as Autorizacao;
@@ -16,12 +17,12 @@ use Illuminate\View\Component;
  * Prepara a navegação principal da aplicação.
  *
  * O componente identifica o utilizador autenticado, determina as páginas
- * ativas, verifica o acesso à gestão dos utilizadores e obtém a quantidade de
+ * ativas, verifica o acesso às áreas administrativas e obtém a quantidade de
  * notificações por ler.
  *
  * @since 1.0.0
  *
- * @version 5.0.0
+ * @version 6.0.0
  */
 final class Navegacao extends Component
 {
@@ -83,7 +84,7 @@ final class Navegacao extends Component
     public readonly bool $paginaPerfilAtiva;
 
     /**
-     * Indica se uma página da gestão dos utilizadores está ativa.
+     * Indica se a gestão dos utilizadores está ativa.
      *
      * @since 2.0.0
      *
@@ -92,13 +93,31 @@ final class Navegacao extends Component
     public readonly bool $paginaUtilizadoresAtiva;
 
     /**
-     * Indica se o utilizador pode aceder à gestão dos utilizadores.
+     * Indica se a gestão dos convites está ativa.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public readonly bool $paginaConvitesAtiva;
+
+    /**
+     * Indica se o utilizador pode gerir utilizadores.
      *
      * @since 2.0.0
      *
      * @version 1.0.0
      */
     public readonly bool $podeGerirUtilizadores;
+
+    /**
+     * Indica se o utilizador pode gerir convites.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public readonly bool $podeGerirConvites;
 
     /**
      * Cria uma nova instância do componente.
@@ -113,7 +132,7 @@ final class Navegacao extends Component
      *
      * @since 1.0.0
      *
-     * @version 5.0.0
+     * @version 6.0.0
      */
     public function __construct(
         Request $pedido,
@@ -152,15 +171,27 @@ final class Navegacao extends Component
                 'utilizadores.*',
             );
 
+        $this->paginaConvitesAtiva =
+            $pedido->routeIs(
+                'convites.*',
+            );
+
+        $autorizacaoUtilizador =
+            $autorizacao->forUser(
+                $this->utilizadorAutenticado,
+            );
+
         $this->podeGerirUtilizadores =
-            $autorizacao
-                ->forUser(
-                    $this->utilizadorAutenticado,
-                )
-                ->allows(
-                    'viewAny',
-                    Utilizador::class,
-                );
+            $autorizacaoUtilizador->allows(
+                'viewAny',
+                Utilizador::class,
+            );
+
+        $this->podeGerirConvites =
+            $autorizacaoUtilizador->allows(
+                'viewAny',
+                Convite::class,
+            );
     }
 
     /**
@@ -192,13 +223,14 @@ final class Navegacao extends Component
     private function normalizarNomeAplicacao(
         string $nomeAplicacao,
     ): string {
-        $nomeNormalizado = preg_replace(
-            '/\s+/u',
-            ' ',
-            trim(
-                $nomeAplicacao,
-            ),
-        );
+        $nomeNormalizado =
+            preg_replace(
+                '/\s+/u',
+                ' ',
+                trim(
+                    $nomeAplicacao,
+                ),
+            );
 
         if (
             ! is_string($nomeNormalizado)
@@ -226,11 +258,12 @@ final class Navegacao extends Component
     private function obterUtilizadorAutenticado(
         FabricaAutenticacao $autenticacao,
     ): Utilizador {
-        $utilizador = $autenticacao
-            ->guard(
-                'sessao',
-            )
-            ->user();
+        $utilizador =
+            $autenticacao
+                ->guard(
+                    'sessao',
+                )
+                ->user();
 
         if (! $utilizador instanceof Utilizador) {
             throw new AuthenticationException(
@@ -241,15 +274,16 @@ final class Navegacao extends Component
             );
         }
 
-        $identificadorUtilizador = filter_var(
-            $utilizador->getKey(),
-            FILTER_VALIDATE_INT,
-            [
-                'options' => [
-                    'min_range' => 1,
+        $identificadorUtilizador =
+            filter_var(
+                $utilizador->getKey(),
+                FILTER_VALIDATE_INT,
+                [
+                    'options' => [
+                        'min_range' => 1,
+                    ],
                 ],
-            ],
-        );
+            );
 
         if (
             ! $utilizador->exists

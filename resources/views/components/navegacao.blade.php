@@ -2,11 +2,11 @@
     Apresenta a navegação principal da aplicação.
 
     A identificação do utilizador, as páginas ativas, a autorização para gerir
-    utilizadores e a quantidade de notificações por ler são preparadas pela
-    classe App\View\Components\Navegacao.
+    utilizadores e convites e a quantidade de notificações por ler são
+    preparadas pela classe App\View\Components\Navegacao.
 
     @since 1.0.0
-    @version 5.0.0
+    @version 6.0.0
 --}}
 
 <nav
@@ -103,6 +103,24 @@
                             @endif
                         >
                             Utilizadores
+                        </a>
+                    </li>
+                @endif
+
+                @if ($podeGerirConvites)
+                    <li class="nav-item">
+                        <a
+                            class="nav-link {{
+                                $paginaConvitesAtiva
+                                    ? 'active'
+                                    : ''
+                            }}"
+                            href="{{ route('convites.indice') }}"
+                            @if ($paginaConvitesAtiva)
+                                aria-current="page"
+                            @endif
+                        >
+                            Convites
                         </a>
                     </li>
                 @endif
