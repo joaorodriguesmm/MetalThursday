@@ -75,6 +75,8 @@ use SensitiveParameter;
  * @property-read Utilizador|null $responsavelSuspensao
  * @property-read Collection<int, RegistoAcessoUtilizador> $registosAcesso
  * @property-read Collection<int, RegistoAcessoUtilizador> $registosAcessoEfetuados
+ * @property-read Collection<int, RegistoPapelUtilizador> $registosPapel
+ * @property-read Collection<int, RegistoPapelUtilizador> $registosPapelEfetuados
  * @property-read Collection<int, Edicao> $edicoesCriadas
  * @property-read Collection<int, MetalThursday> $metalThursdaysComoAutor
  * @property-read Collection<int, MetalThursday> $metalThursdaysComoNomeado
@@ -88,7 +90,7 @@ use SensitiveParameter;
  *
  * @since 1.0.0
  *
- * @version 4.0.0
+ * @version 5.0.0
  */
 class Utilizador extends Authenticatable implements MustVerifyEmail
 {
@@ -917,6 +919,55 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
         return $this
             ->hasMany(
                 RegistoAcessoUtilizador::class,
+                'responsavel_id',
+            )
+            ->orderByDesc(
+                'registado_em',
+            )
+            ->orderByDesc(
+                'id',
+            );
+    }
+
+    /**
+     * Obtém o histórico de alterações do papel do utilizador.
+     *
+     * @return HasMany<RegistoPapelUtilizador, $this> Relação com o histórico.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function registosPapel(): HasMany
+    {
+        return $this
+            ->hasMany(
+                RegistoPapelUtilizador::class,
+                'utilizador_id',
+            )
+            ->orderByDesc(
+                'registado_em',
+            )
+            ->orderByDesc(
+                'id',
+            );
+    }
+
+    /**
+     * Obtém as alterações de papel realizadas pelo utilizador.
+     *
+     * @return HasMany<RegistoPapelUtilizador, $this> Relação com as ações
+     *                                                realizadas.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function registosPapelEfetuados(): HasMany
+    {
+        return $this
+            ->hasMany(
+                RegistoPapelUtilizador::class,
                 'responsavel_id',
             )
             ->orderByDesc(
