@@ -14,7 +14,7 @@ use App\Models\Autenticacao\Utilizador;
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 3.0.0
  */
 final class PoliticaUtilizador
 {
@@ -22,8 +22,9 @@ final class PoliticaUtilizador
      * Autoriza antecipadamente as operações de consulta do
      * superadministrador ativo.
      *
-     * As alterações do acesso não são autorizadas antecipadamente porque
-     * dependem também do utilizador afetado e do respetivo estado atual.
+     * As alterações do acesso e das sessões não são autorizadas
+     * antecipadamente porque dependem também do utilizador afetado e, quando
+     * aplicável, do respetivo estado atual.
      *
      * O nome permanece em inglês por corresponder ao método especial
      * reconhecido pelo sistema de autorização do Laravel.
@@ -35,7 +36,7 @@ final class PoliticaUtilizador
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function before(
         Utilizador $utilizador,
@@ -156,6 +157,32 @@ final class PoliticaUtilizador
             $utilizadorAfetado,
         )
             && $utilizadorAfetado->estaSuspenso();
+    }
+
+    /**
+     * Determina se o utilizador pode encerrar as sessões de outro utilizador.
+     *
+     * A operação pode ser aplicada a utilizadores ativos ou suspensos. O
+     * superadministrador não pode encerrar as próprias sessões através desta
+     * área administrativa.
+     *
+     * @param  Utilizador  $utilizador  Utilizador autenticado.
+     * @param  Utilizador  $utilizadorAfetado  Utilizador cujas sessões serão
+     *                                         encerradas.
+     * @return bool Verdadeiro quando as sessões podem ser encerradas.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function encerrarSessoes(
+        Utilizador $utilizador,
+        Utilizador $utilizadorAfetado,
+    ): bool {
+        return $this->podeGerirAcesso(
+            $utilizador,
+            $utilizadorAfetado,
+        );
     }
 
     /**

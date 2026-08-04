@@ -5,11 +5,11 @@
     histórico do acesso são carregados explicitamente pelo
     App\Http\Controllers\Utilizadores\ControladorUtilizador.
 
-    A suspensão e a reativação são autorizadas pela política e executadas pelo
-    serviço transacional de gestão do acesso.
+    A suspensão, a reativação e o encerramento das sessões são autorizados
+    pela política e executados pelo serviço transacional de gestão do acesso.
 
     @since 2.0.0
-    @version 2.0.0
+    @version 3.0.0
 --}}
 
 <x-layout-aplicacao>
@@ -428,7 +428,7 @@
         </div>
     </div>
 
-        @can('suspender', $utilizador)
+    @can('suspender', $utilizador)
         <section class="card shadow-sm mt-4 border-danger">
             <div class="card-header">
                 <h2 class="h5 mb-0">
@@ -591,6 +591,89 @@
                             ></i>
 
                             Reativar acesso
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+    @endcan
+
+    @can('encerrarSessoes', $utilizador)
+        <section class="card shadow-sm mt-4 border-warning">
+            <div class="card-header">
+                <h2 class="h5 mb-0">
+                    Encerrar sessões
+                </h2>
+            </div>
+
+            <div class="card-body">
+                <div
+                    class="alert alert-warning"
+                    role="alert"
+                >
+                    Todas as sessões atuais serão encerradas e a autenticação
+                    persistente será invalidada. O estado ativo ou suspenso da
+                    conta não será alterado.
+                </div>
+
+                <form
+                    method="POST"
+                    action="{{
+                        route(
+                            'utilizadores.encerrar-sessoes',
+                            $utilizador,
+                        )
+                    }}"
+                    novalidate
+                >
+                    @csrf
+                    @method('DELETE')
+
+                    <div class="form-check mb-3">
+                        <input
+                            id="confirmar-encerramento-sessoes"
+                            class="form-check-input @error('confirmar_encerramento_sessoes', 'sessoes') is-invalid @enderror"
+                            type="checkbox"
+                            name="confirmar_encerramento_sessoes"
+                            value="1"
+                            @checked(old('confirmar_encerramento_sessoes'))
+                            aria-describedby="erro-confirmar-encerramento-sessoes"
+                            @error('confirmar_encerramento_sessoes', 'sessoes')
+                                aria-invalid="true"
+                            @enderror
+                            required
+                        >
+
+                        <label
+                            class="form-check-label"
+                            for="confirmar-encerramento-sessoes"
+                        >
+                            Confirmo que pretendo encerrar todas as sessões
+                            deste utilizador.
+                        </label>
+
+                        <div
+                            id="erro-confirmar-encerramento-sessoes"
+                            class="invalid-feedback @error('confirmar_encerramento_sessoes', 'sessoes') d-block @enderror"
+                            aria-live="polite"
+                        >
+                            @error('confirmar_encerramento_sessoes', 'sessoes')
+                                {{ $message }}
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="text-end">
+                        <button
+                            class="btn btn-warning"
+                            type="submit"
+                        >
+                            <i
+                                class="bi bi-box-arrow-right me-2"
+                                aria-hidden="true"
+                            ></i>
+
+                            Encerrar todas as sessões
                         </button>
                     </div>
                 </form>

@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Utilizadores;
 
 use App\Enumeracoes\PapelUtilizador;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Utilizadores\EncerrarSessoesUtilizadorRequest;
 use App\Http\Requests\Utilizadores\ReativarUtilizadorRequest;
 use App\Http\Requests\Utilizadores\SuspenderUtilizadorRequest;
 use App\Models\Autenticacao\Utilizador;
@@ -27,12 +28,12 @@ use Throwable;
  * papel e pelo estado atual do acesso. A página de detalhes apresenta os
  * dados administrativos, o convite utilizado e o histórico do acesso.
  *
- * A suspensão e a reativação são delegadas ao serviço transacional
- * responsável pela proteção das regras de domínio e das sessões.
+ * A suspensão, a reativação e o encerramento das sessões são delegados ao
+ * serviço transacional responsável pela proteção das regras de domínio.
  *
  * @since 2.0.0
  *
- * @version 3.0.0
+ * @version 4.0.0
  */
 final class ControladorUtilizador extends Controller
 {
@@ -418,6 +419,78 @@ final class ControladorUtilizador extends Controller
                 'O acesso de %s foi reativado com sucesso.',
                 $utilizador->nome,
             ),
+        );
+    }
+
+    /**
+     * Encerra todas as sessões persistidas de um utilizador.
+     *
+     * A operação pode ser aplicada a utilizadores ativos ou suspensos. O
+     * serviço renova também o token persistente, impedindo autenticações
+     * futuras baseadas na credencial anterior.
+     *
+     * @param  EncerrarSessoesUtilizadorRequest  $pedido  Pedido validado.
+     * @param  Utilizador  $utilizador  Utilizador afetado.
+     * @return RedirectResponse Redirecionamento para os detalhes.
+     *
+     * @throws Throwable Quando ocorre um erro técnico inesperado.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function encerrarSessoes(
+        EncerrarSessoesUtilizadorRequest $pedido,
+        Utilizador $utilizador,
+    ): RedirectResponse {
+        $responsavel =
+            $pedido->obterUtilizadorAutenticado();
+
+        try {
+            $numeroSessoesEncerradas =
+                $this
+                    ->servicoAcessoUtilizadores
+                    ->encerrarSessoes(
+                        utilizador: $utilizador,
+                        responsavel: $responsavel,
+                    );
+        } catch (DomainException $excecao) {
+            return to_route(
+                'utilizadores.detalhes',
+                $utilizador,
+            )->withErrors(
+                [
+                    'confirmar_encerramento_sessoes' => $excecao->getMessage(),
+                ],
+                'sessoes',
+            );
+        }
+
+        $mensagem =
+            match ($numeroSessoesEncerradas) {
+                0 => sprintf(
+                    'As autenticações persistentes de %s foram invalidadas. Não existiam sessões ativas para encerrar.',
+                    $utilizador->nome,
+                ),
+
+                1 => sprintf(
+                    'Foi encerrada 1 sessão de %s e as autenticações persistentes foram invalidadas.',
+                    $utilizador->nome,
+                ),
+
+                default => sprintf(
+                    'Foram encerradas %d sessões de %s e as autenticações persistentes foram invalidadas.',
+                    $numeroSessoesEncerradas,
+                    $utilizador->nome,
+                ),
+            };
+
+        return to_route(
+            'utilizadores.detalhes',
+            $utilizador,
+        )->with(
+            'sucesso',
+            $mensagem,
         );
     }
 

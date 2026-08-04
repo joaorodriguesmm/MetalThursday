@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Route;
  *
  * @since 2.0.0
  *
- * @version 3.0.0
+ * @version 4.0.0
  */
 Route::middleware([
     'auth:sessao',
@@ -79,6 +79,20 @@ Route::middleware([
                 )
                 ->name(
                     'reativar',
+                );
+
+            Route::delete(
+                '/{utilizador}/sessoes',
+                [
+                    ControladorUtilizador::class,
+                    'encerrarSessoes',
+                ],
+            )
+                ->whereNumber(
+                    'utilizador',
+                )
+                ->name(
+                    'encerrar-sessoes',
                 );
         },
     );
