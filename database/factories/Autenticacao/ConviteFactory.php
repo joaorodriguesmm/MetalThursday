@@ -20,7 +20,7 @@ use InvalidArgumentException;
  *
  * @since 2.0.0
  *
- * @version 2.1.0
+ * @version 3.0.0
  */
 final class ConviteFactory extends Factory
 {
@@ -49,7 +49,7 @@ final class ConviteFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
     public function definition(): array
     {
@@ -82,14 +82,13 @@ final class ConviteFactory extends Factory
             'utilizado_em' => null,
 
             'revogado_em' => null,
+
+            'revogado_por_id' => null,
         ];
     }
 
     /**
      * Define um código conhecido para o convite.
-     *
-     * O código é validado e normalizado pelo próprio contrato do modelo antes
-     * de o respetivo hash ser colocado no estado da factory.
      *
      * @param  string  $codigo  Código original do convite.
      * @return static Factory configurada.
@@ -149,7 +148,7 @@ final class ConviteFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
     public function expirado(): static
     {
@@ -161,26 +160,40 @@ final class ConviteFactory extends Factory
             'utilizado_em' => null,
 
             'revogado_em' => null,
+
+            'revogado_por_id' => null,
         ]);
     }
 
     /**
-     * Cria um convite revogado e ainda não utilizado.
+     * Cria um convite revogado por um utilizador conhecido.
      *
+     * O estado garante que um convite revogado não permanece simultaneamente
+     * utilizado.
+     *
+     * @param  Utilizador  $responsavel  Responsável pela revogação.
      * @return static Factory configurada.
+     *
+     * @throws InvalidArgumentException Quando o responsável não está
+     *                                  persistido.
      *
      * @since 2.0.0
      *
-     * @version 2.1.0
+     * @version 1.0.0
      */
-    public function revogado(): static
-    {
+    public function revogadoPor(
+        Utilizador $responsavel,
+    ): static {
         return $this->state([
             'utilizado_por_id' => null,
 
             'utilizado_em' => null,
 
             'revogado_em' => now(),
+
+            'revogado_por_id' => $this->obterIdentificadorUtilizadorPersistido(
+                $responsavel,
+            ),
         ]);
     }
 
@@ -223,7 +236,7 @@ final class ConviteFactory extends Factory
      *
      * @since 2.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
     public function utilizadoPor(
         Utilizador $utilizador,
@@ -236,6 +249,8 @@ final class ConviteFactory extends Factory
             'utilizado_em' => now(),
 
             'revogado_em' => null,
+
+            'revogado_por_id' => null,
         ]);
     }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Factories\Autenticacao;
 
+use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\Convite;
 use App\Models\Autenticacao\Utilizador;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -16,7 +17,7 @@ use Tests\TestCase;
  *
  * @since 2.0.0
  *
- * @version 1.0.0
+ * @version 2.0.0
  */
 final class FactoriesConviteTest extends TestCase
 {
@@ -29,7 +30,7 @@ final class FactoriesConviteTest extends TestCase
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function cria_convite_utilizado_com_codigo_e_relacoes_conhecidas(): void
@@ -37,24 +38,32 @@ final class FactoriesConviteTest extends TestCase
         $codigo =
             'MT-Convite-Factory-Conhecido';
 
-        $criador = Utilizador::factory()
-            ->create();
+        $criador =
+            Utilizador::factory()
+                ->create();
 
-        $utilizador = Utilizador::factory()
-            ->create();
+        $responsavelRevogacao =
+            $this->criarSuperAdministrador();
 
-        $convite = Convite::factory()
-            ->comCodigo(
-                $codigo,
-            )
-            ->criadoPor(
-                $criador,
-            )
-            ->revogado()
-            ->utilizadoPor(
-                $utilizador,
-            )
-            ->create();
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $convite =
+            Convite::factory()
+                ->comCodigo(
+                    $codigo,
+                )
+                ->criadoPor(
+                    $criador,
+                )
+                ->revogadoPor(
+                    $responsavelRevogacao,
+                )
+                ->utilizadoPor(
+                    $utilizador,
+                )
+                ->create();
 
         self::assertSame(
             $criador->getKey(),
@@ -72,6 +81,10 @@ final class FactoriesConviteTest extends TestCase
 
         self::assertNull(
             $convite->revogado_em,
+        );
+
+        self::assertNull(
+            $convite->revogado_por_id,
         );
 
         self::assertTrue(
@@ -95,10 +108,11 @@ final class FactoriesConviteTest extends TestCase
     #[Test]
     public function cria_convite_sem_destinatario_nem_expiracao(): void
     {
-        $convite = Convite::factory()
-            ->semEmailDestino()
-            ->semExpiracao()
-            ->create();
+        $convite =
+            Convite::factory()
+                ->semEmailDestino()
+                ->semExpiracao()
+                ->create();
 
         self::assertNull(
             $convite->email_destino,
@@ -123,9 +137,10 @@ final class FactoriesConviteTest extends TestCase
     #[Test]
     public function cria_convite_expirado_e_pendente(): void
     {
-        $convite = Convite::factory()
-            ->expirado()
-            ->create();
+        $convite =
+            Convite::factory()
+                ->expirado()
+                ->create();
 
         self::assertTrue(
             $convite->estaExpirado(),
@@ -139,24 +154,41 @@ final class FactoriesConviteTest extends TestCase
             $convite->foiRevogado(),
         );
 
+        self::assertNull(
+            $convite->revogado_por_id,
+        );
+
         self::assertFalse(
             $convite->estaDisponivel(),
         );
     }
 
     /**
-     * Confirma que o estado revogado produz um convite não utilizado.
+     * Confirma que o estado revogado conserva o responsável.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
     public function cria_convite_revogado_e_nao_utilizado(): void
     {
-        $convite = Convite::factory()
-            ->revogado()
-            ->create();
+        $responsavel =
+            $this->criarSuperAdministrador();
+
+        $convite =
+            Convite::factory()
+                ->revogadoPor(
+                    $responsavel,
+                )
+                ->create()
+                ->fresh([
+                    'responsavelRevogacao',
+                ]);
+
+        self::assertNotNull(
+            $convite,
+        );
 
         self::assertTrue(
             $convite->foiRevogado(),
@@ -169,17 +201,28 @@ final class FactoriesConviteTest extends TestCase
         self::assertFalse(
             $convite->estaDisponivel(),
         );
+
+        self::assertSame(
+            (int) $responsavel->getKey(),
+            $convite->revogado_por_id,
+        );
+
+        self::assertTrue(
+            $convite->responsavelRevogacao->is(
+                $responsavel,
+            ),
+        );
     }
 
     /**
-     * Confirma que um utilizador não persistido não pode ser associado.
+     * Confirma que um criador não persistido não pode ser associado.
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     #[Test]
-    public function rejeita_utilizador_nao_persistido(): void
+    public function rejeita_criador_nao_persistido(): void
     {
         $this->expectException(
             InvalidArgumentException::class,
@@ -189,5 +232,43 @@ final class FactoriesConviteTest extends TestCase
             ->criadoPor(
                 new Utilizador,
             );
+    }
+
+    /**
+     * Confirma que um responsável não persistido não pode ser associado.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    #[Test]
+    public function rejeita_responsavel_revogacao_nao_persistido(): void
+    {
+        $this->expectException(
+            InvalidArgumentException::class,
+        );
+
+        Convite::factory()
+            ->revogadoPor(
+                new Utilizador,
+            );
+    }
+
+    /**
+     * Cria um superadministrador ativo.
+     *
+     * @return Utilizador Superadministrador criado.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function criarSuperAdministrador(): Utilizador
+    {
+        return Utilizador::factory()
+            ->comPapel(
+                PapelUtilizador::SuperAdministrador,
+            )
+            ->create();
     }
 }

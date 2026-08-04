@@ -9,6 +9,7 @@ use App\Models\Autenticacao\Convite;
 use App\Models\Autenticacao\Utilizador;
 use App\Servicos\Autenticacao\ServicoConvites;
 use Carbon\CarbonImmutable;
+use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -24,7 +25,7 @@ use Tests\TestCase;
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 3.0.0
  */
 final class ServicoConvitesTest extends TestCase
 {
@@ -126,6 +127,10 @@ final class ServicoConvitesTest extends TestCase
             $convite->revogado_em,
         );
 
+        self::assertNull(
+            $convite->revogado_por_id,
+        );
+
         self::assertNotNull(
             $convite->expira_em,
         );
@@ -172,6 +177,8 @@ final class ServicoConvitesTest extends TestCase
                 'utilizado_em' => null,
 
                 'revogado_em' => null,
+
+                'revogado_por_id' => null,
             ],
         );
 
@@ -301,9 +308,11 @@ final class ServicoConvitesTest extends TestCase
     /**
      * Confirma que a revogação é persistida e idempotente.
      *
+     * O primeiro momento e o primeiro responsável são preservados.
+     *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     #[Test]
     public function revoga_um_convite_pendente(): void
@@ -315,6 +324,9 @@ final class ServicoConvitesTest extends TestCase
         Date::setTestNow(
             $primeiroMomento,
         );
+
+        $responsavel =
+            $this->criarSuperAdministrador();
 
         $servico = app(
             ServicoConvites::class,
@@ -328,6 +340,7 @@ final class ServicoConvitesTest extends TestCase
         $conviteRevogado =
             $servico->revogar(
                 $resultado->obterConvite(),
+                $responsavel,
             );
 
         self::assertNotNull(
@@ -340,6 +353,17 @@ final class ServicoConvitesTest extends TestCase
                 ->equalTo(
                     $primeiroMomento,
                 ),
+        );
+
+        self::assertSame(
+            (int) $responsavel->getKey(),
+            $conviteRevogado->revogado_por_id,
+        );
+
+        self::assertTrue(
+            $conviteRevogado->responsavelRevogacao->is(
+                $responsavel,
+            ),
         );
 
         self::assertTrue(
@@ -356,13 +380,24 @@ final class ServicoConvitesTest extends TestCase
             ),
         );
 
+        $primeiraAtualizacao =
+            $conviteRevogado->updated_at;
+
         Date::setTestNow(
             $primeiroMomento->addDay(),
         );
 
+        $outroResponsavel =
+            Utilizador::factory()
+                ->comPapel(
+                    PapelUtilizador::SuperAdministrador,
+                )
+                ->create();
+
         $conviteRevogadoNovamente =
             $servico->revogar(
                 $conviteRevogado,
+                $outroResponsavel,
             );
 
         self::assertNotNull(
@@ -377,6 +412,20 @@ final class ServicoConvitesTest extends TestCase
                 ),
         );
 
+        self::assertSame(
+            (int) $responsavel->getKey(),
+            $conviteRevogadoNovamente->revogado_por_id,
+        );
+
+        self::assertTrue(
+            $conviteRevogadoNovamente
+                ->updated_at
+                ?->equalTo(
+                    $primeiraAtualizacao,
+                )
+                ?? false,
+        );
+
         $this->assertDatabaseHas(
             'convites',
             [
@@ -385,7 +434,187 @@ final class ServicoConvitesTest extends TestCase
                 'revogado_em' => $primeiroMomento->format(
                     'Y-m-d H:i:s',
                 ),
+
+                'revogado_por_id' => $responsavel->getKey(),
             ],
+        );
+    }
+
+    /**
+     * Confirma que um convite expirado continua a poder ser revogado.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    #[Test]
+    public function revoga_um_convite_expirado(): void
+    {
+        $responsavel =
+            $this->criarSuperAdministrador();
+
+        $convite =
+            Convite::factory()
+                ->expirado()
+                ->create();
+
+        $conviteRevogado = app(
+            ServicoConvites::class,
+        )->revogar(
+            $convite,
+            $responsavel,
+        );
+
+        self::assertTrue(
+            $conviteRevogado->foiRevogado(),
+        );
+
+        self::assertSame(
+            (int) $responsavel->getKey(),
+            $conviteRevogado->revogado_por_id,
+        );
+    }
+
+    /**
+     * Confirma que apenas superadministradores podem revogar convites.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    #[Test]
+    public function rejeita_responsavel_sem_papel_de_superadministrador(): void
+    {
+        $responsavel =
+            $this->criarUtilizador();
+
+        $convite =
+            Convite::factory()
+                ->create();
+
+        $this->expectException(
+            DomainException::class,
+        );
+
+        $this->expectExceptionMessage(
+            'A revogação de convites exige um superadministrador com acesso ativo.',
+        );
+
+        app(
+            ServicoConvites::class,
+        )->revogar(
+            $convite,
+            $responsavel,
+        );
+    }
+
+    /**
+     * Confirma que um superadministrador suspenso não pode revogar convites.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    #[Test]
+    public function rejeita_superadministrador_suspenso(): void
+    {
+        $responsavelSuspensao =
+            $this->criarSuperAdministrador();
+
+        $superAdministradorSuspenso =
+            Utilizador::factory()
+                ->comPapel(
+                    PapelUtilizador::SuperAdministrador,
+                )
+                ->suspensoPor(
+                    $responsavelSuspensao,
+                    'Suspensão administrativa.',
+                )
+                ->create();
+
+        $convite =
+            Convite::factory()
+                ->create();
+
+        $this->expectException(
+            DomainException::class,
+        );
+
+        app(
+            ServicoConvites::class,
+        )->revogar(
+            $convite,
+            $superAdministradorSuspenso,
+        );
+    }
+
+    /**
+     * Confirma que o responsável deve estar persistido.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    #[Test]
+    public function rejeita_responsavel_nao_persistido(): void
+    {
+        $convite =
+            Convite::factory()
+                ->create();
+
+        $this->expectException(
+            InvalidArgumentException::class,
+        );
+
+        $this->expectExceptionMessage(
+            'O responsável pela revogação deve estar persistido.',
+        );
+
+        app(
+            ServicoConvites::class,
+        )->revogar(
+            $convite,
+            new Utilizador,
+        );
+    }
+
+    /**
+     * Confirma que um convite utilizado não pode ser revogado.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    #[Test]
+    public function rejeita_convite_ja_utilizado(): void
+    {
+        $responsavel =
+            $this->criarSuperAdministrador();
+
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $convite =
+            Convite::factory()
+                ->utilizadoPor(
+                    $utilizador,
+                )
+                ->create();
+
+        $this->expectException(
+            DomainException::class,
+        );
+
+        $this->expectExceptionMessage(
+            'Não é possível revogar um convite já utilizado.',
+        );
+
+        app(
+            ServicoConvites::class,
+        )->revogar(
+            $convite,
+            $responsavel,
         );
     }
 
@@ -434,7 +663,8 @@ final class ServicoConvitesTest extends TestCase
      */
     private function criarUtilizador(): Utilizador
     {
-        $utilizador = new Utilizador;
+        $utilizador =
+            new Utilizador;
 
         $utilizador->nome =
             'Administrador de testes';
@@ -456,5 +686,23 @@ final class ServicoConvitesTest extends TestCase
         $utilizador->saveOrFail();
 
         return $utilizador->refresh();
+    }
+
+    /**
+     * Cria um superadministrador ativo.
+     *
+     * @return Utilizador Superadministrador criado.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function criarSuperAdministrador(): Utilizador
+    {
+        return Utilizador::factory()
+            ->comPapel(
+                PapelUtilizador::SuperAdministrador,
+            )
+            ->create();
     }
 }

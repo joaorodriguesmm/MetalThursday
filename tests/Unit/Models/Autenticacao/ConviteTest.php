@@ -20,7 +20,7 @@ use Tests\TestCase;
  *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 3.0.0
  */
 final class ConviteTest extends TestCase
 {
@@ -155,7 +155,8 @@ final class ConviteTest extends TestCase
     #[Test]
     public function define_apenas_o_hash_do_codigo_no_modelo(): void
     {
-        $convite = new Convite;
+        $convite =
+            new Convite;
 
         $convite->definirCodigo(
             'MT-CODIGO-SEGURO',
@@ -192,7 +193,8 @@ final class ConviteTest extends TestCase
     #[Test]
     public function considera_disponivel_um_convite_pendente(): void
     {
-        $convite = new Convite;
+        $convite =
+            new Convite;
 
         $momento = CarbonImmutable::parse(
             '2026-07-21 12:00:00',
@@ -233,9 +235,10 @@ final class ConviteTest extends TestCase
             '2026-07-21 12:00:00',
         );
 
-        $convite = new Convite([
-            'expira_em' => $momentoExpiracao,
-        ]);
+        $convite =
+            new Convite([
+                'expira_em' => $momentoExpiracao,
+            ]);
 
         self::assertTrue(
             $convite->estaExpirado(
@@ -264,15 +267,13 @@ final class ConviteTest extends TestCase
             '2026-07-21 12:00:00',
         );
 
-        $utilizador = new Utilizador;
+        $utilizador =
+            $this->criarUtilizadorPersistido(
+                42,
+            );
 
-        $utilizador->forceFill([
-            'id' => 42,
-        ]);
-
-        $utilizador->exists = true;
-
-        $convite = new Convite;
+        $convite =
+            new Convite;
 
         $convite->utilizar(
             $utilizador,
@@ -289,9 +290,19 @@ final class ConviteTest extends TestCase
         );
 
         self::assertTrue(
-            $convite->utilizado_em->equalTo(
-                $momentoUtilizacao,
-            ),
+            $convite
+                ->utilizado_em
+                ->equalTo(
+                    $momentoUtilizacao,
+                ),
+        );
+
+        self::assertNull(
+            $convite->revogado_em,
+        );
+
+        self::assertNull(
+            $convite->revogado_por_id,
         );
 
         self::assertTrue(
@@ -317,11 +328,80 @@ final class ConviteTest extends TestCase
     }
 
     /**
+     * Confirma que uma revogação associa o responsável e regista o momento.
+     *
+     * A autorização administrativa é responsabilidade do serviço. O modelo
+     * exige apenas um responsável persistido.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    #[Test]
+    public function revoga_um_convite_com_responsavel_persistido(): void
+    {
+        $momento = CarbonImmutable::parse(
+            '2026-07-21 12:00:00',
+        );
+
+        $responsavel =
+            $this->criarUtilizadorPersistido(
+                41,
+            );
+
+        $convite =
+            new Convite;
+
+        $convite->revogar(
+            $responsavel,
+            $momento,
+        );
+
+        self::assertNotNull(
+            $convite->revogado_em,
+        );
+
+        self::assertTrue(
+            $convite
+                ->revogado_em
+                ->equalTo(
+                    $momento,
+                ),
+        );
+
+        self::assertSame(
+            41,
+            $convite->revogado_por_id,
+        );
+
+        self::assertTrue(
+            $convite->relationLoaded(
+                'responsavelRevogacao',
+            ),
+        );
+
+        self::assertSame(
+            $responsavel,
+            $convite->responsavelRevogacao,
+        );
+
+        self::assertTrue(
+            $convite->foiRevogado(),
+        );
+
+        self::assertFalse(
+            $convite->estaDisponivel(
+                $momento,
+            ),
+        );
+    }
+
+    /**
      * Confirma que um convite revogado não pode ser utilizado.
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     #[Test]
     public function impede_a_utilizacao_de_um_convite_revogado(): void
@@ -330,17 +410,21 @@ final class ConviteTest extends TestCase
             '2026-07-21 12:00:00',
         );
 
-        $utilizador = new Utilizador;
+        $responsavel =
+            $this->criarUtilizadorPersistido(
+                41,
+            );
 
-        $utilizador->forceFill([
-            'id' => 42,
-        ]);
+        $utilizador =
+            $this->criarUtilizadorPersistido(
+                42,
+            );
 
-        $utilizador->exists = true;
-
-        $convite = new Convite;
+        $convite =
+            new Convite;
 
         $convite->revogar(
+            $responsavel,
             $momento,
         );
 
@@ -359,14 +443,14 @@ final class ConviteTest extends TestCase
     }
 
     /**
-     * Confirma que revogar novamente não altera o momento original.
+     * Confirma que revogar novamente preserva a primeira auditoria.
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     #[Test]
-    public function mantem_a_primeira_data_ao_revogar_novamente(): void
+    public function mantem_a_primeira_data_e_o_primeiro_responsavel_ao_revogar_novamente(): void
     {
         $primeiroMomento = CarbonImmutable::parse(
             '2026-07-21 12:00:00',
@@ -376,13 +460,26 @@ final class ConviteTest extends TestCase
             '2026-07-22 12:00:00',
         );
 
-        $convite = new Convite;
+        $primeiroResponsavel =
+            $this->criarUtilizadorPersistido(
+                41,
+            );
+
+        $segundoResponsavel =
+            $this->criarUtilizadorPersistido(
+                43,
+            );
+
+        $convite =
+            new Convite;
 
         $convite->revogar(
+            $primeiroResponsavel,
             $primeiroMomento,
         );
 
         $convite->revogar(
+            $segundoResponsavel,
             $segundoMomento,
         );
 
@@ -391,9 +488,47 @@ final class ConviteTest extends TestCase
         );
 
         self::assertTrue(
-            $convite->revogado_em->equalTo(
-                $primeiroMomento,
-            ),
+            $convite
+                ->revogado_em
+                ->equalTo(
+                    $primeiroMomento,
+                ),
+        );
+
+        self::assertSame(
+            41,
+            $convite->revogado_por_id,
+        );
+
+        self::assertSame(
+            $primeiroResponsavel,
+            $convite->responsavelRevogacao,
+        );
+    }
+
+    /**
+     * Confirma que a revogação exige um responsável persistido.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    #[Test]
+    public function rejeita_responsavel_nao_persistido_ao_revogar(): void
+    {
+        $convite =
+            new Convite;
+
+        $this->expectException(
+            DomainException::class,
+        );
+
+        $this->expectExceptionMessage(
+            'O responsável pela revogação deve estar persistido.',
+        );
+
+        $convite->revogar(
+            new Utilizador,
         );
     }
 
@@ -402,7 +537,7 @@ final class ConviteTest extends TestCase
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     #[Test]
     public function impede_a_revogacao_de_um_convite_utilizado(): void
@@ -411,15 +546,18 @@ final class ConviteTest extends TestCase
             '2026-07-21 12:00:00',
         );
 
-        $utilizador = new Utilizador;
+        $responsavel =
+            $this->criarUtilizadorPersistido(
+                41,
+            );
 
-        $utilizador->forceFill([
-            'id' => 42,
-        ]);
+        $utilizador =
+            $this->criarUtilizadorPersistido(
+                42,
+            );
 
-        $utilizador->exists = true;
-
-        $convite = new Convite;
+        $convite =
+            new Convite;
 
         $convite->utilizar(
             $utilizador,
@@ -435,7 +573,34 @@ final class ConviteTest extends TestCase
         );
 
         $convite->revogar(
+            $responsavel,
             $momento,
         );
+    }
+
+    /**
+     * Cria um utilizador com um identificador persistido simulado.
+     *
+     * @param  int  $identificador  Identificador pretendido.
+     * @return Utilizador Utilizador configurado.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function criarUtilizadorPersistido(
+        int $identificador,
+    ): Utilizador {
+        $utilizador =
+            new Utilizador;
+
+        $utilizador->forceFill([
+            'id' => $identificador,
+        ]);
+
+        $utilizador->exists =
+            true;
+
+        return $utilizador;
     }
 }

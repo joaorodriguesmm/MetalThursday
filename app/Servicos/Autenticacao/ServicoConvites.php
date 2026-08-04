@@ -25,9 +25,12 @@ use Throwable;
  * código original é devolvido apenas no momento da criação, sendo persistido
  * exclusivamente o respetivo hash SHA-256.
  *
+ * As revogações conservam o superadministrador ativo responsável e são
+ * executadas com bloqueios pessimistas.
+ *
  * @since 2.0.0
  *
- * @version 2.0.0
+ * @version 3.0.0
  */
 final class ServicoConvites
 {
@@ -119,7 +122,8 @@ final class ServicoConvites
             $codigo = $this->gerarCodigo();
 
             try {
-                $convite = new Convite;
+                $convite =
+                    new Convite;
 
                 $convite->nome_convidado =
                     $nomeConvidado;
@@ -202,29 +206,41 @@ final class ServicoConvites
     /**
      * Revoga um convite de forma concorrencialmente segura.
      *
-     * O registo é bloqueado durante a transação para impedir que seja
-     * utilizado ou revogado simultaneamente por outro processo.
+     * O convite e o responsável são novamente obtidos com bloqueio exclusivo.
+     * Apenas um superadministrador com acesso ativo pode concluir a operação.
+     *
+     * Uma revogação repetida preserva o primeiro momento e o primeiro
+     * responsável, não alterando sequer a data de atualização do convite.
      *
      * @param  Convite  $convite  Convite a revogar.
+     * @param  Utilizador  $responsavel  Superadministrador responsável.
      * @param  CarbonInterface|null  $momento  Momento da revogação.
      * @return Convite Convite revogado.
      *
-     * @throws InvalidArgumentException Quando o convite não está persistido.
-     * @throws ModelNotFoundException Quando o convite deixou de existir.
-     * @throws DomainException Quando o convite já foi utilizado.
+     * @throws InvalidArgumentException Quando o convite ou o responsável não
+     *                                  estão persistidos.
+     * @throws ModelNotFoundException Quando algum registo deixou de existir.
+     * @throws DomainException Quando o responsável não está autorizado ou o
+     *                         convite já foi utilizado.
      * @throws Throwable Quando ocorre outro erro durante a transação.
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function revogar(
         Convite $convite,
+        Utilizador $responsavel,
         ?CarbonInterface $momento = null,
     ): Convite {
         $identificadorConvite =
             $this->obterIdentificadorConvite(
                 $convite,
+            );
+
+        $identificadorResponsavel =
+            $this->obterIdentificadorUtilizador(
+                $responsavel,
             );
 
         $momentoRevogacao = $momento !== null
@@ -234,10 +250,23 @@ final class ServicoConvites
             : null;
 
         return DB::transaction(
-            static function () use (
+            function () use (
                 $identificadorConvite,
+                $identificadorResponsavel,
                 $momentoRevogacao,
             ): Convite {
+                $responsavelBloqueado =
+                    Utilizador::query()
+                        ->whereKey(
+                            $identificadorResponsavel,
+                        )
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                $this->garantirResponsavelAutorizado(
+                    $responsavelBloqueado,
+                );
+
                 $conviteBloqueado =
                     Convite::query()
                         ->whereKey(
@@ -247,10 +276,18 @@ final class ServicoConvites
                         ->firstOrFail();
 
                 $conviteBloqueado->revogar(
+                    $responsavelBloqueado,
                     $momentoRevogacao,
                 );
 
-                $conviteBloqueado->saveOrFail();
+                if (
+                    $conviteBloqueado->isDirty([
+                        'revogado_em',
+                        'revogado_por_id',
+                    ])
+                ) {
+                    $conviteBloqueado->saveOrFail();
+                }
 
                 return $conviteBloqueado;
             },
@@ -357,6 +394,33 @@ final class ServicoConvites
     }
 
     /**
+     * Confirma que o responsável pode revogar convites.
+     *
+     * @param  Utilizador  $responsavel  Utilizador responsável.
+     *
+     * @throws DomainException Quando o responsável não é um
+     *                         superadministrador com acesso ativo.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function garantirResponsavelAutorizado(
+        Utilizador $responsavel,
+    ): void {
+        if (
+            $responsavel->eSuperAdministrador()
+            && $responsavel->temAcessoAtivo()
+        ) {
+            return;
+        }
+
+        throw new DomainException(
+            'A revogação de convites exige um superadministrador com acesso ativo.',
+        );
+    }
+
+    /**
      * Obtém o identificador de um convite persistido.
      *
      * @param  Convite  $convite  Convite recebido.
@@ -409,6 +473,60 @@ final class ServicoConvites
         }
 
         return (int) $identificadorNormalizado;
+    }
+
+    /**
+     * Obtém o identificador de um responsável persistido.
+     *
+     * @param  Utilizador  $responsavel  Utilizador recebido.
+     * @return int Identificador do responsável.
+     *
+     * @throws InvalidArgumentException Quando o responsável não está
+     *                                  persistido ou não possui um
+     *                                  identificador válido.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private function obterIdentificadorUtilizador(
+        Utilizador $responsavel,
+    ): int {
+        if (! $responsavel->exists) {
+            throw new InvalidArgumentException(
+                'O responsável pela revogação deve estar persistido.',
+            );
+        }
+
+        $identificador =
+            $responsavel->getKey();
+
+        if (
+            is_int($identificador)
+            && $identificador > 0
+        ) {
+            return $identificador;
+        }
+
+        if (is_string($identificador)) {
+            $identificadorNormalizado = trim(
+                $identificador,
+            );
+
+            if (
+                $identificadorNormalizado !== ''
+                && ctype_digit(
+                    $identificadorNormalizado,
+                )
+                && (int) $identificadorNormalizado > 0
+            ) {
+                return (int) $identificadorNormalizado;
+            }
+        }
+
+        throw new InvalidArgumentException(
+            'O responsável pela revogação deve possuir um identificador válido.',
+        );
     }
 
     /**

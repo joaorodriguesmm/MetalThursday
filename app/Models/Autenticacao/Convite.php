@@ -35,14 +35,16 @@ use SensitiveParameter;
  * @property CarbonImmutable|null $expira_em
  * @property CarbonImmutable|null $utilizado_em
  * @property CarbonImmutable|null $revogado_em
+ * @property int|null $revogado_por_id
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
  * @property-read Utilizador|null $criador
  * @property-read Utilizador|null $utilizador
+ * @property-read Utilizador|null $responsavelRevogacao
  *
  * @since 2.0.0
  *
- * @version 3.1.0
+ * @version 4.0.0
  */
 class Convite extends Model
 {
@@ -157,7 +159,7 @@ class Convite extends Model
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     protected function casts(): array
     {
@@ -171,6 +173,8 @@ class Convite extends Model
             'utilizado_em' => 'immutable_datetime',
 
             'revogado_em' => 'immutable_datetime',
+
+            'revogado_por_id' => 'integer',
         ];
     }
 
@@ -401,6 +405,23 @@ class Convite extends Model
     }
 
     /**
+     * Obtém o superadministrador responsável pela revogação.
+     *
+     * @return BelongsTo<Utilizador, $this> Relação com o responsável.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    public function responsavelRevogacao(): BelongsTo
+    {
+        return $this->belongsTo(
+            Utilizador::class,
+            'revogado_por_id',
+        );
+    }
+
+    /**
      * Limita a consulta aos convites ainda não utilizados nem revogados.
      *
      * Este escopo não verifica a expiração.
@@ -424,6 +445,9 @@ class Convite extends Model
             )
             ->whereNull(
                 'revogado_em',
+            )
+            ->whereNull(
+                'revogado_por_id',
             );
     }
 
@@ -438,7 +462,7 @@ class Convite extends Model
      *
      * @since 2.0.0
      *
-     * @version 2.1.0
+     * @version 3.0.0
      */
     public function scopeDisponiveis(
         Builder $construtor,
@@ -454,6 +478,9 @@ class Convite extends Model
             )
             ->whereNull(
                 'revogado_em',
+            )
+            ->whereNull(
+                'revogado_por_id',
             )
             ->where(
                 static function (
@@ -583,11 +610,12 @@ class Convite extends Model
      *
      * @since 2.0.0
      *
-     * @version 1.0.0
+     * @version 2.0.0
      */
     public function foiRevogado(): bool
     {
-        return $this->revogado_em !== null;
+        return $this->revogado_em !== null
+            || $this->revogado_por_id !== null;
     }
 
     /**
@@ -652,7 +680,7 @@ class Convite extends Model
      *
      * @since 2.0.0
      *
-     * @version 3.0.0
+     * @version 4.0.0
      */
     public function utilizar(
         Utilizador $utilizador,
@@ -670,23 +698,27 @@ class Convite extends Model
             );
         }
 
-        $identificadorUtilizador = $utilizador->getKey();
-
-        if (
-            ! $utilizador->exists
-            || ! is_numeric($identificadorUtilizador)
-            || (int) $identificadorUtilizador < 1
-        ) {
-            throw new DomainException(
+        $identificadorUtilizador =
+            self::obterIdentificadorUtilizadorPersistido(
+                $utilizador,
                 'O utilizador associado ao convite ainda não foi persistido.',
             );
-        }
 
-        $this->utilizado_por_id = (int) $identificadorUtilizador;
+        $this->utilizado_por_id =
+            $identificadorUtilizador;
 
-        $this->utilizado_em = $momentoUtilizacao;
+        $this->utilizado_em =
+            $momentoUtilizacao;
 
-        $this->revogado_em = null;
+        $this->revogado_em =
+            null;
+
+        $this->revogado_por_id =
+            null;
+
+        $this->unsetRelation(
+            'responsavelRevogacao',
+        );
 
         $this->setRelation(
             'utilizador',
@@ -698,17 +730,24 @@ class Convite extends Model
      * Revoga o convite.
      *
      * Um convite utilizado não pode ser posteriormente revogado. A revogação
-     * repetida do mesmo convite é uma operação idempotente.
+     * repetida é idempotente e preserva o primeiro momento e o primeiro
+     * responsável.
      *
+     * A autorização administrativa do responsável é validada pelo serviço.
+     * O modelo confirma apenas que o utilizador está persistido.
+     *
+     * @param  Utilizador  $responsavel  Responsável pela revogação.
      * @param  CarbonInterface|null  $momento  Momento da revogação.
      *
-     * @throws DomainException Quando o convite já foi utilizado.
+     * @throws DomainException Quando o convite já foi utilizado ou o
+     *                         responsável não está persistido.
      *
      * @since 2.0.0
      *
-     * @version 2.0.0
+     * @version 3.0.0
      */
     public function revogar(
+        Utilizador $responsavel,
         ?CarbonInterface $momento = null,
     ): void {
         if ($this->foiUtilizado()) {
@@ -721,11 +760,22 @@ class Convite extends Model
             return;
         }
 
+        self::obterIdentificadorUtilizadorPersistido(
+            $responsavel,
+            'O responsável pela revogação deve estar persistido.',
+        );
+
         $this->revogado_em = $momento !== null
             ? CarbonImmutable::instance(
                 $momento,
             )
             : CarbonImmutable::now();
+
+        $this
+            ->responsavelRevogacao()
+            ->associate(
+                $responsavel,
+            );
     }
 
     /**
@@ -792,6 +842,61 @@ class Convite extends Model
             self::normalizarCodigo(
                 $codigo,
             ),
+        );
+    }
+
+    /**
+     * Obtém o identificador de um utilizador persistido.
+     *
+     * @param  Utilizador  $utilizador  Utilizador recebido.
+     * @param  string  $mensagem  Mensagem utilizada em caso de erro.
+     * @return int Identificador válido.
+     *
+     * @throws DomainException Quando o utilizador não está persistido ou não
+     *                         possui um identificador válido.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    private static function obterIdentificadorUtilizadorPersistido(
+        Utilizador $utilizador,
+        string $mensagem,
+    ): int {
+        if (! $utilizador->exists) {
+            throw new DomainException(
+                $mensagem,
+            );
+        }
+
+        $identificador =
+            $utilizador->getKey();
+
+        if (
+            is_int($identificador)
+            && $identificador > 0
+        ) {
+            return $identificador;
+        }
+
+        if (is_string($identificador)) {
+            $identificadorNormalizado = trim(
+                $identificador,
+            );
+
+            if (
+                $identificadorNormalizado !== ''
+                && ctype_digit(
+                    $identificadorNormalizado,
+                )
+                && (int) $identificadorNormalizado > 0
+            ) {
+                return (int) $identificadorNormalizado;
+            }
+        }
+
+        throw new DomainException(
+            $mensagem,
         );
     }
 }
