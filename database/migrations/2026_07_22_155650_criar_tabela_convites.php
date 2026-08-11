@@ -99,7 +99,6 @@ return new class extends Migration
                     ->constrained(
                         table: 'utilizadores',
                     )
-                    ->cascadeOnUpdate()
                     ->nullOnDelete();
 
                 $tabela

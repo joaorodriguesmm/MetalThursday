@@ -262,6 +262,33 @@ final class GeneroTest extends TestCase
     }
 
     /**
+     * Confirma que um género não pode ser relacionado consigo próprio.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    #[Test]
+    public function impede_relacao_de_um_genero_consigo_proprio(): void
+    {
+        $genero = $this->criarGenero(
+            'Thrash Metal',
+        );
+
+        $this->expectException(
+            QueryException::class,
+        );
+
+        DB::table(
+            'hierarquia_generos',
+        )->insert([
+            'genero_id' => $genero->getKey(),
+
+            'genero_pai_id' => $genero->getKey(),
+        ]);
+    }
+
+    /**
      * Confirma que um género não persistido não pode iniciar a travessia.
      *
      * @since 2.0.0

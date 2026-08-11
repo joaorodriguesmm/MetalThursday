@@ -42,7 +42,6 @@ return new class extends Migration
                     ->constrained(
                         table: 'generos',
                     )
-                    ->cascadeOnUpdate()
                     ->cascadeOnDelete();
 
                 $tabela
@@ -53,7 +52,6 @@ return new class extends Migration
                         table: 'generos',
                         indexName: 'hierarquia_generos_genero_pai_fk',
                     )
-                    ->cascadeOnUpdate()
                     ->cascadeOnDelete();
 
                 $tabela->primary(
