@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Requests\Autenticacao;
 
 use App\Models\Autenticacao\Convite;
-use App\Models\Autenticacao\Utilizador;
 use App\Models\Comunicacao\PermissaoEmail;
 use App\ObjetosValor\Utilizadores\EnderecoEmail;
 use App\ObjetosValor\Utilizadores\NomeUtilizador;
@@ -151,11 +150,6 @@ final class AceitarConviteRequest extends FormRequest
                 'required',
                 'string',
                 $this->criarRegraEnderecoEmail(),
-
-                Rule::unique(
-                    Utilizador::class,
-                    'email',
-                ),
             ],
 
             'fotografia' => [
@@ -233,8 +227,6 @@ final class AceitarConviteRequest extends FormRequest
             'email.required' => 'Por favor, insere o teu endereço de e-mail.',
 
             'email.string' => 'O endereço de e-mail deve ser uma sequência de caracteres.',
-
-            'email.unique' => 'O endereço de e-mail já está associado a outro utilizador.',
 
             'fotografia.image' => 'A fotografia deve ser uma imagem válida.',
 

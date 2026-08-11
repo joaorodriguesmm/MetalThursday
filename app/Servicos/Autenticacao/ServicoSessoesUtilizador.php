@@ -11,8 +11,8 @@ use InvalidArgumentException;
 /**
  * Gere as sessões persistidas dos utilizadores.
  *
- * O serviço atua diretamente sobre a tabela técnica `sessoes`, utilizada
- * pelo driver de sessões de base de dados da aplicação.
+ * O serviço atua diretamente sobre a tabela e a ligação configuradas para
+ * as sessões da aplicação.
  *
  * A eliminação participa numa transação exterior quando o método é chamado
  * durante uma operação transacional de acesso.
@@ -23,16 +23,6 @@ use InvalidArgumentException;
  */
 final class ServicoSessoesUtilizador
 {
-    /**
-     * Nome da tabela técnica das sessões.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const TABELA_SESSOES =
-        'sessoes';
-
     /**
      * Encerra todas as sessões persistidas de um utilizador.
      *
@@ -56,9 +46,16 @@ final class ServicoSessoesUtilizador
                 $utilizador,
             );
 
-        return DB::table(
-            self::TABELA_SESSOES,
+        return DB::connection(
+            config(
+                'session.connection',
+            ),
         )
+            ->table(
+                (string) config(
+                    'session.table',
+                ),
+            )
             ->where(
                 'user_id',
                 $identificadorUtilizador,

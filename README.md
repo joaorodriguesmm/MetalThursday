@@ -23,7 +23,7 @@ O **MetalThursday** é o website de uma rubrica semanal, criada por um grupo de 
 - PHP >= 8.2
 - Composer
 - Node.js + NPM
-- Base de dados (MySQL/MariaDB/SQLite, conforme configurado em `.env`)
+- MariaDB
 
 ### Passos
 
@@ -45,20 +45,30 @@ php artisan key:generate
 # 5. Configurar a base de dados no ficheiro .env e depois correr as migrações
 php artisan migrate
 
-# 6. Compilar os assets (frontend)
-npm run desenvolver
-# ou, para produção:
-npm run build
+# 6. Compilar os assets
+npm run compilar
 
 # 7. Iniciar o servidor local
-npm run compilar
+php artisan serve
+```
+
+Durante o desenvolvimento, o Vite pode ser iniciado num segundo terminal:
+
+```bash
+npm run desenvolver
+```
+
+Se forem utilizadas funcionalidades processadas em fila, inicia também um worker:
+
+```bash
+php artisan queue:listen --tries=1
 ```
 
 A aplicação ficará disponível em `http://localhost:8000`.
 
 ## 📂 Estrutura do projeto
 
-```
+```text
 MetalThursday/
 ├── app/          # Lógica da aplicação (Controllers, Models, etc.)
 ├── bootstrap/    # Ficheiros de arranque da framework
