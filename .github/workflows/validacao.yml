@@ -1,0 +1,108 @@
+name: Validação
+
+on:
+  push:
+    branches:
+      - main
+      - funcionalidade/gestao-utilizadores
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validacao-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  php:
+    name: PHP e Laravel
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      mariadb:
+        image: mariadb:11.8.8
+        env:
+          MARIADB_ROOT_PASSWORD: metalthursday_ci
+          MARIADB_DATABASE: metalthursday_testes
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: mariadb
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: metalthursday_testes
+      DB_USERNAME: root
+      DB_PASSWORD: metalthursday_ci
+
+    steps:
+      - name: Obter o código
+        uses: actions/checkout@v6
+
+      - name: Configurar o PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, pdo_mysql
+          coverage: none
+          tools: composer:v2
+        env:
+          fail-fast: true
+
+      - name: Validar o Composer
+        run: composer validate --strict
+
+      - name: Auditar dependências PHP
+        run: composer audit
+
+      - name: Instalar dependências PHP
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Preparar o ambiente de testes
+        run: |
+          cp .env.testing.example .env.testing
+          php artisan key:generate --env=testing
+
+      - name: Verificar formatação PHP
+        run: ./vendor/bin/pint --test
+
+      - name: Validar migrações
+        run: php artisan migrate:fresh --force --env=testing
+
+      - name: Executar testes PHP
+        run: composer testar
+
+  javascript:
+    name: JavaScript e assets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Obter o código
+        uses: actions/checkout@v6
+
+      - name: Configurar o Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Instalar dependências JavaScript
+        run: npm ci
+
+      - name: Auditar dependências JavaScript
+        run: npm audit
+
+      - name: Validar JavaScript e compilar assets
+        run: npm run validar
