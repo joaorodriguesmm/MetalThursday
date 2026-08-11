@@ -64,7 +64,7 @@ jobs:
         run: composer validate --strict
 
       - name: Auditar dependências PHP
-        run: composer audit
+        run: composer audit --locked
 
       - name: Instalar dependências PHP
         run: composer install --no-interaction --prefer-dist --no-progress
