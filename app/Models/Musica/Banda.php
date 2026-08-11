@@ -68,7 +68,7 @@ class Banda extends Model
      * @version 1.0.0
      */
     private const TABELA_BANDA_GENERO =
-    'banda_genero';
+        'banda_genero';
 
     /**
      * Nome físico da tabela associada ao modelo.
@@ -85,7 +85,7 @@ class Banda extends Model
      * Atributos permitidos em operações de atribuição em massa.
      *
      * A origem geográfica deve ser associada explicitamente através da
-     * relação {@see origemGeografica()}. A coluna `nome_ativo` é gerada pela
+     * relação Eloquent `origemGeografica`. A coluna `nome_ativo` é gerada pela
      * base de dados e não pode ser atribuída pela aplicação.
      *
      * @var list<string>

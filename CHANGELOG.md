@@ -13,4 +13,4 @@ e este projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - Estrutura base do projeto em Laravel (backend, rotas, views Blade).
 - Configuração inicial de frontend com Vite, JavaScript e SCSS.
 
-[1.0.0]: https://github.com/Joao-Rodrigues-Multimedia/MetalThursday/releases/tag/v1.0.0
+[1.0.0]: https://github.com/joaorodriguesmm/MetalThursday/releases/tag/v1.0.0

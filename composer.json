@@ -1,6 +1,6 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "joao-rodrigues-multimedia/metalthursday",
+    "name": "joaorodriguesmm/metalthursday",
     "type": "project",
     "description": "Aplicação web da rubrica semanal MetalThursday.",
     "keywords": [

@@ -20,7 +20,7 @@ O **MetalThursday** é o website de uma rubrica semanal, criada por um grupo de 
 
 ### Pré-requisitos
 
-- PHP >= 8.1
+- PHP >= 8.2
 - Composer
 - Node.js + NPM
 - Base de dados (MySQL/MariaDB/SQLite, conforme configurado em `.env`)
@@ -29,7 +29,7 @@ O **MetalThursday** é o website de uma rubrica semanal, criada por um grupo de 
 
 ```bash
 # 1. Clonar o repositório
-git clone https://github.com/Joao-Rodrigues-Multimedia/MetalThursday.git
+git clone https://github.com/joaorodriguesmm/MetalThursday.git
 cd MetalThursday
 
 # 2. Instalar dependências PHP
@@ -46,12 +46,12 @@ php artisan key:generate
 php artisan migrate
 
 # 6. Compilar os assets (frontend)
-npm run dev
+npm run desenvolver
 # ou, para produção:
 npm run build
 
 # 7. Iniciar o servidor local
-php artisan serve
+npm run compilar
 ```
 
 A aplicação ficará disponível em `http://localhost:8000`.
