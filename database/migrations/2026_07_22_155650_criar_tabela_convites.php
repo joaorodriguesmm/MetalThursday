@@ -88,8 +88,8 @@ return new class extends Migration
                  * Utilizador criado através do convite.
                  *
                  * Permanece nulo enquanto o convite não tiver sido utilizado.
-                 * Caso o utilizador seja eliminado fisicamente, a data de
-                 * utilização continua a preservar o estado consumido.
+                 * A eliminação física do utilizador é restringida para preservar
+                 * permanentemente a associação histórica ao convite utilizado.
                  */
                 $tabela
                     ->foreignId(
@@ -99,7 +99,7 @@ return new class extends Migration
                     ->constrained(
                         table: 'utilizadores',
                     )
-                    ->nullOnDelete();
+                    ->restrictOnDelete();
 
                 $tabela
                     ->timestamp(
@@ -197,9 +197,6 @@ return new class extends Migration
         /*
          * Um convite associado a um utilizador tem obrigatoriamente uma data
          * de utilização.
-         *
-         * O inverso não é exigido porque a eliminação física do utilizador
-         * coloca utilizado_por_id a nulo, preservando utilizado_em.
          */
         DB::statement(
             <<<'SQL'
