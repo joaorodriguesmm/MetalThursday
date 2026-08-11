@@ -13,4 +13,19 @@ use Illuminate\Foundation\Testing\TestCase as TesteBase;
  *
  * @version 1.0.0
  */
-abstract class TestCase extends TesteBase {}
+abstract class TestCase extends TesteBase
+{
+    /**
+     * Prepara o ambiente comum dos testes funcionais.
+     *
+     * @since 2.0.0
+     *
+     * @version 1.0.0
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->withoutVite();
+    }
+}
