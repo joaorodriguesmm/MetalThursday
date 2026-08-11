@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - funcionalidade/gestao-utilizadores
+      - refatoracao/auditoria-v2
   pull_request:
     branches:
       - main
@@ -71,8 +72,8 @@ jobs:
 
       - name: Preparar o ambiente de testes
         run: |
-          cp .env.testing.example .env.testing
-          php artisan key:generate --env=testing
+          cp .env.example .env
+          php artisan key:generate
 
       - name: Verificar formatação PHP
         run: ./vendor/bin/pint --test

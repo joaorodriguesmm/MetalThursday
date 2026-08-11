@@ -44,16 +44,16 @@
         ],
         "desenvolver": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74\" \"php artisan serve --env=reconstrucao\" \"php artisan queue:listen --env=reconstrucao --tries=1\" \"npm run desenvolver\" --names=servidor,fila,vite --kill-others"
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"npm run desenvolver\" --names=servidor,fila,vite --kill-others"
         ],
         "formatar": "pint",
         "testar": [
-            "@php artisan config:clear --env=testing --ansi",
-            "@php artisan test --env=testing --ansi"
+            "@php artisan config:clear --ansi",
+            "@php artisan test --ansi"
         ]
     },
     "scripts-descriptions": {
-        "desenvolver": "Inicia o servidor, a fila e o Vite no ambiente de reconstrução.",
+        "desenvolver": "Inicia o servidor, a fila e o Vite no ambiente local.",
         "formatar": "Formata os ficheiros PHP com o Laravel Pint.",
         "testar": "Executa os testes automatizados no ambiente de testes."
     },
