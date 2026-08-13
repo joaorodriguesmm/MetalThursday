@@ -14,8 +14,6 @@ use Illuminate\Support\Facades\Schema;
  * repositórios de tokens e sessões do Laravel.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 return new class extends Migration
 {
@@ -23,8 +21,6 @@ return new class extends Migration
      * Cria as tabelas de recuperação da palavra-passe e de sessões.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function up(): void
     {
@@ -55,9 +51,15 @@ return new class extends Migration
             'sessoes',
             static function (Blueprint $tabela): void {
                 $tabela
-                    ->string(
+                    ->char(
                         'id',
-                        255,
+                        40,
+                    )
+                    ->charset(
+                        'ascii',
+                    )
+                    ->collation(
+                        'ascii_bin',
                     )
                     ->primary();
 
@@ -80,8 +82,9 @@ return new class extends Migration
                     ->nullable();
 
                 $tabela
-                    ->text(
+                    ->string(
                         'user_agent',
+                        500,
                     )
                     ->nullable();
 
@@ -90,7 +93,7 @@ return new class extends Migration
                 );
 
                 $tabela
-                    ->integer(
+                    ->unsignedBigInteger(
                         'last_activity',
                     )
                     ->index();
@@ -102,8 +105,6 @@ return new class extends Migration
      * Elimina as tabelas de autenticação e sessões.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function down(): void
     {

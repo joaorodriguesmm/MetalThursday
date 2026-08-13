@@ -29,8 +29,6 @@ use Throwable;
  * nunca é colocado na sessão.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class ControladorConvite extends Controller
 {
@@ -40,8 +38,6 @@ final class ControladorConvite extends Controller
      * Número de convites apresentados por página.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const REGISTOS_POR_PAGINA =
         20;
@@ -50,8 +46,6 @@ final class ControladorConvite extends Controller
      * Comprimento máximo da pesquisa.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const COMPRIMENTO_MAXIMO_PESQUISA =
         100;
@@ -60,8 +54,6 @@ final class ControladorConvite extends Controller
      * Identificador do estado disponível.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const ESTADO_DISPONIVEL =
         'disponivel';
@@ -70,8 +62,6 @@ final class ControladorConvite extends Controller
      * Identificador do estado expirado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const ESTADO_EXPIRADO =
         'expirado';
@@ -80,8 +70,6 @@ final class ControladorConvite extends Controller
      * Identificador do estado revogado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const ESTADO_REVOGADO =
         'revogado';
@@ -90,11 +78,23 @@ final class ControladorConvite extends Controller
      * Identificador do estado utilizado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const ESTADO_UTILIZADO =
         'utilizado';
+
+    /**
+     * Estados disponibilizados pelo filtro e respetivas etiquetas.
+     *
+     * @var array<string, non-empty-string>
+     *
+     * @since 2.0.0
+     */
+    private const ESTADOS_DISPONIVEIS = [
+        self::ESTADO_DISPONIVEL => 'Disponível',
+        self::ESTADO_EXPIRADO => 'Expirado',
+        self::ESTADO_REVOGADO => 'Revogado',
+        self::ESTADO_UTILIZADO => 'Utilizado',
+    ];
 
     /**
      * Cria o controlador.
@@ -102,8 +102,6 @@ final class ControladorConvite extends Controller
      * @param  ServicoConvites  $servicoConvites  Serviço dos convites.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function __construct(
         private readonly ServicoConvites $servicoConvites,
@@ -116,8 +114,6 @@ final class ControladorConvite extends Controller
      * @return View Listagem administrativa.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function indice(
         Request $pedido,
@@ -140,9 +136,6 @@ final class ControladorConvite extends Controller
                     'estado',
                 ),
             );
-
-        $momentoAtual =
-            CarbonImmutable::now();
 
         $convites =
             Convite::query()
@@ -196,60 +189,24 @@ final class ControladorConvite extends Controller
                 )
                 ->when(
                     $estado === self::ESTADO_DISPONIVEL,
-                    static function (
+                    static fn (
                         Builder $construtor,
-                    ) use (
-                        $momentoAtual,
-                    ): void {
-                        $construtor
-                            ->whereNull(
-                                'utilizado_em',
-                            )
-                            ->whereNull(
-                                'revogado_em',
-                            )
-                            ->where(
-                                static function (
-                                    Builder $construtorExpiracao,
-                                ) use (
-                                    $momentoAtual,
-                                ): void {
-                                    $construtorExpiracao
-                                        ->whereNull(
-                                            'expira_em',
-                                        )
-                                        ->orWhere(
-                                            'expira_em',
-                                            '>',
-                                            $momentoAtual,
-                                        );
-                                },
-                            );
-                    },
+                    ): Builder => $construtor->disponiveis(),
                 )
                 ->when(
                     $estado === self::ESTADO_EXPIRADO,
-                    static function (
+                    static fn (
                         Builder $construtor,
-                    ) use (
-                        $momentoAtual,
-                    ): void {
-                        $construtor
-                            ->whereNull(
-                                'utilizado_em',
-                            )
-                            ->whereNull(
-                                'revogado_em',
-                            )
-                            ->whereNotNull(
-                                'expira_em',
-                            )
-                            ->where(
-                                'expira_em',
-                                '<=',
-                                $momentoAtual,
-                            );
-                    },
+                    ): Builder => $construtor
+                        ->pendentes()
+                        ->whereNotNull(
+                            'expira_em',
+                        )
+                        ->where(
+                            'expira_em',
+                            '<=',
+                            CarbonImmutable::now(),
+                        ),
                 )
                 ->when(
                     $estado === self::ESTADO_REVOGADO,
@@ -287,15 +244,7 @@ final class ControladorConvite extends Controller
 
                 'estadoAtual' => $estado,
 
-                'estadosDisponiveis' => [
-                    self::ESTADO_DISPONIVEL => 'Disponível',
-
-                    self::ESTADO_EXPIRADO => 'Expirado',
-
-                    self::ESTADO_REVOGADO => 'Revogado',
-
-                    self::ESTADO_UTILIZADO => 'Utilizado',
-                ],
+                'estadosDisponiveis' => self::ESTADOS_DISPONIVEIS,
 
                 'filtrosAtivos' => $pesquisa !== null
                     || $estado !== null,
@@ -309,8 +258,6 @@ final class ControladorConvite extends Controller
      * @return View Formulário administrativo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function criar(): View
     {
@@ -326,7 +273,7 @@ final class ControladorConvite extends Controller
                     ->addMinute()
                     ->startOfMinute()
                     ->format(
-                        'Y-m-d\TH:i',
+                        'Y-m-d\\TH:i',
                     ),
             ],
         );
@@ -344,8 +291,6 @@ final class ControladorConvite extends Controller
      * @throws Throwable Quando ocorre um erro inesperado na criação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function guardar(
         CriarConviteRequest $pedido,
@@ -411,8 +356,6 @@ final class ControladorConvite extends Controller
      * @throws Throwable Quando ocorre um erro técnico inesperado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function revogar(
         RevogarConviteRequest $pedido,
@@ -470,8 +413,6 @@ final class ControladorConvite extends Controller
      * @return string|null Pesquisa normalizada ou nulo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function normalizarPesquisa(
         mixed $valor,
@@ -510,8 +451,6 @@ final class ControladorConvite extends Controller
      * @return string|null Estado reconhecido ou nulo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function normalizarEstado(
         mixed $valor,
@@ -527,13 +466,10 @@ final class ControladorConvite extends Controller
                 ),
             );
 
-        return match ($estado) {
-            self::ESTADO_DISPONIVEL,
-            self::ESTADO_EXPIRADO,
-            self::ESTADO_REVOGADO,
-            self::ESTADO_UTILIZADO => $estado,
-
-            default => null,
-        };
+        return isset(
+            self::ESTADOS_DISPONIVEIS[$estado],
+        )
+            ? $estado
+            : null;
     }
 }

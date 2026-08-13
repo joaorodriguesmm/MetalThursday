@@ -23,8 +23,6 @@ use LogicException;
  * sequencialmente.
  *
  * @since 1.0.0
- *
- * @version 4.1.0
  */
 final class ControladorGosto extends Controller
 {
@@ -33,9 +31,7 @@ final class ControladorGosto extends Controller
      *
      * @var int
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const TENTATIVAS_TRANSACAO =
         3;
@@ -45,9 +41,7 @@ final class ControladorGosto extends Controller
      *
      * @var string
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const ACAO_GOSTOU =
         'gostou';
@@ -57,9 +51,7 @@ final class ControladorGosto extends Controller
      *
      * @var string
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const MENSAGEM_GOSTO_ADICIONADO =
         'Gosto adicionado.';
@@ -69,9 +61,7 @@ final class ControladorGosto extends Controller
      *
      * @var string
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const MENSAGEM_GOSTO_REMOVIDO =
         'Gosto removido.';
@@ -81,9 +71,7 @@ final class ControladorGosto extends Controller
      *
      * @var string
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const MENSAGEM_SEM_GOSTOS =
         'Ainda não há gostos.';
@@ -95,8 +83,6 @@ final class ControladorGosto extends Controller
      *                                                        notificações.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function __construct(
         private readonly NotificadorInteracoes $notificadorInteracoes,
@@ -122,8 +108,6 @@ final class ControladorGosto extends Controller
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 1.0.0
-     *
-     * @version 4.1.0
      */
     public function alternar(
         Comentario $comentario,
@@ -232,8 +216,6 @@ final class ControladorGosto extends Controller
      * @return JsonResponse Lista de utilizadores.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function listarUtilizadores(
         Comentario $comentario,
@@ -267,9 +249,7 @@ final class ControladorGosto extends Controller
      * @throws LogicException Quando a consulta devolve um nome persistido com
      *                        um formato inválido.
      *
-     * @since 3.0.0
-     *
-     * @version 2.1.0
+     * @since 2.0.0
      */
     private function obterDadosIndicador(
         Comentario $comentario,
@@ -352,8 +332,6 @@ final class ControladorGosto extends Controller
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterUtilizadorAutenticado(): Utilizador
     {

@@ -13,8 +13,6 @@ use Illuminate\Database\Seeder;
  * utilizada pelo Laravel.
  *
  * @since 1.0.0
- *
- * @version 3.0.0
  */
 final class DatabaseSeeder extends Seeder
 {
@@ -25,8 +23,6 @@ final class DatabaseSeeder extends Seeder
      * convencional dos seeders do Laravel.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function run(): void
     {

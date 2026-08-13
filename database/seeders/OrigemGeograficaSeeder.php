@@ -15,8 +15,6 @@ use Illuminate\Support\Facades\DB;
  * por corresponder à convenção utilizada pelo Laravel.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class OrigemGeograficaSeeder extends Seeder
 {
@@ -30,8 +28,6 @@ final class OrigemGeograficaSeeder extends Seeder
      * @var array<string, string>
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const ORIGENS_POR_CODIGO = [
         'AF' => 'Afeganistão',
@@ -234,7 +230,7 @@ final class OrigemGeograficaSeeder extends Seeder
         'VE' => 'Venezuela',
         'VN' => 'Vietname',
         'ZM' => 'Zâmbia',
-        'ZW' => 'Zimbábue',
+        'ZW' => 'Zimbabué',
         'INT' => 'Internacional',
     ];
 
@@ -245,8 +241,6 @@ final class OrigemGeograficaSeeder extends Seeder
      * convencional dos seeders do Laravel.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function run(): void
     {

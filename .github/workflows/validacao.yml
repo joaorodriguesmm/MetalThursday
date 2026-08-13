@@ -3,9 +3,7 @@ name: Validação
 on:
   push:
     branches:
-      - main
-      - funcionalidade/gestao-utilizadores
-      - refatoracao/auditoria-v2
+      - "**"
   pull_request:
     branches:
       - main
@@ -96,11 +94,11 @@ jobs:
       - name: Configurar o Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: "22"
+          node-version: "24"
           cache: npm
 
       - name: Instalar dependências JavaScript
-        run: npm ci
+        run: npm ci --strict-allow-scripts
 
       - name: Auditar dependências JavaScript
         run: npm audit

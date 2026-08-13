@@ -29,8 +29,6 @@ use Throwable;
  * utilizador tem de confirmar o novo endereço antes de voltar a autenticar-se.
  *
  * @since 1.0.0
- *
- * @version 4.0.0
  */
 final class ControladorPerfil extends Controller
 {
@@ -39,9 +37,7 @@ final class ControladorPerfil extends Controller
      *
      * @var string
      *
-     * @since 3.2.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const SACO_ERROS =
         'perfil';
@@ -51,9 +47,7 @@ final class ControladorPerfil extends Controller
      *
      * @var string
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private const IDENTIFICADOR_PERMISSAO_TODAS =
         'todas';
@@ -64,8 +58,6 @@ final class ControladorPerfil extends Controller
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private const MENSAGEM_PERFIL_ATUALIZADO =
         'O perfil foi atualizado com sucesso.';
@@ -75,9 +67,7 @@ final class ControladorPerfil extends Controller
      *
      * @var string
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const MENSAGEM_EMAIL_INDISPONIVEL =
         'O endereço de e-mail já está associado a outro utilizador.';
@@ -87,9 +77,7 @@ final class ControladorPerfil extends Controller
      *
      * @var string
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const MENSAGEM_VERIFICACAO_NAO_ENVIADA =
         'O perfil foi atualizado, mas não foi possível enviar a mensagem de verificação do novo endereço de e-mail.';
@@ -99,9 +87,7 @@ final class ControladorPerfil extends Controller
      *
      * @var string
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const MENSAGEM_EMAIL_ALTERADO =
         'O perfil foi atualizado. Verifica o novo endereço de e-mail antes de iniciares sessão novamente.';
@@ -114,8 +100,6 @@ final class ControladorPerfil extends Controller
      *                                                   perfil.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function __construct(
         private readonly ServicoAtualizacaoPerfil $servicoPerfil,
@@ -135,8 +119,6 @@ final class ControladorPerfil extends Controller
      *                        identificador válido.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function editar(
         Request $pedido,
@@ -198,8 +180,6 @@ final class ControladorPerfil extends Controller
      *                   técnico inesperado.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function atualizar(
         AtualizarPerfilRequest $pedido,
@@ -290,9 +270,7 @@ final class ControladorPerfil extends Controller
      * @param  Utilizador  $utilizador  Utilizador consultado.
      * @return list<int> Identificadores normalizados e ordenados.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function obterIdentificadoresPermissoesEmail(
         Utilizador $utilizador,
@@ -340,9 +318,7 @@ final class ControladorPerfil extends Controller
      * @throws LogicException Quando uma permissão persistida não possui um
      *                        identificador válido.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function prepararPermissoesEmailFormulario(
         Request $pedido,
@@ -396,9 +372,7 @@ final class ControladorPerfil extends Controller
      * @throws LogicException Quando a permissão não possui um identificador
      *                        persistido válido.
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterIdentificadorPermissao(
         PermissaoEmail $permissao,
@@ -423,9 +397,7 @@ final class ControladorPerfil extends Controller
      * @param  PermissaoEmail  $permissao  Permissão analisada.
      * @return bool Verdadeiro quando é a permissão global.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function ePermissaoTodas(
         PermissaoEmail $permissao,
@@ -443,9 +415,7 @@ final class ControladorPerfil extends Controller
      * @param  Utilizador  $utilizador  Utilizador atualizado.
      * @return bool Verdadeiro quando a notificação foi enviada.
      *
-     * @since 2.1.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function enviarNotificacaoVerificacao(
         Utilizador $utilizador,
@@ -470,9 +440,7 @@ final class ControladorPerfil extends Controller
      *
      * @param  Request  $pedido  Pedido HTTP.
      *
-     * @since 2.1.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function terminarSessao(
         Request $pedido,
@@ -498,8 +466,6 @@ final class ControladorPerfil extends Controller
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterUtilizadorAutenticado(): Utilizador
     {
@@ -523,9 +489,7 @@ final class ControladorPerfil extends Controller
      * @param  mixed  $valor  Valor recebido.
      * @return int|null Identificador válido ou nulo.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function normalizarIdentificador(
         mixed $valor,
@@ -579,9 +543,7 @@ final class ControladorPerfil extends Controller
      * @param  mixed  $valores  Valores recebidos.
      * @return list<int> Identificadores positivos e únicos.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function normalizarListaIdentificadores(
         mixed $valores,

@@ -18,8 +18,6 @@ use Illuminate\Support\Facades\Schema;
  * aplicação.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 return new class extends Migration
 {
@@ -27,32 +25,19 @@ return new class extends Migration
      * Cria a tabela intermédia da hierarquia dos géneros.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function up(): void
     {
         Schema::create(
             'hierarquia_generos',
             static function (Blueprint $tabela): void {
-                $tabela
-                    ->foreignId(
-                        'genero_id',
-                    )
-                    ->constrained(
-                        table: 'generos',
-                    )
-                    ->cascadeOnDelete();
+                $tabela->foreignId(
+                    'genero_id',
+                );
 
-                $tabela
-                    ->foreignId(
-                        'genero_pai_id',
-                    )
-                    ->constrained(
-                        table: 'generos',
-                        indexName: 'hierarquia_generos_genero_pai_fk',
-                    )
-                    ->cascadeOnDelete();
+                $tabela->foreignId(
+                    'genero_pai_id',
+                );
 
                 $tabela->primary(
                     [
@@ -70,15 +55,40 @@ return new class extends Migration
                     'genero_pai_id',
                     'hierarquia_generos_genero_pai_indice',
                 );
+
+                $tabela
+                    ->foreign(
+                        'genero_id',
+                    )
+                    ->references(
+                        'id',
+                    )
+                    ->on(
+                        'generos',
+                    )
+                    ->cascadeOnDelete();
+
+                $tabela
+                    ->foreign(
+                        'genero_pai_id',
+                        'hierarquia_generos_genero_pai_fk',
+                    )
+                    ->references(
+                        'id',
+                    )
+                    ->on(
+                        'generos',
+                    )
+                    ->cascadeOnDelete();
             },
         );
 
         DB::statement(
             <<<'SQL'
-                ALTER TABLE `hierarquia_generos`
-                ADD CONSTRAINT `hierarquia_generos_generos_distintos_verificacao`
+            ALTER TABLE `hierarquia_generos`
+                ADD CONSTRAINT `hierarquia_generos_generos_distintos`
                 CHECK (`genero_id` <> `genero_pai_id`)
-                SQL,
+            SQL,
         );
     }
 
@@ -86,8 +96,6 @@ return new class extends Migration
      * Elimina a tabela intermédia da hierarquia dos géneros.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function down(): void
     {

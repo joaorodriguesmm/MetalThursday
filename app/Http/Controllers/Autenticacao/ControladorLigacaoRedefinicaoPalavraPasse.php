@@ -17,8 +17,6 @@ use Illuminate\View\View;
  * visitante, impedindo a enumeração de contas registadas.
  *
  * @since 1.0.0
- *
- * @version 4.1.0
  */
 final class ControladorLigacaoRedefinicaoPalavraPasse extends Controller
 {
@@ -31,8 +29,6 @@ final class ControladorLigacaoRedefinicaoPalavraPasse extends Controller
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private const MENSAGEM_PEDIDO_RECEBIDO =
         'Se existir uma conta associada ao endereço indicado, será enviada uma ligação para redefinir a palavra-passe.';
@@ -43,8 +39,6 @@ final class ControladorLigacaoRedefinicaoPalavraPasse extends Controller
      * @return View Formulário de recuperação.
      *
      * @since 1.0.0
-     *
-     * @version 2.1.0
      */
     public function apresentar(): View
     {
@@ -68,8 +62,6 @@ final class ControladorLigacaoRedefinicaoPalavraPasse extends Controller
      * @return RedirectResponse Redirecionamento para o formulário.
      *
      * @since 1.0.0
-     *
-     * @version 4.1.0
      */
     public function enviar(
         SolicitarRedefinicaoPalavraPasseRequest $pedido,

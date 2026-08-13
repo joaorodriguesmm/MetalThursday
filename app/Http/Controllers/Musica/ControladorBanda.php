@@ -31,8 +31,6 @@ use Symfony\Component\HttpFoundation\Response;
  * obter e a bloquear o registo dentro da transação.
  *
  * @since 1.0.0
- *
- * @version 4.1.0
  */
 final class ControladorBanda extends Controller
 {
@@ -44,8 +42,6 @@ final class ControladorBanda extends Controller
      * @var int
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private const REGISTOS_POR_PAGINA =
         20;
@@ -55,9 +51,7 @@ final class ControladorBanda extends Controller
      *
      * @var int
      *
-     * @since 2.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const COMPRIMENTO_MAXIMO_PESQUISA =
         100;
@@ -67,9 +61,7 @@ final class ControladorBanda extends Controller
      *
      * @var int
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const TENTATIVAS_TRANSACAO =
         3;
@@ -81,8 +73,6 @@ final class ControladorBanda extends Controller
      * @return View Listagem de bandas.
      *
      * @since 1.0.0
-     *
-     * @version 4.1.0
      */
     public function indice(
         Request $pedido,
@@ -148,8 +138,6 @@ final class ControladorBanda extends Controller
      * @return View Formulário de criação.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function criar(
         Request $pedido,
@@ -174,8 +162,6 @@ final class ControladorBanda extends Controller
      * @return JsonResponse|RedirectResponse Resposta da operação.
      *
      * @since 1.0.0
-     *
-     * @version 4.1.0
      */
     public function guardar(
         CriarBandaRequest $pedido,
@@ -256,8 +242,6 @@ final class ControladorBanda extends Controller
      * @return View Página de detalhes.
      *
      * @since 1.0.0
-     *
-     * @version 4.1.0
      */
     public function detalhes(
         Banda $banda,
@@ -348,8 +332,6 @@ final class ControladorBanda extends Controller
      * @return View Formulário de edição.
      *
      * @since 1.0.0
-     *
-     * @version 4.1.0
      */
     public function editar(
         Request $pedido,
@@ -375,13 +357,16 @@ final class ControladorBanda extends Controller
      * O registo é novamente obtido e bloqueado dentro da transação. A
      * autorização é verificada antes de iniciar a operação.
      *
+     * A banda só é persistida quando os atributos ou a relação de géneros
+     * sofrem uma alteração efetiva. Desta forma, os dados de auditoria não são
+     * atualizados por uma submissão idêntica, mas continuam a refletir uma
+     * alteração que afecte apenas os géneros.
+     *
      * @param  AtualizarBandaRequest  $pedido  Pedido validado.
      * @param  Banda  $banda  Banda atualizada.
      * @return JsonResponse|RedirectResponse Resposta da operação.
      *
      * @since 1.0.0
-     *
-     * @version 4.1.0
      */
     public function atualizar(
         AtualizarBandaRequest $pedido,
@@ -425,13 +410,21 @@ final class ControladorBanda extends Controller
                             $dados['origem_geografica_id'],
                         );
 
-                    $bandaBloqueada->saveOrFail();
+                    $alteracoesGeneros =
+                        $bandaBloqueada
+                            ->generos()
+                            ->sync(
+                                $dados['generos'],
+                            );
 
-                    $bandaBloqueada
-                        ->generos()
-                        ->sync(
-                            $dados['generos'],
-                        );
+                    if (
+                        $bandaBloqueada->isDirty()
+                        || $alteracoesGeneros['attached'] !== []
+                        || $alteracoesGeneros['detached'] !== []
+                        || $alteracoesGeneros['updated'] !== []
+                    ) {
+                        $bandaBloqueada->saveOrFail();
+                    }
 
                     return $bandaBloqueada;
                 },
@@ -471,8 +464,6 @@ final class ControladorBanda extends Controller
      * @return JsonResponse|RedirectResponse Resposta da operação.
      *
      * @since 1.0.0
-     *
-     * @version 4.1.0
      */
     public function eliminar(
         Request $pedido,
@@ -533,8 +524,6 @@ final class ControladorBanda extends Controller
      * } Dados preparados.
      *
      * @since 2.0.0
-     *
-     * @version 4.0.0
      */
     private function obterDadosFormulario(
         Request $pedido,
@@ -640,9 +629,7 @@ final class ControladorBanda extends Controller
      * @throws LogicException Quando a origem geográfica da banda não está
      *                        disponível.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function obterDadosCabecalho(
         Banda $banda,
@@ -696,9 +683,7 @@ final class ControladorBanda extends Controller
      * @throws LogicException Quando a origem geográfica da banda não está
      *                        disponível.
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function serializarBanda(
         Banda $banda,
@@ -752,8 +737,6 @@ final class ControladorBanda extends Controller
      * @return string|null Termo normalizado ou nulo.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     private function normalizarPesquisa(
         mixed $valor,
@@ -784,9 +767,7 @@ final class ControladorBanda extends Controller
      * @param  mixed  $valor  Valor recebido.
      * @return string Texto normalizado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function normalizarTextoFormulario(
         mixed $valor,
@@ -810,9 +791,7 @@ final class ControladorBanda extends Controller
      * @param  mixed  $valor  Valor recebido.
      * @return string Identificador normalizado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function normalizarIdentificadorFormulario(
         mixed $valor,
@@ -852,9 +831,7 @@ final class ControladorBanda extends Controller
      * @param  mixed  $valores  Valores recebidos.
      * @return list<string> Identificadores normalizados.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function normalizarListaIdentificadoresFormulario(
         mixed $valores,

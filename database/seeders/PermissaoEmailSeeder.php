@@ -14,8 +14,6 @@ use Illuminate\Support\Facades\DB;
  * pelo Laravel.
  *
  * @since 1.0.0
- *
- * @version 3.0.0
  */
 final class PermissaoEmailSeeder extends Seeder
 {
@@ -30,8 +28,6 @@ final class PermissaoEmailSeeder extends Seeder
      * }>
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private const PERMISSOES = [
         [
@@ -106,8 +102,6 @@ final class PermissaoEmailSeeder extends Seeder
      * convencional dos seeders do Laravel.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function run(): void
     {

@@ -33,8 +33,6 @@ use Throwable;
  * confirmar o endereço de e-mail antes de se poder autenticar.
  *
  * @since 1.0.0
- *
- * @version 4.0.0
  */
 final class ControladorRegistoConvite extends Controller
 {
@@ -43,9 +41,7 @@ final class ControladorRegistoConvite extends Controller
      *
      * @var string
      *
-     * @since 3.2.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const IDENTIFICADOR_PERMISSAO_TODAS =
         'todas';
@@ -58,9 +54,7 @@ final class ControladorRegistoConvite extends Controller
      *
      * @var string
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const MENSAGEM_CONVITE_INDISPONIVEL =
         'Este convite é inválido ou já não está disponível.';
@@ -73,9 +67,7 @@ final class ControladorRegistoConvite extends Controller
      *
      * @var string
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const MENSAGEM_REGISTO_NAO_CONCLUIDO =
         'Não foi possível concluir o registo. Confirma os dados e verifica se o convite continua disponível.';
@@ -90,9 +82,7 @@ final class ControladorRegistoConvite extends Controller
      *                                                              pelo
      *                                                              registo.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public function __construct(
         private readonly ServicoConvites $servicoConvites,
@@ -110,8 +100,6 @@ final class ControladorRegistoConvite extends Controller
      * @return View|RedirectResponse Formulário ou redirecionamento.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function apresentar(
         Request $pedido,
@@ -224,8 +212,6 @@ final class ControladorRegistoConvite extends Controller
      * @throws Throwable Quando ocorre uma falha técnica inesperada.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function registar(
         AceitarConviteRequest $pedido,
@@ -306,9 +292,7 @@ final class ControladorRegistoConvite extends Controller
      * @param  Request  $pedido  Pedido HTTP atual.
      * @return Collection<int, string> Identificadores selecionados.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function obterPermissoesSelecionadas(
         Request $pedido,
@@ -363,9 +347,7 @@ final class ControladorRegistoConvite extends Controller
      * @throws LogicException Quando o nome persistido viola o contrato do
      *                        objeto de valor.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function obterIniciais(
         string $nome,

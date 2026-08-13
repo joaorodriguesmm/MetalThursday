@@ -27,8 +27,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * por utilizador e entidade mesmo perante pedidos concorrentes.
  *
  * @since 1.0.0
- *
- * @version 3.1.0
  */
 final class ControladorAvaliacao extends Controller
 {
@@ -37,9 +35,7 @@ final class ControladorAvaliacao extends Controller
      *
      * @var int
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const TENTATIVAS_TRANSACAO =
         3;
@@ -49,9 +45,7 @@ final class ControladorAvaliacao extends Controller
      *
      * @var string
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const ACAO_AVALIOU =
         'avaliou';
@@ -61,9 +55,7 @@ final class ControladorAvaliacao extends Controller
      *
      * @var string
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const MENSAGEM_SEM_AVALIACOES =
         'Ainda sem avaliações.';
@@ -75,8 +67,6 @@ final class ControladorAvaliacao extends Controller
      *                                                        pelas notificações.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function __construct(
         private readonly NotificadorInteracoes $notificadorInteracoes,
@@ -105,8 +95,6 @@ final class ControladorAvaliacao extends Controller
      *                               válidos.
      *
      * @since 1.0.0
-     *
-     * @version 3.1.0
      */
     public function guardar(
         GuardarAvaliacaoRequest $pedido,
@@ -241,8 +229,6 @@ final class ControladorAvaliacao extends Controller
      *                               válidos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function resolverAvaliavel(
         string $tipo,
@@ -277,8 +263,6 @@ final class ControladorAvaliacao extends Controller
      * @return MetalThursday|SeccaoMetalThursday Entidade bloqueada.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function bloquearAvaliavel(
         MetalThursday|SeccaoMetalThursday $avaliavel,
@@ -321,9 +305,7 @@ final class ControladorAvaliacao extends Controller
      * @throws LogicException Quando uma avaliação possui dados persistidos
      *                        inválidos.
      *
-     * @since 3.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterDadosIndicador(
         MetalThursday|SeccaoMetalThursday $avaliavel,
@@ -473,8 +455,6 @@ final class ControladorAvaliacao extends Controller
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterUtilizadorAutenticado(): Utilizador
     {

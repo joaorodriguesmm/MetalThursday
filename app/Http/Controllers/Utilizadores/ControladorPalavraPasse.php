@@ -23,8 +23,6 @@ use Illuminate\Support\Facades\Auth;
  * atualização da palavra-passe.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 final class ControladorPalavraPasse extends Controller
 {
@@ -34,8 +32,6 @@ final class ControladorPalavraPasse extends Controller
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const SACO_ERROS =
         'palavraPasse';
@@ -47,8 +43,6 @@ final class ControladorPalavraPasse extends Controller
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const MENSAGEM_PALAVRA_PASSE_ATUAL_INCORRETA =
         'A palavra-passe atual introduzida não está correta.';
@@ -59,8 +53,6 @@ final class ControladorPalavraPasse extends Controller
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const MENSAGEM_NOVA_PALAVRA_PASSE_IGUAL =
         'A nova palavra-passe deve ser diferente da palavra-passe atual.';
@@ -71,8 +63,6 @@ final class ControladorPalavraPasse extends Controller
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private const MENSAGEM_SUCESSO =
         'Palavra-passe atualizada com sucesso.';
@@ -86,8 +76,6 @@ final class ControladorPalavraPasse extends Controller
      *                                                               atualização.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function __construct(
         private readonly ServicoAtualizacaoPalavraPasse $servicoPalavraPasse,
@@ -111,8 +99,6 @@ final class ControladorPalavraPasse extends Controller
      *                                 autenticado válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function atualizar(
         AtualizarPalavraPasseRequest $pedido,
@@ -170,8 +156,6 @@ final class ControladorPalavraPasse extends Controller
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterUtilizadorAutenticado(): Utilizador
     {

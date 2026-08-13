@@ -34,8 +34,6 @@ use Symfony\Component\HttpFoundation\Response;
  * transacional para manter a consistência perante pedidos concorrentes.
  *
  * @since 1.0.0
- *
- * @version 4.1.0
  */
 final class ControladorEdicao extends Controller
 {
@@ -47,8 +45,6 @@ final class ControladorEdicao extends Controller
      * @var int
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private const REGISTOS_POR_PAGINA = 20;
 
@@ -57,9 +53,7 @@ final class ControladorEdicao extends Controller
      *
      * @var int
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const TENTATIVAS_TRANSACAO = 3;
 
@@ -68,9 +62,7 @@ final class ControladorEdicao extends Controller
      *
      * @var string
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const MENSAGEM_EDICAO_COM_METAL_THURSDAYS =
         'A edição não pode ser eliminada enquanto possuir MetalThursdays.';
@@ -85,8 +77,6 @@ final class ControladorEdicao extends Controller
      *                                                                          Serviço de apresentação.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function __construct(
         private readonly ServicoMusicasFavoritasEdicao $servicoMusicasFavoritas,
@@ -99,8 +89,6 @@ final class ControladorEdicao extends Controller
      * @return View Listagem de edições.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function indice(): View
     {
@@ -135,8 +123,6 @@ final class ControladorEdicao extends Controller
      * @return View Formulário de criação.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function criar(): View
     {
@@ -158,8 +144,6 @@ final class ControladorEdicao extends Controller
      * @return JsonResponse|RedirectResponse Resposta da operação.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function guardar(
         CriarEdicaoRequest $pedido,
@@ -205,8 +189,6 @@ final class ControladorEdicao extends Controller
      * @return View Página da edição.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function detalhes(
         Edicao $edicao,
@@ -237,8 +219,6 @@ final class ControladorEdicao extends Controller
      * @return View Formulário de edição.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function editar(
         Edicao $edicao,
@@ -266,13 +246,15 @@ final class ControladorEdicao extends Controller
      * A autorização é verificada antes de abrir a transação. A edição é
      * novamente obtida e bloqueada imediatamente antes da atualização.
      *
+     * O modelo só é persistido quando os dados normalizados alteram
+     * efetivamente o estado existente, evitando atualizar os dados de
+     * auditoria sem uma alteração real.
+     *
      * @param  AtualizarEdicaoRequest  $pedido  Pedido validado.
      * @param  Edicao  $edicao  Edição atualizada.
      * @return JsonResponse|RedirectResponse Resposta da operação.
      *
      * @since 1.0.0
-     *
-     * @version 4.1.0
      */
     public function atualizar(
         AtualizarEdicaoRequest $pedido,
@@ -300,9 +282,13 @@ final class ControladorEdicao extends Controller
                         $edicao,
                     );
 
-                $edicaoBloqueada->updateOrFail(
+                $edicaoBloqueada->fill(
                     $dados,
                 );
+
+                if ($edicaoBloqueada->isDirty()) {
+                    $edicaoBloqueada->saveOrFail();
+                }
 
                 return $edicaoBloqueada;
             },
@@ -341,8 +327,6 @@ final class ControladorEdicao extends Controller
      * @return JsonResponse|RedirectResponse Resposta da operação.
      *
      * @since 1.0.0
-     *
-     * @version 4.1.0
      */
     public function eliminar(
         Request $pedido,
@@ -422,8 +406,6 @@ final class ControladorEdicao extends Controller
      *                                 autenticado.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function guardarMusicasFavoritas(
         GuardarMusicasFavoritasEdicaoRequest $pedido,
@@ -463,13 +445,15 @@ final class ControladorEdicao extends Controller
      * A autorização é verificada antes de abrir a transação. A edição é
      * novamente obtida e bloqueada imediatamente antes da atualização.
      *
+     * A edição só é persistida quando a ligação normalizada é diferente da
+     * ligação existente, evitando atualizar os dados de auditoria sem uma
+     * alteração real.
+     *
      * @param  AtualizarLigacaoCompilacaoEdicaoRequest  $pedido  Pedido validado.
      * @param  Edicao  $edicao  Edição atualizada.
      * @return JsonResponse|RedirectResponse Resposta da operação.
      *
      * @since 1.0.0
-     *
-     * @version 4.1.0
      */
     public function atualizarLigacaoCompilacao(
         AtualizarLigacaoCompilacaoEdicaoRequest $pedido,
@@ -493,9 +477,17 @@ final class ControladorEdicao extends Controller
                         $edicao,
                     );
 
-                $edicaoBloqueada->updateOrFail([
+                $edicaoBloqueada->fill([
                     'ligacao_compilacao' => $ligacaoCompilacao,
                 ]);
+
+                if (
+                    $edicaoBloqueada->isDirty(
+                        'ligacao_compilacao',
+                    )
+                ) {
+                    $edicaoBloqueada->saveOrFail();
+                }
 
                 return $edicaoBloqueada;
             },
@@ -529,9 +521,7 @@ final class ControladorEdicao extends Controller
      *     textoBotaoSubmissao: string
      * } Dados preparados para o formulário.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterDadosFormulario(
         ?Edicao $edicao = null,
@@ -577,9 +567,7 @@ final class ControladorEdicao extends Controller
      * @param  Edicao  $edicao  Edição original.
      * @return Edicao Edição novamente obtida e bloqueada.
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function bloquearEdicao(
         Edicao $edicao,
@@ -598,9 +586,7 @@ final class ControladorEdicao extends Controller
      * @param  mixed  $data  Data recebida.
      * @return string Data no formato `Y-m-d` ou texto vazio.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function formatarDataFormulario(
         mixed $data,
@@ -621,9 +607,7 @@ final class ControladorEdicao extends Controller
      *
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterUtilizadorAutenticado(): Utilizador
     {
@@ -669,9 +653,7 @@ final class ControladorEdicao extends Controller
      * @throws LogicException Quando a edição contém dados persistidos
      *                        inválidos.
      *
-     * @since 2.1.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function serializarEdicao(
         Edicao $edicao,
@@ -752,9 +734,7 @@ final class ControladorEdicao extends Controller
      *
      * @throws LogicException Quando o nome persistido não é válido.
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterNomeEdicao(
         Edicao $edicao,
@@ -791,8 +771,6 @@ final class ControladorEdicao extends Controller
      * @throws LogicException Quando as datas persistidas não são válidas.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterTextoApresentacao(
         Edicao $edicao,

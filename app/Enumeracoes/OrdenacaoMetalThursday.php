@@ -11,8 +11,6 @@ namespace App\Enumeracoes;
  * aplicação.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 enum OrdenacaoMetalThursday: string
 {
@@ -20,8 +18,6 @@ enum OrdenacaoMetalThursday: string
      * Ordenação pela data da MetalThursday.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     case Data = 'data';
 
@@ -29,8 +25,6 @@ enum OrdenacaoMetalThursday: string
      * Ordenação pela classificação média.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     case Classificacao = 'classificacao';
 
@@ -38,8 +32,6 @@ enum OrdenacaoMetalThursday: string
      * Ordenação pela classificação atribuída pelo utilizador autenticado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     case MinhaClassificacao = 'minha_classificacao';
 
@@ -54,8 +46,6 @@ enum OrdenacaoMetalThursday: string
      * @return self|null Ordenação correspondente ou nula.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public static function tentarCriar(
         mixed $valor,
@@ -79,8 +69,6 @@ enum OrdenacaoMetalThursday: string
      * @return string Etiqueta da ordenação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function etiqueta(): string
     {

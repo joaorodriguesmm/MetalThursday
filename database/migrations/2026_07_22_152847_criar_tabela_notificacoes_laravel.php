@@ -14,8 +14,6 @@ use Illuminate\Support\Facades\Schema;
  * notificações em base de dados do Laravel.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 return new class extends Migration
 {
@@ -23,8 +21,6 @@ return new class extends Migration
      * Cria a tabela das notificações persistidas.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function up(): void
     {
@@ -32,9 +28,12 @@ return new class extends Migration
             'notificacoes',
             static function (Blueprint $tabela): void {
                 $tabela
-                    ->uuid(
+                    ->char(
                         'id',
+                        36,
                     )
+                    ->charset('ascii')
+                    ->collation('ascii_bin')
                     ->primary();
 
                 $tabela->string(
@@ -66,8 +65,6 @@ return new class extends Migration
      * Elimina a tabela das notificações persistidas.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function down(): void
     {

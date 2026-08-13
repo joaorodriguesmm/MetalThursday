@@ -13,8 +13,6 @@ use Illuminate\Support\Facades\Schema;
  * uma vez.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 return new class extends Migration
 {
@@ -22,33 +20,19 @@ return new class extends Migration
      * Cria a tabela intermédia das permissões de e-mail.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function up(): void
     {
         Schema::create(
             'permissao_email_utilizador',
             static function (Blueprint $tabela): void {
-                $tabela
-                    ->foreignId(
-                        'utilizador_id',
-                    )
-                    ->constrained(
-                        table: 'utilizadores',
-                    )
-                    ->cascadeOnUpdate()
-                    ->cascadeOnDelete();
+                $tabela->foreignId(
+                    'utilizador_id',
+                );
 
-                $tabela
-                    ->foreignId(
-                        'permissao_email_id',
-                    )
-                    ->constrained(
-                        table: 'permissoes_email',
-                    )
-                    ->cascadeOnUpdate()
-                    ->cascadeOnDelete();
+                $tabela->foreignId(
+                    'permissao_email_id',
+                );
 
                 $tabela->primary(
                     [
@@ -67,6 +51,30 @@ return new class extends Migration
                     'permissao_email_id',
                     'permissao_email_utilizador_permissao_indice',
                 );
+
+                $tabela
+                    ->foreign(
+                        'utilizador_id',
+                    )
+                    ->references(
+                        'id',
+                    )
+                    ->on(
+                        'utilizadores',
+                    )
+                    ->cascadeOnDelete();
+
+                $tabela
+                    ->foreign(
+                        'permissao_email_id',
+                    )
+                    ->references(
+                        'id',
+                    )
+                    ->on(
+                        'permissoes_email',
+                    )
+                    ->cascadeOnDelete();
             },
         );
     }
@@ -75,8 +83,6 @@ return new class extends Migration
      * Elimina a tabela intermédia das permissões de e-mail.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function down(): void
     {

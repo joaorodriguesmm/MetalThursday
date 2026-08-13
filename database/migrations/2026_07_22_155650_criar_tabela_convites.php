@@ -18,8 +18,6 @@ use Illuminate\Support\Facades\Schema;
  * e expiração, sem recorrer a uma coluna de estado redundante.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 return new class extends Migration
 {
@@ -27,8 +25,6 @@ return new class extends Migration
      * Cria a tabela dos convites.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function up(): void
     {
@@ -77,12 +73,7 @@ return new class extends Migration
                     ->foreignId(
                         'criado_por_id',
                     )
-                    ->nullable()
-                    ->constrained(
-                        table: 'utilizadores',
-                    )
-                    ->cascadeOnUpdate()
-                    ->nullOnDelete();
+                    ->nullable();
 
                 /*
                  * Utilizador criado através do convite.
@@ -95,11 +86,7 @@ return new class extends Migration
                     ->foreignId(
                         'utilizado_por_id',
                     )
-                    ->nullable()
-                    ->constrained(
-                        table: 'utilizadores',
-                    )
-                    ->restrictOnDelete();
+                    ->nullable();
 
                 $tabela
                     ->timestamp(
@@ -130,7 +117,7 @@ return new class extends Migration
                  * Um utilizador pode ter sido criado através de apenas um
                  * convite.
                  *
-                 * O MySQL permite vários valores nulos nesta restrição.
+                 * O MariaDB permite vários valores nulos nesta restrição.
                  */
                 $tabela->unique(
                     'utilizado_por_id',
@@ -138,75 +125,92 @@ return new class extends Migration
                 );
 
                 $tabela->index(
-                    'email_destino',
-                    'convites_email_destino_indice',
-                );
-
-                /*
-                 * Suporta a localização de convites pendentes, não revogados
-                 * e ainda não expirados.
-                 */
-                $tabela->index(
-                    [
-                        'utilizado_por_id',
-                        'utilizado_em',
-                        'revogado_em',
-                        'expira_em',
-                    ],
-                    'convites_disponibilidade_indice',
-                );
-
-                $tabela->index(
                     'criado_por_id',
                     'convites_criado_por_indice',
                 );
+
+                $tabela
+                    ->foreign(
+                        'criado_por_id',
+                    )
+                    ->references(
+                        'id',
+                    )
+                    ->on(
+                        'utilizadores',
+                    )
+                    ->nullOnDelete();
+
+                $tabela
+                    ->foreign(
+                        'utilizado_por_id',
+                    )
+                    ->references(
+                        'id',
+                    )
+                    ->on(
+                        'utilizadores',
+                    )
+                    ->restrictOnDelete();
             },
         );
 
         DB::statement(
             <<<'SQL'
-                ALTER TABLE `convites`
-                ADD CONSTRAINT `convites_nome_convidado_valido_verificacao`
+            ALTER TABLE `convites`
+                ADD CONSTRAINT `convites_nome_convidado_valido`
                 CHECK (
-                    CHAR_LENGTH(TRIM(`nome_convidado`))
-                    BETWEEN 1 AND 255
+                    CHAR_LENGTH(`nome_convidado`) BETWEEN 1 AND 255
+                    AND `nome_convidado` REGEXP '[^[:space:]]'
                 )
-                SQL,
+            SQL,
         );
 
         DB::statement(
             <<<'SQL'
-                ALTER TABLE `convites`
-                ADD CONSTRAINT `convites_email_destino_valido_verificacao`
+            ALTER TABLE `convites`
+                ADD CONSTRAINT `convites_email_destino_valido`
                 CHECK (
                     `email_destino` IS NULL
-                    OR CHAR_LENGTH(TRIM(`email_destino`))
-                        BETWEEN 1 AND 255
+                    OR (
+                        CHAR_LENGTH(`email_destino`) BETWEEN 1 AND 255
+                        AND `email_destino` REGEXP '[^[:space:]]'
+                    )
                 )
-                SQL,
+            SQL,
         );
 
         DB::statement(
             <<<'SQL'
-                ALTER TABLE `convites`
-                ADD CONSTRAINT `convites_codigo_hash_valido_verificacao`
-                CHECK (CHAR_LENGTH(TRIM(`codigo_hash`)) = 64)
-                SQL,
+            ALTER TABLE `convites`
+                ADD CONSTRAINT `convites_codigo_hash_valido`
+                CHECK (
+                    BINARY `codigo_hash`
+                    REGEXP '^[0-9a-f]{64}$'
+                )
+            SQL,
         );
 
         /*
-         * Um convite associado a um utilizador tem obrigatoriamente uma data
-         * de utilização.
+         * O utilizador criado e o momento de utilização representam a mesma
+         * transição de estado e são sempre preenchidos em conjunto.
          */
         DB::statement(
             <<<'SQL'
-                ALTER TABLE `convites`
-                ADD CONSTRAINT `convites_utilizacao_coerente_verificacao`
+            ALTER TABLE `convites`
+                ADD CONSTRAINT `convites_utilizacao_coerente`
                 CHECK (
-                    `utilizado_por_id` IS NULL
-                    OR `utilizado_em` IS NOT NULL
+                    (
+                        `utilizado_por_id` IS NULL
+                        AND `utilizado_em` IS NULL
+                    )
+                    OR
+                    (
+                        `utilizado_por_id` IS NOT NULL
+                        AND `utilizado_em` IS NOT NULL
+                    )
                 )
-                SQL,
+            SQL,
         );
 
         /*
@@ -215,13 +219,13 @@ return new class extends Migration
          */
         DB::statement(
             <<<'SQL'
-                ALTER TABLE `convites`
-                ADD CONSTRAINT `convites_estado_exclusivo_verificacao`
+            ALTER TABLE `convites`
+                ADD CONSTRAINT `convites_estado_exclusivo`
                 CHECK (
                     `utilizado_em` IS NULL
                     OR `revogado_em` IS NULL
                 )
-                SQL,
+            SQL,
         );
     }
 
@@ -229,8 +233,6 @@ return new class extends Migration
      * Elimina a tabela dos convites.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function down(): void
     {

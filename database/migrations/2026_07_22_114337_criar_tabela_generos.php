@@ -13,8 +13,6 @@ use Illuminate\Support\Facades\Schema;
  * responsáveis pela criação e pela última atualização.
  *
  * @since 2.0.0
- *
- * @version 2.1.0
  */
 return new class extends Migration
 {
@@ -22,8 +20,6 @@ return new class extends Migration
      * Cria a tabela dos géneros musicais.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     public function up(): void
     {
@@ -89,8 +85,6 @@ return new class extends Migration
      * Elimina a tabela dos géneros musicais.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function down(): void
     {

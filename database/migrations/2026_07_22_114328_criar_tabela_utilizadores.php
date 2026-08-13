@@ -14,8 +14,6 @@ use Illuminate\Support\Facades\Schema;
  * verificação de e-mail e recuperação da palavra-passe do Laravel.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 return new class extends Migration
 {
@@ -23,8 +21,6 @@ return new class extends Migration
      * Cria a tabela dos utilizadores.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function up(): void
     {
@@ -66,12 +62,11 @@ return new class extends Migration
                 $tabela
                     ->string(
                         'papel',
-                        32,
+                        19,
                     )
                     ->default(
                         'utilizador',
-                    )
-                    ->index();
+                    );
 
                 $tabela->rememberToken();
 
@@ -84,8 +79,6 @@ return new class extends Migration
      * Elimina a tabela dos utilizadores.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function down(): void
     {

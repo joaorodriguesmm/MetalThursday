@@ -14,8 +14,6 @@ use Illuminate\Support\Facades\Schema;
  * repositórios de filas, lotes e trabalhos falhados do Laravel.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 return new class extends Migration
 {
@@ -23,8 +21,6 @@ return new class extends Migration
      * Cria as tabelas de trabalhos, lotes e trabalhos falhados.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function up(): void
     {
@@ -38,13 +34,15 @@ return new class extends Migration
                         'queue',
                         255,
                     )
-                    ->index();
+                    ->collation(
+                        'utf8mb4_bin',
+                    );
 
                 $tabela->longText(
                     'payload',
                 );
 
-                $tabela->unsignedTinyInteger(
+                $tabela->unsignedSmallInteger(
                     'attempts',
                 );
 
@@ -61,6 +59,15 @@ return new class extends Migration
                 $tabela->unsignedInteger(
                     'created_at',
                 );
+
+                $tabela->index(
+                    [
+                        'queue',
+                        'reserved_at',
+                        'available_at',
+                    ],
+                    'trabalhos_fila_estado_disponibilidade_indice',
+                );
             },
         );
 
@@ -68,9 +75,15 @@ return new class extends Migration
             'lotes_trabalhos_fila',
             static function (Blueprint $tabela): void {
                 $tabela
-                    ->string(
+                    ->char(
                         'id',
-                        255,
+                        36,
+                    )
+                    ->charset(
+                        'ascii',
+                    )
+                    ->collation(
+                        'ascii_bin',
                     )
                     ->primary();
 
@@ -79,15 +92,15 @@ return new class extends Migration
                     255,
                 );
 
-                $tabela->integer(
+                $tabela->unsignedInteger(
                     'total_jobs',
                 );
 
-                $tabela->integer(
+                $tabela->unsignedInteger(
                     'pending_jobs',
                 );
 
-                $tabela->integer(
+                $tabela->unsignedInteger(
                     'failed_jobs',
                 );
 
@@ -102,20 +115,36 @@ return new class extends Migration
                     ->nullable();
 
                 $tabela
-                    ->integer(
+                    ->unsignedInteger(
                         'cancelled_at',
                     )
                     ->nullable();
 
-                $tabela->integer(
+                $tabela->unsignedInteger(
                     'created_at',
                 );
 
                 $tabela
-                    ->integer(
+                    ->unsignedInteger(
                         'finished_at',
                     )
                     ->nullable();
+
+                $tabela->index(
+                    [
+                        'finished_at',
+                        'created_at',
+                    ],
+                    'lotes_trabalhos_fila_estado_data_indice',
+                );
+
+                $tabela->index(
+                    [
+                        'created_at',
+                        'cancelled_at',
+                    ],
+                    'lotes_trabalhos_fila_criacao_cancelamento_indice',
+                );
             },
         );
 
@@ -125,19 +154,35 @@ return new class extends Migration
                 $tabela->id();
 
                 $tabela
-                    ->string(
+                    ->char(
                         'uuid',
-                        255,
+                        36,
+                    )
+                    ->charset(
+                        'ascii',
+                    )
+                    ->collation(
+                        'ascii_bin',
                     )
                     ->unique();
 
-                $tabela->text(
-                    'connection',
-                );
+                $tabela
+                    ->string(
+                        'connection',
+                        255,
+                    )
+                    ->collation(
+                        'utf8mb4_bin',
+                    );
 
-                $tabela->text(
-                    'queue',
-                );
+                $tabela
+                    ->string(
+                        'queue',
+                        255,
+                    )
+                    ->collation(
+                        'utf8mb4_bin',
+                    );
 
                 $tabela->longText(
                     'payload',
@@ -152,6 +197,24 @@ return new class extends Migration
                         'failed_at',
                     )
                     ->useCurrent();
+
+                $tabela->index(
+                    [
+                        'connection',
+                        'queue',
+                    ],
+                    'trabalhos_fila_falhados_ligacao_fila_indice',
+                );
+
+                $tabela->index(
+                    'queue',
+                    'trabalhos_fila_falhados_fila_indice',
+                );
+
+                $tabela->index(
+                    'failed_at',
+                    'trabalhos_fila_falhados_data_indice',
+                );
             },
         );
     }
@@ -160,8 +223,6 @@ return new class extends Migration
      * Elimina as tabelas das filas.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function down(): void
     {

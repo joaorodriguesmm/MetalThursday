@@ -19,8 +19,6 @@ use InvalidArgumentException;
  * @extends Factory<Convite>
  *
  * @since 2.0.0
- *
- * @version 3.0.0
  */
 final class ConviteFactory extends Factory
 {
@@ -30,8 +28,6 @@ final class ConviteFactory extends Factory
      * @var class-string<Convite>
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $model =
         Convite::class;
@@ -48,8 +44,6 @@ final class ConviteFactory extends Factory
      * @return array<string, mixed> Atributos do convite.
      *
      * @since 2.0.0
-     *
-     * @version 3.0.0
      */
     public function definition(): array
     {
@@ -96,8 +90,6 @@ final class ConviteFactory extends Factory
      * @throws InvalidArgumentException Quando o código não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     public function comCodigo(
         string $codigo,
@@ -115,8 +107,6 @@ final class ConviteFactory extends Factory
      * @return static Factory configurada.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     public function semEmailDestino(): static
     {
@@ -131,8 +121,6 @@ final class ConviteFactory extends Factory
      * @return static Factory configurada.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     public function semExpiracao(): static
     {
@@ -147,8 +135,6 @@ final class ConviteFactory extends Factory
      * @return static Factory configurada.
      *
      * @since 2.0.0
-     *
-     * @version 3.0.0
      */
     public function expirado(): static
     {
@@ -178,8 +164,6 @@ final class ConviteFactory extends Factory
      *                                  persistido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function revogadoPor(
         Utilizador $responsavel,
@@ -208,8 +192,6 @@ final class ConviteFactory extends Factory
      *                                  identificador válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     public function criadoPor(
         Utilizador $utilizador,
@@ -235,8 +217,6 @@ final class ConviteFactory extends Factory
      *                                  identificador válido.
      *
      * @since 2.0.0
-     *
-     * @version 3.0.0
      */
     public function utilizadoPor(
         Utilizador $utilizador,
@@ -265,8 +245,6 @@ final class ConviteFactory extends Factory
      *                                  identificador válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     private function obterIdentificadorUtilizadorPersistido(
         Utilizador $utilizador,

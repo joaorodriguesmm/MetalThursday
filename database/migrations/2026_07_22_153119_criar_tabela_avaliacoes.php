@@ -14,28 +14,9 @@ use Illuminate\Support\Facades\Schema;
  * de uma relação polimórfica.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 return new class extends Migration
 {
-    /**
-     * Tipos de entidades que podem receber avaliações.
-     *
-     * Estes valores correspondem aos aliases polimórficos persistidos pela
-     * aplicação e não devem depender dos namespaces PHP dos modelos.
-     *
-     * @var list<string>
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const TIPOS_AVALIAVEL = [
-        'metal_thursday',
-        'seccao_metal_thursday',
-    ];
-
     /**
      * Cria a tabela das avaliações.
      *
@@ -43,8 +24,6 @@ return new class extends Migration
      * avaliável.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function up(): void
     {
@@ -53,15 +32,9 @@ return new class extends Migration
             static function (Blueprint $tabela): void {
                 $tabela->id();
 
-                $tabela
-                    ->foreignId(
-                        'utilizador_id',
-                    )
-                    ->constrained(
-                        table: 'utilizadores',
-                    )
-                    ->cascadeOnUpdate()
-                    ->cascadeOnDelete();
+                $tabela->foreignId(
+                    'utilizador_id',
+                );
 
                 $tabela
                     ->decimal(
@@ -71,10 +44,13 @@ return new class extends Migration
                     )
                     ->unsigned();
 
-                $tabela->enum(
-                    'tipo_avaliavel',
-                    self::TIPOS_AVALIAVEL,
-                );
+                $tabela
+                    ->string(
+                        'tipo_avaliavel',
+                        32,
+                    )
+                    ->charset('ascii')
+                    ->collation('ascii_bin');
 
                 $tabela->unsignedBigInteger(
                     'avaliavel_id',
@@ -98,18 +74,51 @@ return new class extends Migration
                     ],
                     'avaliacoes_utilizador_avaliavel_unico',
                 );
+
+                $tabela
+                    ->foreign(
+                        'utilizador_id',
+                    )
+                    ->references(
+                        'id',
+                    )
+                    ->on(
+                        'utilizadores',
+                    )
+                    ->cascadeOnDelete();
             },
         );
 
         DB::statement(
             <<<'SQL'
-                ALTER TABLE `avaliacoes`
-                ADD CONSTRAINT `avaliacoes_pontuacao_valida_verificacao`
+            ALTER TABLE `avaliacoes`
+                ADD CONSTRAINT `avaliacoes_pontuacao_valida`
                 CHECK (
                     `pontuacao` BETWEEN 0.5 AND 10.0
                     AND MOD(`pontuacao` * 10, 5) = 0
                 )
-                SQL,
+            SQL,
+        );
+
+        DB::statement(
+            <<<'SQL'
+            ALTER TABLE `avaliacoes`
+                ADD CONSTRAINT `avaliacoes_tipo_avaliavel_valido`
+                CHECK (
+                    `tipo_avaliavel` IN (
+                        'metal_thursday',
+                        'seccao_metal_thursday'
+                    )
+                )
+            SQL,
+        );
+
+        DB::statement(
+            <<<'SQL'
+            ALTER TABLE `avaliacoes`
+                ADD CONSTRAINT `avaliacoes_avaliavel_id_valido`
+                CHECK (`avaliavel_id` >= 1)
+            SQL,
         );
     }
 
@@ -117,8 +126,6 @@ return new class extends Migration
      * Elimina a tabela das avaliações.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function down(): void
     {

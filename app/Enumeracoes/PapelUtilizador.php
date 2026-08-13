@@ -11,8 +11,6 @@ namespace App\Enumeracoes;
  * `utilizadores.papel`.
  *
  * @since 2.0.0
- *
- * @version 3.0.0
  */
 enum PapelUtilizador: string
 {
@@ -20,8 +18,6 @@ enum PapelUtilizador: string
      * Utilizador comum da aplicação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     case Utilizador = 'utilizador';
 
@@ -29,8 +25,6 @@ enum PapelUtilizador: string
      * Utilizador com permissões administrativas.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     case Administrador = 'administrador';
 
@@ -38,8 +32,6 @@ enum PapelUtilizador: string
      * Utilizador com acesso administrativo global.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     case SuperAdministrador = 'super_administrador';
 
@@ -54,8 +46,6 @@ enum PapelUtilizador: string
      * @return self|null Papel correspondente ou nulo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public static function tentarCriar(
         mixed $valor,
@@ -79,8 +69,6 @@ enum PapelUtilizador: string
      * @return string Etiqueta do papel.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function etiqueta(): string
     {
@@ -97,12 +85,15 @@ enum PapelUtilizador: string
      * @return bool Verdadeiro para administradores e superadministradores.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function possuiPrivilegiosAdministrativos(): bool
     {
-        return $this !== self::Utilizador;
+        return match ($this) {
+            self::Administrador,
+            self::SuperAdministrador => true,
+
+            self::Utilizador => false,
+        };
     }
 
     /**
@@ -111,8 +102,6 @@ enum PapelUtilizador: string
      * @return bool Verdadeiro apenas para o superadministrador.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function eSuperAdministrador(): bool
     {

@@ -22,8 +22,6 @@ use Illuminate\View\View;
  * definido como guard principal da aplicação.
  *
  * @since 1.0.0
- *
- * @version 4.0.0
  */
 final class ControladorSessaoAutenticada extends Controller
 {
@@ -33,8 +31,6 @@ final class ControladorSessaoAutenticada extends Controller
      * @return View Formulário de autenticação.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function apresentar(): View
     {
@@ -59,8 +55,6 @@ final class ControladorSessaoAutenticada extends Controller
      *                                 utilizador válido.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function autenticar(
         AutenticarUtilizadorRequest $pedido,
@@ -120,8 +114,6 @@ final class ControladorSessaoAutenticada extends Controller
      * @return RedirectResponse Redirecionamento para o início de sessão.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function terminar(
         Request $pedido,
@@ -145,8 +137,6 @@ final class ControladorSessaoAutenticada extends Controller
      * @param  Request  $pedido  Pedido HTTP.
      *
      * @since 2.0.0
-     *
-     * @version 3.0.0
      */
     private function terminarSessao(
         Request $pedido,

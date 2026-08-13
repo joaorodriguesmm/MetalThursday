@@ -15,8 +15,6 @@ use Illuminate\Support\Facades\Schema;
  * preservada num registo histórico independente.
  *
  * @since 2.0.0
- *
- * @version 1.0.1
  */
 return new class extends Migration
 {
@@ -24,8 +22,6 @@ return new class extends Migration
      * Nome da restrição do estado atual de suspensão.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const RESTRICAO_ESTADO_SUSPENSAO =
         'utilizadores_suspensao_coerente_verificacao';
@@ -34,12 +30,10 @@ return new class extends Migration
      * Adiciona o estado atual e cria o histórico de acesso.
      *
      * A distinção entre o utilizador afetado e o responsável é garantida pelo
-     * serviço transacional. O MariaDB 10.4 não permite referenciar a coluna
-     * `id`, por ser AUTO_INCREMENT, numa restrição CHECK da própria tabela.
+     * serviço transacional. O MariaDB não permite referenciar a coluna `id`,
+     * por ser AUTO_INCREMENT, numa restrição CHECK da própria tabela.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.1
      */
     public function up(): void
     {
@@ -72,11 +66,7 @@ return new class extends Migration
                     ->nullable()
                     ->after(
                         'motivo_suspensao',
-                    )
-                    ->constrained(
-                        'utilizadores',
-                    )
-                    ->restrictOnDelete();
+                    );
 
                 $tabela->index(
                     [
@@ -94,12 +84,29 @@ return new class extends Migration
                     ],
                     'utilizadores_papel_suspensao_indice',
                 );
+
+                $tabela->index(
+                    'suspenso_por_id',
+                    'utilizadores_suspenso_por_indice',
+                );
+
+                $tabela
+                    ->foreign(
+                        'suspenso_por_id',
+                    )
+                    ->references(
+                        'id',
+                    )
+                    ->on(
+                        'utilizadores',
+                    )
+                    ->restrictOnDelete();
             },
         );
 
         DB::statement(
             <<<'SQL'
-                ALTER TABLE `utilizadores`
+            ALTER TABLE `utilizadores`
                 ADD CONSTRAINT `utilizadores_suspensao_coerente_verificacao`
                 CHECK (
                     (
@@ -111,11 +118,11 @@ return new class extends Migration
                     (
                         `suspenso_em` IS NOT NULL
                         AND `motivo_suspensao` IS NOT NULL
-                        AND CHAR_LENGTH(TRIM(`motivo_suspensao`)) > 0
+                        AND `motivo_suspensao` REGEXP '[^[:space:]]'
                         AND `suspenso_por_id` IS NOT NULL
                     )
                 )
-                SQL,
+            SQL,
         );
 
         Schema::create(
@@ -123,19 +130,17 @@ return new class extends Migration
             static function (Blueprint $tabela): void {
                 $tabela->id();
 
-                $tabela
-                    ->foreignId(
-                        'utilizador_id',
-                    )
-                    ->constrained(
-                        'utilizadores',
-                    )
-                    ->restrictOnDelete();
-
-                $tabela->string(
-                    'acao',
-                    16,
+                $tabela->foreignId(
+                    'utilizador_id',
                 );
+
+                $tabela
+                    ->string(
+                        'acao',
+                        10,
+                    )
+                    ->charset('ascii')
+                    ->collation('ascii_bin');
 
                 $tabela
                     ->string(
@@ -144,14 +149,9 @@ return new class extends Migration
                     )
                     ->nullable();
 
-                $tabela
-                    ->foreignId(
-                        'responsavel_id',
-                    )
-                    ->constrained(
-                        'utilizadores',
-                    )
-                    ->restrictOnDelete();
+                $tabela->foreignId(
+                    'responsavel_id',
+                );
 
                 $tabela->timestamp(
                     'registado_em',
@@ -175,55 +175,70 @@ return new class extends Migration
                     'registos_acesso_responsavel_data_indice',
                 );
 
-                $tabela->index(
-                    [
-                        'acao',
-                        'registado_em',
+                $tabela
+                    ->foreign(
+                        'utilizador_id',
+                    )
+                    ->references(
                         'id',
-                    ],
-                    'registos_acesso_acao_data_indice',
-                );
+                    )
+                    ->on(
+                        'utilizadores',
+                    )
+                    ->restrictOnDelete();
+
+                $tabela
+                    ->foreign(
+                        'responsavel_id',
+                    )
+                    ->references(
+                        'id',
+                    )
+                    ->on(
+                        'utilizadores',
+                    )
+                    ->restrictOnDelete();
             },
         );
 
         DB::statement(
             <<<'SQL'
-                ALTER TABLE `registos_acesso_utilizadores`
+            ALTER TABLE `registos_acesso_utilizadores`
                 ADD CONSTRAINT `registos_acesso_acao_valida_verificacao`
                 CHECK (
-                    BINARY `acao` IN (
-                        BINARY 'suspensao',
-                        BINARY 'reativacao'
+                    `acao` IN (
+                        'suspensao',
+                        'reativacao'
                     )
                 )
-                SQL,
+            SQL,
         );
 
         DB::statement(
             <<<'SQL'
-                ALTER TABLE `registos_acesso_utilizadores`
+            ALTER TABLE `registos_acesso_utilizadores`
                 ADD CONSTRAINT `registos_acesso_estado_coerente_verificacao`
                 CHECK (
                     (
-                        BINARY `acao` = BINARY 'suspensao'
+                        `acao` = 'suspensao'
                         AND `motivo` IS NOT NULL
-                        AND CHAR_LENGTH(TRIM(`motivo`)) > 0
+                        AND `motivo` REGEXP '[^[:space:]]'
                     )
                     OR
                     (
-                        BINARY `acao` = BINARY 'reativacao'
+                        `acao` = 'reativacao'
                         AND `motivo` IS NULL
                     )
                 )
-                SQL,
+            SQL,
         );
 
         DB::statement(
             <<<'SQL'
-                ALTER TABLE `registos_acesso_utilizadores`
+            ALTER TABLE `registos_acesso_utilizadores`
                 ADD CONSTRAINT `registos_acesso_responsavel_distinto_verificacao`
                 CHECK (`responsavel_id` <> `utilizador_id`)
-                SQL,
+            SQL,
         );
     }
 
@@ -231,8 +246,6 @@ return new class extends Migration
      * Remove o histórico e o estado atual de acesso.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function down(): void
     {
@@ -262,6 +275,10 @@ return new class extends Migration
                     [
                         'suspenso_por_id',
                     ],
+                );
+
+                $tabela->dropIndex(
+                    'utilizadores_suspenso_por_indice',
                 );
 
                 $tabela->dropColumn([

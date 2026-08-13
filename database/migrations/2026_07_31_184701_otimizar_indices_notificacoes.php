@@ -17,8 +17,6 @@ use Illuminate\Support\Facades\Schema;
  * um terceiro índice redundante com o mesmo prefixo.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 return new class extends Migration
 {
@@ -36,18 +34,12 @@ return new class extends Migration
      * registos com a mesma data de criação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function up(): void
     {
         Schema::table(
             'notificacoes',
             static function (Blueprint $tabela): void {
-                $tabela->dropIndex(
-                    'notificacoes_notificavel_indice',
-                );
-
                 $tabela->index(
                     [
                         'notifiable_type',
@@ -66,6 +58,10 @@ return new class extends Migration
                     ],
                     'notificacoes_destinatario_criacao_indice',
                 );
+
+                $tabela->dropIndex(
+                    'notificacoes_notificavel_indice',
+                );
             },
         );
     }
@@ -74,28 +70,26 @@ return new class extends Migration
      * Remove os índices especializados e restaura o índice original.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function down(): void
     {
         Schema::table(
             'notificacoes',
             static function (Blueprint $tabela): void {
-                $tabela->dropIndex(
-                    'notificacoes_destinatario_leitura_indice',
-                );
-
-                $tabela->dropIndex(
-                    'notificacoes_destinatario_criacao_indice',
-                );
-
                 $tabela->index(
                     [
                         'notifiable_type',
                         'notifiable_id',
                     ],
                     'notificacoes_notificavel_indice',
+                );
+
+                $tabela->dropIndex(
+                    'notificacoes_destinatario_leitura_indice',
+                );
+
+                $tabela->dropIndex(
+                    'notificacoes_destinatario_criacao_indice',
                 );
             },
         );

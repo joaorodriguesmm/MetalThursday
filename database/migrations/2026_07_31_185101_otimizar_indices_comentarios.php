@@ -21,8 +21,6 @@ use Illuminate\Support\Facades\Schema;
  * sempre suportada por um índice válido no MariaDB.
  *
  * @since 2.0.0
- *
- * @version 1.1.0
  */
 return new class extends Migration
 {
@@ -41,8 +39,6 @@ return new class extends Migration
      * pai com o mesmo filtro e ordenação.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     public function up(): void
     {
@@ -95,8 +91,6 @@ return new class extends Migration
      * permanece suportada durante a reversão da migration.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     public function down(): void
     {

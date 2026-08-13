@@ -14,8 +14,6 @@ use Illuminate\Support\Facades\Schema;
  * possuir uma ligação para a respetiva compilação.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 return new class extends Migration
 {
@@ -23,8 +21,6 @@ return new class extends Migration
      * Cria a tabela das edições.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function up(): void
     {
@@ -123,8 +119,6 @@ return new class extends Migration
      * Elimina a tabela das edições.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function down(): void
     {

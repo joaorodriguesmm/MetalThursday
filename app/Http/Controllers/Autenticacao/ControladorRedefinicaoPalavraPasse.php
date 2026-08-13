@@ -26,8 +26,6 @@ use SensitiveParameter;
  * técnicas exigidas pelo contrato do Laravel.
  *
  * @since 1.0.0
- *
- * @version 4.0.0
  */
 final class ControladorRedefinicaoPalavraPasse extends Controller
 {
@@ -39,9 +37,7 @@ final class ControladorRedefinicaoPalavraPasse extends Controller
      *
      * @var string
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const MENSAGEM_LIGACAO_INVALIDA =
         'A ligação de redefinição é inválida ou já não está disponível. Solicita uma nova ligação.';
@@ -51,9 +47,7 @@ final class ControladorRedefinicaoPalavraPasse extends Controller
      *
      * @var int
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const COMPRIMENTO_TOKEN_PERSISTENTE = 60;
 
@@ -69,8 +63,6 @@ final class ControladorRedefinicaoPalavraPasse extends Controller
      * @return View Formulário de redefinição.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function apresentar(
         Request $pedido,
@@ -107,8 +99,6 @@ final class ControladorRedefinicaoPalavraPasse extends Controller
      * @return RedirectResponse Redirecionamento após a operação.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function redefinir(
         RedefinirPalavraPasseRequest $pedido,
@@ -190,9 +180,7 @@ final class ControladorRedefinicaoPalavraPasse extends Controller
      * @param  Request  $pedido  Pedido HTTP.
      * @return string Endereço normalizado ou string vazia.
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterEmailDaConsulta(
         Request $pedido,

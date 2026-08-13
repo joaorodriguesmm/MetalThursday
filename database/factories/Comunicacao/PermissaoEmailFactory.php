@@ -17,8 +17,6 @@ use Illuminate\Support\Str;
  * @extends Factory<PermissaoEmail>
  *
  * @since 2.0.0
- *
- * @version 2.1.0
  */
 final class PermissaoEmailFactory extends Factory
 {
@@ -28,8 +26,6 @@ final class PermissaoEmailFactory extends Factory
      * @var class-string<PermissaoEmail>
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $model = PermissaoEmail::class;
 
@@ -42,8 +38,6 @@ final class PermissaoEmailFactory extends Factory
      * @return array<string, mixed> Atributos da permissão.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     public function definition(): array
     {
@@ -101,8 +95,6 @@ final class PermissaoEmailFactory extends Factory
      * @return static Factory configurada.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     public function comIdentificador(
         string $identificador,
@@ -128,8 +120,6 @@ final class PermissaoEmailFactory extends Factory
      * @return static Factory configurada.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     public function comDados(
         string $nome,
@@ -159,8 +149,6 @@ final class PermissaoEmailFactory extends Factory
      * @return static Factory configurada.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     public function naOrdem(
         int $ordem,

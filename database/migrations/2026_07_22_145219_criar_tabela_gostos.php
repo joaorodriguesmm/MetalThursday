@@ -12,8 +12,6 @@ use Illuminate\Support\Facades\Schema;
  * Cada utilizador pode atribuir apenas um gosto a cada comentário.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 return new class extends Migration
 {
@@ -21,8 +19,6 @@ return new class extends Migration
      * Cria a tabela dos gostos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function up(): void
     {
@@ -31,25 +27,13 @@ return new class extends Migration
             static function (Blueprint $tabela): void {
                 $tabela->id();
 
-                $tabela
-                    ->foreignId(
-                        'utilizador_id',
-                    )
-                    ->constrained(
-                        table: 'utilizadores',
-                    )
-                    ->cascadeOnUpdate()
-                    ->cascadeOnDelete();
+                $tabela->foreignId(
+                    'utilizador_id',
+                );
 
-                $tabela
-                    ->foreignId(
-                        'comentario_id',
-                    )
-                    ->constrained(
-                        table: 'comentarios',
-                    )
-                    ->cascadeOnUpdate()
-                    ->cascadeOnDelete();
+                $tabela->foreignId(
+                    'comentario_id',
+                );
 
                 $tabela->timestamps();
 
@@ -70,6 +54,30 @@ return new class extends Migration
                     'comentario_id',
                     'gostos_comentario_indice',
                 );
+
+                $tabela
+                    ->foreign(
+                        'utilizador_id',
+                    )
+                    ->references(
+                        'id',
+                    )
+                    ->on(
+                        'utilizadores',
+                    )
+                    ->cascadeOnDelete();
+
+                $tabela
+                    ->foreign(
+                        'comentario_id',
+                    )
+                    ->references(
+                        'id',
+                    )
+                    ->on(
+                        'comentarios',
+                    )
+                    ->cascadeOnDelete();
             },
         );
     }
@@ -78,8 +86,6 @@ return new class extends Migration
      * Elimina a tabela dos gostos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function down(): void
     {

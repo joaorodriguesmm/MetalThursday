@@ -7,13 +7,11 @@ namespace App\Enumeracoes;
 /**
  * Representa uma direção de ordenação disponibilizada pela aplicação.
  *
- * Os valores persistidos em parâmetros públicos utilizam português. A
+ * Os valores expostos através de parâmetros públicos utilizam português. A
  * conversão para os valores técnicos reconhecidos pelo construtor de
  * consultas é efetuada explicitamente através de {@see paraSql()}.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 enum DirecaoOrdenacao: string
 {
@@ -21,8 +19,6 @@ enum DirecaoOrdenacao: string
      * Ordenação ascendente.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     case Ascendente = 'ascendente';
 
@@ -30,8 +26,6 @@ enum DirecaoOrdenacao: string
      * Ordenação descendente.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     case Descendente = 'descendente';
 
@@ -49,8 +43,6 @@ enum DirecaoOrdenacao: string
      * @return self|null Direção correspondente ou nula.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public static function tentarCriar(
         mixed $valor,
@@ -74,8 +66,6 @@ enum DirecaoOrdenacao: string
      * @return string Etiqueta da direção.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function etiqueta(): string
     {
@@ -91,8 +81,6 @@ enum DirecaoOrdenacao: string
      * @return 'asc'|'desc' Direção técnica de ordenação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function paraSql(): string
     {

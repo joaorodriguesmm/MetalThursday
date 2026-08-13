@@ -12,8 +12,6 @@ declare(strict_types=1);
  * @return array<string, mixed> Configurações dos sistemas de ficheiros.
  *
  * @since 1.0.0
- *
- * @version 3.0.0
  */
 return [
     /*

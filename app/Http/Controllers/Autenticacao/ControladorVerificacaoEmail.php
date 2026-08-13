@@ -24,8 +24,6 @@ use SensitiveParameter;
  * que pedidos simultâneos não emitem repetidamente o evento de verificação.
  *
  * @since 1.0.0
- *
- * @version 3.0.0
  */
 final class ControladorVerificacaoEmail extends Controller
 {
@@ -35,8 +33,6 @@ final class ControladorVerificacaoEmail extends Controller
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const RESULTADO_INVALIDO =
         'invalido';
@@ -47,8 +43,6 @@ final class ControladorVerificacaoEmail extends Controller
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const RESULTADO_JA_VERIFICADO =
         'ja_verificado';
@@ -59,8 +53,6 @@ final class ControladorVerificacaoEmail extends Controller
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const RESULTADO_VERIFICADO =
         'verificado';
@@ -71,9 +63,7 @@ final class ControladorVerificacaoEmail extends Controller
      *
      * @var string
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const PADRAO_HASH_VERIFICACAO =
         '/\A[0-9a-f]{40}\z/';
@@ -86,9 +76,7 @@ final class ControladorVerificacaoEmail extends Controller
      *
      * @var string
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const MENSAGEM_LIGACAO_INVALIDA =
         'A ligação de verificação é inválida ou expirou.';
@@ -110,8 +98,6 @@ final class ControladorVerificacaoEmail extends Controller
      * @throws RuntimeException Quando a verificação não pode ser persistida.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function __invoke(
         Request $pedido,
@@ -216,9 +202,7 @@ final class ControladorVerificacaoEmail extends Controller
      * @param  string  $hash  Hash recebido.
      * @return bool Verdadeiro quando o formato é válido.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function hashTemFormatoValido(
         #[SensitiveParameter]
@@ -241,8 +225,6 @@ final class ControladorVerificacaoEmail extends Controller
      * @return bool Verdadeiro quando o hash corresponde.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function hashCorresponde(
         Utilizador $utilizador,
@@ -270,8 +252,6 @@ final class ControladorVerificacaoEmail extends Controller
      * @return int|null Identificador válido ou nulo.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function converterParaIdentificador(
         string $valor,
@@ -307,8 +287,6 @@ final class ControladorVerificacaoEmail extends Controller
      * @return RedirectResponse Redirecionamento com mensagem de erro.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function redirecionarLigacaoInvalida(): RedirectResponse
     {

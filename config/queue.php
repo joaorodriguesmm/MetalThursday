@@ -11,8 +11,6 @@ declare(strict_types=1);
  * @return array<string, mixed> Configuração das filas.
  *
  * @since 1.0.0
- *
- * @version 3.1.0
  */
 return [
     /*
@@ -46,7 +44,9 @@ return [
         'database' => [
             'driver' => 'database',
 
-            'connection' => 'mariadb',
+            'connection' => env(
+                'DB_CONNECTION',
+            ),
 
             'table' => 'trabalhos_fila',
 
@@ -71,7 +71,9 @@ return [
     */
 
     'batching' => [
-        'database' => 'mariadb',
+        'database' => env(
+            'DB_CONNECTION',
+        ),
 
         'table' => 'lotes_trabalhos_fila',
     ],
@@ -88,7 +90,9 @@ return [
             'database-uuids',
         ),
 
-        'database' => 'mariadb',
+        'database' => env(
+            'DB_CONNECTION',
+        ),
 
         'table' => 'trabalhos_fila_falhados',
     ],

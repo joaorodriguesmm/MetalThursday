@@ -13,8 +13,6 @@ use Illuminate\Support\Str;
  * @return array<string, mixed> Configuração do cache.
  *
  * @since 1.0.0
- *
- * @version 3.1.0
  */
 return [
     /*
@@ -50,11 +48,7 @@ return [
         'database' => [
             'driver' => 'database',
 
-            'connection' => 'mariadb',
-
             'table' => 'cache',
-
-            'lock_connection' => 'mariadb',
 
             'lock_table' => 'bloqueios_cache',
         ],

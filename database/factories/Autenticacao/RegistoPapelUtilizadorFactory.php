@@ -21,8 +21,6 @@ use InvalidArgumentException;
  * @extends Factory<RegistoPapelUtilizador>
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class RegistoPapelUtilizadorFactory extends Factory
 {
@@ -32,8 +30,6 @@ final class RegistoPapelUtilizadorFactory extends Factory
      * @var class-string<RegistoPapelUtilizador>
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $model =
         RegistoPapelUtilizador::class;
@@ -47,8 +43,6 @@ final class RegistoPapelUtilizadorFactory extends Factory
      * @return array<string, mixed> Atributos do registo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function definition(): array
     {
@@ -79,8 +73,6 @@ final class RegistoPapelUtilizadorFactory extends Factory
      * @throws InvalidArgumentException Quando os papéis coincidem.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function alteracao(
         PapelUtilizador $papelAnterior,
@@ -109,8 +101,6 @@ final class RegistoPapelUtilizadorFactory extends Factory
      *                                  persistido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function paraUtilizador(
         Utilizador $utilizador,
@@ -132,8 +122,6 @@ final class RegistoPapelUtilizadorFactory extends Factory
      *                                  persistido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function registadoPor(
         Utilizador $responsavel,
@@ -152,8 +140,6 @@ final class RegistoPapelUtilizadorFactory extends Factory
      * @return static Factory configurada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function registadoEm(
         CarbonInterface $momento,
@@ -176,8 +162,6 @@ final class RegistoPapelUtilizadorFactory extends Factory
      *                                  identificador válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private static function obterIdentificadorUtilizadorPersistido(
         Utilizador $utilizador,

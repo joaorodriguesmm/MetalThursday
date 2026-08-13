@@ -14,8 +14,6 @@ use Illuminate\Support\Facades\Schema;
  * apresentado ao utilizador, uma descrição e uma ordem de apresentação.
  *
  * @since 2.0.0
- *
- * @version 2.1.0
  */
 return new class extends Migration
 {
@@ -23,8 +21,6 @@ return new class extends Migration
      * Cria a tabela das permissões de correio eletrónico.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     public function up(): void
     {
@@ -38,35 +34,57 @@ return new class extends Migration
                         'identificador',
                         64,
                     )
-                    ->unique();
+                    ->charset('ascii')
+                    ->collation('ascii_bin');
 
-                $tabela
-                    ->string(
-                        'nome',
-                        100,
-                    )
-                    ->unique();
+                $tabela->string(
+                    'nome',
+                    100,
+                );
 
-                $tabela->text(
+                $tabela->mediumText(
                     'descricao',
                 );
 
-                $tabela
-                    ->unsignedTinyInteger(
-                        'ordem',
-                    )
-                    ->unique();
+                $tabela->unsignedTinyInteger(
+                    'ordem',
+                );
 
                 $tabela->timestamps();
+
+                $tabela->unique(
+                    'identificador',
+                    'permissoes_email_identificador_unico',
+                );
+
+                $tabela->unique(
+                    'nome',
+                    'permissoes_email_nome_unico',
+                );
+
+                $tabela->unique(
+                    'ordem',
+                    'permissoes_email_ordem_unica',
+                );
             },
         );
 
         DB::statement(
             <<<'SQL'
-                ALTER TABLE `permissoes_email`
-                ADD CONSTRAINT `permissoes_email_ordem_positiva_verificacao`
-                CHECK (`ordem` >= 1)
-                SQL,
+            ALTER TABLE `permissoes_email`
+                ADD CONSTRAINT `permissoes_email_identificador_formato_valido`
+                CHECK (
+                    BINARY `identificador` REGEXP '^[a-z0-9]+(_[a-z0-9]+)*$'
+                )
+            SQL,
+        );
+
+        DB::statement(
+            <<<'SQL'
+            ALTER TABLE `permissoes_email`
+                ADD CONSTRAINT `permissoes_email_ordem_valida`
+                CHECK (`ordem` BETWEEN 1 AND 255)
+            SQL,
         );
     }
 
@@ -74,8 +92,6 @@ return new class extends Migration
      * Elimina a tabela das permissões de correio eletrónico.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function down(): void
     {

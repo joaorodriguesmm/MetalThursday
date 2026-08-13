@@ -14,8 +14,6 @@ use Illuminate\Support\Facades\DB;
  * pelo Laravel.
  *
  * @since 1.0.0
- *
- * @version 3.0.0
  */
 final class TipoSeccaoSeeder extends Seeder
 {
@@ -31,8 +29,6 @@ final class TipoSeccaoSeeder extends Seeder
      * }>
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private const TIPOS_SECCAO = [
         [
@@ -88,8 +84,6 @@ final class TipoSeccaoSeeder extends Seeder
      * convencional dos seeders do Laravel.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function run(): void
     {

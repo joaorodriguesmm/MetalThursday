@@ -14,8 +14,6 @@ use Illuminate\Support\Facades\Schema;
  * armazenamento de cache do Laravel.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 return new class extends Migration
 {
@@ -23,8 +21,6 @@ return new class extends Migration
      * Cria as tabelas de cache e de bloqueios atómicos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function up(): void
     {
@@ -36,6 +32,9 @@ return new class extends Migration
                         'key',
                         255,
                     )
+                    ->collation(
+                        'utf8mb4_bin',
+                    )
                     ->primary();
 
                 $tabela->mediumText(
@@ -43,7 +42,7 @@ return new class extends Migration
                 );
 
                 $tabela
-                    ->integer(
+                    ->unsignedBigInteger(
                         'expiration',
                     )
                     ->index();
@@ -58,15 +57,22 @@ return new class extends Migration
                         'key',
                         255,
                     )
+                    ->collation(
+                        'utf8mb4_bin',
+                    )
                     ->primary();
 
-                $tabela->string(
-                    'owner',
-                    255,
-                );
+                $tabela
+                    ->string(
+                        'owner',
+                        255,
+                    )
+                    ->collation(
+                        'utf8mb4_bin',
+                    );
 
                 $tabela
-                    ->integer(
+                    ->unsignedBigInteger(
                         'expiration',
                     )
                     ->index();
@@ -78,8 +84,6 @@ return new class extends Migration
      * Elimina as tabelas de cache.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function down(): void
     {

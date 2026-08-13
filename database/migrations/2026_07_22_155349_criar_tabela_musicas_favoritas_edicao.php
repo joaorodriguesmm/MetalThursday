@@ -17,8 +17,6 @@ use Illuminate\Support\Facades\Schema;
  * não existir uma entidade própria para representar músicas.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 return new class extends Migration
 {
@@ -26,8 +24,6 @@ return new class extends Migration
      * Cria a tabela das músicas favoritas das edições.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function up(): void
     {
@@ -36,15 +32,9 @@ return new class extends Migration
             static function (Blueprint $tabela): void {
                 $tabela->id();
 
-                $tabela
-                    ->foreignId(
-                        'edicao_id',
-                    )
-                    ->constrained(
-                        table: 'edicoes',
-                    )
-                    ->cascadeOnUpdate()
-                    ->cascadeOnDelete();
+                $tabela->foreignId(
+                    'edicao_id',
+                );
 
                 /*
                  * Utilizador a quem pertence a escolha.
@@ -52,24 +42,21 @@ return new class extends Migration
                  * A eliminação física é restringida para preservar a
                  * classificação histórica associada à edição.
                  */
-                $tabela
-                    ->foreignId(
-                        'utilizador_id',
-                    )
-                    ->constrained(
-                        table: 'utilizadores',
-                    )
-                    ->cascadeOnUpdate()
-                    ->restrictOnDelete();
+                $tabela->foreignId(
+                    'utilizador_id',
+                );
 
                 $tabela->unsignedTinyInteger(
                     'posicao',
                 );
 
-                $tabela->string(
-                    'musica',
-                    255,
-                );
+                $tabela
+                    ->string(
+                        'musica',
+                        255,
+                    )
+                    ->charset('utf8mb4')
+                    ->collation('utf8mb4_unicode_ci');
 
                 /*
                  * Utilizador que registou a escolha.
@@ -81,12 +68,7 @@ return new class extends Migration
                     ->foreignId(
                         'registado_por_id',
                     )
-                    ->nullable()
-                    ->constrained(
-                        table: 'utilizadores',
-                    )
-                    ->cascadeOnUpdate()
-                    ->nullOnDelete();
+                    ->nullable();
 
                 $tabela->timestamps();
 
@@ -126,23 +108,72 @@ return new class extends Migration
                     ],
                     'musicas_favoritas_edicao_posicao_indice',
                 );
+
+                $tabela->index(
+                    'utilizador_id',
+                    'musicas_favoritas_edicao_utilizador_indice',
+                );
+
+                $tabela->index(
+                    'registado_por_id',
+                    'musicas_favoritas_edicao_registador_indice',
+                );
+
+                $tabela
+                    ->foreign(
+                        'edicao_id',
+                    )
+                    ->references(
+                        'id',
+                    )
+                    ->on(
+                        'edicoes',
+                    )
+                    ->cascadeOnDelete();
+
+                $tabela
+                    ->foreign(
+                        'utilizador_id',
+                    )
+                    ->references(
+                        'id',
+                    )
+                    ->on(
+                        'utilizadores',
+                    )
+                    ->restrictOnDelete();
+
+                $tabela
+                    ->foreign(
+                        'registado_por_id',
+                    )
+                    ->references(
+                        'id',
+                    )
+                    ->on(
+                        'utilizadores',
+                    )
+                    ->nullOnDelete();
             },
         );
 
         DB::statement(
             <<<'SQL'
-                ALTER TABLE `musicas_favoritas_edicao`
-                ADD CONSTRAINT `musicas_favoritas_edicao_posicao_valida_verificacao`
+            ALTER TABLE `musicas_favoritas_edicao`
+                ADD CONSTRAINT `musicas_favoritas_edicao_posicao_valida`
                 CHECK (`posicao` BETWEEN 1 AND 3)
-                SQL,
+            SQL,
         );
 
         DB::statement(
             <<<'SQL'
-                ALTER TABLE `musicas_favoritas_edicao`
-                ADD CONSTRAINT `musicas_favoritas_edicao_musica_valida_verificacao`
-                CHECK (CHAR_LENGTH(TRIM(`musica`)) BETWEEN 1 AND 255)
-                SQL,
+            ALTER TABLE `musicas_favoritas_edicao`
+                ADD CONSTRAINT `musicas_favoritas_edicao_musica_valida`
+                CHECK (
+                    CHAR_LENGTH(`musica`) BETWEEN 1 AND 255
+                    AND `musica` REGEXP '[^[:space:]]'
+                )
+            SQL,
         );
     }
 
@@ -150,8 +181,6 @@ return new class extends Migration
      * Elimina a tabela das músicas favoritas das edições.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function down(): void
     {

@@ -15,8 +15,6 @@ namespace App\Enumeracoes;
  * explicitamente através de {@see deBooleano()}.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 enum RespostaBinaria: string
 {
@@ -24,8 +22,6 @@ enum RespostaBinaria: string
      * Resposta afirmativa.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     case Sim = 'sim';
 
@@ -33,8 +29,6 @@ enum RespostaBinaria: string
      * Resposta negativa.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     case Nao = 'nao';
 
@@ -49,8 +43,6 @@ enum RespostaBinaria: string
      * @return self|null Resposta correspondente ou nula.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public static function tentarCriar(
         mixed $valor,
@@ -75,8 +67,6 @@ enum RespostaBinaria: string
      * @return self Resposta correspondente.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public static function deBooleano(
         bool $valor,
@@ -92,8 +82,6 @@ enum RespostaBinaria: string
      * @return bool Verdadeiro para sim e falso para não.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function paraBooleano(): bool
     {
@@ -106,8 +94,6 @@ enum RespostaBinaria: string
      * @return string Etiqueta da resposta.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function etiqueta(): string
     {

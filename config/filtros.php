@@ -23,8 +23,6 @@ declare(strict_types=1);
  * } Configuração dos filtros dinâmicos.
  *
  * @since 1.0.0
- *
- * @version 2.0.0
  */
 return [
     'metal_thursday' => [

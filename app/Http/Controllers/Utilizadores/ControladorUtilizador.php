@@ -35,8 +35,6 @@ use Throwable;
  * papel são delegados aos respetivos serviços transacionais.
  *
  * @since 2.0.0
- *
- * @version 5.0.0
  */
 final class ControladorUtilizador extends Controller
 {
@@ -48,8 +46,6 @@ final class ControladorUtilizador extends Controller
      * @var int
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const REGISTOS_POR_PAGINA =
         20;
@@ -60,8 +56,6 @@ final class ControladorUtilizador extends Controller
      * @var int
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const COMPRIMENTO_MAXIMO_PESQUISA =
         100;
@@ -70,8 +64,6 @@ final class ControladorUtilizador extends Controller
      * Identificador público do estado de acesso ativo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const ESTADO_ATIVO =
         'ativo';
@@ -80,8 +72,6 @@ final class ControladorUtilizador extends Controller
      * Identificador público do estado de acesso suspenso.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const ESTADO_SUSPENSO =
         'suspenso';
@@ -101,8 +91,6 @@ final class ControladorUtilizador extends Controller
      *                                                                papéis.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function __construct(
         private readonly ServicoAcessoUtilizadores $servicoAcessoUtilizadores,
@@ -116,8 +104,6 @@ final class ControladorUtilizador extends Controller
      * @return View Listagem administrativa dos utilizadores.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function indice(
         Request $pedido,
@@ -256,8 +242,6 @@ final class ControladorUtilizador extends Controller
      * @return View Página de detalhes do utilizador.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function detalhes(
         Utilizador $utilizador,
@@ -347,8 +331,6 @@ final class ControladorUtilizador extends Controller
      * @throws Throwable Quando ocorre um erro técnico inesperado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function suspender(
         SuspenderUtilizadorRequest $pedido,
@@ -409,8 +391,6 @@ final class ControladorUtilizador extends Controller
      * @throws Throwable Quando ocorre um erro técnico inesperado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function reativar(
         ReativarUtilizadorRequest $pedido,
@@ -464,8 +444,6 @@ final class ControladorUtilizador extends Controller
      * @throws Throwable Quando ocorre um erro técnico inesperado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function encerrarSessoes(
         EncerrarSessoesUtilizadorRequest $pedido,
@@ -535,8 +513,6 @@ final class ControladorUtilizador extends Controller
      * @throws Throwable Quando ocorre um erro técnico inesperado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function alterarPapel(
         AlterarPapelUtilizadorRequest $pedido,
@@ -595,8 +571,6 @@ final class ControladorUtilizador extends Controller
      * @return string|null Pesquisa normalizada ou nulo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function normalizarPesquisa(
         mixed $valor,
@@ -635,8 +609,6 @@ final class ControladorUtilizador extends Controller
      * @return string|null Estado reconhecido ou nulo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function normalizarEstado(
         mixed $valor,

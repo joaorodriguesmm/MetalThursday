@@ -21,8 +21,6 @@ use InvalidArgumentException;
  * @extends Factory<RegistoAcessoUtilizador>
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class RegistoAcessoUtilizadorFactory extends Factory
 {
@@ -32,8 +30,6 @@ final class RegistoAcessoUtilizadorFactory extends Factory
      * @var class-string<RegistoAcessoUtilizador>
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $model =
         RegistoAcessoUtilizador::class;
@@ -47,8 +43,6 @@ final class RegistoAcessoUtilizadorFactory extends Factory
      * @return array<string, mixed> Atributos do registo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function definition(): array
     {
@@ -76,8 +70,6 @@ final class RegistoAcessoUtilizadorFactory extends Factory
      * @throws InvalidArgumentException Quando o motivo não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function suspensao(
         string $motivo = 'Suspensão criada para testes.',
@@ -97,8 +89,6 @@ final class RegistoAcessoUtilizadorFactory extends Factory
      * @return static Factory configurada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function reativacao(): static
     {
@@ -119,8 +109,6 @@ final class RegistoAcessoUtilizadorFactory extends Factory
      *                                  persistido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function paraUtilizador(
         Utilizador $utilizador,
@@ -142,8 +130,6 @@ final class RegistoAcessoUtilizadorFactory extends Factory
      *                                  persistido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function registadoPor(
         Utilizador $responsavel,
@@ -166,8 +152,6 @@ final class RegistoAcessoUtilizadorFactory extends Factory
      *                                  identificador válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private static function obterIdentificadorUtilizadorPersistido(
         Utilizador $utilizador,

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -13,28 +14,9 @@ use Illuminate\Support\Facades\Schema;
  * através de uma relação polimórfica.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 return new class extends Migration
 {
-    /**
-     * Tipos de entidades que podem ser marcadas como ouvidas.
-     *
-     * Estes valores correspondem aos aliases polimórficos persistidos pela
-     * aplicação e não devem depender dos namespaces PHP dos modelos.
-     *
-     * @var list<string>
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const TIPOS_AUDIVEL = [
-        'metal_thursday',
-        'seccao_metal_thursday',
-    ];
-
     /**
      * Cria a tabela dos registos de audição.
      *
@@ -42,8 +24,6 @@ return new class extends Migration
      * ouvida.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function up(): void
     {
@@ -52,20 +32,17 @@ return new class extends Migration
             static function (Blueprint $tabela): void {
                 $tabela->id();
 
-                $tabela
-                    ->foreignId(
-                        'utilizador_id',
-                    )
-                    ->constrained(
-                        table: 'utilizadores',
-                    )
-                    ->cascadeOnUpdate()
-                    ->cascadeOnDelete();
-
-                $tabela->enum(
-                    'tipo_audivel',
-                    self::TIPOS_AUDIVEL,
+                $tabela->foreignId(
+                    'utilizador_id',
                 );
+
+                $tabela
+                    ->string(
+                        'tipo_audivel',
+                        32,
+                    )
+                    ->charset('ascii')
+                    ->collation('ascii_bin');
 
                 $tabela->unsignedBigInteger(
                     'audivel_id',
@@ -89,7 +66,40 @@ return new class extends Migration
                     ],
                     'audicoes_utilizador_audivel_unico',
                 );
+
+                $tabela
+                    ->foreign(
+                        'utilizador_id',
+                    )
+                    ->references(
+                        'id',
+                    )
+                    ->on(
+                        'utilizadores',
+                    )
+                    ->cascadeOnDelete();
             },
+        );
+
+        DB::statement(
+            <<<'SQL'
+            ALTER TABLE `audicoes`
+                ADD CONSTRAINT `audicoes_tipo_audivel_valido`
+                CHECK (
+                    `tipo_audivel` IN (
+                        'metal_thursday',
+                        'seccao_metal_thursday'
+                    )
+                )
+            SQL,
+        );
+
+        DB::statement(
+            <<<'SQL'
+            ALTER TABLE `audicoes`
+                ADD CONSTRAINT `audicoes_audivel_id_valido`
+                CHECK (`audivel_id` >= 1)
+            SQL,
         );
     }
 
@@ -97,8 +107,6 @@ return new class extends Migration
      * Elimina a tabela dos registos de audição.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function down(): void
     {

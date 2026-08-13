@@ -11,7 +11,6 @@ import {
  * @type {ReadonlyArray<string>}
  *
  * @since 2.0.0
- * @version 1.0.0
  */
 const FICHEIROS_JAVASCRIPT = Object.freeze([
     'eslint.config.js',
@@ -23,7 +22,6 @@ const FICHEIROS_JAVASCRIPT = Object.freeze([
  * Configuração estática do ESLint para o JavaScript do projeto.
  *
  * @since 2.0.0
- * @version 2.0.0
  */
 export default defineConfig([
     globalIgnores(
@@ -115,9 +113,7 @@ export default defineConfig([
         ],
 
         languageOptions: {
-            globals: {
-                ...globals.node,
-            },
+            globals: globals.nodeBuiltin,
         },
     },
 
@@ -129,9 +125,7 @@ export default defineConfig([
         ],
 
         languageOptions: {
-            globals: {
-                ...globals.browser,
-            },
+            globals: globals.browser,
         },
     },
 ]);

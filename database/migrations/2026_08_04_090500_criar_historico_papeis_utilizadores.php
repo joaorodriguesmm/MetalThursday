@@ -15,8 +15,6 @@ use Illuminate\Support\Facades\Schema;
  * momento em que a operação foi concluída.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 return new class extends Migration
 {
@@ -28,8 +26,6 @@ return new class extends Migration
      * código da aplicação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function up(): void
     {
@@ -38,33 +34,29 @@ return new class extends Migration
             static function (Blueprint $tabela): void {
                 $tabela->id();
 
-                $tabela
-                    ->foreignId(
-                        'utilizador_id',
-                    )
-                    ->constrained(
-                        'utilizadores',
-                    )
-                    ->restrictOnDelete();
-
-                $tabela->string(
-                    'papel_anterior',
-                    32,
-                );
-
-                $tabela->string(
-                    'papel_novo',
-                    32,
+                $tabela->foreignId(
+                    'utilizador_id',
                 );
 
                 $tabela
-                    ->foreignId(
-                        'responsavel_id',
+                    ->string(
+                        'papel_anterior',
+                        19,
                     )
-                    ->constrained(
-                        'utilizadores',
+                    ->charset('ascii')
+                    ->collation('ascii_bin');
+
+                $tabela
+                    ->string(
+                        'papel_novo',
+                        19,
                     )
-                    ->restrictOnDelete();
+                    ->charset('ascii')
+                    ->collation('ascii_bin');
+
+                $tabela->foreignId(
+                    'responsavel_id',
+                );
 
                 $tabela->timestamp(
                     'registado_em',
@@ -88,20 +80,35 @@ return new class extends Migration
                     'registos_papel_responsavel_data_indice',
                 );
 
-                $tabela->index(
-                    [
-                        'papel_novo',
-                        'registado_em',
+                $tabela
+                    ->foreign(
+                        'utilizador_id',
+                    )
+                    ->references(
                         'id',
-                    ],
-                    'registos_papel_novo_data_indice',
-                );
+                    )
+                    ->on(
+                        'utilizadores',
+                    )
+                    ->restrictOnDelete();
+
+                $tabela
+                    ->foreign(
+                        'responsavel_id',
+                    )
+                    ->references(
+                        'id',
+                    )
+                    ->on(
+                        'utilizadores',
+                    )
+                    ->restrictOnDelete();
             },
         );
 
         DB::statement(
             <<<'SQL'
-                ALTER TABLE `registos_papel_utilizadores`
+            ALTER TABLE `registos_papel_utilizadores`
                 ADD CONSTRAINT `registos_papel_papeis_validos_verificacao`
                 CHECK (
                     BINARY `papel_anterior` IN (
@@ -116,23 +123,26 @@ return new class extends Migration
                         BINARY 'super_administrador'
                     )
                 )
-                SQL,
+            SQL,
         );
 
         DB::statement(
             <<<'SQL'
-                ALTER TABLE `registos_papel_utilizadores`
+            ALTER TABLE `registos_papel_utilizadores`
                 ADD CONSTRAINT `registos_papel_papeis_distintos_verificacao`
-                CHECK (BINARY `papel_anterior` <> BINARY `papel_novo`)
-                SQL,
+                CHECK (
+                    BINARY `papel_anterior`
+                    <> BINARY `papel_novo`
+                )
+            SQL,
         );
 
         DB::statement(
             <<<'SQL'
-                ALTER TABLE `registos_papel_utilizadores`
+            ALTER TABLE `registos_papel_utilizadores`
                 ADD CONSTRAINT `registos_papel_responsavel_distinto_verificacao`
                 CHECK (`responsavel_id` <> `utilizador_id`)
-                SQL,
+            SQL,
         );
     }
 
@@ -140,8 +150,6 @@ return new class extends Migration
      * Remove o histórico das alterações dos papéis.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function down(): void
     {

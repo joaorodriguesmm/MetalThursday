@@ -26,8 +26,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * sequencialmente.
  *
  * @since 1.0.0
- *
- * @version 4.1.0
  */
 final class ControladorAudicao extends Controller
 {
@@ -36,9 +34,7 @@ final class ControladorAudicao extends Controller
      *
      * @var int
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const TENTATIVAS_TRANSACAO =
         3;
@@ -48,9 +44,7 @@ final class ControladorAudicao extends Controller
      *
      * @var string
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const ACAO_OUVIU =
         'ouviu';
@@ -60,9 +54,7 @@ final class ControladorAudicao extends Controller
      *
      * @var string
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const MENSAGEM_SEM_AUDICOES =
         'Ninguém marcou como ouvido.';
@@ -76,8 +68,6 @@ final class ControladorAudicao extends Controller
      *                                                        notificações.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function __construct(
         private readonly NotificadorInteracoes $notificadorInteracoes,
@@ -106,8 +96,6 @@ final class ControladorAudicao extends Controller
      *                               válidos.
      *
      * @since 1.0.0
-     *
-     * @version 4.1.0
      */
     public function alternar(
         string $tipoAudivel,
@@ -220,8 +208,6 @@ final class ControladorAudicao extends Controller
      *                               válidos.
      *
      * @since 2.0.0
-     *
-     * @version 3.0.0
      */
     private function resolverAudivel(
         string $tipo,
@@ -256,8 +242,6 @@ final class ControladorAudicao extends Controller
      * @return MetalThursday|SeccaoMetalThursday Entidade bloqueada.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function bloquearAudivel(
         MetalThursday|SeccaoMetalThursday $audivel,
@@ -300,9 +284,7 @@ final class ControladorAudicao extends Controller
      * @throws LogicException Quando uma audição possui dados persistidos
      *                        inválidos.
      *
-     * @since 4.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterDadosIndicador(
         MetalThursday|SeccaoMetalThursday $audivel,
@@ -446,8 +428,6 @@ final class ControladorAudicao extends Controller
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterUtilizadorAutenticado(): Utilizador
     {

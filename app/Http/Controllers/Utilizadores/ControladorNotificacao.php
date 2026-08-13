@@ -22,8 +22,6 @@ use Illuminate\View\View;
  * preservando a primeira data de leitura perante pedidos concorrentes.
  *
  * @since 1.0.0
- *
- * @version 4.1.0
  */
 final class ControladorNotificacao extends Controller
 {
@@ -33,8 +31,6 @@ final class ControladorNotificacao extends Controller
      * @var int
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private const NOTIFICACOES_POR_PAGINA =
         15;
@@ -50,8 +46,6 @@ final class ControladorNotificacao extends Controller
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function indice(): View
     {
@@ -61,6 +55,7 @@ final class ControladorNotificacao extends Controller
         $existemNotificacoesNaoLidas =
             $utilizador
                 ->notificacoesPorLer()
+                ->reorder()
                 ->exists();
 
         $notificacoes =
@@ -76,6 +71,7 @@ final class ControladorNotificacao extends Controller
                     'created_at',
                     'updated_at',
                 ])
+                ->reorder()
                 ->orderByDesc(
                     'created_at',
                 )
@@ -117,8 +113,6 @@ final class ControladorNotificacao extends Controller
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 1.0.0
-     *
-     * @version 4.1.0
      */
     public function marcarComoLida(
         string $identificadorNotificacao,
@@ -177,8 +171,6 @@ final class ControladorNotificacao extends Controller
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function marcarTodasComoLidas(): RedirectResponse
     {
@@ -188,6 +180,7 @@ final class ControladorNotificacao extends Controller
         $quantidadeAtualizada =
             $utilizador
                 ->notificacoesPorLer()
+                ->reorder()
                 ->update([
                     'read_at' => now(),
                 ]);
@@ -222,8 +215,6 @@ final class ControladorNotificacao extends Controller
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterUtilizadorAutenticado(): Utilizador
     {

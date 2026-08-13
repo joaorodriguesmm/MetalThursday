@@ -12,8 +12,6 @@ use Illuminate\Support\Facades\Schema;
  * Cada associação entre uma banda e um género pode existir apenas uma vez.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 return new class extends Migration
 {
@@ -21,33 +19,19 @@ return new class extends Migration
      * Cria a tabela intermédia entre bandas e géneros.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function up(): void
     {
         Schema::create(
             'banda_genero',
             static function (Blueprint $tabela): void {
-                $tabela
-                    ->foreignId(
-                        'banda_id',
-                    )
-                    ->constrained(
-                        table: 'bandas',
-                    )
-                    ->cascadeOnUpdate()
-                    ->cascadeOnDelete();
+                $tabela->foreignId(
+                    'banda_id',
+                );
 
-                $tabela
-                    ->foreignId(
-                        'genero_id',
-                    )
-                    ->constrained(
-                        table: 'generos',
-                    )
-                    ->cascadeOnUpdate()
-                    ->cascadeOnDelete();
+                $tabela->foreignId(
+                    'genero_id',
+                );
 
                 $tabela->primary(
                     [
@@ -65,6 +49,30 @@ return new class extends Migration
                     'genero_id',
                     'banda_genero_genero_indice',
                 );
+
+                $tabela
+                    ->foreign(
+                        'banda_id',
+                    )
+                    ->references(
+                        'id',
+                    )
+                    ->on(
+                        'bandas',
+                    )
+                    ->cascadeOnDelete();
+
+                $tabela
+                    ->foreign(
+                        'genero_id',
+                    )
+                    ->references(
+                        'id',
+                    )
+                    ->on(
+                        'generos',
+                    )
+                    ->cascadeOnDelete();
             },
         );
     }
@@ -73,8 +81,6 @@ return new class extends Migration
      * Elimina a tabela intermédia entre bandas e géneros.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function down(): void
     {

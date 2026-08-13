@@ -14,8 +14,6 @@ use Illuminate\Support\Facades\DB;
  * dados alinhadas.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 return new class extends Migration
 {
@@ -23,8 +21,6 @@ return new class extends Migration
      * Nome da restrição aplicada à coluna dos papéis.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const NOME_RESTRICAO =
         'utilizadores_papel_valido_verificacao';
@@ -38,8 +34,6 @@ return new class extends Migration
      * @var list<string>
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const PAPEIS_PERMITIDOS = [
         'utilizador',
@@ -57,8 +51,6 @@ return new class extends Migration
      *                        atuais.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function up(): void
     {
@@ -96,8 +88,6 @@ return new class extends Migration
      * Remove a restrição dos papéis dos utilizadores.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function down(): void
     {

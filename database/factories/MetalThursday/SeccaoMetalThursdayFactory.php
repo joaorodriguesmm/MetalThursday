@@ -24,8 +24,6 @@ use InvalidArgumentException;
  * @extends Factory<SeccaoMetalThursday>
  *
  * @since 2.0.0
- *
- * @version 2.2.0
  */
 final class SeccaoMetalThursdayFactory extends Factory
 {
@@ -35,8 +33,6 @@ final class SeccaoMetalThursdayFactory extends Factory
      * @var class-string<SeccaoMetalThursday>
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $model = SeccaoMetalThursday::class;
 
@@ -52,8 +48,6 @@ final class SeccaoMetalThursdayFactory extends Factory
      * @return array<string, mixed> Atributos da secção.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function definition(): array
     {
@@ -91,8 +85,6 @@ final class SeccaoMetalThursdayFactory extends Factory
      *                                  persistida.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function paraMetalThursday(
         MetalThursday $metalThursday,
@@ -117,8 +109,6 @@ final class SeccaoMetalThursdayFactory extends Factory
      * @throws InvalidArgumentException Quando o tipo não está persistido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function doTipo(
         TipoSeccao $tipoSeccao,
@@ -147,8 +137,6 @@ final class SeccaoMetalThursdayFactory extends Factory
      *                                  persistida.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function comBanda(
         ?Banda $banda = null,
@@ -169,135 +157,99 @@ final class SeccaoMetalThursdayFactory extends Factory
     /**
      * Define a posição da secção dentro da MetalThursday.
      *
-     * @param  int  $ordem  Posição positiva da secção.
+     * A validação é delegada ao contrato definitivo do modelo.
+     *
+     * @param  int  $ordem  Posição da secção.
      * @return static Factory configurada.
      *
-     * @throws InvalidArgumentException Quando a posição não cabe na coluna.
+     * @throws InvalidArgumentException Quando a posição não é válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     public function naOrdem(
         int $ordem,
     ): static {
-        if (
-            $ordem < SeccaoMetalThursday::ORDEM_MINIMA
-            || $ordem > SeccaoMetalThursday::ORDEM_MAXIMA
-        ) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'A ordem da secção deve estar entre %d e %d.',
-                    SeccaoMetalThursday::ORDEM_MINIMA,
-                    SeccaoMetalThursday::ORDEM_MAXIMA,
-                ),
-            );
-        }
+        $seccao = new SeccaoMetalThursday;
+
+        $seccao->ordem =
+            $ordem;
 
         return $this->state([
-            'ordem' => $ordem,
+            'ordem' => $seccao->ordem,
         ]);
     }
 
     /**
      * Define o conteúdo textual da secção.
      *
+     * A normalização e a validação são delegadas ao contrato definitivo do
+     * modelo.
+     *
      * @param  string  $descricao  Descrição obrigatória da secção.
      * @param  string|null  $titulo  Título opcional da secção.
      * @return static Factory configurada.
      *
-     * @throws InvalidArgumentException Quando a descrição está vazia ou o
-     *                                  título ultrapassa o limite da coluna.
+     * @throws InvalidArgumentException Quando o conteúdo não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     public function comConteudo(
         string $descricao,
         ?string $titulo = null,
     ): static {
-        $descricaoNormalizada = trim(
-            str_replace(
-                [
-                    "\r\n",
-                    "\r",
-                ],
-                "\n",
-                $descricao,
-            ),
-        );
+        $seccao = new SeccaoMetalThursday;
 
-        $tituloNormalizado = $titulo !== null
-            ? Str::squish(
-                $titulo,
-            )
-            : null;
+        $seccao->descricao =
+            $descricao;
 
-        if ($descricaoNormalizada === '') {
-            throw new InvalidArgumentException(
-                'A descrição da secção não pode estar vazia.',
-            );
-        }
-
-        if (
-            mb_strlen(
-                $descricaoNormalizada,
-            ) > SeccaoMetalThursday::COMPRIMENTO_MAXIMO_DESCRICAO
-        ) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'A descrição da secção não pode exceder %d caracteres.',
-                    SeccaoMetalThursday::COMPRIMENTO_MAXIMO_DESCRICAO,
-                ),
-            );
-        }
-
-        if (
-            $tituloNormalizado !== null
-            && mb_strlen(
-                $tituloNormalizado,
-            ) > SeccaoMetalThursday::COMPRIMENTO_MAXIMO_TITULO
-        ) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'O título da secção não pode exceder %d caracteres.',
-                    SeccaoMetalThursday::COMPRIMENTO_MAXIMO_TITULO,
-                ),
-            );
-        }
+        $seccao->titulo =
+            $titulo;
 
         return $this->state([
-            'titulo' => $tituloNormalizado !== ''
-                ? $tituloNormalizado
-                : null,
+            'titulo' => $seccao->titulo,
 
-            'descricao' => $descricaoNormalizada,
+            'descricao' => $seccao->descricao,
         ]);
     }
 
     /**
      * Define uma ligação e o respetivo tipo de incorporação.
      *
+     * A normalização e a validação da ligação são delegadas ao contrato
+     * definitivo do modelo. Uma ligação vazia continua a ser rejeitada por este
+     * estado.
+     *
      * @param  string  $ligacao  Ligação absoluta a persistir.
      * @param  TipoIncorporacao  $tipoIncorporacao  Tipo da incorporação.
      * @return static Factory configurada.
      *
-     * @throws InvalidArgumentException Quando a ligação não é válida ou
-     *                                  ultrapassa o limite da coluna.
+     * @throws InvalidArgumentException Quando a ligação não é válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     public function comIncorporacao(
         string $ligacao,
         TipoIncorporacao $tipoIncorporacao,
     ): static {
+        $seccao = new SeccaoMetalThursday;
+
+        $seccao->ligacao =
+            $ligacao;
+
+        $ligacaoNormalizada =
+            $seccao->ligacao;
+
+        if (
+            ! is_string($ligacaoNormalizada)
+            || $ligacaoNormalizada === ''
+        ) {
+            throw new InvalidArgumentException(
+                'A ligação da secção não pode estar vazia.',
+            );
+        }
+
         return $this->state([
-            'ligacao' => $this->normalizarLigacao(
-                $ligacao,
-            ),
+            'ligacao' => $ligacaoNormalizada,
 
             'tipo_incorporacao' => $tipoIncorporacao->value,
         ]);
@@ -319,8 +271,6 @@ final class SeccaoMetalThursdayFactory extends Factory
      *                                  persistida.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     public function comDetalhes(
         ?Banda $banda = null,
@@ -390,103 +340,6 @@ final class SeccaoMetalThursdayFactory extends Factory
     }
 
     /**
-     * Normaliza e valida uma ligação HTTP ou HTTPS.
-     *
-     * A ligação deve ser absoluta, possuir um anfitrião, não incluir
-     * credenciais, espaços, caracteres de controlo ou barras invertidas.
-     *
-     * @param  string  $ligacao  Ligação recebida.
-     * @return string Ligação normalizada.
-     *
-     * @throws InvalidArgumentException Quando a ligação não é válida.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private function normalizarLigacao(
-        string $ligacao,
-    ): string {
-        $ligacaoNormalizada = trim(
-            $ligacao,
-        );
-
-        if ($ligacaoNormalizada === '') {
-            throw new InvalidArgumentException(
-                'A ligação da secção não pode estar vazia.',
-            );
-        }
-
-        if (
-            mb_strlen(
-                $ligacaoNormalizada,
-            ) > SeccaoMetalThursday::COMPRIMENTO_MAXIMO_LIGACAO
-            || str_contains(
-                $ligacaoNormalizada,
-                '\\',
-            )
-            || preg_match(
-                '/[\x00-\x20\x7F]/',
-                $ligacaoNormalizada,
-            ) === 1
-            || filter_var(
-                $ligacaoNormalizada,
-                FILTER_VALIDATE_URL,
-            ) === false
-        ) {
-            throw new InvalidArgumentException(
-                'A ligação da secção deve ser um URL absoluto válido.',
-            );
-        }
-
-        $componentes = parse_url(
-            $ligacaoNormalizada,
-        );
-
-        if (
-            ! is_array($componentes)
-            || ! isset(
-                $componentes['scheme'],
-                $componentes['host'],
-            )
-            || isset(
-                $componentes['user'],
-            )
-            || isset(
-                $componentes['pass'],
-            )
-            || trim(
-                (string) $componentes['host'],
-            ) === ''
-        ) {
-            throw new InvalidArgumentException(
-                'A ligação da secção deve possuir um anfitrião válido e não pode incluir credenciais.',
-            );
-        }
-
-        $esquema = mb_strtolower(
-            (string) $componentes['scheme'],
-        );
-
-        if (
-            ! in_array(
-                $esquema,
-                [
-                    'http',
-                    'https',
-                ],
-                true,
-            )
-        ) {
-            throw new InvalidArgumentException(
-                'A ligação da secção deve utilizar HTTP ou HTTPS.',
-            );
-        }
-
-        return $ligacaoNormalizada;
-    }
-
-    /**
      * Valida que um modelo relacionado já se encontra persistido.
      *
      * @param  Model  $modelo  Modelo a validar.
@@ -495,8 +348,6 @@ final class SeccaoMetalThursdayFactory extends Factory
      * @throws InvalidArgumentException Quando o modelo não está persistido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function validarModeloPersistido(
         Model $modelo,

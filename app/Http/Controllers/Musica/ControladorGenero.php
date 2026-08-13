@@ -30,8 +30,6 @@ use Symfony\Component\HttpFoundation\Response;
  * identificador, impedindo que operações concorrentes introduzam ciclos.
  *
  * @since 1.0.0
- *
- * @version 4.1.0
  */
 final class ControladorGenero extends Controller
 {
@@ -43,8 +41,6 @@ final class ControladorGenero extends Controller
      * @var int
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private const REGISTOS_POR_PAGINA =
         20;
@@ -55,8 +51,6 @@ final class ControladorGenero extends Controller
      * @var int
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private const COMPRIMENTO_MAXIMO_PESQUISA =
         100;
@@ -66,9 +60,7 @@ final class ControladorGenero extends Controller
      *
      * @var int
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const TENTATIVAS_TRANSACAO =
         3;
@@ -80,8 +72,6 @@ final class ControladorGenero extends Controller
      * @return View Listagem de géneros.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function indice(
         Request $pedido,
@@ -145,8 +135,6 @@ final class ControladorGenero extends Controller
      * @return View Formulário de criação.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function criar(
         Request $pedido,
@@ -177,8 +165,6 @@ final class ControladorGenero extends Controller
      *                             disponível após a validação do pedido.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function guardar(
         CriarGeneroRequest $pedido,
@@ -264,8 +250,6 @@ final class ControladorGenero extends Controller
      * @return View Página do género.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function detalhes(
         Genero $genero,
@@ -341,8 +325,6 @@ final class ControladorGenero extends Controller
      * @return View Formulário de edição.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function editar(
         Request $pedido,
@@ -373,6 +355,11 @@ final class ControladorGenero extends Controller
      * do bloqueio, os descendentes são novamente calculados, impedindo que
      * alterações concorrentes contornem a validação do pedido e criem ciclos.
      *
+     * O género só é persistido quando o nome ou a relação de géneros pais
+     * sofre uma alteração efetiva. Desta forma, os dados de auditoria não são
+     * atualizados por uma submissão idêntica, mas continuam a refletir uma
+     * alteração exclusivamente hierárquica.
+     *
      * @param  AtualizarGeneroRequest  $pedido  Pedido validado.
      * @param  Genero  $genero  Género atualizado.
      * @return JsonResponse|RedirectResponse Resposta da operação.
@@ -381,8 +368,6 @@ final class ControladorGenero extends Controller
      *                             disponível ou passou a ser proibido.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function atualizar(
         AtualizarGeneroRequest $pedido,
@@ -433,15 +418,24 @@ final class ControladorGenero extends Controller
                         $identificadoresProibidos,
                     );
 
-                    $generoBloqueado->updateOrFail([
-                        'nome' => $dados['nome'],
-                    ]);
+                    $generoBloqueado->nome =
+                        $dados['nome'];
 
-                    $generoBloqueado
-                        ->generosPais()
-                        ->sync(
-                            $dados['generos_pai'],
-                        );
+                    $alteracoesGenerosPais =
+                        $generoBloqueado
+                            ->generosPais()
+                            ->sync(
+                                $dados['generos_pai'],
+                            );
+
+                    if (
+                        $generoBloqueado->isDirty()
+                        || $alteracoesGenerosPais['attached'] !== []
+                        || $alteracoesGenerosPais['detached'] !== []
+                        || $alteracoesGenerosPais['updated'] !== []
+                    ) {
+                        $generoBloqueado->saveOrFail();
+                    }
 
                     return $generoBloqueado;
                 },
@@ -482,8 +476,6 @@ final class ControladorGenero extends Controller
      * @return JsonResponse|RedirectResponse Resposta da operação.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function eliminar(
         Request $pedido,
@@ -544,8 +536,6 @@ final class ControladorGenero extends Controller
      * } Dados preparados.
      *
      * @since 2.0.0
-     *
-     * @version 4.0.0
      */
     private function obterDadosFormulario(
         Request $pedido,
@@ -626,9 +616,7 @@ final class ControladorGenero extends Controller
      *
      * @return array<int, true> Identificadores dos géneros ativos bloqueados.
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function bloquearHierarquiaAtiva(): array
     {
@@ -663,9 +651,7 @@ final class ControladorGenero extends Controller
      * @throws ValidationException Quando um género pai deixou de estar
      *                             disponível.
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function garantirGenerosPaisDisponiveis(
         array $identificadoresGenerosPais,
@@ -698,9 +684,7 @@ final class ControladorGenero extends Controller
      *
      * @throws ValidationException Quando a alteração criaria um ciclo.
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function garantirHierarquiaSemCiclos(
         array $identificadoresGenerosPais,
@@ -728,8 +712,6 @@ final class ControladorGenero extends Controller
      * @return Collection<int, Genero> Géneros disponíveis.
      *
      * @since 2.0.0
-     *
-     * @version 3.0.0
      */
     private function obterGenerosDisponiveis(
         array $identificadoresExcluidos,
@@ -766,9 +748,7 @@ final class ControladorGenero extends Controller
      *     nomesGenerosFilhos: string|null
      * } Dados preparados.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function obterDadosCabecalhoGenero(
         Genero $genero,
@@ -800,9 +780,7 @@ final class ControladorGenero extends Controller
      * @throws LogicException Quando a banda contém dados persistidos
      *                        inválidos.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function prepararBandaAssociada(
         Banda $banda,
@@ -854,9 +832,7 @@ final class ControladorGenero extends Controller
      *
      * @throws LogicException Quando a coleção contém um registo inválido.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function juntarNomesGeneros(
         Collection $generos,
@@ -904,9 +880,7 @@ final class ControladorGenero extends Controller
      *     generos_filhos: list<array{id: int, nome: string}>
      * } Dados do género.
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function serializarGenero(
         Genero $genero,
@@ -934,9 +908,7 @@ final class ControladorGenero extends Controller
      *
      * @throws LogicException Quando a coleção contém um registo inválido.
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function serializarColecaoGeneros(
         Collection $generos,
@@ -967,8 +939,6 @@ final class ControladorGenero extends Controller
      * @return string|null Termo normalizado ou nulo.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     private function normalizarPesquisa(
         mixed $valor,
@@ -999,9 +969,7 @@ final class ControladorGenero extends Controller
      * @param  mixed  $valor  Valor recebido.
      * @return string Texto normalizado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function normalizarTextoFormulario(
         mixed $valor,
@@ -1025,9 +993,7 @@ final class ControladorGenero extends Controller
      * @param  mixed  $valor  Valor recebido.
      * @return string Identificador normalizado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function normalizarIdentificadorFormulario(
         mixed $valor,
@@ -1067,9 +1033,7 @@ final class ControladorGenero extends Controller
      * @param  mixed  $valores  Valores recebidos.
      * @return list<string> Identificadores normalizados.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function normalizarListaIdentificadoresFormulario(
         mixed $valores,

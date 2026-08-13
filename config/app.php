@@ -11,8 +11,6 @@ declare(strict_types=1);
  * @return array<string, mixed> Configurações gerais da aplicação.
  *
  * @since 1.0.0
- *
- * @version 3.0.0
  */
 return [
     /*

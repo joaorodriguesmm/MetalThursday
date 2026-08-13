@@ -24,8 +24,6 @@ use LogicException;
  * atribuídas ao utilizador.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 final class ControladorPermissoesEmail extends Controller
 {
@@ -35,8 +33,6 @@ final class ControladorPermissoesEmail extends Controller
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private const MENSAGEM_SUCESSO =
         'Permissões de e-mail atualizadas com sucesso.';
@@ -50,8 +46,6 @@ final class ControladorPermissoesEmail extends Controller
      *                                                          sincronização.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function __construct(
         private readonly ServicoPermissoesEmail $servicoPermissoesEmail,
@@ -72,8 +66,6 @@ final class ControladorPermissoesEmail extends Controller
      *                        válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function atualizar(
         AtualizarPermissoesEmailRequest $pedido,
@@ -107,8 +99,6 @@ final class ControladorPermissoesEmail extends Controller
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterUtilizadorAutenticado(): Utilizador
     {

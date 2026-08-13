@@ -1,8 +1,5 @@
-import { defineConfig }
-    from 'vite';
-
-import laravel
-    from 'laravel-vite-plugin';
+import { defineConfig } from 'vite';
+import laravel from 'laravel-vite-plugin';
 
 /**
  * Entradas de estilos e scripts processadas pelo Vite.
@@ -10,7 +7,6 @@ import laravel
  * @type {ReadonlyArray<string>}
  *
  * @since 1.0.0
- * @version 2.0.0
  */
 const ENTRADAS_APLICACAO = Object.freeze([
     'resources/sass/app.scss',
@@ -33,24 +29,19 @@ const ENTRADAS_APLICACAO = Object.freeze([
  * Exporta a configuração do Vite para a aplicação.
  *
  * @since 1.0.0
- * @version 2.0.0
  */
 export default defineConfig({
     plugins: [
         laravel({
-            input:
-                ENTRADAS_APLICACAO,
-
-            refresh:
-                true,
+            input: ENTRADAS_APLICACAO,
+            refresh: true,
         }),
     ],
 
     css: {
         preprocessorOptions: {
             scss: {
-                quietDeps:
-                    true,
+                quietDeps: true,
             },
         },
     },

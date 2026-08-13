@@ -13,8 +13,6 @@ use Illuminate\Support\Facades\Schema;
  * o autor e o utilizador nomeado para a publicação seguinte.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 return new class extends Migration
 {
@@ -22,8 +20,6 @@ return new class extends Migration
      * Cria a tabela das MetalThursdays.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function up(): void
     {
@@ -108,25 +104,28 @@ return new class extends Migration
                 $tabela->index(
                     [
                         'edicao_id',
+                        'deleted_at',
                         'data',
                     ],
-                    'metal_thursdays_edicao_data_indice',
+                    'metal_thursdays_edicao_estado_data_indice',
                 );
 
                 $tabela->index(
                     [
                         'autor_id',
+                        'deleted_at',
                         'data',
                     ],
-                    'metal_thursdays_autor_data_indice',
+                    'metal_thursdays_autor_estado_data_indice',
                 );
 
                 $tabela->index(
                     [
                         'proximo_nomeado_id',
+                        'deleted_at',
                         'data',
                     ],
-                    'metal_thursdays_nomeado_data_indice',
+                    'metal_thursdays_nomeado_estado_data_indice',
                 );
             },
         );
@@ -136,8 +135,6 @@ return new class extends Migration
      * Elimina a tabela das MetalThursdays.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function down(): void
     {

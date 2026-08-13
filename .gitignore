@@ -11,6 +11,7 @@ Thumbs.db
 /.nova
 /.vscode
 /.zed
+/*.code-workspace
 
 /.phpactor.json
 /.phpunit.cache

@@ -13,8 +13,6 @@ use Illuminate\Support\Str;
  * @return array<string, mixed> Configuração das sessões.
  *
  * @since 1.0.0
- *
- * @version 3.1.0
  */
 return [
     /*
@@ -65,7 +63,9 @@ return [
         'framework/sessions',
     ),
 
-    'connection' => 'mariadb',
+    'connection' => env(
+        'DB_CONNECTION',
+    ),
 
     'table' => 'sessoes',
 

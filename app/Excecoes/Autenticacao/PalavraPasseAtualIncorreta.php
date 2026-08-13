@@ -11,8 +11,6 @@ use Throwable;
  * Indica que a palavra-passe atual não corresponde ao valor persistido.
  *
  * @since 2.0.0
- *
- * @version 1.1.0
  */
 final class PalavraPasseAtualIncorreta extends DomainException
 {
@@ -25,8 +23,6 @@ final class PalavraPasseAtualIncorreta extends DomainException
      *                                           aplicável.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function __construct(
         string $mensagem = 'A palavra-passe atual está incorreta.',

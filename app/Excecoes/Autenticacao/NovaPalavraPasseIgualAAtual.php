@@ -11,8 +11,6 @@ use Throwable;
  * Indica que a nova palavra-passe coincide com a palavra-passe atual.
  *
  * @since 2.0.0
- *
- * @version 1.1.0
  */
 final class NovaPalavraPasseIgualAAtual extends DomainException
 {
@@ -25,8 +23,6 @@ final class NovaPalavraPasseIgualAAtual extends DomainException
      *                                           exceção, quando aplicável.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function __construct(
         string $mensagem = 'A nova palavra-passe deve ser diferente da palavra-passe atual.',

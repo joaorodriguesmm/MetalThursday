@@ -11,8 +11,6 @@ namespace App\Enumeracoes;
  * `seccoes_metal_thursday.tipo_incorporacao`.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 enum TipoIncorporacao: string
 {
@@ -20,8 +18,6 @@ enum TipoIncorporacao: string
      * Apresenta apenas a ligação externa.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     case Ligacao = 'ligacao';
 
@@ -29,8 +25,6 @@ enum TipoIncorporacao: string
      * Incorpora um vídeo do YouTube.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     case VideoYouTube = 'video_youtube';
 
@@ -38,8 +32,6 @@ enum TipoIncorporacao: string
      * Incorpora uma lista de reprodução do YouTube.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     case ListaReproducaoYouTube =
         'lista_reproducao_youtube';
@@ -55,8 +47,6 @@ enum TipoIncorporacao: string
      * @return self|null Tipo correspondente ou nulo.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public static function tentarCriar(
         mixed $valor,
@@ -80,8 +70,6 @@ enum TipoIncorporacao: string
      * @return string Etiqueta do tipo de incorporação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function etiqueta(): string
     {
@@ -103,8 +91,6 @@ enum TipoIncorporacao: string
      * @return string|null Expressão regular ou nula para ligações comuns.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function expressaoRegularJavaScript(): ?string
     {

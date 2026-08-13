@@ -8,7 +8,6 @@ use App\Models\MetalThursday\Edicao;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 /**
@@ -20,8 +19,6 @@ use InvalidArgumentException;
  * @extends Factory<Edicao>
  *
  * @since 2.0.0
- *
- * @version 2.1.0
  */
 final class EdicaoFactory extends Factory
 {
@@ -31,8 +28,6 @@ final class EdicaoFactory extends Factory
      * @var class-string<Edicao>
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $model =
         Edicao::class;
@@ -46,8 +41,6 @@ final class EdicaoFactory extends Factory
      * @return array<string, mixed> Atributos da edição.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function definition(): array
     {
@@ -88,44 +81,26 @@ final class EdicaoFactory extends Factory
     /**
      * Define o nome da edição.
      *
+     * A normalização e a validação são delegadas ao contrato definitivo do
+     * modelo.
+     *
      * @param  string  $nome  Nome pretendido.
      * @return static Factory configurada.
      *
-     * @throws InvalidArgumentException Quando o nome está vazio ou ultrapassa
-     *                                  o comprimento máximo permitido.
+     * @throws InvalidArgumentException Quando o nome não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function comNome(
         string $nome,
     ): static {
-        $nomeNormalizado = Str::squish(
-            $nome,
-        );
+        $edicao = new Edicao;
 
-        if ($nomeNormalizado === '') {
-            throw new InvalidArgumentException(
-                'O nome da edição não pode estar vazio.',
-            );
-        }
-
-        if (
-            mb_strlen(
-                $nomeNormalizado,
-            ) > Edicao::COMPRIMENTO_MAXIMO_NOME
-        ) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'O nome da edição não pode exceder %d caracteres.',
-                    Edicao::COMPRIMENTO_MAXIMO_NOME,
-                ),
-            );
-        }
+        $edicao->nome =
+            $nome;
 
         return $this->state([
-            'nome' => $nomeNormalizado,
+            'nome' => $edicao->nome,
         ]);
     }
 
@@ -138,8 +113,6 @@ final class EdicaoFactory extends Factory
      * @return static Factory configurada.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function emCurso(): static
     {
@@ -163,8 +136,6 @@ final class EdicaoFactory extends Factory
      *                                  data inicial.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function comPeriodo(
         CarbonInterface $dataInicio,
@@ -201,75 +172,33 @@ final class EdicaoFactory extends Factory
     /**
      * Define a ligação da compilação da edição.
      *
+     * A normalização e a validação são delegadas ao contrato definitivo do
+     * modelo. Uma ligação vazia continua a ser rejeitada por este estado.
+     *
      * @param  string  $ligacao  Ligação absoluta da compilação.
      * @return static Factory configurada.
      *
-     * @throws InvalidArgumentException Quando a ligação está vazia, não é
-     *                                  válida ou ultrapassa o limite da coluna.
+     * @throws InvalidArgumentException Quando a ligação não é válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function comLigacaoCompilacao(
         string $ligacao,
     ): static {
-        $ligacaoNormalizada = trim(
-            $ligacao,
-        );
+        $edicao = new Edicao;
 
-        if ($ligacaoNormalizada === '') {
+        $edicao->ligacao_compilacao =
+            $ligacao;
+
+        $ligacaoNormalizada =
+            $edicao->ligacao_compilacao;
+
+        if (
+            ! is_string($ligacaoNormalizada)
+            || $ligacaoNormalizada === ''
+        ) {
             throw new InvalidArgumentException(
                 'A ligação da compilação não pode estar vazia.',
-            );
-        }
-
-        if (
-            mb_strlen(
-                $ligacaoNormalizada,
-            ) > Edicao::COMPRIMENTO_MAXIMO_LIGACAO_COMPILACAO
-        ) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'A ligação da compilação não pode exceder %d caracteres.',
-                    Edicao::COMPRIMENTO_MAXIMO_LIGACAO_COMPILACAO,
-                ),
-            );
-        }
-
-        if (
-            filter_var(
-                $ligacaoNormalizada,
-                FILTER_VALIDATE_URL,
-            ) === false
-        ) {
-            throw new InvalidArgumentException(
-                'A ligação da compilação deve ser um URL absoluto válido.',
-            );
-        }
-
-        $esquema = parse_url(
-            $ligacaoNormalizada,
-            PHP_URL_SCHEME,
-        );
-
-        if (
-            ! is_string(
-                $esquema,
-            )
-            || ! in_array(
-                strtolower(
-                    $esquema,
-                ),
-                [
-                    'http',
-                    'https',
-                ],
-                true,
-            )
-        ) {
-            throw new InvalidArgumentException(
-                'A ligação da compilação deve utilizar HTTP ou HTTPS.',
             );
         }
 

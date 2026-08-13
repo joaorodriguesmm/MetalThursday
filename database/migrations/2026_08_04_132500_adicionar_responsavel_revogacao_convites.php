@@ -18,8 +18,6 @@ use Illuminate\Support\Facades\Schema;
  * retroativamente um responsável desconhecido ou incorreto.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 return new class extends Migration
 {
@@ -27,8 +25,6 @@ return new class extends Migration
      * Nome da restrição de coerência da revogação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const NOME_RESTRICAO =
         'convites_revogacao_responsavel_coerente_verificacao';
@@ -40,8 +36,6 @@ return new class extends Migration
      *                        responsável identificável.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function up(): void
     {
@@ -63,10 +57,6 @@ return new class extends Migration
         Schema::table(
             'convites',
             static function (Blueprint $tabela): void {
-                /*
-                 * A eliminação física do responsável é impedida para preservar
-                 * permanentemente a autoria da revogação.
-                 */
                 $tabela
                     ->foreignId(
                         'revogado_por_id',
@@ -74,9 +64,22 @@ return new class extends Migration
                     ->nullable()
                     ->after(
                         'revogado_em',
+                    );
+
+                $tabela->index(
+                    'revogado_por_id',
+                    'convites_revogado_por_indice',
+                );
+
+                $tabela
+                    ->foreign(
+                        'revogado_por_id',
                     )
-                    ->constrained(
-                        table: 'utilizadores',
+                    ->references(
+                        'id',
+                    )
+                    ->on(
+                        'utilizadores',
                     )
                     ->restrictOnDelete();
             },
@@ -84,7 +87,7 @@ return new class extends Migration
 
         DB::statement(
             <<<'SQL'
-                ALTER TABLE `convites`
+            ALTER TABLE `convites`
                 ADD CONSTRAINT `convites_revogacao_responsavel_coerente_verificacao`
                 CHECK (
                     (
@@ -97,7 +100,7 @@ return new class extends Migration
                         AND `revogado_por_id` IS NOT NULL
                     )
                 )
-                SQL,
+            SQL,
         );
     }
 
@@ -105,8 +108,6 @@ return new class extends Migration
      * Remove a autoria administrativa das revogações.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function down(): void
     {
@@ -120,7 +121,17 @@ return new class extends Migration
         Schema::table(
             'convites',
             static function (Blueprint $tabela): void {
-                $tabela->dropConstrainedForeignId(
+                $tabela->dropForeign(
+                    [
+                        'revogado_por_id',
+                    ],
+                );
+
+                $tabela->dropIndex(
+                    'convites_revogado_por_indice',
+                );
+
+                $tabela->dropColumn(
                     'revogado_por_id',
                 );
             },

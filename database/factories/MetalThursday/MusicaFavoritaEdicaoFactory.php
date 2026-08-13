@@ -21,8 +21,6 @@ use InvalidArgumentException;
  * @extends Factory<MusicaFavoritaEdicao>
  *
  * @since 2.0.0
- *
- * @version 2.1.0
  */
 final class MusicaFavoritaEdicaoFactory extends Factory
 {
@@ -32,8 +30,6 @@ final class MusicaFavoritaEdicaoFactory extends Factory
      * @var class-string<MusicaFavoritaEdicao>
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $model = MusicaFavoritaEdicao::class;
 
@@ -46,8 +42,6 @@ final class MusicaFavoritaEdicaoFactory extends Factory
      * @return array<string, mixed> Atributos da música favorita.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     public function definition(): array
     {
@@ -100,8 +94,6 @@ final class MusicaFavoritaEdicaoFactory extends Factory
      * @throws InvalidArgumentException Quando a edição não está persistida.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function paraEdicao(
         Edicao $edicao,
@@ -127,8 +119,6 @@ final class MusicaFavoritaEdicaoFactory extends Factory
      *                                  persistido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function pertencenteA(
         Utilizador $utilizador,
@@ -154,8 +144,6 @@ final class MusicaFavoritaEdicaoFactory extends Factory
      *                                  persistido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function registadaPor(
         Utilizador $utilizador,
@@ -174,42 +162,33 @@ final class MusicaFavoritaEdicaoFactory extends Factory
     /**
      * Define a posição da música favorita.
      *
+     * A validação é delegada ao contrato definitivo do modelo.
+     *
      * @param  int  $posicao  Posição pretendida.
      * @return static Factory configurada.
      *
-     * @throws InvalidArgumentException Quando a posição não está compreendida
-     *                                  no intervalo permitido pelo modelo.
+     * @throws InvalidArgumentException Quando a posição não é válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     public function comPosicao(
         int $posicao,
     ): static {
-        if (
-            $posicao < MusicaFavoritaEdicao::POSICAO_MINIMA
-            || $posicao > MusicaFavoritaEdicao::POSICAO_MAXIMA
-        ) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'A posição da música favorita deve estar compreendida entre %d e %d.',
-                    MusicaFavoritaEdicao::POSICAO_MINIMA,
-                    MusicaFavoritaEdicao::POSICAO_MAXIMA,
-                ),
-            );
-        }
+        $musicaFavorita = new MusicaFavoritaEdicao;
+
+        $musicaFavorita->posicao =
+            $posicao;
 
         return $this->state([
-            'posicao' => $posicao,
+            'posicao' => $musicaFavorita->posicao,
         ]);
     }
 
     /**
      * Define a identificação da música favorita.
      *
-     * Tabulações, quebras de linha e sequências de espaços Unicode são
-     * convertidas num único espaço, reproduzindo o contrato do modelo.
+     * A normalização e a validação são delegadas ao contrato definitivo do
+     * modelo.
      *
      * @param  string  $musica  Identificação da música.
      * @return static Factory configurada.
@@ -217,71 +196,17 @@ final class MusicaFavoritaEdicaoFactory extends Factory
      * @throws InvalidArgumentException Quando a identificação não é válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     public function comMusica(
         string $musica,
     ): static {
-        if (
-            preg_match(
-                '//u',
-                $musica,
-            ) !== 1
-        ) {
-            throw new InvalidArgumentException(
-                'A identificação da música favorita contém texto inválido.',
-            );
-        }
+        $musicaFavorita = new MusicaFavoritaEdicao;
 
-        if (
-            preg_match(
-                '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/',
-                $musica,
-            ) === 1
-        ) {
-            throw new InvalidArgumentException(
-                'A identificação da música favorita contém caracteres inválidos.',
-            );
-        }
-
-        $musicaNormalizada = preg_replace(
-            '/\s+/u',
-            ' ',
-            $musica,
-        );
-
-        if (! is_string($musicaNormalizada)) {
-            throw new InvalidArgumentException(
-                'Não foi possível normalizar a identificação da música favorita.',
-            );
-        }
-
-        $musicaNormalizada = trim(
-            $musicaNormalizada,
-        );
-
-        if ($musicaNormalizada === '') {
-            throw new InvalidArgumentException(
-                'A identificação da música favorita não pode estar vazia.',
-            );
-        }
-
-        if (
-            mb_strlen(
-                $musicaNormalizada,
-            ) > MusicaFavoritaEdicao::COMPRIMENTO_MAXIMO_MUSICA
-        ) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'A identificação da música favorita não pode exceder %d caracteres.',
-                    MusicaFavoritaEdicao::COMPRIMENTO_MAXIMO_MUSICA,
-                ),
-            );
-        }
+        $musicaFavorita->musica =
+            $musica;
 
         return $this->state([
-            'musica' => $musicaNormalizada,
+            'musica' => $musicaFavorita->musica,
         ]);
     }
 
@@ -294,8 +219,6 @@ final class MusicaFavoritaEdicaoFactory extends Factory
      * @return static Factory configurada.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     public function semRegistador(): static
     {
@@ -313,8 +236,6 @@ final class MusicaFavoritaEdicaoFactory extends Factory
      * @throws InvalidArgumentException Quando o modelo não está persistido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function validarModeloPersistido(
         Model $modelo,

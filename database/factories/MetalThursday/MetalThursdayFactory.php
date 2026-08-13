@@ -11,7 +11,6 @@ use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 /**
@@ -23,8 +22,6 @@ use InvalidArgumentException;
  * @extends Factory<MetalThursday>
  *
  * @since 2.0.0
- *
- * @version 2.1.0
  */
 final class MetalThursdayFactory extends Factory
 {
@@ -34,8 +31,6 @@ final class MetalThursdayFactory extends Factory
      * @var class-string<MetalThursday>
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $model = MetalThursday::class;
 
@@ -52,8 +47,6 @@ final class MetalThursdayFactory extends Factory
      * @return array<string, mixed> Atributos da MetalThursday.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function definition(): array
     {
@@ -90,39 +83,34 @@ final class MetalThursdayFactory extends Factory
     /**
      * Define um nome para a MetalThursday.
      *
+     * A normalização e a validação são delegadas ao contrato definitivo do
+     * modelo. Um nome vazio continua a ser rejeitado por este estado.
+     *
      * @param  string  $nome  Nome pretendido.
      * @return static Factory configurada.
      *
-     * @throws InvalidArgumentException Quando o nome está vazio ou ultrapassa
-     *                                  o comprimento máximo permitido.
+     * @throws InvalidArgumentException Quando o nome não é válido ou fica vazio
+     *                                  após normalização.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function comNome(
         string $nome,
     ): static {
-        $nomeNormalizado = Str::squish(
-            $nome,
-        );
+        $metalThursday = new MetalThursday;
 
-        if ($nomeNormalizado === '') {
-            throw new InvalidArgumentException(
-                'O nome da MetalThursday não pode estar vazio.',
-            );
-        }
+        $metalThursday->nome =
+            $nome;
+
+        $nomeNormalizado =
+            $metalThursday->nome;
 
         if (
-            mb_strlen(
-                $nomeNormalizado,
-            ) > MetalThursday::COMPRIMENTO_MAXIMO_NOME
+            ! is_string($nomeNormalizado)
+            || $nomeNormalizado === ''
         ) {
             throw new InvalidArgumentException(
-                sprintf(
-                    'O nome da MetalThursday não pode exceder %d caracteres.',
-                    MetalThursday::COMPRIMENTO_MAXIMO_NOME,
-                ),
+                'O nome da MetalThursday não pode estar vazio.',
             );
         }
 
@@ -140,8 +128,6 @@ final class MetalThursdayFactory extends Factory
      * @return static Factory configurada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function comData(
         CarbonInterface $data,
@@ -168,8 +154,6 @@ final class MetalThursdayFactory extends Factory
      *                                  persistida.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function comEdicao(
         ?Edicao $edicao = null,
@@ -200,8 +184,6 @@ final class MetalThursdayFactory extends Factory
      *                                  persistido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function comAutor(
         ?Utilizador $utilizador = null,
@@ -232,8 +214,6 @@ final class MetalThursdayFactory extends Factory
      *                                  persistido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function comProximoNomeado(
         ?Utilizador $utilizador = null,
@@ -260,8 +240,6 @@ final class MetalThursdayFactory extends Factory
      * @throws InvalidArgumentException Quando o modelo não está persistido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function validarModeloPersistido(
         Model $modelo,

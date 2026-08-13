@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -14,8 +15,6 @@ use Illuminate\Support\Facades\Schema;
  * informação musical detalhada.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 return new class extends Migration
 {
@@ -23,8 +22,6 @@ return new class extends Migration
      * Cria a tabela dos tipos de secção.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function up(): void
     {
@@ -38,16 +35,15 @@ return new class extends Migration
                         'identificador',
                         32,
                     )
-                    ->unique();
+                    ->charset('ascii')
+                    ->collation('ascii_bin');
 
-                $tabela
-                    ->string(
-                        'nome',
-                        64,
-                    )
-                    ->unique();
+                $tabela->string(
+                    'nome',
+                    64,
+                );
 
-                $tabela->text(
+                $tabela->mediumText(
                     'descricao',
                 );
 
@@ -59,14 +55,53 @@ return new class extends Migration
                         false,
                     );
 
-                $tabela
-                    ->unsignedTinyInteger(
-                        'ordem',
-                    )
-                    ->unique();
+                $tabela->unsignedTinyInteger(
+                    'ordem',
+                );
 
                 $tabela->timestamps();
+
+                $tabela->unique(
+                    'identificador',
+                    'tipos_seccao_identificador_unico',
+                );
+
+                $tabela->unique(
+                    'nome',
+                    'tipos_seccao_nome_unico',
+                );
+
+                $tabela->unique(
+                    'ordem',
+                    'tipos_seccao_ordem_unica',
+                );
             },
+        );
+
+        DB::statement(
+            <<<'SQL'
+            ALTER TABLE `tipos_seccao`
+                ADD CONSTRAINT `tipos_seccao_identificador_formato_valido`
+                CHECK (
+                    BINARY `identificador` REGEXP '^[a-z0-9]+(_[a-z0-9]+)*$'
+                )
+            SQL,
+        );
+
+        DB::statement(
+            <<<'SQL'
+            ALTER TABLE `tipos_seccao`
+                ADD CONSTRAINT `tipos_seccao_exige_detalhes_valido`
+                CHECK (`exige_detalhes` IN (0, 1))
+            SQL,
+        );
+
+        DB::statement(
+            <<<'SQL'
+            ALTER TABLE `tipos_seccao`
+                ADD CONSTRAINT `tipos_seccao_ordem_valida`
+                CHECK (`ordem` BETWEEN 1 AND 255)
+            SQL,
         );
     }
 
@@ -74,8 +109,6 @@ return new class extends Migration
      * Elimina a tabela dos tipos de secção.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function down(): void
     {

@@ -26,8 +26,6 @@ use Throwable;
  * `SeccaoMetalThursday`.
  *
  * @since 1.0.0
- *
- * @version 3.1.0
  */
 final class FiltrosMetalThursday
 {
@@ -40,8 +38,6 @@ final class FiltrosMetalThursday
      * @var array<string, non-empty-string>
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private const MAPA_FILTROS = [
         'filtro_autor' => 'filtrarPorAutor',
@@ -63,8 +59,6 @@ final class FiltrosMetalThursday
      * @var array<int, class-string<Model>>
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     private const MODELOS_SUPORTADOS = [
         MetalThursday::class,
@@ -77,8 +71,6 @@ final class FiltrosMetalThursday
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     private const COLUNA_CLASSIFICACAO_MEDIA =
         'avaliacoes_avg_pontuacao';
@@ -89,8 +81,6 @@ final class FiltrosMetalThursday
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const COLUNA_CLASSIFICACAO_UTILIZADOR =
         'classificacao_utilizador';
@@ -101,8 +91,6 @@ final class FiltrosMetalThursday
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const COLUNA_DATA_METAL_THURSDAY =
         'data_metal_thursday';
@@ -111,8 +99,6 @@ final class FiltrosMetalThursday
      * Pedido HTTP que contém os parâmetros dos filtros e da ordenação.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     private readonly Request $pedido;
 
@@ -122,8 +108,6 @@ final class FiltrosMetalThursday
      * @var Builder<Model>
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     private Builder $construtor;
 
@@ -133,8 +117,6 @@ final class FiltrosMetalThursday
      * @var class-string<Model>
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     private string $classeModelo;
 
@@ -144,8 +126,6 @@ final class FiltrosMetalThursday
      * @param  Request  $pedido  Pedido HTTP.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function __construct(
         Request $pedido,
@@ -160,8 +140,6 @@ final class FiltrosMetalThursday
      * @return Builder<Model> Consulta com filtros e ordenação aplicados.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function aplicar(
         Builder $construtor,
@@ -183,8 +161,6 @@ final class FiltrosMetalThursday
      * Aplica os filtros explicitamente permitidos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function aplicarFiltros(): void
     {
@@ -212,8 +188,6 @@ final class FiltrosMetalThursday
      * recebidos não são reconhecidos.
      *
      * @since 1.0.0
-     *
-     * @version 2.1.0
      */
     private function aplicarOrdenacao(): void
     {
@@ -256,8 +230,6 @@ final class FiltrosMetalThursday
      * @param  DirecaoOrdenacao  $direcao  Direção pretendida.
      *
      * @since 2.0.0
-     *
-     * @version 1.2.0
      */
     private function ordenarPorClassificacaoMedia(
         DirecaoOrdenacao $direcao,
@@ -287,8 +259,6 @@ final class FiltrosMetalThursday
      * @param  DirecaoOrdenacao  $direcao  Direção pretendida.
      *
      * @since 1.0.0
-     *
-     * @version 2.1.0
      */
     private function ordenarPorClassificacaoDoUtilizador(
         DirecaoOrdenacao $direcao,
@@ -357,8 +327,6 @@ final class FiltrosMetalThursday
      * @param  DirecaoOrdenacao  $direcao  Direção pretendida.
      *
      * @since 1.0.0
-     *
-     * @version 2.1.0
      */
     private function ordenarPorData(
         DirecaoOrdenacao $direcao,
@@ -411,8 +379,6 @@ final class FiltrosMetalThursday
      * @param  DirecaoOrdenacao  $direcao  Direção pretendida.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     private function adicionarCriterioDesempate(
         DirecaoOrdenacao $direcao,
@@ -432,8 +398,6 @@ final class FiltrosMetalThursday
      * @param  mixed  $valor  Identificador recebido.
      *
      * @since 1.0.0
-     *
-     * @version 2.1.0
      */
     private function filtrarPorAutor(
         mixed $valor,
@@ -463,8 +427,6 @@ final class FiltrosMetalThursday
      * @param  mixed  $valor  Identificador recebido.
      *
      * @since 1.0.0
-     *
-     * @version 2.2.0
      */
     private function filtrarPorBanda(
         mixed $valor,
@@ -504,8 +466,6 @@ final class FiltrosMetalThursday
      * @param  mixed  $valor  Resposta binária recebida.
      *
      * @since 1.0.0
-     *
-     * @version 2.1.0
      */
     private function filtrarPorAutoriaDoUtilizador(
         mixed $valor,
@@ -538,8 +498,6 @@ final class FiltrosMetalThursday
      * @param  mixed  $valor  Data recebida.
      *
      * @since 1.0.0
-     *
-     * @version 2.2.0
      */
     private function filtrarPorDataAte(
         mixed $valor,
@@ -569,8 +527,6 @@ final class FiltrosMetalThursday
      * @param  mixed  $valor  Data recebida.
      *
      * @since 1.0.0
-     *
-     * @version 2.2.0
      */
     private function filtrarPorDataDesde(
         mixed $valor,
@@ -600,8 +556,6 @@ final class FiltrosMetalThursday
      * @param  mixed  $valor  Data recebida.
      *
      * @since 1.0.0
-     *
-     * @version 2.2.0
      */
     private function filtrarPorData(
         mixed $valor,
@@ -630,8 +584,6 @@ final class FiltrosMetalThursday
      * @param  mixed  $valor  Identificador recebido.
      *
      * @since 1.0.0
-     *
-     * @version 2.1.0
      */
     private function filtrarPorEdicao(
         mixed $valor,
@@ -661,8 +613,6 @@ final class FiltrosMetalThursday
      * @param  mixed  $valor  Resposta binária recebida.
      *
      * @since 1.0.0
-     *
-     * @version 2.1.0
      */
     private function filtrarPorNomeacaoDoUtilizador(
         mixed $valor,
@@ -695,8 +645,6 @@ final class FiltrosMetalThursday
      * @param  mixed  $valor  Identificador recebido.
      *
      * @since 1.0.0
-     *
-     * @version 2.1.0
      */
     private function filtrarPorGenero(
         mixed $valor,
@@ -755,8 +703,6 @@ final class FiltrosMetalThursday
      * @param  mixed  $valor  Resposta binária recebida.
      *
      * @since 1.0.0
-     *
-     * @version 2.1.0
      */
     private function filtrarPorAvaliacaoDoUtilizador(
         mixed $valor,
@@ -804,8 +750,6 @@ final class FiltrosMetalThursday
      * @param  mixed  $valor  Resposta binária recebida.
      *
      * @since 1.0.0
-     *
-     * @version 2.1.0
      */
     private function filtrarPorAudicaoDoUtilizador(
         mixed $valor,
@@ -856,8 +800,6 @@ final class FiltrosMetalThursday
      * @param  Closure(Builder<Model>): Builder<Model>  $restricao  Restrição.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function aplicarRestricaoNaMetalThursday(
         Closure $restricao,
@@ -887,8 +829,6 @@ final class FiltrosMetalThursday
      * @param  bool  $deveCoincidir  Estado da correspondência.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function aplicarCorrespondenciaNaMetalThursday(
         string $coluna,
@@ -939,8 +879,6 @@ final class FiltrosMetalThursday
      * @return int|null Identificador válido ou nulo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function converterParaIdentificador(
         mixed $valor,
@@ -967,8 +905,6 @@ final class FiltrosMetalThursday
      * @return bool|null Valor convertido ou nulo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function converterParaBooleano(
         mixed $valor,
@@ -985,8 +921,6 @@ final class FiltrosMetalThursday
      * @return CarbonImmutable|null Data válida ou nula.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     private function converterParaData(
         mixed $valor,
@@ -1029,8 +963,6 @@ final class FiltrosMetalThursday
      * @return int|null Identificador ou nulo.
      *
      * @since 2.0.0
-     *
-     * @version 1.2.0
      */
     private function obterIdentificadorUtilizador(): ?int
     {
@@ -1060,8 +992,6 @@ final class FiltrosMetalThursday
      * @return bool Verdadeiro quando o valor pode ser processado.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     private function valorPodeSerAplicado(
         mixed $valor,
@@ -1084,8 +1014,6 @@ final class FiltrosMetalThursday
      * @throws InvalidArgumentException Quando o modelo não é suportado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function garantirModeloSuportado(): void
     {
@@ -1114,8 +1042,6 @@ final class FiltrosMetalThursday
      * @return bool Estado da verificação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function eConsultaDeMetalThursdays(): bool
     {

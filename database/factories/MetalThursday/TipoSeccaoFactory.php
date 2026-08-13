@@ -18,8 +18,6 @@ use InvalidArgumentException;
  * @extends Factory<TipoSeccao>
  *
  * @since 2.0.0
- *
- * @version 2.1.0
  */
 final class TipoSeccaoFactory extends Factory
 {
@@ -29,8 +27,6 @@ final class TipoSeccaoFactory extends Factory
      * @var class-string<TipoSeccao>
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $model = TipoSeccao::class;
 
@@ -43,8 +39,6 @@ final class TipoSeccaoFactory extends Factory
      * @return array<string, mixed> Atributos do tipo de secção.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function definition(): array
     {
@@ -64,15 +58,18 @@ final class TipoSeccaoFactory extends Factory
             ),
         );
 
-        $baseIdentificador = Str::limit(
-            Str::slug(
-                $nome,
-                '_',
+        $baseIdentificador = rtrim(
+            Str::limit(
+                Str::slug(
+                    $nome,
+                    '_',
+                ),
+                TipoSeccao::COMPRIMENTO_MAXIMO_IDENTIFICADOR
+                    - strlen($sufixo)
+                    - 1,
+                '',
             ),
-            TipoSeccao::COMPRIMENTO_MAXIMO_IDENTIFICADOR
-                - strlen($sufixo)
-                - 1,
-            '',
+            '_',
         );
 
         return [
@@ -112,8 +109,6 @@ final class TipoSeccaoFactory extends Factory
      * @return static Factory configurada.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function comDetalhes(): static
     {
@@ -128,8 +123,6 @@ final class TipoSeccaoFactory extends Factory
      * @return static Factory configurada.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function semDetalhes(): static
     {
@@ -141,6 +134,9 @@ final class TipoSeccaoFactory extends Factory
     /**
      * Define os dados principais do tipo de secção.
      *
+     * A normalização e a validação são delegadas ao contrato definitivo do
+     * modelo.
+     *
      * @param  string  $identificador  Identificador técnico estável.
      * @param  string  $nome  Nome apresentado ao utilizador.
      * @param  string  $descricao  Descrição do tipo.
@@ -149,112 +145,54 @@ final class TipoSeccaoFactory extends Factory
      * @throws InvalidArgumentException Quando os dados não são válidos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function comDados(
         string $identificador,
         string $nome,
         string $descricao,
     ): static {
-        $identificadorNormalizado = Str::slug(
-            trim(
-                $identificador,
-            ),
-            '_',
-        );
+        $tipoSeccao = new TipoSeccao;
 
-        $nomeNormalizado = Str::squish(
-            $nome,
-        );
+        $tipoSeccao->identificador =
+            $identificador;
 
-        $descricaoNormalizada = Str::squish(
-            $descricao,
-        );
+        $tipoSeccao->nome =
+            $nome;
 
-        if ($identificadorNormalizado === '') {
-            throw new InvalidArgumentException(
-                'O identificador do tipo de secção não pode estar vazio.',
-            );
-        }
-
-        if (
-            strlen(
-                $identificadorNormalizado,
-            ) > TipoSeccao::COMPRIMENTO_MAXIMO_IDENTIFICADOR
-        ) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'O identificador do tipo de secção não pode exceder %d caracteres.',
-                    TipoSeccao::COMPRIMENTO_MAXIMO_IDENTIFICADOR,
-                ),
-            );
-        }
-
-        if ($nomeNormalizado === '') {
-            throw new InvalidArgumentException(
-                'O nome do tipo de secção não pode estar vazio.',
-            );
-        }
-
-        if (
-            mb_strlen(
-                $nomeNormalizado,
-            ) > TipoSeccao::COMPRIMENTO_MAXIMO_NOME
-        ) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'O nome do tipo de secção não pode exceder %d caracteres.',
-                    TipoSeccao::COMPRIMENTO_MAXIMO_NOME,
-                ),
-            );
-        }
-
-        if ($descricaoNormalizada === '') {
-            throw new InvalidArgumentException(
-                'A descrição do tipo de secção não pode estar vazia.',
-            );
-        }
+        $tipoSeccao->descricao =
+            $descricao;
 
         return $this->state([
-            'identificador' => $identificadorNormalizado,
+            'identificador' => $tipoSeccao->identificador,
 
-            'nome' => $nomeNormalizado,
+            'nome' => $tipoSeccao->nome,
 
-            'descricao' => $descricaoNormalizada,
+            'descricao' => $tipoSeccao->descricao,
         ]);
     }
 
     /**
      * Define a ordem de apresentação do tipo de secção.
      *
+     * A validação é delegada ao contrato definitivo do modelo.
+     *
      * @param  int  $ordem  Ordem pretendida.
      * @return static Factory configurada.
      *
-     * @throws InvalidArgumentException Quando a ordem não cabe na coluna.
+     * @throws InvalidArgumentException Quando a ordem não é válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function naOrdem(
         int $ordem,
     ): static {
-        if (
-            $ordem < TipoSeccao::ORDEM_MINIMA
-            || $ordem > TipoSeccao::ORDEM_MAXIMA
-        ) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'A ordem do tipo de secção deve estar entre %d e %d.',
-                    TipoSeccao::ORDEM_MINIMA,
-                    TipoSeccao::ORDEM_MAXIMA,
-                ),
-            );
-        }
+        $tipoSeccao = new TipoSeccao;
+
+        $tipoSeccao->ordem =
+            $ordem;
 
         return $this->state([
-            'ordem' => $ordem,
+            'ordem' => $tipoSeccao->ordem,
         ]);
     }
 }

@@ -8,8 +8,6 @@ namespace App\Enumeracoes;
  * Representa uma alteração administrativa do acesso de um utilizador.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 enum AcaoAcessoUtilizador: string
 {
@@ -17,8 +15,6 @@ enum AcaoAcessoUtilizador: string
      * Suspensão do acesso à aplicação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     case Suspensao = 'suspensao';
 
@@ -26,8 +22,6 @@ enum AcaoAcessoUtilizador: string
      * Reativação do acesso à aplicação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     case Reativacao = 'reativacao';
 
@@ -38,8 +32,6 @@ enum AcaoAcessoUtilizador: string
      * @return self|null Ação correspondente ou nulo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public static function tentarCriar(
         mixed $valor,
@@ -63,8 +55,6 @@ enum AcaoAcessoUtilizador: string
      * @return string Etiqueta da ação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function etiqueta(): string
     {
@@ -80,8 +70,6 @@ enum AcaoAcessoUtilizador: string
      * @return bool Verdadeiro apenas para uma suspensão.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function eSuspensao(): bool
     {
@@ -94,8 +82,6 @@ enum AcaoAcessoUtilizador: string
      * @return bool Verdadeiro apenas para uma reativação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function eReativacao(): bool
     {

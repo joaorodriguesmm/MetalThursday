@@ -21,8 +21,6 @@ use InvalidArgumentException;
  * @extends Factory<Utilizador>
  *
  * @since 2.0.0
- *
- * @version 3.0.0
  */
 final class UtilizadorFactory extends Factory
 {
@@ -33,8 +31,6 @@ final class UtilizadorFactory extends Factory
      * utilizadores criados por esta factory.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const PALAVRA_PASSE_PREDEFINIDA =
         'PalavraPasse#2026';
@@ -46,8 +42,6 @@ final class UtilizadorFactory extends Factory
      * processo de testes.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private static ?string $hashPalavraPasse =
         null;
@@ -58,8 +52,6 @@ final class UtilizadorFactory extends Factory
      * @var class-string<Utilizador>
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $model =
         Utilizador::class;
@@ -73,8 +65,6 @@ final class UtilizadorFactory extends Factory
      * @return array<string, mixed> Atributos do utilizador.
      *
      * @since 2.0.0
-     *
-     * @version 3.0.0
      */
     public function definition(): array
     {
@@ -118,8 +108,6 @@ final class UtilizadorFactory extends Factory
      * @return static Factory configurada.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     public function naoVerificado(): static
     {
@@ -135,8 +123,6 @@ final class UtilizadorFactory extends Factory
      * @return static Factory configurada.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     public function comPapel(
         PapelUtilizador $papel,
@@ -161,8 +147,6 @@ final class UtilizadorFactory extends Factory
      *                                  persistido ou o motivo não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function suspensoPor(
         Utilizador $responsavel,
@@ -194,8 +178,6 @@ final class UtilizadorFactory extends Factory
      *                                  fotografia válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     public function comFotografia(
         string $caminho,
@@ -233,8 +215,6 @@ final class UtilizadorFactory extends Factory
      *                                  identificador válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private static function obterIdentificadorUtilizadorPersistido(
         Utilizador $utilizador,

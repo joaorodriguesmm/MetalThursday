@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -15,8 +16,6 @@ use Illuminate\Support\Facades\Schema;
  * necessariamente um código ISO 3166-1 alfa-2.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 return new class extends Migration
 {
@@ -24,8 +23,6 @@ return new class extends Migration
      * Cria a tabela das origens geográficas.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function up(): void
     {
@@ -34,22 +31,42 @@ return new class extends Migration
             static function (Blueprint $tabela): void {
                 $tabela->id();
 
-                $tabela
-                    ->string(
-                        'nome',
-                        100,
-                    )
-                    ->unique();
+                $tabela->string(
+                    'nome',
+                    100,
+                );
 
                 $tabela
                     ->string(
                         'codigo',
                         8,
                     )
-                    ->unique();
+                    ->charset('ascii')
+                    ->collation('ascii_bin');
 
                 $tabela->timestamps();
+
+                $tabela->unique(
+                    'nome',
+                    'origens_geograficas_nome_unico',
+                );
+
+                $tabela->unique(
+                    'codigo',
+                    'origens_geograficas_codigo_unico',
+                );
             },
+        );
+
+        DB::statement(
+            <<<'SQL'
+            ALTER TABLE `origens_geograficas`
+                ADD CONSTRAINT `origens_geograficas_codigo_formato_valido`
+                CHECK (
+                    CHAR_LENGTH(`codigo`) BETWEEN 2 AND 8
+                    AND BINARY `codigo` REGEXP '^[A-Z0-9]+(-[A-Z0-9]+)*$'
+                )
+            SQL,
         );
     }
 
@@ -57,8 +74,6 @@ return new class extends Migration
      * Elimina a tabela das origens geográficas.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function down(): void
     {

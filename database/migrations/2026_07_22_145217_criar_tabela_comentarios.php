@@ -18,34 +18,13 @@ use Illuminate\Support\Facades\Schema;
  * que não são criados ciclos na árvore de respostas.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 return new class extends Migration
 {
     /**
-     * Tipos de entidades que podem receber comentários.
-     *
-     * Estes valores correspondem aos aliases polimórficos persistidos pela
-     * aplicação e não dependem dos namespaces PHP dos modelos.
-     *
-     * @var list<string>
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private const TIPOS_COMENTAVEL = [
-        'metal_thursday',
-        'seccao_metal_thursday',
-    ];
-
-    /**
      * Cria a tabela dos comentários.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function up(): void
     {
@@ -58,21 +37,19 @@ return new class extends Migration
                     ->foreignId(
                         'utilizador_id',
                     )
-                    ->nullable()
-                    ->constrained(
-                        table: 'utilizadores',
-                    )
-                    ->cascadeOnUpdate()
-                    ->nullOnDelete();
+                    ->nullable();
 
                 $tabela->text(
                     'conteudo',
                 );
 
-                $tabela->enum(
-                    'tipo_comentavel',
-                    self::TIPOS_COMENTAVEL,
-                );
+                $tabela
+                    ->string(
+                        'tipo_comentavel',
+                        32,
+                    )
+                    ->charset('ascii')
+                    ->collation('ascii_bin');
 
                 $tabela->unsignedBigInteger(
                     'comentavel_id',
@@ -82,16 +59,16 @@ return new class extends Migration
                     ->foreignId(
                         'comentario_pai_id',
                     )
-                    ->nullable()
-                    ->constrained(
-                        table: 'comentarios',
-                    )
-                    ->cascadeOnUpdate()
-                    ->nullOnDelete();
+                    ->nullable();
 
                 $tabela->timestamps();
 
                 $tabela->softDeletes();
+
+                $tabela->index(
+                    'utilizador_id',
+                    'comentarios_utilizador_indice',
+                );
 
                 $tabela->index(
                     [
@@ -108,18 +85,63 @@ return new class extends Migration
                     ],
                     'comentarios_pai_data_indice',
                 );
+
+                $tabela
+                    ->foreign(
+                        'utilizador_id',
+                    )
+                    ->references(
+                        'id',
+                    )
+                    ->on(
+                        'utilizadores',
+                    )
+                    ->nullOnDelete();
+
+                $tabela
+                    ->foreign(
+                        'comentario_pai_id',
+                    )
+                    ->references(
+                        'id',
+                    )
+                    ->on(
+                        'comentarios',
+                    )
+                    ->nullOnDelete();
             },
         );
 
         DB::statement(
             <<<'SQL'
-                ALTER TABLE `comentarios`
-                ADD CONSTRAINT `comentarios_conteudo_valido_verificacao`
+            ALTER TABLE `comentarios`
+                ADD CONSTRAINT `comentarios_conteudo_valido`
                 CHECK (
-                    CHAR_LENGTH(TRIM(`conteudo`))
-                    BETWEEN 1 AND 2000
+                    CHAR_LENGTH(`conteudo`) BETWEEN 1 AND 2000
+                    AND `conteudo` REGEXP '[^[:space:]]'
                 )
-                SQL,
+            SQL,
+        );
+
+        DB::statement(
+            <<<'SQL'
+            ALTER TABLE `comentarios`
+                ADD CONSTRAINT `comentarios_tipo_comentavel_valido`
+                CHECK (
+                    `tipo_comentavel` IN (
+                        'metal_thursday',
+                        'seccao_metal_thursday'
+                    )
+                )
+            SQL,
+        );
+
+        DB::statement(
+            <<<'SQL'
+            ALTER TABLE `comentarios`
+                ADD CONSTRAINT `comentarios_comentavel_id_valido`
+                CHECK (`comentavel_id` >= 1)
+            SQL,
         );
     }
 
@@ -127,8 +149,6 @@ return new class extends Migration
      * Elimina a tabela dos comentários.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function down(): void
     {

@@ -16,8 +16,6 @@ use Monolog\Processor\PsrLogMessageProcessor;
  * @return array<string, mixed> Configurações de registo de eventos.
  *
  * @since 1.0.0
- *
- * @version 3.0.0
  */
 return [
     /*

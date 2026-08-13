@@ -14,32 +14,13 @@ use Illuminate\Support\Facades\Schema;
  * conter uma banda, informação editorial e uma ligação externa incorporável.
  *
  * @since 2.0.0
- *
- * @version 2.1.0
  */
 return new class extends Migration
 {
     /**
-     * Tipos de incorporação persistidos pela aplicação.
-     *
-     * @var list<string>
-     *
-     * @since 2.0.0
-     *
-     * @version 2.0.0
-     */
-    private const TIPOS_INCORPORACAO = [
-        'ligacao',
-        'video_youtube',
-        'lista_reproducao_youtube',
-    ];
-
-    /**
      * Cria a tabela das secções das MetalThursdays.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     public function up(): void
     {
@@ -79,7 +60,7 @@ return new class extends Migration
                     )
                     ->nullable();
 
-                $tabela->text(
+                $tabela->mediumText(
                     'descricao',
                 );
 
@@ -102,10 +83,12 @@ return new class extends Migration
                     ->nullable();
 
                 $tabela
-                    ->enum(
+                    ->string(
                         'tipo_incorporacao',
-                        self::TIPOS_INCORPORACAO,
+                        24,
                     )
+                    ->charset('ascii')
+                    ->collation('ascii_bin')
                     ->nullable();
 
                 $tabela
@@ -169,35 +152,59 @@ return new class extends Migration
                     ],
                     'seccoes_metal_thursday_estado_ordem_indice',
                 );
+
+                $tabela->index(
+                    [
+                        'banda_id',
+                        'deleted_at',
+                        'metal_thursday_id',
+                    ],
+                    'seccoes_metal_thursday_banda_estado_metal_indice',
+                );
             },
         );
 
         DB::statement(
             <<<'SQL'
-                ALTER TABLE `seccoes_metal_thursday`
-                ADD CONSTRAINT `seccoes_metal_thursday_ordem_positiva_verificacao`
-                CHECK (`ordem` >= 1)
-                SQL,
+            ALTER TABLE `seccoes_metal_thursday`
+                ADD CONSTRAINT `seccoes_metal_thursday_ordem_valida`
+                CHECK (`ordem` BETWEEN 1 AND 65535)
+            SQL,
         );
 
         DB::statement(
             <<<'SQL'
-                ALTER TABLE `seccoes_metal_thursday`
-                ADD CONSTRAINT `seccoes_metal_thursday_ano_valido_verificacao`
+            ALTER TABLE `seccoes_metal_thursday`
+                ADD CONSTRAINT `seccoes_metal_thursday_ano_valido`
                 CHECK (`ano` IS NULL OR `ano` BETWEEN 1900 AND 2155)
-                SQL,
+            SQL,
         );
 
         DB::statement(
             <<<'SQL'
-                ALTER TABLE `seccoes_metal_thursday`
-                ADD CONSTRAINT `seccoes_metal_thursday_incorporacao_valida_verificacao`
+            ALTER TABLE `seccoes_metal_thursday`
+                ADD CONSTRAINT `seccoes_metal_thursday_tipo_incorporacao_valido`
+                CHECK (
+                    `tipo_incorporacao` IS NULL
+                    OR `tipo_incorporacao` IN (
+                        'ligacao',
+                        'video_youtube',
+                        'lista_reproducao_youtube'
+                    )
+                )
+            SQL,
+        );
+
+        DB::statement(
+            <<<'SQL'
+            ALTER TABLE `seccoes_metal_thursday`
+                ADD CONSTRAINT `seccoes_metal_thursday_incorporacao_coerente`
                 CHECK (
                     (`ligacao` IS NULL AND `tipo_incorporacao` IS NULL)
                     OR
                     (`ligacao` IS NOT NULL AND `tipo_incorporacao` IS NOT NULL)
                 )
-                SQL,
+            SQL,
         );
     }
 
@@ -205,8 +212,6 @@ return new class extends Migration
      * Elimina a tabela das secções das MetalThursdays.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function down(): void
     {

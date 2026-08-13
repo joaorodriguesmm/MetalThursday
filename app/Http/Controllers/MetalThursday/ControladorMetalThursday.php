@@ -45,8 +45,6 @@ use Throwable;
  * Gere as operações HTTP relacionadas com MetalThursdays.
  *
  * @since 1.0.0
- *
- * @version 5.1.1
  */
 final class ControladorMetalThursday extends Controller
 {
@@ -57,9 +55,7 @@ final class ControladorMetalThursday extends Controller
      *
      * @var string
      *
-     * @since 2.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const VISTA_COMPLETA = 'completa';
 
@@ -68,9 +64,7 @@ final class ControladorMetalThursday extends Controller
      *
      * @var string
      *
-     * @since 2.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const VISTA_SIMPLIFICADA = 'simplificada';
 
@@ -79,9 +73,7 @@ final class ControladorMetalThursday extends Controller
      *
      * @var array<int, string>
      *
-     * @since 5.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const TIPOS_FILTROS = [
         'selecao',
@@ -94,9 +86,7 @@ final class ControladorMetalThursday extends Controller
      *
      * @var array<int, string>
      *
-     * @since 5.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const CHAVES_DADOS_FILTROS = [
         'edicoes',
@@ -111,8 +101,6 @@ final class ControladorMetalThursday extends Controller
      * @var array<int, int>
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const OPCOES_POR_PAGINA = [
         5,
@@ -127,41 +115,36 @@ final class ControladorMetalThursday extends Controller
      * @var int
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const POR_PAGINA_PREDEFINIDO = 10;
 
     /**
-     * Pontuação mínima permitida numa avaliação.
+     * Primeira estrela apresentada no controlo de avaliação.
+     *
+     * Cada estrela permite selecionar o valor inteiro ou o respetivo meio
+     * valor através do gestor JavaScript do modal.
      *
      * @var int
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
-    private const PONTUACAO_MINIMA = 1;
+    private const PRIMEIRA_ESTRELA_AVALIACAO = 1;
 
     /**
-     * Pontuação máxima permitida numa avaliação.
+     * Última estrela apresentada no controlo de avaliação.
      *
      * @var int
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
-    private const PONTUACAO_MAXIMA = 10;
+    private const ULTIMA_ESTRELA_AVALIACAO = 10;
 
     /**
      * Número de utilizadores processados por bloco nas notificações.
      *
      * @var int
      *
-     * @since 2.2.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const UTILIZADORES_POR_BLOCO = 100;
 
@@ -170,9 +153,7 @@ final class ControladorMetalThursday extends Controller
      *
      * @var int
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const TENTATIVAS_TRANSACAO = 3;
 
@@ -189,8 +170,6 @@ final class ControladorMetalThursday extends Controller
      *                                                                incorporações.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function __construct(
         private readonly ServicoPersistenciaMetalThursday $servicoPersistencia,
@@ -205,8 +184,6 @@ final class ControladorMetalThursday extends Controller
      * @return View Página principal.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function indice(
         Request $pedido,
@@ -228,7 +205,7 @@ final class ControladorMetalThursday extends Controller
             );
 
         $identificadorUtilizador =
-            $this->obterIdentificadorUtilizadorOpcional();
+            $this->obterIdentificadorUtilizadorAutenticado();
 
         $registosMetalThursday = null;
         $seccoesSimplificadas = null;
@@ -289,8 +266,6 @@ final class ControladorMetalThursday extends Controller
      * @return View Página de criação.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function criar(
         Request $pedido,
@@ -323,8 +298,6 @@ final class ControladorMetalThursday extends Controller
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function guardar(
         GuardarMetalThursdayRequest $pedido,
@@ -335,7 +308,7 @@ final class ControladorMetalThursday extends Controller
         );
 
         $identificadorCriador =
-            $this->obterIdentificadorUtilizador();
+            $this->obterIdentificadorUtilizadorAutenticado();
 
         $metalThursday =
             $this->servicoPersistencia
@@ -376,8 +349,6 @@ final class ControladorMetalThursday extends Controller
      * @return View Página de detalhes.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function detalhes(
         MetalThursday $metalThursday,
@@ -389,7 +360,7 @@ final class ControladorMetalThursday extends Controller
 
         $this->carregarDetalhes(
             $metalThursday,
-            $this->obterIdentificadorUtilizadorOpcional(),
+            $this->obterIdentificadorUtilizadorAutenticado(),
         );
 
         return view(
@@ -410,8 +381,6 @@ final class ControladorMetalThursday extends Controller
      * @return View Página de edição.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function editar(
         Request $pedido,
@@ -454,8 +423,6 @@ final class ControladorMetalThursday extends Controller
      * @return JsonResponse|RedirectResponse Resposta da operação.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function atualizar(
         GuardarMetalThursdayRequest $pedido,
@@ -502,8 +469,6 @@ final class ControladorMetalThursday extends Controller
      * @return JsonResponse|RedirectResponse Resposta da operação.
      *
      * @since 1.0.0
-     *
-     * @version 4.1.0
      */
     public function eliminar(
         Request $pedido,
@@ -555,8 +520,6 @@ final class ControladorMetalThursday extends Controller
      * @return JsonResponse Identificador do utilizador encontrado.
      *
      * @since 1.0.0
-     *
-     * @version 2.1.0
      */
     public function obterUtilizadorHaMaisTempoSemNomeacao(): JsonResponse
     {
@@ -623,15 +586,13 @@ final class ControladorMetalThursday extends Controller
     /**
      * Cria a consulta da vista completa.
      *
-     * @param  int|null  $identificadorUtilizador  Utilizador autenticado.
+     * @param  int  $identificadorUtilizador  Utilizador autenticado.
      * @return Builder<MetalThursday> Consulta preparada.
      *
      * @since 2.0.0
-     *
-     * @version 2.2.0
      */
     private function criarConsultaCompleta(
-        ?int $identificadorUtilizador,
+        int $identificadorUtilizador,
     ): Builder {
         return MetalThursday::query()
             ->comNumeroSemanaNaEdicao()
@@ -644,65 +605,11 @@ final class ControladorMetalThursday extends Controller
                 'avaliacoes',
                 'pontuacao',
             )
-            ->with([
-                'edicao:id,nome',
-                'autor:id,nome',
-                'proximoNomeado:id,nome',
-                'avaliacoes.utilizador:id,nome',
-                'audicoes.utilizador:id,nome',
-                'avaliacaoUtilizadorAutenticado',
-                'audicaoUtilizadorAutenticado',
-
-                'comentarios' => function (
-                    Relation $relacao,
-                ) use (
+            ->with(
+                $this->obterRelacoesApresentacao(
                     $identificadorUtilizador,
-                ): void {
-                    $this->configurarComentariosParaApresentacao(
-                        $relacao->getQuery(),
-                        $identificadorUtilizador,
-                    );
-                },
-
-                'seccoes' => function (
-                    Relation $relacao,
-                ) use (
-                    $identificadorUtilizador,
-                ): void {
-                    $construtor =
-                        $relacao->getQuery();
-
-                    $construtor
-                        ->withCount([
-                            'comentarios',
-                            'avaliacoes',
-                            'audicoes',
-                        ])
-                        ->withAvg(
-                            'avaliacoes',
-                            'pontuacao',
-                        )
-                        ->with([
-                            'tipoSeccao:id,nome,exige_detalhes',
-                            'banda:id,nome',
-                            'avaliacoes.utilizador:id,nome',
-                            'audicoes.utilizador:id,nome',
-                            'avaliacaoUtilizadorAutenticado',
-                            'audicaoUtilizadorAutenticado',
-
-                            'comentarios' => function (
-                                Relation $relacaoComentarios,
-                            ) use (
-                                $identificadorUtilizador,
-                            ): void {
-                                $this->configurarComentariosParaApresentacao(
-                                    $relacaoComentarios->getQuery(),
-                                    $identificadorUtilizador,
-                                );
-                            },
-                        ]);
-                },
-            ]);
+                ),
+            );
     }
 
     /**
@@ -711,8 +618,6 @@ final class ControladorMetalThursday extends Controller
      * @return Builder<SeccaoMetalThursday> Consulta preparada.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     private function criarConsultaSimplificada(): Builder
     {
@@ -759,15 +664,13 @@ final class ControladorMetalThursday extends Controller
      * Carrega as relações necessárias para a página de detalhes.
      *
      * @param  MetalThursday  $metalThursday  MetalThursday carregada.
-     * @param  int|null  $identificadorUtilizador  Utilizador autenticado.
+     * @param  int  $identificadorUtilizador  Utilizador autenticado.
      *
-     * @since 2.1.0
-     *
-     * @version 2.2.0
+     * @since 2.0.0
      */
     private function carregarDetalhes(
         MetalThursday $metalThursday,
-        ?int $identificadorUtilizador,
+        int $identificadorUtilizador,
     ): void {
         $metalThursday
             ->carregarNumeroSemanaNaEdicao()
@@ -780,65 +683,86 @@ final class ControladorMetalThursday extends Controller
                 'avaliacoes',
                 'pontuacao',
             )
-            ->load([
-                'edicao:id,nome',
-                'autor:id,nome',
-                'proximoNomeado:id,nome',
-                'avaliacoes.utilizador:id,nome',
-                'audicoes.utilizador:id,nome',
-                'avaliacaoUtilizadorAutenticado',
-                'audicaoUtilizadorAutenticado',
-
-                'comentarios' => function (
-                    Relation $relacao,
-                ) use (
+            ->load(
+                $this->obterRelacoesApresentacao(
                     $identificadorUtilizador,
-                ): void {
-                    $this->configurarComentariosParaApresentacao(
-                        $relacao->getQuery(),
-                        $identificadorUtilizador,
-                    );
-                },
+                ),
+            );
+    }
 
-                'seccoes' => function (
-                    Relation $relacao,
-                ) use (
+    /**
+     * Obtém a árvore de relações utilizada na vista completa e nos detalhes.
+     *
+     * Centralizar a configuração evita que a listagem e a página de detalhes
+     * evoluam com relações ou agregados diferentes por engano.
+     *
+     * @param  int  $identificadorUtilizador  Utilizador autenticado.
+     * @return array<int|string, mixed> Relações e restrições de eager loading.
+     *
+     * @since 2.0.0
+     */
+    private function obterRelacoesApresentacao(
+        int $identificadorUtilizador,
+    ): array {
+        return [
+            'edicao:id,nome',
+            'autor:id,nome',
+            'proximoNomeado:id,nome',
+            'avaliacoes.utilizador:id,nome',
+            'audicoes.utilizador:id,nome',
+            'avaliacaoUtilizadorAutenticado',
+            'audicaoUtilizadorAutenticado',
+
+            'comentarios' => function (
+                Relation $relacao,
+            ) use (
+                $identificadorUtilizador,
+            ): void {
+                $this->configurarComentariosParaApresentacao(
+                    $relacao->getQuery(),
                     $identificadorUtilizador,
-                ): void {
-                    $construtor =
-                        $relacao->getQuery();
+                );
+            },
 
-                    $construtor
-                        ->withCount([
-                            'comentarios',
-                            'avaliacoes',
-                            'audicoes',
-                        ])
-                        ->withAvg(
-                            'avaliacoes',
-                            'pontuacao',
-                        )
-                        ->with([
-                            'tipoSeccao:id,nome,exige_detalhes',
-                            'banda:id,nome',
-                            'avaliacoes.utilizador:id,nome',
-                            'audicoes.utilizador:id,nome',
-                            'avaliacaoUtilizadorAutenticado',
-                            'audicaoUtilizadorAutenticado',
+            'seccoes' => function (
+                Relation $relacao,
+            ) use (
+                $identificadorUtilizador,
+            ): void {
+                $construtor =
+                    $relacao->getQuery();
 
-                            'comentarios' => function (
-                                Relation $relacaoComentarios,
-                            ) use (
+                $construtor
+                    ->withCount([
+                        'comentarios',
+                        'avaliacoes',
+                        'audicoes',
+                    ])
+                    ->withAvg(
+                        'avaliacoes',
+                        'pontuacao',
+                    )
+                    ->with([
+                        'tipoSeccao:id,nome,exige_detalhes',
+                        'banda:id,nome',
+                        'avaliacoes.utilizador:id,nome',
+                        'audicoes.utilizador:id,nome',
+                        'avaliacaoUtilizadorAutenticado',
+                        'audicaoUtilizadorAutenticado',
+
+                        'comentarios' => function (
+                            Relation $relacaoComentarios,
+                        ) use (
+                            $identificadorUtilizador,
+                        ): void {
+                            $this->configurarComentariosParaApresentacao(
+                                $relacaoComentarios->getQuery(),
                                 $identificadorUtilizador,
-                            ): void {
-                                $this->configurarComentariosParaApresentacao(
-                                    $relacaoComentarios->getQuery(),
-                                    $identificadorUtilizador,
-                                );
-                            },
-                        ]);
-                },
-            ]);
+                            );
+                        },
+                    ]);
+            },
+        ];
     }
 
     /**
@@ -849,8 +773,6 @@ final class ControladorMetalThursday extends Controller
      * @return array<string, mixed> Dados dos formulários.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterDadosFormulario(
         ?MetalThursday $metalThursday = null,
@@ -899,26 +821,27 @@ final class ControladorMetalThursday extends Controller
     /**
      * Obtém os dados necessários ao modal de avaliação.
      *
+     * Os limites representam as estrelas inteiras apresentadas. A seleção de
+     * meios valores é tratada pelo gestor JavaScript do modal.
+     *
      * @return array{
      *     pontuacaoMinima: int,
      *     pontuacaoMaxima: int,
      *     pontuacoesDisponiveis: array<int, int>
-     * } Dados da escala de avaliação.
+     * } Dados do controlo de avaliação.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterDadosAvaliacao(): array
     {
         return [
-            'pontuacaoMinima' => self::PONTUACAO_MINIMA,
+            'pontuacaoMinima' => self::PRIMEIRA_ESTRELA_AVALIACAO,
 
-            'pontuacaoMaxima' => self::PONTUACAO_MAXIMA,
+            'pontuacaoMaxima' => self::ULTIMA_ESTRELA_AVALIACAO,
 
             'pontuacoesDisponiveis' => range(
-                self::PONTUACAO_MINIMA,
-                self::PONTUACAO_MAXIMA,
+                self::PRIMEIRA_ESTRELA_AVALIACAO,
+                self::ULTIMA_ESTRELA_AVALIACAO,
             ),
         ];
     }
@@ -928,9 +851,7 @@ final class ControladorMetalThursday extends Controller
      *
      * @return Collection<int, Edicao> Edições.
      *
-     * @since 2.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterEdicoesParaSelecao(): Collection
     {
@@ -955,9 +876,7 @@ final class ControladorMetalThursday extends Controller
      *
      * @return Collection<int, Utilizador> Utilizadores.
      *
-     * @since 2.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterUtilizadoresParaSelecao(): Collection
     {
@@ -981,9 +900,7 @@ final class ControladorMetalThursday extends Controller
      *
      * @return Collection<int, Banda> Bandas.
      *
-     * @since 2.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterBandasParaSelecao(): Collection
     {
@@ -1007,9 +924,7 @@ final class ControladorMetalThursday extends Controller
      *
      * @return Collection<int, Genero> Géneros.
      *
-     * @since 2.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterGenerosParaSelecao(): Collection
     {
@@ -1034,8 +949,6 @@ final class ControladorMetalThursday extends Controller
      * @return int Número permitido.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     private function obterNumeroPorPagina(
         Request $pedido,
@@ -1069,8 +982,6 @@ final class ControladorMetalThursday extends Controller
      * @return string Tipo da vista.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     private function obterTipoVista(
         Request $pedido,
@@ -1098,54 +1009,22 @@ final class ControladorMetalThursday extends Controller
     /**
      * Obtém o identificador do utilizador autenticado.
      *
-     * @return int Identificador do utilizador.
+     * Todas as rotas deste controlador pertencem ao grupo autenticado da
+     * aplicação, pelo que a ausência de um utilizador válido representa uma
+     * inconsistência do contexto HTTP.
+     *
+     * @return int Identificador validado.
      *
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
-     * @since 2.1.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
-    private function obterIdentificadorUtilizador(): int
+    private function obterIdentificadorUtilizadorAutenticado(): int
     {
         $utilizador =
             Auth::guard(
                 'sessao',
             )->user();
-
-        if (! $utilizador instanceof Utilizador) {
-            throw new AuthenticationException(
-                'É necessário iniciar sessão para criar uma MetalThursday.',
-            );
-        }
-
-        return $this->obterIdentificadorUtilizadorValido(
-            $utilizador,
-        );
-    }
-
-    /**
-     * Obtém o identificador do utilizador autenticado, quando existente.
-     *
-     * @return int|null Identificador ou nulo.
-     *
-     * @throws AuthenticationException Quando o guard devolve um utilizador
-     *                                 inválido.
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
-     */
-    private function obterIdentificadorUtilizadorOpcional(): ?int
-    {
-        $utilizador =
-            Auth::guard(
-                'sessao',
-            )->user();
-
-        if ($utilizador === null) {
-            return null;
-        }
 
         if (! $utilizador instanceof Utilizador) {
             throw new AuthenticationException(
@@ -1153,26 +1032,6 @@ final class ControladorMetalThursday extends Controller
             );
         }
 
-        return $this->obterIdentificadorUtilizadorValido(
-            $utilizador,
-        );
-    }
-
-    /**
-     * Obtém e valida o identificador de um utilizador autenticado.
-     *
-     * @param  Utilizador  $utilizador  Utilizador devolvido pelo guard.
-     * @return int Identificador validado.
-     *
-     * @throws AuthenticationException Quando o identificador não é válido.
-     *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
-     */
-    private function obterIdentificadorUtilizadorValido(
-        Utilizador $utilizador,
-    ): int {
         $identificador =
             $utilizador->getKey();
 
@@ -1195,31 +1054,61 @@ final class ControladorMetalThursday extends Controller
      * @return array{
      *     id: int,
      *     nome: string|null,
-     *     data: string|null
+     *     data: string
      * } Dados da MetalThursday.
      *
-     * @since 2.2.0
+     * @throws LogicException Quando a MetalThursday contém dados persistidos
+     *                        inválidos.
      *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function serializarMetalThursday(
         MetalThursday $metalThursday,
     ): array {
+        $identificador =
+            $metalThursday->getKey();
+
+        if (
+            ! is_numeric($identificador)
+            || (int) $identificador < 1
+        ) {
+            throw new LogicException(
+                'A MetalThursday não possui um identificador persistido válido.',
+            );
+        }
+
+        $nome =
+            $metalThursday->nome;
+
+        if (
+            $nome !== null
+            && (
+                ! is_string($nome)
+                || trim($nome) === ''
+            )
+        ) {
+            throw new LogicException(
+                'A MetalThursday não possui um nome persistido válido.',
+            );
+        }
+
         $data =
             $metalThursday->data;
 
+        if (! $data instanceof CarbonInterface) {
+            throw new LogicException(
+                'A MetalThursday não possui uma data persistida válida.',
+            );
+        }
+
         return [
-            'id' => (int) $metalThursday->getKey(),
+            'id' => (int) $identificador,
 
-            'nome' => is_string($metalThursday->nome)
-                ? $metalThursday->nome
-                : null,
+            'nome' => $nome,
 
-            'data' => $data instanceof CarbonInterface
-                ? $data->format(
-                    'Y-m-d',
-                )
-                : null,
+            'data' => $data->format(
+                'Y-m-d',
+            ),
         ];
     }
 
@@ -1240,8 +1129,6 @@ final class ControladorMetalThursday extends Controller
      * @param  int  $identificadorCriador  Criador autenticado.
      *
      * @since 2.0.0
-     *
-     * @version 1.2.0
      */
     private function notificarCriacao(
         MetalThursday $metalThursday,
@@ -1331,15 +1218,13 @@ final class ControladorMetalThursday extends Controller
      * contrato do componente de comentário.
      *
      * @param  Builder<Comentario>  $construtor  Consulta dos comentários.
-     * @param  int|null  $identificadorUtilizador  Utilizador autenticado.
+     * @param  int  $identificadorUtilizador  Utilizador autenticado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.1.0
+     * @since 2.0.0
      */
     private function configurarComentariosParaApresentacao(
         Builder $construtor,
-        ?int $identificadorUtilizador,
+        int $identificadorUtilizador,
     ): void {
         $construtor
             ->principais()
@@ -1408,9 +1293,7 @@ final class ControladorMetalThursday extends Controller
      *     ligacaoLimparFiltros: string
      * } Dados preparados.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function obterDadosControlosListagem(
         Request $pedido,
@@ -1524,9 +1407,7 @@ final class ControladorMetalThursday extends Controller
      *     }>
      * }> Grupos normalizados.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function obterGruposFiltrosDisponiveis(): array
     {
@@ -1688,9 +1569,7 @@ final class ControladorMetalThursday extends Controller
      * @param  Request  $pedido  Pedido HTTP atual.
      * @return array<int, array<string, mixed>> Secções anteriores normalizadas.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterSeccoesAnteriores(
         Request $pedido,
@@ -1715,9 +1594,7 @@ final class ControladorMetalThursday extends Controller
      * @return array<int, SeccaoMetalThursday|array<string, mixed>> Secções
      *                                                              utilizadas pelo formulário.
      *
-     * @since 3.0.0
-     *
-     * @version 2.1.0
+     * @since 2.0.0
      */
     private function obterSeccoesFormulario(
         Request $pedido,
@@ -1753,9 +1630,7 @@ final class ControladorMetalThursday extends Controller
      * @param  mixed  $seccoes  Valor recebido da sessão.
      * @return array<int, array<string, mixed>> Secções normalizadas.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function normalizarSeccoesSubmetidas(
         mixed $seccoes,
@@ -1816,9 +1691,7 @@ final class ControladorMetalThursday extends Controller
      *     }>
      * } Configuração dos formulários.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterConfiguracaoFormulario(): array
     {
@@ -1891,9 +1764,7 @@ final class ControladorMetalThursday extends Controller
      *     }
      * } Configuração preparada.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function obterConfiguracaoListagemMetalThursday(
         array $gruposFiltrosDisponiveis,
@@ -1948,9 +1819,7 @@ final class ControladorMetalThursday extends Controller
      * @throws LogicException Quando um modelo não possui identificador ou nome
      *                        válidos.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function serializarOpcoesSelecao(
         Collection $modelos,

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Pdo\Mysql;
+
 /**
  * Define a ligação à base de dados MariaDB utilizada pela aplicação.
  *
@@ -11,8 +13,6 @@ declare(strict_types=1);
  * @return array<string, mixed> Configuração da base de dados.
  *
  * @since 1.0.0
- *
- * @version 3.1.0
  */
 return [
     /*
@@ -52,7 +52,6 @@ return [
 
             'database' => env(
                 'DB_DATABASE',
-                'metalthursday',
             ),
 
             'username' => env(
@@ -93,7 +92,10 @@ return [
             )
                 ? array_filter(
                     [
-                        PDO::MYSQL_ATTR_SSL_CA => env(
+                        (PHP_VERSION_ID >= 80500
+                            ? Mysql::ATTR_SSL_CA
+                            : PDO::MYSQL_ATTR_SSL_CA
+                        ) => env(
                             'MYSQL_ATTR_SSL_CA',
                         ),
                     ],

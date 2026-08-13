@@ -32,8 +32,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * desatualizado.
  *
  * @since 1.0.0
- *
- * @version 3.1.0
  */
 final class ControladorComentario extends Controller
 {
@@ -44,9 +42,7 @@ final class ControladorComentario extends Controller
      *
      * @var int
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const TENTATIVAS_TRANSACAO =
         3;
@@ -56,9 +52,7 @@ final class ControladorComentario extends Controller
      *
      * @var string
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const ACAO_COMENTOU =
         'comentou';
@@ -68,9 +62,7 @@ final class ControladorComentario extends Controller
      *
      * @var string
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const ACAO_RESPONDEU =
         'respondeu';
@@ -82,8 +74,6 @@ final class ControladorComentario extends Controller
      *                                                        pelas notificações.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function __construct(
         private readonly NotificadorInteracoes $notificadorInteracoes,
@@ -106,8 +96,6 @@ final class ControladorComentario extends Controller
      *                               válidos.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function guardar(
         GuardarComentarioRequest $pedido,
@@ -220,8 +208,6 @@ final class ControladorComentario extends Controller
      *                               já não estão disponíveis.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function responder(
         GuardarComentarioRequest $pedido,
@@ -334,6 +320,9 @@ final class ControladorComentario extends Controller
      * autorização é aplicada ao modelo bloqueado, garantindo que a decisão
      * utiliza o estado persistido atual.
      *
+     * Quando o conteúdo normalizado não sofreu alterações, não é executada
+     * qualquer escrita nem atualizado o respetivo timestamp.
+     *
      * @param  AtualizarComentarioRequest  $pedido  Pedido validado.
      * @param  Comentario  $comentario  Comentário atualizado.
      * @return JsonResponse Comentário atualizado.
@@ -341,8 +330,6 @@ final class ControladorComentario extends Controller
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function atualizar(
         AtualizarComentarioRequest $pedido,
@@ -372,9 +359,11 @@ final class ControladorComentario extends Controller
                         $comentarioBloqueado,
                     );
 
-                    $comentarioBloqueado->updateOrFail([
-                        'conteudo' => $conteudo,
-                    ]);
+                    if ($comentarioBloqueado->conteudo !== $conteudo) {
+                        $comentarioBloqueado->updateOrFail([
+                            'conteudo' => $conteudo,
+                        ]);
+                    }
 
                     return $comentarioBloqueado;
                 },
@@ -397,8 +386,8 @@ final class ControladorComentario extends Controller
     /**
      * Elimina logicamente um comentário.
      *
-     * A eliminação lógica preserva a estrutura da conversa quando existem
-     * respostas associadas.
+     * A eliminação lógica preserva a estrutura persistida da conversa quando
+     * existem respostas associadas.
      *
      * A autorização é verificada antes de abrir a transação, evitando obter
      * um bloqueio exclusivo para pedidos que serão rejeitados. Depois da
@@ -411,8 +400,6 @@ final class ControladorComentario extends Controller
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 1.0.0
-     *
-     * @version 3.1.0
      */
     public function eliminar(
         Comentario $comentario,
@@ -456,8 +443,6 @@ final class ControladorComentario extends Controller
      *                               válidos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function resolverComentavel(
         string $tipo,
@@ -492,9 +477,7 @@ final class ControladorComentario extends Controller
      *                                                         comentada.
      * @return MetalThursday|SeccaoMetalThursday Entidade bloqueada.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function bloquearComentavel(
         MetalThursday|SeccaoMetalThursday $comentavel,
@@ -525,9 +508,7 @@ final class ControladorComentario extends Controller
      * @param  Comentario  $comentario  Comentário recebido.
      * @return Comentario Comentário principal bloqueado.
      *
-     * @since 2.1.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function obterComentarioPrincipal(
         Comentario $comentario,
@@ -564,9 +545,7 @@ final class ControladorComentario extends Controller
      * @throws NotFoundHttpException Quando a entidade não é suportada ou já
      *                               não está disponível.
      *
-     * @since 2.1.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function obterComentavelDoComentario(
         Comentario $comentario,
@@ -591,9 +570,7 @@ final class ControladorComentario extends Controller
      *
      * @param  Comentario  $comentario  Comentário carregado.
      *
-     * @since 2.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function carregarComentario(
         Comentario $comentario,
@@ -627,9 +604,7 @@ final class ControladorComentario extends Controller
      *     }|null
      * } Dados do comentário.
      *
-     * @since 2.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function serializarComentario(
         Comentario $comentario,
@@ -682,8 +657,6 @@ final class ControladorComentario extends Controller
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterUtilizadorAutenticado(): Utilizador
     {
