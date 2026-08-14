@@ -14,8 +14,6 @@ use Tests\TestCase;
  * Testa os índices utilizados pela árvore de comentários.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class IndicesComentariosTest extends TestCase
 {
@@ -29,8 +27,6 @@ final class IndicesComentariosTest extends TestCase
      * índices especializados conservam os mesmos prefixos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function possui_indices_para_comentarios_principais_e_respostas(): void

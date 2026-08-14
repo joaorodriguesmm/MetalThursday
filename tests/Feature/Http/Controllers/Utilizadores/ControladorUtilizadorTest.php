@@ -20,8 +20,6 @@ use Tests\TestCase;
  * Testa a consulta administrativa dos utilizadores.
  *
  * @since 2.0.0
- *
- * @version 3.0.0
  */
 final class ControladorUtilizadorTest extends TestCase
 {
@@ -31,8 +29,6 @@ final class ControladorUtilizadorTest extends TestCase
      * Prepara cada teste sem depender dos ficheiros produzidos pelo Vite.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function setUp(): void
     {
@@ -45,8 +41,6 @@ final class ControladorUtilizadorTest extends TestCase
      * Confirma que um visitante é encaminhado para o início de sessão.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function visitante_nao_pode_consultar_os_utilizadores(): void
@@ -68,8 +62,6 @@ final class ControladorUtilizadorTest extends TestCase
      * Confirma que um utilizador comum não pode consultar a área.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function utilizador_comum_nao_pode_consultar_os_utilizadores(): void
@@ -96,8 +88,6 @@ final class ControladorUtilizadorTest extends TestCase
      * superadministrador.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function administrador_nao_pode_consultar_os_utilizadores(): void
@@ -126,8 +116,6 @@ final class ControladorUtilizadorTest extends TestCase
      * Confirma que um superadministrador suspenso perde o acesso à área.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function superadministrador_suspenso_nao_pode_consultar_os_utilizadores(): void
@@ -174,8 +162,6 @@ final class ControladorUtilizadorTest extends TestCase
      * Confirma que um superadministrador consulta a listagem.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function superadministrador_consulta_a_listagem(): void
@@ -233,8 +219,6 @@ final class ControladorUtilizadorTest extends TestCase
      * Confirma a pesquisa pelo nome.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function pesquisa_utilizadores_pelo_nome(): void
@@ -284,8 +268,6 @@ final class ControladorUtilizadorTest extends TestCase
      * Confirma a pesquisa pelo endereço de e-mail.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function pesquisa_utilizadores_pelo_email(): void
@@ -335,8 +317,6 @@ final class ControladorUtilizadorTest extends TestCase
      * Confirma o filtro pelo papel.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function filtra_utilizadores_pelo_papel(): void
@@ -388,8 +368,6 @@ final class ControladorUtilizadorTest extends TestCase
      * Confirma o filtro pelo estado de suspensão.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function filtra_utilizadores_pelo_estado_do_acesso(): void
@@ -445,8 +423,6 @@ final class ControladorUtilizadorTest extends TestCase
      * Confirma que um visitante não pode consultar os detalhes.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function visitante_nao_pode_consultar_os_detalhes(): void
@@ -474,8 +450,6 @@ final class ControladorUtilizadorTest extends TestCase
      * outro utilizador.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function utilizador_comum_nao_pode_consultar_os_detalhes(): void
@@ -506,8 +480,6 @@ final class ControladorUtilizadorTest extends TestCase
      * Confirma os detalhes de um utilizador sem convite nem históricos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function superadministrador_consulta_utilizador_ativo_sem_historico(): void
@@ -570,8 +542,6 @@ final class ControladorUtilizadorTest extends TestCase
      * ordenados.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function apresenta_suspensao_convite_e_historicos_ordenados(): void
@@ -696,8 +666,6 @@ final class ControladorUtilizadorTest extends TestCase
      * carregadas antes da apresentação.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function carrega_explicitamente_as_relacoes_dos_detalhes(): void
@@ -824,8 +792,6 @@ final class ControladorUtilizadorTest extends TestCase
      * Confirma que um identificador inexistente devolve uma resposta 404.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function detalhes_de_utilizador_inexistente_devolvem_nao_encontrado(): void
@@ -857,8 +823,6 @@ final class ControladorUtilizadorTest extends TestCase
      * @return Convite Convite persistido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarConviteUtilizado(
         Utilizador $utilizador,
@@ -903,8 +867,6 @@ final class ControladorUtilizadorTest extends TestCase
      * @return Utilizador Superadministrador criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarSuperAdministrador(): Utilizador
     {

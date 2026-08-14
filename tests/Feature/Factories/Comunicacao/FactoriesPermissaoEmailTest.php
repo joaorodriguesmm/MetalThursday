@@ -14,8 +14,6 @@ use Tests\TestCase;
  * Testa os estados personalizados da factory das permissões de e-mail.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class FactoriesPermissaoEmailTest extends TestCase
 {
@@ -25,8 +23,6 @@ final class FactoriesPermissaoEmailTest extends TestCase
      * Confirma que os estados personalizados são aplicados.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function cria_permissao_com_estados_personalizados(): void
@@ -69,8 +65,6 @@ final class FactoriesPermissaoEmailTest extends TestCase
      * Confirma que a factory utiliza o formato de identificador do modelo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_identificador_com_espacos_interiores(): void
@@ -90,8 +84,6 @@ final class FactoriesPermissaoEmailTest extends TestCase
      * apresentados.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_dados_com_caracteres_de_controlo(): void
@@ -104,6 +96,24 @@ final class FactoriesPermissaoEmailTest extends TestCase
             ->comDados(
                 "Avisos\nsemanais",
                 'Descrição válida.',
+            );
+    }
+
+    /**
+     * Confirma que a factory rejeita uma ordem fora dos limites do modelo.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function rejeita_ordem_invalida(): void
+    {
+        $this->expectException(
+            InvalidArgumentException::class,
+        );
+
+        PermissaoEmail::factory()
+            ->naOrdem(
+                0,
             );
     }
 }

@@ -17,8 +17,6 @@ use Tests\TestCase;
  * Testa a integridade dos papéis persistidos nos utilizadores.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class PapeisUtilizadoresTest extends TestCase
 {
@@ -28,8 +26,6 @@ final class PapeisUtilizadoresTest extends TestCase
      * Nome da restrição aplicada à coluna dos papéis.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const NOME_RESTRICAO =
         'utilizadores_papel_valido_verificacao';
@@ -38,8 +34,6 @@ final class PapeisUtilizadoresTest extends TestCase
      * Confirma que a restrição dos papéis existe na base de dados.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function possui_restricao_dos_papeis(): void
@@ -78,8 +72,6 @@ final class PapeisUtilizadoresTest extends TestCase
      * Confirma que todos os papéis da enumeração podem ser persistidos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function permite_os_papeis_definidos_pela_aplicacao(): void
@@ -120,8 +112,6 @@ final class PapeisUtilizadoresTest extends TestCase
      * @param  string  $papel  Papel inválido testado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     #[DataProvider('fornecerPapeisInvalidos')]
@@ -152,8 +142,6 @@ final class PapeisUtilizadoresTest extends TestCase
      * @return array<string, array{0: string}> Papéis inválidos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public static function fornecerPapeisInvalidos(): array
     {

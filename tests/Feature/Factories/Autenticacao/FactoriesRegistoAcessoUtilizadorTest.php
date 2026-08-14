@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature\Factories\Autenticacao;
 
 use App\Enumeracoes\AcaoAcessoUtilizador;
-use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\RegistoAcessoUtilizador;
 use App\Models\Autenticacao\Utilizador;
-use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
@@ -18,8 +16,6 @@ use Tests\TestCase;
  * Testa os estados da factory dos registos de acesso.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class FactoriesRegistoAcessoUtilizadorTest extends TestCase
 {
@@ -29,8 +25,6 @@ final class FactoriesRegistoAcessoUtilizadorTest extends TestCase
      * Confirma a criação de uma suspensão com relações conhecidas.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function cria_suspensao_com_relacoes_conhecidas(): void
@@ -39,9 +33,6 @@ final class FactoriesRegistoAcessoUtilizadorTest extends TestCase
             ->create();
 
         $responsavel = Utilizador::factory()
-            ->comPapel(
-                PapelUtilizador::SuperAdministrador,
-            )
             ->create();
 
         $registo = RegistoAcessoUtilizador::factory()
@@ -89,8 +80,6 @@ final class FactoriesRegistoAcessoUtilizadorTest extends TestCase
      * Confirma a criação de uma reativação sem motivo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function cria_reativacao_sem_motivo(): void
@@ -118,38 +107,27 @@ final class FactoriesRegistoAcessoUtilizadorTest extends TestCase
     }
 
     /**
-     * Confirma que a data indicada é preservada.
+     * Confirma que um motivo de suspensão inválido é rejeitado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
-    public function preserva_a_data_do_registo(): void
+    public function rejeita_motivo_de_suspensao_invalido(): void
     {
-        $data = CarbonImmutable::parse(
-            '2026-08-03 11:30:00',
+        $this->expectException(
+            InvalidArgumentException::class,
         );
 
-        $registo = RegistoAcessoUtilizador::factory()
-            ->state([
-                'registado_em' => $data,
-            ])
-            ->create();
-
-        self::assertTrue(
-            $data->equalTo(
-                $registo->registado_em,
-            ),
-        );
+        RegistoAcessoUtilizador::factory()
+            ->suspensao(
+                '   ',
+            );
     }
 
     /**
      * Confirma que um utilizador não persistido é rejeitado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_utilizador_afetado_nao_persistido(): void
@@ -168,8 +146,6 @@ final class FactoriesRegistoAcessoUtilizadorTest extends TestCase
      * Confirma que um responsável não persistido é rejeitado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_responsavel_nao_persistido(): void

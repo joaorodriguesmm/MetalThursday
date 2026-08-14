@@ -18,8 +18,6 @@ use Tests\TestCase;
  * Testa a integridade do histórico dos papéis dos utilizadores.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class HistoricoPapeisUtilizadoresTest extends TestCase
 {
@@ -31,8 +29,6 @@ final class HistoricoPapeisUtilizadoresTest extends TestCase
      * @var list<string>
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const RESTRICOES = [
         'registos_papel_papeis_validos_verificacao',
@@ -44,8 +40,6 @@ final class HistoricoPapeisUtilizadoresTest extends TestCase
      * Confirma a estrutura e as restrições do histórico.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function possui_estrutura_e_restricoes_de_integridade(): void
@@ -125,25 +119,14 @@ final class HistoricoPapeisUtilizadoresTest extends TestCase
      * Confirma que uma alteração coerente pode ser persistida.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function permite_um_registo_historico_valido(): void
     {
-        $utilizador =
-            Utilizador::factory()
-                ->comPapel(
-                    PapelUtilizador::Administrador,
-                )
-                ->create();
-
-        $responsavel =
-            Utilizador::factory()
-                ->comPapel(
-                    PapelUtilizador::SuperAdministrador,
-                )
-                ->create();
+        [
+            $utilizador,
+            $responsavel,
+        ] = $this->criarUtilizadorEResponsavel();
 
         DB::table(
             'registos_papel_utilizadores',
@@ -173,8 +156,6 @@ final class HistoricoPapeisUtilizadoresTest extends TestCase
      * @param  string  $valor  Valor inválido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     #[DataProvider('fornecerPapeisInvalidos')]
@@ -182,16 +163,10 @@ final class HistoricoPapeisUtilizadoresTest extends TestCase
         string $campo,
         string $valor,
     ): void {
-        $utilizador =
-            Utilizador::factory()
-                ->create();
-
-        $responsavel =
-            Utilizador::factory()
-                ->comPapel(
-                    PapelUtilizador::SuperAdministrador,
-                )
-                ->create();
+        [
+            $utilizador,
+            $responsavel,
+        ] = $this->criarUtilizadorEResponsavel();
 
         $dados = [
             'utilizador_id' => $utilizador->getKey(),
@@ -219,22 +194,14 @@ final class HistoricoPapeisUtilizadoresTest extends TestCase
      * Confirma que uma alteração sem efeito é rejeitada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_papeis_iguais(): void
     {
-        $utilizador =
-            Utilizador::factory()
-                ->create();
-
-        $responsavel =
-            Utilizador::factory()
-                ->comPapel(
-                    PapelUtilizador::SuperAdministrador,
-                )
-                ->create();
+        [
+            $utilizador,
+            $responsavel,
+        ] = $this->criarUtilizadorEResponsavel();
 
         $this->expectException(
             QueryException::class,
@@ -255,8 +222,6 @@ final class HistoricoPapeisUtilizadoresTest extends TestCase
      * Confirma que o utilizador afetado não pode ser o responsável.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_o_utilizador_como_responsavel_do_proprio_historico(): void
@@ -281,13 +246,61 @@ final class HistoricoPapeisUtilizadoresTest extends TestCase
     }
 
     /**
+     * Confirma que o utilizador afetado por um registo histórico é preservado.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function preserva_o_utilizador_afetado_pelo_historico(): void
+    {
+        [
+            $utilizador,
+            $responsavel,
+        ] = $this->criarUtilizadorEResponsavel();
+
+        $this->criarRegistoHistorico(
+            $utilizador,
+            $responsavel,
+        );
+
+        $this->expectException(
+            QueryException::class,
+        );
+
+        $utilizador->delete();
+    }
+
+    /**
+     * Confirma que o responsável por um registo histórico é preservado.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function preserva_o_responsavel_pelo_historico(): void
+    {
+        [
+            $utilizador,
+            $responsavel,
+        ] = $this->criarUtilizadorEResponsavel();
+
+        $this->criarRegistoHistorico(
+            $utilizador,
+            $responsavel,
+        );
+
+        $this->expectException(
+            QueryException::class,
+        );
+
+        $responsavel->delete();
+    }
+
+    /**
      * Fornece valores incompatíveis com o contrato dos papéis.
      *
      * @return array<string, array{0: string, 1: string}> Valores inválidos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public static function fornecerPapeisInvalidos(): array
     {
@@ -312,5 +325,46 @@ final class HistoricoPapeisUtilizadoresTest extends TestCase
                 'administrador ',
             ],
         ];
+    }
+
+    /**
+     * Cria um utilizador afetado e outro utilizador responsável.
+     *
+     * @return array{0: Utilizador, 1: Utilizador} Utilizadores criados.
+     *
+     * @since 2.0.0
+     */
+    private function criarUtilizadorEResponsavel(): array
+    {
+        return [
+            Utilizador::factory()
+                ->create(),
+
+            Utilizador::factory()
+                ->create(),
+        ];
+    }
+
+    /**
+     * Cria um registo histórico válido entre dois utilizadores.
+     *
+     * @param  Utilizador  $utilizador  Utilizador afetado.
+     * @param  Utilizador  $responsavel  Utilizador responsável.
+     *
+     * @since 2.0.0
+     */
+    private function criarRegistoHistorico(
+        Utilizador $utilizador,
+        Utilizador $responsavel,
+    ): void {
+        DB::table(
+            'registos_papel_utilizadores',
+        )->insert([
+            'utilizador_id' => $utilizador->getKey(),
+            'papel_anterior' => PapelUtilizador::Utilizador->value,
+            'papel_novo' => PapelUtilizador::Administrador->value,
+            'responsavel_id' => $responsavel->getKey(),
+            'registado_em' => now(),
+        ]);
     }
 }

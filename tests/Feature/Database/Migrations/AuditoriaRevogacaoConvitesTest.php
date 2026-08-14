@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Database\Migrations;
 
-use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\Convite;
 use App\Models\Autenticacao\Utilizador;
 use Illuminate\Database\QueryException;
@@ -19,8 +18,6 @@ use Tests\TestCase;
  * Testa a integridade da autoria das revogações dos convites.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class AuditoriaRevogacaoConvitesTest extends TestCase
 {
@@ -30,8 +27,6 @@ final class AuditoriaRevogacaoConvitesTest extends TestCase
      * Nome da restrição de coerência da revogação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const NOME_RESTRICAO =
         'convites_revogacao_responsavel_coerente_verificacao';
@@ -40,8 +35,6 @@ final class AuditoriaRevogacaoConvitesTest extends TestCase
      * Confirma a coluna, a chave estrangeira e a restrição.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function possui_estrutura_de_auditoria_da_revogacao(): void
@@ -105,17 +98,35 @@ final class AuditoriaRevogacaoConvitesTest extends TestCase
     }
 
     /**
+     * Confirma que um convite não revogado não possui data nem responsável.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function permite_data_e_responsavel_ambos_nulos(): void
+    {
+        $convite = Convite::factory()
+            ->create();
+
+        self::assertNull(
+            $convite->revogado_em,
+        );
+
+        self::assertNull(
+            $convite->revogado_por_id,
+        );
+    }
+
+    /**
      * Confirma que uma revogação coerente pode ser persistida.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function permite_data_e_responsavel_em_conjunto(): void
     {
-        $responsavel =
-            $this->criarSuperAdministrador();
+        $responsavel = Utilizador::factory()
+            ->create();
 
         $convite =
             Convite::factory()
@@ -141,8 +152,6 @@ final class AuditoriaRevogacaoConvitesTest extends TestCase
      * @param  bool  $comResponsavel  Indica se o responsável é persistido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     #[DataProvider('fornecerEstadosParciais')]
@@ -150,8 +159,8 @@ final class AuditoriaRevogacaoConvitesTest extends TestCase
         bool $comData,
         bool $comResponsavel,
     ): void {
-        $responsavel =
-            $this->criarSuperAdministrador();
+        $responsavel = Utilizador::factory()
+            ->create();
 
         $this->expectException(
             QueryException::class,
@@ -199,14 +208,12 @@ final class AuditoriaRevogacaoConvitesTest extends TestCase
      * Confirma que o responsável por uma revogação não pode ser eliminado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function preserva_o_responsavel_pela_revogacao(): void
     {
-        $responsavel =
-            $this->criarSuperAdministrador();
+        $responsavel = Utilizador::factory()
+            ->create();
 
         Convite::factory()
             ->revogadoPor(
@@ -227,8 +234,6 @@ final class AuditoriaRevogacaoConvitesTest extends TestCase
      * @return array<string, array{0: bool, 1: bool}> Estados inválidos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public static function fornecerEstadosParciais(): array
     {
@@ -243,23 +248,5 @@ final class AuditoriaRevogacaoConvitesTest extends TestCase
                 true,
             ],
         ];
-    }
-
-    /**
-     * Cria um superadministrador ativo.
-     *
-     * @return Utilizador Superadministrador criado.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private function criarSuperAdministrador(): Utilizador
-    {
-        return Utilizador::factory()
-            ->comPapel(
-                PapelUtilizador::SuperAdministrador,
-            )
-            ->create();
     }
 }

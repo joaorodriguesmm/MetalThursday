@@ -7,6 +7,7 @@ namespace Tests\Feature\Http\Controllers\Interacoes;
 use App\Enumeracoes\Interacoes\TipoEntidadeInteracao;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\MetalThursday;
+use App\Models\MetalThursday\SeccaoMetalThursday;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -18,8 +19,6 @@ use Tests\TestCase;
  * Testa a alternância e a apresentação das audições.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class ControladorAudicaoTest extends TestCase
 {
@@ -30,8 +29,6 @@ final class ControladorAudicaoTest extends TestCase
      * construir o indicador, sem uma consulta adicional.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function adiciona_audicao_sem_consulta_de_contagem_redundante(): void
@@ -126,6 +123,72 @@ final class ControladorAudicaoTest extends TestCase
                 'tipo_audivel' => $metalThursday->getMorphClass(),
 
                 'audivel_id' => $metalThursday->getKey(),
+            ],
+        );
+    }
+
+    /**
+     * Confirma a remoção da audição de uma secção.
+     *
+     * Quando é removida a última audição, o indicador deve regressar ao estado
+     * vazio apresentado pela interface.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function remove_audicao_de_uma_seccao(): void
+    {
+        Notification::fake();
+
+        $utilizador = Utilizador::factory()
+            ->create();
+
+        $seccao = SeccaoMetalThursday::factory()
+            ->create();
+
+        $seccao
+            ->audicoes()
+            ->create([
+                'utilizador_id' => $utilizador->getKey(),
+            ]);
+
+        $this
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
+            ->postJson(
+                route(
+                    'audicoes.alternar',
+                    [
+                        'tipoAudivel' => TipoEntidadeInteracao::SeccaoMetalThursday->value,
+
+                        'identificadorAudivel' => $seccao->getKey(),
+                    ],
+                ),
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'marcado_como_ouvido',
+                false,
+            )
+            ->assertJsonPath(
+                'numero_audicoes',
+                0,
+            )
+            ->assertJsonPath(
+                'conteudo_indicador_html',
+                'Ninguém marcou como ouvido.',
+            );
+
+        $this->assertDatabaseMissing(
+            'audicoes',
+            [
+                'utilizador_id' => $utilizador->getKey(),
+
+                'tipo_audivel' => $seccao->getMorphClass(),
+
+                'audivel_id' => $seccao->getKey(),
             ],
         );
     }

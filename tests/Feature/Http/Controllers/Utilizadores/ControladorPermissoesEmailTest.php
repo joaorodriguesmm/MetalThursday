@@ -15,8 +15,6 @@ use Tests\TestCase;
  * Testa os pedidos HTTP associados às permissões de e-mail.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 final class ControladorPermissoesEmailTest extends TestCase
 {
@@ -28,8 +26,6 @@ final class ControladorPermissoesEmailTest extends TestCase
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const MENSAGEM_SUCESSO =
         'Permissões de e-mail atualizadas com sucesso.';
@@ -38,8 +34,6 @@ final class ControladorPermissoesEmailTest extends TestCase
      * Impede visitantes de atualizarem as permissões de e-mail.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function visitante_nao_pode_atualizar_permissoes_email(): void
@@ -68,8 +62,6 @@ final class ControladorPermissoesEmailTest extends TestCase
      * Substitui as permissões atuais pelas permissões selecionadas.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function atualiza_permissoes_email_selecionadas(): void
@@ -194,8 +186,6 @@ final class ControladorPermissoesEmailTest extends TestCase
      * Remove todas as permissões quando é enviada uma lista vazia.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function lista_vazia_remove_todas_as_permissoes(): void
@@ -298,8 +288,6 @@ final class ControladorPermissoesEmailTest extends TestCase
      * seleção está marcado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function campo_ausente_remove_todas_as_permissoes(): void
@@ -376,8 +364,6 @@ final class ControladorPermissoesEmailTest extends TestCase
      * Rejeita uma permissão inexistente sem alterar as associações atuais.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_permissao_inexistente_sem_alterar_associacoes(): void
@@ -467,8 +453,6 @@ final class ControladorPermissoesEmailTest extends TestCase
      * Rejeita valores que não sejam identificadores inteiros.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_identificador_com_formato_invalido(): void
@@ -546,8 +530,6 @@ final class ControladorPermissoesEmailTest extends TestCase
      * Rejeita um valor que não seja uma lista.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_permissoes_quando_nao_sao_uma_lista(): void
@@ -623,8 +605,6 @@ final class ControladorPermissoesEmailTest extends TestCase
      * Rejeita permissões repetidas.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_permissoes_repetidas(): void
@@ -706,8 +686,6 @@ final class ControladorPermissoesEmailTest extends TestCase
      * @return Utilizador Utilizador criado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function criarUtilizador(): Utilizador
     {
@@ -744,8 +722,6 @@ final class ControladorPermissoesEmailTest extends TestCase
      * @return PermissaoEmail Permissão criada.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function criarPermissaoEmail(
         string $nome,
@@ -781,8 +757,6 @@ final class ControladorPermissoesEmailTest extends TestCase
      * @return list<int> Identificadores ordenados.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterIdentificadoresPermissoes(
         Utilizador $utilizador,

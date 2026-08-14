@@ -4,7 +4,15 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Http\Controllers\Autenticacao;
 
+use App\Models\Autenticacao\Utilizador;
+use Database\Factories\Autenticacao\UtilizadorFactory;
+use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Route as RotaLaravel;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Route;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -13,17 +21,15 @@ use Tests\TestCase;
  * Testa as rotas e os formulários públicos de recuperação da palavra-passe.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class RecuperacaoPalavraPasseTest extends TestCase
 {
+    use RefreshDatabase;
+
     /**
      * Confirma o contrato português das rotas de recuperação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function regista_rotas_portuguesas_de_recuperacao(): void
@@ -68,8 +74,6 @@ final class RecuperacaoPalavraPasseTest extends TestCase
      * Confirma o contrato português das rotas de redefinição.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function regista_rotas_portuguesas_de_redefinicao(): void
@@ -114,8 +118,6 @@ final class RecuperacaoPalavraPasseTest extends TestCase
      * Garante que os nomes antigos não permanecem registados.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function nao_regista_nomes_antigos_das_rotas(): void
@@ -143,8 +145,6 @@ final class RecuperacaoPalavraPasseTest extends TestCase
      * lançava uma exceção ao tentar gerar o endereço do formulário.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function apresenta_formularios_publicos_sem_erros(): void
@@ -166,7 +166,9 @@ final class RecuperacaoPalavraPasseTest extends TestCase
 
         $this
             ->get(
-                route('login'),
+                route(
+                    'login',
+                ),
             )
             ->assertOk()
             ->assertSee(
@@ -213,14 +215,205 @@ final class RecuperacaoPalavraPasseTest extends TestCase
     }
 
     /**
+     * Confirma que o pedido não revela se existe uma conta.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function pedido_de_recuperacao_nao_revela_existencia_da_conta(): void
+    {
+        Notification::fake();
+
+        Utilizador::factory()
+            ->create([
+                'email' => 'existente@example.com',
+            ]);
+
+        $mensagem =
+            'Se existir uma conta associada ao endereço indicado, será enviada uma ligação para redefinir a palavra-passe.';
+
+        $enderecoRecuperacao =
+            route(
+                'autenticacao.recuperar-palavra-passe',
+            );
+
+        $this
+            ->post(
+                route(
+                    'autenticacao.enviar-ligacao-redefinicao',
+                ),
+                [
+                    'email' => 'existente@example.com',
+                ],
+            )
+            ->assertRedirect(
+                $enderecoRecuperacao,
+            )
+            ->assertSessionDoesntHaveErrors()
+            ->assertSessionHas(
+                'informacao',
+                $mensagem,
+            );
+
+        $this
+            ->post(
+                route(
+                    'autenticacao.enviar-ligacao-redefinicao',
+                ),
+                [
+                    'email' => 'inexistente@example.com',
+                ],
+            )
+            ->assertRedirect(
+                $enderecoRecuperacao,
+            )
+            ->assertSessionDoesntHaveErrors()
+            ->assertSessionHas(
+                'informacao',
+                $mensagem,
+            );
+    }
+
+    /**
+     * Confirma a redefinição válida da palavra-passe.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function redefine_a_palavra_passe_com_uma_ligacao_valida(): void
+    {
+        $tokenPersistenteAnterior =
+            'token-persistente-anterior';
+
+        $novaPalavraPasse =
+            'NovaPalavraPasse#2026';
+
+        $utilizador =
+            Utilizador::factory()
+                ->create([
+                    'remember_token' => $tokenPersistenteAnterior,
+                ]);
+
+        $codigoRedefinicao =
+            Password::createToken(
+                $utilizador,
+            );
+
+        Event::fake([
+            PasswordReset::class,
+        ]);
+
+        $this
+            ->post(
+                route(
+                    'autenticacao.atualizar-palavra-passe',
+                ),
+                [
+                    'codigo_redefinicao' => $codigoRedefinicao,
+
+                    'email' => $utilizador->email,
+
+                    'palavra_passe' => $novaPalavraPasse,
+
+                    'confirmacao_palavra_passe' => $novaPalavraPasse,
+                ],
+            )
+            ->assertRedirect(
+                route(
+                    'login',
+                ),
+            )
+            ->assertSessionHas(
+                'sucesso',
+                'A palavra-passe foi redefinida com sucesso.',
+            );
+
+        $utilizador->refresh();
+
+        self::assertTrue(
+            Hash::check(
+                $novaPalavraPasse,
+                $utilizador->password,
+            ),
+        );
+
+        self::assertNotSame(
+            $tokenPersistenteAnterior,
+            $utilizador->getRememberToken(),
+        );
+
+        Event::assertDispatched(
+            PasswordReset::class,
+        );
+    }
+
+    /**
+     * Confirma a resposta segura perante uma ligação inválida.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function rejeita_ligacao_de_redefinicao_invalida(): void
+    {
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $novaPalavraPasse =
+            'NovaPalavraPasse#2026';
+
+        $enderecoFormulario =
+            route(
+                'autenticacao.redefinir-palavra-passe',
+                [
+                    'token' => 'codigo-invalido',
+
+                    'email' => $utilizador->email,
+                ],
+            );
+
+        $this
+            ->from(
+                $enderecoFormulario,
+            )
+            ->post(
+                route(
+                    'autenticacao.atualizar-palavra-passe',
+                ),
+                [
+                    'codigo_redefinicao' => 'codigo-invalido',
+
+                    'email' => $utilizador->email,
+
+                    'palavra_passe' => $novaPalavraPasse,
+
+                    'confirmacao_palavra_passe' => $novaPalavraPasse,
+                ],
+            )
+            ->assertRedirect(
+                $enderecoFormulario,
+            )
+            ->assertSessionHasErrors([
+                'ligacao_redefinicao' => 'A ligação de redefinição é inválida ou já não está disponível. Solicita uma nova ligação.',
+            ]);
+
+        self::assertTrue(
+            Hash::check(
+                UtilizadorFactory::PALAVRA_PASSE_PREDEFINIDA,
+                $utilizador
+                    ->refresh()
+                    ->password,
+            ),
+        );
+    }
+
+    /**
      * Obtém uma rota registada pelo respetivo nome.
      *
      * @param  string  $nome  Nome da rota.
      * @return RotaLaravel Rota registada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function obterRota(
         string $nome,

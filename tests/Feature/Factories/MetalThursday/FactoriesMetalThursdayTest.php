@@ -9,6 +9,7 @@ use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -19,8 +20,6 @@ use Tests\TestCase;
  * Laravel e que os valores normalizados chegam aos modelos persistidos.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class FactoriesMetalThursdayTest extends TestCase
 {
@@ -30,8 +29,6 @@ final class FactoriesMetalThursdayTest extends TestCase
      * Confirma os estados personalizados da factory das edições.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function cria_edicao_com_estados_personalizados(): void
@@ -83,11 +80,75 @@ final class FactoriesMetalThursdayTest extends TestCase
     }
 
     /**
+     * Confirma que o estado em curso não define uma data de fim.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function cria_edicao_em_curso(): void
+    {
+        CarbonImmutable::setTestNow(
+            CarbonImmutable::create(
+                2026,
+                8,
+                14,
+                12,
+            ),
+        );
+
+        try {
+            $edicao = Edicao::factory()
+                ->emCurso()
+                ->create();
+
+            self::assertSame(
+                '2026-07-14',
+                $edicao->data_inicio->toDateString(),
+            );
+
+            self::assertNull(
+                $edicao->data_fim,
+            );
+        } finally {
+            CarbonImmutable::setTestNow();
+        }
+    }
+
+    /**
+     * Confirma que a factory rejeita um período temporal incoerente.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function rejeita_periodo_com_data_final_anterior_ao_inicio(): void
+    {
+        $dataInicio = CarbonImmutable::create(
+            2026,
+            6,
+            1,
+        );
+
+        $dataFim = CarbonImmutable::create(
+            2026,
+            5,
+            31,
+        );
+
+        $this->expectException(
+            InvalidArgumentException::class,
+        );
+
+        Edicao::factory()
+            ->comPeriodo(
+                $dataInicio,
+                $dataFim,
+            );
+    }
+
+    /**
      * Confirma os estados personalizados da factory das MetalThursdays.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function cria_metal_thursday_com_estados_personalizados(): void
@@ -153,5 +214,23 @@ final class FactoriesMetalThursdayTest extends TestCase
             $proximoNomeado->getKey(),
             $metalThursday->proximo_nomeado_id,
         );
+    }
+
+    /**
+     * Confirma que uma edição não persistida não pode ser associada.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function rejeita_edicao_nao_persistida(): void
+    {
+        $this->expectException(
+            InvalidArgumentException::class,
+        );
+
+        MetalThursday::factory()
+            ->comEdicao(
+                new Edicao,
+            );
     }
 }

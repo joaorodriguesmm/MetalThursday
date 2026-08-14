@@ -23,8 +23,6 @@ use Tests\TestCase;
  * Testa o carregamento dos destinatários das notificações de criação.
  *
  * @since 2.0.0
- *
- * @version 1.1.1
  */
 final class NotificacoesCriacaoMetalThursdayTest extends TestCase
 {
@@ -43,8 +41,6 @@ final class NotificacoesCriacaoMetalThursdayTest extends TestCase
      * `Notification::send()`.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     #[Test]
     public function carrega_permissoes_sem_consultas_por_destinatario(): void
@@ -99,10 +95,6 @@ final class NotificacoesCriacaoMetalThursdayTest extends TestCase
                 $controlador,
                 'notificarCriacao',
             );
-
-        $metodo->setAccessible(
-            true,
-        );
 
         $metodo->invoke(
             $controlador,
@@ -171,8 +163,6 @@ final class NotificacoesCriacaoMetalThursdayTest extends TestCase
      *                                                                 esperada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.1
      */
     private function confirmarNotificacaoComPermissoesCarregadas(
         Utilizador $utilizador,
@@ -230,8 +220,6 @@ final class NotificacoesCriacaoMetalThursdayTest extends TestCase
      * @return Utilizador Utilizador persistido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarUtilizadorSelecionavel(): Utilizador
     {

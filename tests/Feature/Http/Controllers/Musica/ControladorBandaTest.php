@@ -16,8 +16,6 @@ use Tests\TestCase;
  * Testa os pedidos HTTP associados às bandas.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class ControladorBandaTest extends TestCase
 {
@@ -27,8 +25,6 @@ final class ControladorBandaTest extends TestCase
      * Prepara cada teste sem depender dos ficheiros produzidos pelo Vite.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function setUp(): void
     {
@@ -42,8 +38,6 @@ final class ControladorBandaTest extends TestCase
      * géneros, respeitando o contrato de atribuição em massa do modelo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function cria_banda_em_json_com_as_relacoes_esperadas(): void
@@ -143,8 +137,6 @@ final class ControladorBandaTest extends TestCase
      * Confirma que o criador pode atualizar os dados e as relações da banda.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function criador_atualiza_banda(): void
@@ -257,8 +249,6 @@ final class ControladorBandaTest extends TestCase
      * receber uma resposta de proibição, e não uma resposta de validação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function utilizador_sem_autorizacao_e_rejeitado_antes_da_validacao(): void
@@ -317,8 +307,6 @@ final class ControladorBandaTest extends TestCase
      * Confirma que apenas o criador pode eliminar a banda.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function utilizador_sem_autorizacao_nao_elimina_banda(): void
@@ -361,13 +349,53 @@ final class ControladorBandaTest extends TestCase
     }
 
     /**
+     * Confirma que o criador pode eliminar logicamente a banda.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function criador_elimina_banda(): void
+    {
+        $criador = $this->criarUtilizador();
+
+        $origemGeografica = $this->criarOrigemGeografica(
+            'Polónia',
+            'PL',
+        );
+
+        $banda = $this->criarBanda(
+            $criador,
+            $origemGeografica,
+            'Behemoth',
+        );
+
+        $this
+            ->actingAs(
+                $criador,
+                'sessao',
+            )
+            ->deleteJson(
+                route(
+                    'bandas.eliminar',
+                    $banda,
+                ),
+            )
+            ->assertNoContent();
+
+        $this->assertSoftDeleted(
+            'bandas',
+            [
+                'id' => $banda->getKey(),
+            ],
+        );
+    }
+
+    /**
      * Cria um utilizador autenticável e verificado.
      *
      * @return Utilizador Utilizador criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarUtilizador(): Utilizador
     {
@@ -383,8 +411,6 @@ final class ControladorBandaTest extends TestCase
      * @return OrigemGeografica Origem criada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarOrigemGeografica(
         string $nome,
@@ -405,8 +431,6 @@ final class ControladorBandaTest extends TestCase
      * @return Genero Género criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarGenero(
         string $nome,
@@ -427,8 +451,6 @@ final class ControladorBandaTest extends TestCase
      * @return Banda Banda criada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarBanda(
         Utilizador $criador,

@@ -18,8 +18,6 @@ use Tests\TestCase;
  * Testa a gestão administrativa dos convites.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class ControladorConviteTest extends TestCase
 {
@@ -29,8 +27,6 @@ final class ControladorConviteTest extends TestCase
      * Prepara cada teste.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function setUp(): void
     {
@@ -43,8 +39,6 @@ final class ControladorConviteTest extends TestCase
      * Repõe o relógio global.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function tearDown(): void
     {
@@ -57,8 +51,6 @@ final class ControladorConviteTest extends TestCase
      * Confirma que um visitante é redirecionado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function visitante_nao_pode_consultar_convites(): void
@@ -80,8 +72,6 @@ final class ControladorConviteTest extends TestCase
      * Confirma que um utilizador comum não pode consultar a área.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function utilizador_comum_nao_pode_consultar_convites(): void
@@ -107,8 +97,6 @@ final class ControladorConviteTest extends TestCase
      * Confirma que um administrador não pode consultar a área.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function administrador_nao_pode_consultar_convites(): void
@@ -134,11 +122,59 @@ final class ControladorConviteTest extends TestCase
     }
 
     /**
+     * Confirma que um administrador não pode criar convites.
+     *
+     * São protegidos tanto o formulário como o processamento da criação.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function administrador_nao_pode_criar_convites(): void
+    {
+        $administrador =
+            Utilizador::factory()
+                ->comPapel(
+                    PapelUtilizador::Administrador,
+                )
+                ->create();
+
+        $this
+            ->actingAs(
+                $administrador,
+                'sessao',
+            )
+            ->get(
+                route(
+                    'convites.criar',
+                ),
+            )
+            ->assertForbidden();
+
+        $this
+            ->actingAs(
+                $administrador,
+                'sessao',
+            )
+            ->post(
+                route(
+                    'convites.guardar',
+                ),
+                [
+                    'nome_convidado' => 'Convite não autorizado',
+                ],
+            )
+            ->assertForbidden();
+
+        $this->assertDatabaseCount(
+            'convites',
+            0,
+        );
+    }
+
+    /**
      * Confirma a apresentação de todos os estados.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function superadministrador_consulta_a_listagem(): void
@@ -252,8 +288,6 @@ final class ControladorConviteTest extends TestCase
      * Confirma a pesquisa pelo nome.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function pesquisa_convites_pelo_nome(): void
@@ -297,8 +331,6 @@ final class ControladorConviteTest extends TestCase
      * Confirma a pesquisa pelo endereço.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function pesquisa_convites_pelo_email(): void
@@ -342,8 +374,6 @@ final class ControladorConviteTest extends TestCase
      * Confirma os filtros por todos os estados.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function filtra_convites_pelo_estado(): void
@@ -441,8 +471,6 @@ final class ControladorConviteTest extends TestCase
      * Confirma o formulário de criação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function apresenta_formulario_de_criacao(): void
@@ -476,8 +504,6 @@ final class ControladorConviteTest extends TestCase
      * Confirma a validação dos dados obrigatórios.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function criacao_exige_nome_valido(): void
@@ -523,8 +549,6 @@ final class ControladorConviteTest extends TestCase
      * Confirma a criação e a apresentação única da ligação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function cria_convite_e_apresenta_a_ligacao_original(): void
@@ -576,6 +600,10 @@ final class ControladorConviteTest extends TestCase
             ->assertHeader(
                 'Referrer-Policy',
                 'no-referrer',
+            )
+            ->assertHeader(
+                'X-Robots-Tag',
+                'noindex, nofollow, noarchive',
             )
             ->assertSeeText(
                 'Helena Metal',
@@ -641,8 +669,6 @@ final class ControladorConviteTest extends TestCase
      * Confirma que destinatário e expiração são opcionais.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function cria_convite_sem_email_nem_expiracao(): void
@@ -686,8 +712,6 @@ final class ControladorConviteTest extends TestCase
      * Confirma que a revogação exige confirmação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function revogacao_exige_confirmacao_explicita(): void
@@ -736,11 +760,51 @@ final class ControladorConviteTest extends TestCase
     }
 
     /**
+     * Confirma que um administrador não pode revogar convites.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function administrador_nao_pode_revogar_convites(): void
+    {
+        $administrador =
+            Utilizador::factory()
+                ->comPapel(
+                    PapelUtilizador::Administrador,
+                )
+                ->create();
+
+        $convite =
+            Convite::factory()
+                ->create();
+
+        $this
+            ->actingAs(
+                $administrador,
+                'sessao',
+            )
+            ->patch(
+                route(
+                    'convites.revogar',
+                    $convite,
+                ),
+                [
+                    'confirmar_revogacao' => '1',
+                ],
+            )
+            ->assertForbidden();
+
+        self::assertFalse(
+            $convite
+                ->refresh()
+                ->foiRevogado(),
+        );
+    }
+
+    /**
      * Confirma a revogação administrativa.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function superadministrador_revoga_convite(): void
@@ -794,8 +858,6 @@ final class ControladorConviteTest extends TestCase
      * Confirma que repetir a revogação não altera a auditoria.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function revogacao_repetida_e_idempotente(): void
@@ -863,8 +925,6 @@ final class ControladorConviteTest extends TestCase
      * Confirma que um convite utilizado não pode ser revogado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function convite_utilizado_nao_pode_ser_revogado(): void
@@ -906,8 +966,6 @@ final class ControladorConviteTest extends TestCase
      * @return Utilizador Superadministrador criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarSuperAdministrador(): Utilizador
     {

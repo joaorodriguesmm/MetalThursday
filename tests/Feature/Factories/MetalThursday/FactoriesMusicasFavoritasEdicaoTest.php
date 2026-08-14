@@ -16,8 +16,6 @@ use Tests\TestCase;
  * Testa os estados personalizados da factory das músicas favoritas.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class FactoriesMusicasFavoritasEdicaoTest extends TestCase
 {
@@ -27,8 +25,6 @@ final class FactoriesMusicasFavoritasEdicaoTest extends TestCase
      * Confirma que todos os estados personalizados são aplicados.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function cria_musica_favorita_com_estados_personalizados(): void
@@ -87,16 +83,20 @@ final class FactoriesMusicasFavoritasEdicaoTest extends TestCase
     }
 
     /**
-     * Confirma que o estado sem registador remove a associação opcional.
+     * Confirma que o estado sem registador remove uma associação anterior.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function cria_musica_favorita_sem_registador(): void
     {
+        $registador = Utilizador::factory()
+            ->create();
+
         $musicaFavorita = MusicaFavoritaEdicao::factory()
+            ->registadaPor(
+                $registador,
+            )
             ->semRegistador()
             ->create();
 
@@ -109,8 +109,6 @@ final class FactoriesMusicasFavoritasEdicaoTest extends TestCase
      * Confirma que a factory utiliza os limites públicos do modelo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_posicao_fora_do_intervalo(): void
@@ -130,8 +128,6 @@ final class FactoriesMusicasFavoritasEdicaoTest extends TestCase
      * modelo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_musica_com_caracteres_de_controlo(): void
@@ -143,6 +139,24 @@ final class FactoriesMusicasFavoritasEdicaoTest extends TestCase
         MusicaFavoritaEdicao::factory()
             ->comMusica(
                 "Música\0inválida",
+            );
+    }
+
+    /**
+     * Confirma que uma edição não persistida não pode ser associada.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function rejeita_edicao_nao_persistida(): void
+    {
+        $this->expectException(
+            InvalidArgumentException::class,
+        );
+
+        MusicaFavoritaEdicao::factory()
+            ->paraEdicao(
+                new Edicao,
             );
     }
 }

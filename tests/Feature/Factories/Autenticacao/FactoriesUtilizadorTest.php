@@ -18,8 +18,6 @@ use Tests\TestCase;
  * Testa os estados personalizados da factory dos utilizadores.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 final class FactoriesUtilizadorTest extends TestCase
 {
@@ -29,8 +27,6 @@ final class FactoriesUtilizadorTest extends TestCase
      * Confirma o estado ativo predefinido dos utilizadores.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function cria_utilizador_com_acesso_ativo_por_predefinicao(): void
@@ -65,8 +61,6 @@ final class FactoriesUtilizadorTest extends TestCase
      * A fotografia é normalizada pelo contrato definitivo do modelo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function cria_utilizador_com_estados_personalizados(): void
@@ -107,8 +101,6 @@ final class FactoriesUtilizadorTest extends TestCase
      * Confirma a criação de um utilizador suspenso.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function cria_utilizador_com_acesso_suspenso(): void
@@ -167,8 +159,6 @@ final class FactoriesUtilizadorTest extends TestCase
      * Confirma que um responsável não persistido é rejeitado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_responsavel_de_suspensao_nao_persistido(): void
@@ -187,8 +177,6 @@ final class FactoriesUtilizadorTest extends TestCase
      * Confirma que um motivo de suspensão vazio é rejeitado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_motivo_de_suspensao_vazio(): void
@@ -214,8 +202,6 @@ final class FactoriesUtilizadorTest extends TestCase
      * Confirma que a factory rejeita uma ligação externa como fotografia.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_fotografia_com_ligacao_externa(): void
@@ -234,8 +220,6 @@ final class FactoriesUtilizadorTest extends TestCase
      * Confirma que a factory rejeita travessia de diretórios.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_fotografia_com_travessia_de_diretorios(): void
@@ -254,8 +238,6 @@ final class FactoriesUtilizadorTest extends TestCase
      * Confirma que um caminho vazio não representa uma fotografia.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_fotografia_vazia(): void

@@ -15,8 +15,6 @@ use Tests\TestCase;
  * Testa os pedidos HTTP associados à alteração da palavra-passe.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 final class ControladorPalavraPasseTest extends TestCase
 {
@@ -28,8 +26,6 @@ final class ControladorPalavraPasseTest extends TestCase
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const PALAVRA_PASSE_ATUAL =
         'PalavraPasse#Atual2026';
@@ -40,8 +36,6 @@ final class ControladorPalavraPasseTest extends TestCase
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const NOVA_PALAVRA_PASSE =
         'NovaPalavraPasse#2026';
@@ -52,8 +46,6 @@ final class ControladorPalavraPasseTest extends TestCase
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const MENSAGEM_SUCESSO =
         'Palavra-passe atualizada com sucesso.';
@@ -62,8 +54,6 @@ final class ControladorPalavraPasseTest extends TestCase
      * Impede visitantes de alterarem a palavra-passe.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function visitante_nao_pode_alterar_palavra_passe(): void
@@ -96,8 +86,6 @@ final class ControladorPalavraPasseTest extends TestCase
      * Altera a palavra-passe e mantém a sessão autenticada.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function altera_palavra_passe_com_sucesso(): void
@@ -182,8 +170,6 @@ final class ControladorPalavraPasseTest extends TestCase
      * A palavra-passe persistida deve permanecer inalterada.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_palavra_passe_atual_incorreta(): void
@@ -254,8 +240,6 @@ final class ControladorPalavraPasseTest extends TestCase
      * Impede a reutilização da palavra-passe atual.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_nova_palavra_passe_igual_a_atual(): void
@@ -328,8 +312,6 @@ final class ControladorPalavraPasseTest extends TestCase
      * Os erros devem ser colocados no saco exclusivo do formulário.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_nova_palavra_passe_insegura(): void
@@ -393,8 +375,6 @@ final class ControladorPalavraPasseTest extends TestCase
      * Rejeita uma confirmação diferente da nova palavra-passe.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_confirmacao_diferente(): void
@@ -458,8 +438,6 @@ final class ControladorPalavraPasseTest extends TestCase
      * Rejeita o pedido quando os campos obrigatórios estão vazios.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_campos_obrigatorios_vazios(): void
@@ -525,8 +503,6 @@ final class ControladorPalavraPasseTest extends TestCase
      * @return Utilizador Utilizador criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarUtilizador(): Utilizador
     {

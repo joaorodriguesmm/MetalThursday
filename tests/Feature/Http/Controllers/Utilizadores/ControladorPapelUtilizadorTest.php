@@ -18,8 +18,6 @@ use Tests\TestCase;
  * preservação da suspensão e a invalidação das autenticações.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class ControladorPapelUtilizadorTest extends TestCase
 {
@@ -29,8 +27,6 @@ final class ControladorPapelUtilizadorTest extends TestCase
      * Prepara cada teste sem depender dos ficheiros produzidos pelo Vite.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function setUp(): void
     {
@@ -43,8 +39,6 @@ final class ControladorPapelUtilizadorTest extends TestCase
      * Confirma que um visitante não pode alterar papéis.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function visitante_nao_pode_alterar_papel(): void
@@ -76,8 +70,6 @@ final class ControladorPapelUtilizadorTest extends TestCase
      * Confirma que um utilizador comum é rejeitado antes da validação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function utilizador_comum_e_rejeitado_antes_da_validacao(): void
@@ -109,8 +101,6 @@ final class ControladorPapelUtilizadorTest extends TestCase
      * Confirma que o superadministrador não pode alterar o próprio papel.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function superadministrador_nao_pode_alterar_o_proprio_papel(): void
@@ -147,8 +137,6 @@ final class ControladorPapelUtilizadorTest extends TestCase
      * Confirma que o novo papel é obrigatório.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function alteracao_exige_um_papel(): void
@@ -205,8 +193,6 @@ final class ControladorPapelUtilizadorTest extends TestCase
      * Confirma que um papel desconhecido é rejeitado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_um_papel_desconhecido(): void
@@ -258,8 +244,6 @@ final class ControladorPapelUtilizadorTest extends TestCase
      * Confirma que a alteração exige confirmação explícita.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function alteracao_exige_confirmacao_explicita(): void
@@ -317,8 +301,6 @@ final class ControladorPapelUtilizadorTest extends TestCase
      * autenticações.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function superadministrador_altera_o_papel_do_utilizador(): void
@@ -438,8 +420,6 @@ final class ControladorPapelUtilizadorTest extends TestCase
      * Confirma que a alteração do papel preserva a suspensão atual.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function altera_o_papel_de_utilizador_suspenso(): void
@@ -520,8 +500,6 @@ final class ControladorPapelUtilizadorTest extends TestCase
      * invalidar as autenticações.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function papel_ja_atribuido_e_rejeitado_sem_efeitos_colaterais(): void
@@ -616,8 +594,6 @@ final class ControladorPapelUtilizadorTest extends TestCase
      * responsável como superadministrador ativo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function alteracao_de_outro_superadministrador_preserva_um_ativo(): void
@@ -684,8 +660,6 @@ final class ControladorPapelUtilizadorTest extends TestCase
      * @return Utilizador Superadministrador criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarSuperAdministrador(): Utilizador
     {
@@ -703,8 +677,6 @@ final class ControladorPapelUtilizadorTest extends TestCase
      * @param  string  $identificador  Identificador da sessão.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarSessao(
         Utilizador $utilizador,

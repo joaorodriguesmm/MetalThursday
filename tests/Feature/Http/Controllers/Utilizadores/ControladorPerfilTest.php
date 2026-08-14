@@ -21,8 +21,6 @@ use Tests\TestCase;
  * Testa os pedidos HTTP associados aos dados gerais do perfil.
  *
  * @since 2.0.0
- *
- * @version 2.1.0
  */
 final class ControladorPerfilTest extends TestCase
 {
@@ -34,8 +32,6 @@ final class ControladorPerfilTest extends TestCase
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const MENSAGEM_PERFIL_ATUALIZADO =
         'O perfil foi atualizado com sucesso.';
@@ -46,8 +42,6 @@ final class ControladorPerfilTest extends TestCase
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const MENSAGEM_EMAIL_ALTERADO =
         'O perfil foi atualizado. Verifica o novo endereço de e-mail antes de iniciares sessão novamente.';
@@ -56,8 +50,6 @@ final class ControladorPerfilTest extends TestCase
      * Disco público falso utilizado pelos testes.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private FilesystemAdapter $discoPublico;
 
@@ -65,8 +57,6 @@ final class ControladorPerfilTest extends TestCase
      * Prepara cada teste.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function setUp(): void
     {
@@ -95,8 +85,6 @@ final class ControladorPerfilTest extends TestCase
      * Impede visitantes de aceder à edição do perfil.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function visitante_nao_pode_aceder_ao_perfil(): void
@@ -125,8 +113,6 @@ final class ControladorPerfilTest extends TestCase
      * selecionadas e qual representa todas as comunicações.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function apresenta_pagina_de_edicao_do_perfil(): void
@@ -225,8 +211,6 @@ final class ControladorPerfilTest extends TestCase
      * Atualiza o nome sem terminar a sessão quando o e-mail não muda.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function atualiza_perfil_sem_alterar_email(): void
@@ -319,8 +303,6 @@ final class ControladorPerfilTest extends TestCase
      * Termina a sessão e envia uma nova verificação quando o e-mail muda.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     #[Test]
     public function alteracao_do_email_termina_sessao_e_envia_verificacao(): void
@@ -397,8 +379,6 @@ final class ControladorPerfilTest extends TestCase
      * Guarda a fotografia nova e elimina a fotografia anterior.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function substitui_fotografia_do_perfil(): void
@@ -496,8 +476,6 @@ final class ControladorPerfilTest extends TestCase
      * Os dados persistidos devem permanecer inalterados.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_dados_invalidos_no_saco_do_perfil(): void
@@ -582,8 +560,6 @@ final class ControladorPerfilTest extends TestCase
      * @return Utilizador Utilizador criado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function criarUtilizador(
         string $nome = 'Utilizador Teste',
@@ -629,8 +605,6 @@ final class ControladorPerfilTest extends TestCase
      * @return PermissaoEmail Permissão criada.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function criarPermissaoEmail(
         string $nome,
@@ -671,8 +645,6 @@ final class ControladorPerfilTest extends TestCase
      * @throws RuntimeException Quando não é possível criar o ficheiro.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function criarFotografiaPngValida(): UploadedFile
     {

@@ -18,8 +18,6 @@ use Tests\TestCase;
  * Testa o início e o encerramento da sessão autenticada.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class ControladorSessaoAutenticadaTest extends TestCase
 {
@@ -29,8 +27,6 @@ final class ControladorSessaoAutenticadaTest extends TestCase
      * Confirma que o formulário de início de sessão está disponível.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function apresenta_o_formulario_de_inicio_de_sessao(): void
@@ -51,8 +47,6 @@ final class ControladorSessaoAutenticadaTest extends TestCase
      * Confirma a autenticação de um utilizador com acesso ativo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function autentica_um_utilizador_com_acesso_ativo(): void
@@ -88,8 +82,6 @@ final class ControladorSessaoAutenticadaTest extends TestCase
      * persistente.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function cria_autenticacao_persistente_quando_solicitada(): void
@@ -129,14 +121,45 @@ final class ControladorSessaoAutenticadaTest extends TestCase
     }
 
     /**
+     * Confirma o encerramento da sessão autenticada.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function termina_a_sessao_autenticada(): void
+    {
+        $utilizador = Utilizador::factory()
+            ->create();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $this
+            ->post(
+                route(
+                    'logout',
+                ),
+            )
+            ->assertRedirect(
+                route(
+                    'login',
+                ),
+            );
+
+        $this->assertGuest(
+            'sessao',
+        );
+    }
+
+    /**
      * Confirma que uma conta suspensa não pode iniciar sessão.
      *
      * Uma tentativa com credenciais corretas não é contabilizada como uma
      * falha de autenticação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_credenciais_validas_de_um_utilizador_suspenso(): void
@@ -210,8 +233,6 @@ final class ControladorSessaoAutenticadaTest extends TestCase
      * suspensa.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function nao_revela_a_suspensao_quando_a_palavra_passe_e_incorreta(): void
@@ -279,8 +300,6 @@ final class ControladorSessaoAutenticadaTest extends TestCase
      * sessão autenticada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_um_utilizador_com_email_nao_verificado(): void
@@ -329,8 +348,6 @@ final class ControladorSessaoAutenticadaTest extends TestCase
      * @return SessionGuard Guard utilizado pela aplicação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function obterGuardaSessao(): SessionGuard
     {
@@ -354,8 +371,6 @@ final class ControladorSessaoAutenticadaTest extends TestCase
      * @return string Chave do limitador.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarChaveLimitacao(
         string $email,
@@ -377,8 +392,6 @@ final class ControladorSessaoAutenticadaTest extends TestCase
      * @return Utilizador Superadministrador criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarSuperAdministrador(): Utilizador
     {

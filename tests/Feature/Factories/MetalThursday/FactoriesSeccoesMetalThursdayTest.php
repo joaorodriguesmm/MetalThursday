@@ -18,8 +18,6 @@ use Tests\TestCase;
  * Testa os estados personalizados das factories de tipos e secções.
  *
  * @since 2.0.0
- *
- * @version 1.1.0
  */
 final class FactoriesSeccoesMetalThursdayTest extends TestCase
 {
@@ -29,8 +27,6 @@ final class FactoriesSeccoesMetalThursdayTest extends TestCase
      * Confirma os estados personalizados da factory dos tipos de secção.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function cria_tipo_seccao_com_estados_personalizados(): void
@@ -73,11 +69,27 @@ final class FactoriesSeccoesMetalThursdayTest extends TestCase
     }
 
     /**
+     * Confirma que o estado sem detalhes remove essa exigência.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function cria_tipo_seccao_sem_detalhes(): void
+    {
+        $tipoSeccao = TipoSeccao::factory()
+            ->comDetalhes()
+            ->semDetalhes()
+            ->create();
+
+        self::assertFalse(
+            $tipoSeccao->exige_detalhes,
+        );
+    }
+
+    /**
      * Confirma os estados personalizados da factory das secções.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function cria_seccao_com_conteudo_e_incorporacao(): void
@@ -175,8 +187,6 @@ final class FactoriesSeccoesMetalThursdayTest extends TestCase
      * sempre um tipo de incorporação correspondente.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     #[Test]
     public function cria_seccao_detalhada_com_dados_validos(): void
@@ -245,8 +255,6 @@ final class FactoriesSeccoesMetalThursdayTest extends TestCase
      * Confirma que a factory rejeita ligações com credenciais incorporadas.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_incorporacao_com_credenciais(): void
@@ -259,6 +267,24 @@ final class FactoriesSeccoesMetalThursdayTest extends TestCase
             ->comIncorporacao(
                 'https://utilizador:segredo@example.com/video',
                 TipoIncorporacao::Ligacao,
+            );
+    }
+
+    /**
+     * Confirma que uma MetalThursday não persistida não pode ser associada.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function rejeita_metal_thursday_nao_persistida(): void
+    {
+        $this->expectException(
+            InvalidArgumentException::class,
+        );
+
+        SeccaoMetalThursday::factory()
+            ->paraMetalThursday(
+                new MetalThursday,
             );
     }
 }

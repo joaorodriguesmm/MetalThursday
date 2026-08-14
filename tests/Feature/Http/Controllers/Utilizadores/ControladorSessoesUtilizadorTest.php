@@ -19,8 +19,6 @@ use Tests\TestCase;
  * das sessões.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class ControladorSessoesUtilizadorTest extends TestCase
 {
@@ -30,8 +28,6 @@ final class ControladorSessoesUtilizadorTest extends TestCase
      * Prepara cada teste sem depender dos ficheiros produzidos pelo Vite.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function setUp(): void
     {
@@ -44,8 +40,6 @@ final class ControladorSessoesUtilizadorTest extends TestCase
      * Confirma que um visitante não pode encerrar sessões.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function visitante_nao_pode_encerrar_sessoes(): void
@@ -75,8 +69,6 @@ final class ControladorSessoesUtilizadorTest extends TestCase
      * Confirma que um utilizador comum é rejeitado antes da validação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function utilizador_comum_e_rejeitado_antes_da_validacao(): void
@@ -109,8 +101,6 @@ final class ControladorSessoesUtilizadorTest extends TestCase
      * sessões através da área administrativa.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function superadministrador_nao_pode_encerrar_as_proprias_sessoes(): void
@@ -155,8 +145,6 @@ final class ControladorSessoesUtilizadorTest extends TestCase
      * Confirma que a operação exige confirmação explícita.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function encerramento_exige_confirmacao_explicita(): void
@@ -220,8 +208,6 @@ final class ControladorSessoesUtilizadorTest extends TestCase
      * Confirma o encerramento seletivo das sessões de um utilizador ativo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function encerra_sessoes_de_utilizador_ativo(): void
@@ -328,8 +314,6 @@ final class ControladorSessoesUtilizadorTest extends TestCase
      * encerradas sem alterar a suspensão.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function encerra_sessoes_de_utilizador_suspenso(): void
@@ -422,8 +406,6 @@ final class ControladorSessoesUtilizadorTest extends TestCase
      * autenticação persistente.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function invalida_token_quando_nao_existem_sessoes(): void
@@ -483,8 +465,6 @@ final class ControladorSessoesUtilizadorTest extends TestCase
      * @return Utilizador Superadministrador criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarSuperAdministrador(): Utilizador
     {
@@ -502,8 +482,6 @@ final class ControladorSessoesUtilizadorTest extends TestCase
      * @param  string  $identificador  Identificador da sessão.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarSessao(
         Utilizador $utilizador,

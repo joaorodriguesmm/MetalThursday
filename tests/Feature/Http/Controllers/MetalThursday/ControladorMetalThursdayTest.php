@@ -16,8 +16,6 @@ use Tests\TestCase;
  * Testa os pedidos HTTP associados às MetalThursdays.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class ControladorMetalThursdayTest extends TestCase
 {
@@ -27,8 +25,6 @@ final class ControladorMetalThursdayTest extends TestCase
      * Prepara cada teste sem depender dos ficheiros produzidos pelo Vite.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function setUp(): void
     {
@@ -42,8 +38,6 @@ final class ControladorMetalThursdayTest extends TestCase
      * edição sem depender de um accessor com consultas implícitas.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function listagem_completa_apresenta_numero_semana_na_edicao(): void
@@ -88,8 +82,6 @@ final class ControladorMetalThursdayTest extends TestCase
      * edição e reutiliza o valor durante toda a renderização.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function detalhes_apresentam_numero_semana_na_edicao(): void
@@ -128,12 +120,63 @@ final class ControladorMetalThursdayTest extends TestCase
     }
 
     /**
+     * Confirma que o utilizador nunca nomeado com precedência alfabética é
+     * apresentado antes dos utilizadores já nomeados.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function obtem_utilizador_ha_mais_tempo_sem_nomeacao(): void
+    {
+        $utilizadorAutenticado = Utilizador::factory()
+            ->create([
+                'nome' => 'Zelda',
+            ]);
+
+        $primeiroNuncaNomeado = Utilizador::factory()
+            ->create([
+                'nome' => 'Ana',
+            ]);
+
+        Utilizador::factory()
+            ->create([
+                'nome' => 'Beatriz',
+            ]);
+
+        $utilizadorJaNomeado = Utilizador::factory()
+            ->create([
+                'nome' => 'Carlos',
+            ]);
+
+        $this->actingAs(
+            $utilizadorAutenticado,
+            'sessao',
+        );
+
+        $this->criarMetalThursday(
+            $this->criarEdicao(),
+            $utilizadorJaNomeado,
+            '2026-01-01',
+        );
+
+        $this
+            ->getJson(
+                route(
+                    'utilizadores.ha-mais-tempo-sem-nomeacao',
+                ),
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'identificador',
+                $primeiroNuncaNomeado->getKey(),
+            );
+    }
+
+    /**
      * Confirma que um utilizador sem autorização não elimina a
      * MetalThursday.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function utilizador_sem_autorizacao_nao_elimina_metal_thursday(): void
@@ -174,13 +217,49 @@ final class ControladorMetalThursdayTest extends TestCase
     }
 
     /**
+     * Confirma que o criador pode eliminar logicamente a MetalThursday.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function criador_elimina_metal_thursday(): void
+    {
+        $criador = $this->criarUtilizador();
+
+        $this->actingAs(
+            $criador,
+            'sessao',
+        );
+
+        $metalThursday = $this->criarMetalThursday(
+            $this->criarEdicao(),
+            $criador,
+            '2026-01-01',
+        );
+
+        $this
+            ->deleteJson(
+                route(
+                    'metal-thursday.eliminar',
+                    $metalThursday,
+                ),
+            )
+            ->assertNoContent();
+
+        $this->assertSoftDeleted(
+            'metal_thursdays',
+            [
+                'id' => $metalThursday->getKey(),
+            ],
+        );
+    }
+
+    /**
      * Cria um utilizador autenticável e verificado.
      *
      * @return Utilizador Utilizador criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarUtilizador(): Utilizador
     {
@@ -194,8 +273,6 @@ final class ControladorMetalThursdayTest extends TestCase
      * @return Edicao Edição criada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarEdicao(): Edicao
     {
@@ -223,8 +300,6 @@ final class ControladorMetalThursdayTest extends TestCase
      * @return MetalThursday MetalThursday criada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarMetalThursday(
         Edicao $edicao,

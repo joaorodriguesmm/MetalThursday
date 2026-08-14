@@ -14,22 +14,77 @@ use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 /**
- * Testa as operações HTTP de atualização e eliminação das edições.
+ * Testa as principais operações HTTP de escrita das edições.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class ControladorEdicaoTest extends TestCase
 {
     use RefreshDatabase;
 
     /**
+     * Confirma que um administrador cria uma edição.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function administrador_cria_edicao(): void
+    {
+        $administrador = $this->criarAdministrador();
+
+        $this
+            ->actingAs(
+                $administrador,
+                'sessao',
+            )
+            ->postJson(
+                route(
+                    'edicoes.guardar',
+                ),
+                [
+                    'nome' => '  Edição   criada  ',
+
+                    'data_inicio' => '2026-03-01',
+
+                    'data_fim' => '',
+                ],
+            )
+            ->assertCreated()
+            ->assertJsonPath(
+                'mensagem',
+                'Edição criada com sucesso.',
+            )
+            ->assertJsonPath(
+                'edicao.nome',
+                'Edição criada',
+            )
+            ->assertJsonPath(
+                'edicao.data_inicio',
+                '2026-03-01',
+            )
+            ->assertJsonPath(
+                'edicao.data_fim',
+                null,
+            );
+
+        $this->assertDatabaseHas(
+            'edicoes',
+            [
+                'nome' => 'Edição criada',
+
+                'data_inicio' => '2026-03-01',
+
+                'data_fim' => null,
+
+                'deleted_at' => null,
+            ],
+        );
+    }
+
+    /**
      * Confirma que um administrador atualiza os dados principais da edição.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function administrador_atualiza_edicao(): void
@@ -87,11 +142,98 @@ final class ControladorEdicaoTest extends TestCase
     }
 
     /**
+     * Confirma que um administrador guarda as músicas favoritas de um
+     * utilizador.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function administrador_guarda_musicas_favoritas(): void
+    {
+        $edicao = $this->criarEdicao();
+
+        $administrador = $this->criarAdministrador();
+
+        $utilizador = Utilizador::factory()
+            ->create();
+
+        $this
+            ->actingAs(
+                $administrador,
+                'sessao',
+            )
+            ->postJson(
+                route(
+                    'edicoes.musicas-favoritas.guardar',
+                    $edicao,
+                ),
+                [
+                    'musicas_favoritas' => [
+                        $utilizador->getKey() => [
+                            "  Banda\t—\nPrimeira música  ",
+                            'Segunda música',
+                            '',
+                        ],
+                    ],
+                ],
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'mensagem',
+                'Músicas favoritas guardadas com sucesso.',
+            );
+
+        $this->assertDatabaseCount(
+            'musicas_favoritas_edicao',
+            2,
+        );
+
+        $this->assertDatabaseHas(
+            'musicas_favoritas_edicao',
+            [
+                'edicao_id' => $edicao->getKey(),
+
+                'utilizador_id' => $utilizador->getKey(),
+
+                'posicao' => 1,
+
+                'musica' => 'Banda — Primeira música',
+
+                'registado_por_id' => $administrador->getKey(),
+            ],
+        );
+
+        $this->assertDatabaseHas(
+            'musicas_favoritas_edicao',
+            [
+                'edicao_id' => $edicao->getKey(),
+
+                'utilizador_id' => $utilizador->getKey(),
+
+                'posicao' => 2,
+
+                'musica' => 'Segunda música',
+
+                'registado_por_id' => $administrador->getKey(),
+            ],
+        );
+
+        $this->assertDatabaseMissing(
+            'musicas_favoritas_edicao',
+            [
+                'edicao_id' => $edicao->getKey(),
+
+                'utilizador_id' => $utilizador->getKey(),
+
+                'posicao' => 3,
+            ],
+        );
+    }
+
+    /**
      * Confirma que um utilizador comum não elimina uma edição.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function utilizador_comum_nao_elimina_edicao(): void
@@ -128,8 +270,6 @@ final class ControladorEdicaoTest extends TestCase
      * Confirma que uma edição sem MetalThursdays pode ser eliminada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function administrador_elimina_edicao_vazia(): void
@@ -163,8 +303,6 @@ final class ControladorEdicaoTest extends TestCase
      * Confirma que uma edição com MetalThursdays não pode ser eliminada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function administrador_nao_elimina_edicao_com_metal_thursdays(): void
@@ -213,8 +351,6 @@ final class ControladorEdicaoTest extends TestCase
      * Confirma que um administrador atualiza a ligação da compilação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function administrador_atualiza_ligacao_compilacao(): void
@@ -261,8 +397,6 @@ final class ControladorEdicaoTest extends TestCase
      * @return Edicao Edição criada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarEdicao(): Edicao
     {
@@ -287,8 +421,6 @@ final class ControladorEdicaoTest extends TestCase
      * @return Utilizador Administrador criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarAdministrador(): Utilizador
     {

@@ -12,8 +12,6 @@ use Tests\TestCase;
  * Confirma que os testes utilizam um ambiente e uma base de dados isolados.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 final class AmbienteTestesTest extends TestCase
 {
@@ -21,8 +19,6 @@ final class AmbienteTestesTest extends TestCase
      * Confirma o ambiente, a ligação e a base de dados utilizados nos testes.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function utiliza_o_ambiente_e_a_base_de_dados_exclusivos_dos_testes(): void

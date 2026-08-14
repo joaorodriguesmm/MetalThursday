@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Factories\Autenticacao;
 
-use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\Convite;
 use App\Models\Autenticacao\Utilizador;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -16,8 +15,6 @@ use Tests\TestCase;
  * Testa os estados personalizados da factory dos convites.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 final class FactoriesConviteTest extends TestCase
 {
@@ -29,8 +26,6 @@ final class FactoriesConviteTest extends TestCase
      * O estado utilizado deve também remover qualquer revogação anterior.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function cria_convite_utilizado_com_codigo_e_relacoes_conhecidas(): void
@@ -43,7 +38,8 @@ final class FactoriesConviteTest extends TestCase
                 ->create();
 
         $responsavelRevogacao =
-            $this->criarSuperAdministrador();
+            Utilizador::factory()
+                ->create();
 
         $utilizador =
             Utilizador::factory()
@@ -102,8 +98,6 @@ final class FactoriesConviteTest extends TestCase
      * Confirma a remoção do destinatário e do prazo de expiração.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function cria_convite_sem_destinatario_nem_expiracao(): void
@@ -131,8 +125,6 @@ final class FactoriesConviteTest extends TestCase
      * Confirma que o estado expirado produz um convite indisponível.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function cria_convite_expirado_e_pendente(): void
@@ -167,14 +159,13 @@ final class FactoriesConviteTest extends TestCase
      * Confirma que o estado revogado conserva o responsável.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function cria_convite_revogado_e_nao_utilizado(): void
     {
         $responsavel =
-            $this->criarSuperAdministrador();
+            Utilizador::factory()
+                ->create();
 
         $convite =
             Convite::factory()
@@ -218,8 +209,6 @@ final class FactoriesConviteTest extends TestCase
      * Confirma que um criador não persistido não pode ser associado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_criador_nao_persistido(): void
@@ -238,8 +227,6 @@ final class FactoriesConviteTest extends TestCase
      * Confirma que um responsável não persistido não pode ser associado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_responsavel_revogacao_nao_persistido(): void
@@ -255,20 +242,20 @@ final class FactoriesConviteTest extends TestCase
     }
 
     /**
-     * Cria um superadministrador ativo.
-     *
-     * @return Utilizador Superadministrador criado.
+     * Confirma que um utilizador não persistido não pode utilizar o convite.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
-    private function criarSuperAdministrador(): Utilizador
+    #[Test]
+    public function rejeita_utilizador_nao_persistido(): void
     {
-        return Utilizador::factory()
-            ->comPapel(
-                PapelUtilizador::SuperAdministrador,
-            )
-            ->create();
+        $this->expectException(
+            InvalidArgumentException::class,
+        );
+
+        Convite::factory()
+            ->utilizadoPor(
+                new Utilizador,
+            );
     }
 }

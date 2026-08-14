@@ -14,8 +14,6 @@ use Tests\TestCase;
  * Testa os pedidos HTTP associados aos géneros musicais.
  *
  * @since 2.0.0
- *
- * @version 1.1.0
  */
 final class ControladorGeneroTest extends TestCase
 {
@@ -25,8 +23,6 @@ final class ControladorGeneroTest extends TestCase
      * Prepara cada teste sem depender dos ficheiros produzidos pelo Vite.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function setUp(): void
     {
@@ -44,8 +40,6 @@ final class ControladorGeneroTest extends TestCase
      * permanece presente e pode ser normalizado para uma lista vazia.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function formulario_de_criacao_inclui_campo_oculto_dos_generos_pais(): void
@@ -89,8 +83,6 @@ final class ControladorGeneroTest extends TestCase
      * normalização, produzindo uma lista vazia válida.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function cria_genero_sem_generos_pais(): void
@@ -151,8 +143,6 @@ final class ControladorGeneroTest extends TestCase
      * resposta deve apresentar explicitamente uma lista vazia.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function cria_genero_em_json_com_as_relacoes_esperadas(): void
@@ -214,8 +204,6 @@ final class ControladorGeneroTest extends TestCase
      * Confirma que o criador pode atualizar o género.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function criador_atualiza_genero(): void
@@ -278,8 +266,6 @@ final class ControladorGeneroTest extends TestCase
      * receber uma resposta de proibição, e não uma resposta de validação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function utilizador_sem_autorizacao_e_rejeitado_antes_da_validacao(): void
@@ -333,8 +319,6 @@ final class ControladorGeneroTest extends TestCase
      * Confirma que apenas o criador pode eliminar o género.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function utilizador_sem_autorizacao_nao_elimina_genero(): void
@@ -374,13 +358,51 @@ final class ControladorGeneroTest extends TestCase
     }
 
     /**
+     * Confirma que o criador pode eliminar logicamente o género.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function criador_elimina_genero(): void
+    {
+        $criador = $this->criarUtilizador();
+
+        $genero = $this
+            ->actingAs(
+                $criador,
+                'sessao',
+            )
+            ->criarGenero(
+                'Thrash Metal',
+            );
+
+        $this
+            ->actingAs(
+                $criador,
+                'sessao',
+            )
+            ->deleteJson(
+                route(
+                    'generos.eliminar',
+                    $genero,
+                ),
+            )
+            ->assertNoContent();
+
+        $this->assertSoftDeleted(
+            'generos',
+            [
+                'id' => $genero->getKey(),
+            ],
+        );
+    }
+
+    /**
      * Cria um utilizador autenticável e verificado.
      *
      * @return Utilizador Utilizador criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarUtilizador(): Utilizador
     {
@@ -395,8 +417,6 @@ final class ControladorGeneroTest extends TestCase
      * @return Genero Género criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarGenero(
         string $nome,

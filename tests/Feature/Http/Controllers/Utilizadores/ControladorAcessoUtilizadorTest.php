@@ -20,8 +20,6 @@ use Tests\TestCase;
  * fluxo HTTP real.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class ControladorAcessoUtilizadorTest extends TestCase
 {
@@ -31,8 +29,6 @@ final class ControladorAcessoUtilizadorTest extends TestCase
      * Prepara cada teste sem depender dos ficheiros produzidos pelo Vite.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function setUp(): void
     {
@@ -45,8 +41,6 @@ final class ControladorAcessoUtilizadorTest extends TestCase
      * Confirma que um visitante não pode suspender um utilizador.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function visitante_nao_pode_suspender_utilizador(): void
@@ -76,8 +70,6 @@ final class ControladorAcessoUtilizadorTest extends TestCase
      * Confirma que um utilizador comum é rejeitado antes da validação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function utilizador_comum_e_rejeitado_antes_da_validacao_da_suspensao(): void
@@ -109,8 +101,6 @@ final class ControladorAcessoUtilizadorTest extends TestCase
      * Confirma que o superadministrador não pode suspender o próprio acesso.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function superadministrador_nao_pode_suspender_o_proprio_acesso(): void
@@ -145,8 +135,6 @@ final class ControladorAcessoUtilizadorTest extends TestCase
      * Confirma que o motivo da suspensão é obrigatório.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function suspensao_exige_um_motivo(): void
@@ -200,8 +188,6 @@ final class ControladorAcessoUtilizadorTest extends TestCase
      * Confirma que um superadministrador suspende um utilizador.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function superadministrador_suspende_utilizador(): void
@@ -284,8 +270,6 @@ final class ControladorAcessoUtilizadorTest extends TestCase
      * através do mesmo formulário.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function utilizador_ja_suspenso_nao_pode_ser_suspenso_novamente(): void
@@ -321,8 +305,6 @@ final class ControladorAcessoUtilizadorTest extends TestCase
      * Confirma que a reativação exige confirmação explícita.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function reativacao_exige_confirmacao_explicita(): void
@@ -379,8 +361,6 @@ final class ControladorAcessoUtilizadorTest extends TestCase
      * Confirma que um superadministrador reativa um utilizador.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function superadministrador_reativa_utilizador(): void
@@ -468,8 +448,6 @@ final class ControladorAcessoUtilizadorTest extends TestCase
      * Confirma que um utilizador ativo não pode ser reativado novamente.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function utilizador_ativo_nao_pode_ser_reativado(): void
@@ -504,8 +482,6 @@ final class ControladorAcessoUtilizadorTest extends TestCase
      * @return Utilizador Superadministrador criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarSuperAdministrador(): Utilizador
     {

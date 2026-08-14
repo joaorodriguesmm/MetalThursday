@@ -18,8 +18,6 @@ use Tests\TestCase;
  * Testa a alternância e a apresentação dos gostos dos comentários.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class ControladorGostoTest extends TestCase
 {
@@ -30,8 +28,6 @@ final class ControladorGostoTest extends TestCase
      * número de gostos, sem executar uma contagem adicional.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function adiciona_gosto_sem_consulta_de_contagem_redundante(): void
@@ -127,11 +123,9 @@ final class ControladorGostoTest extends TestCase
 
     /**
      * Confirma que a segunda alternância remove o gosto e devolve o indicador
-     * vazio.
+     * vazio sem gerar uma nova notificação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function remove_gosto_e_devolve_contagem_zero(): void
@@ -191,14 +185,14 @@ final class ControladorGostoTest extends TestCase
                 'utilizador_id' => $utilizador->getKey(),
             ],
         );
+
+        Notification::assertNothingSent();
     }
 
     /**
      * Confirma que a lista preserva contas diferentes com o mesmo nome.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function lista_utilizadores_sem_remover_nomes_repetidos(): void
@@ -263,8 +257,6 @@ final class ControladorGostoTest extends TestCase
      * @return Comentario Comentário criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarComentario(
         Utilizador $autor,

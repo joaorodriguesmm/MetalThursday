@@ -14,8 +14,6 @@ use Tests\TestCase;
  * Testa os índices utilizados pelas consultas das notificações.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class IndicesNotificacoesTest extends TestCase
 {
@@ -29,8 +27,6 @@ final class IndicesNotificacoesTest extends TestCase
      * aplicação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function possui_indices_para_leitura_e_ordenacao(): void
