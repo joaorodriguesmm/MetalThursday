@@ -21,21 +21,20 @@ use LogicException;
  * conteúdo antes da persistência, protegendo outros pontos de entrada.
  *
  * @since 2.0.0
- *
- * @version 2.1.0
  */
 abstract class PedidoComentarioRequest extends FormRequest
 {
     /**
      * Normaliza o conteúdo antes da validação.
      *
-     * Os finais de linha são convertidos para o formato Unix e os espaços
-     * exteriores são removidos. Os espaços e as quebras de linha interiores
-     * são preservados.
+     * Os finais de linha são convertidos para o formato Unix. Os espaços,
+     * tabulações e quebras de linha exteriores são removidos, preservando os
+     * restantes caracteres para que a validação possa rejeitá-los quando
+     * necessário.
+     *
+     * Os espaços e as quebras de linha interiores são preservados.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function prepareForValidation(): void
     {
@@ -60,8 +59,6 @@ abstract class PedidoComentarioRequest extends FormRequest
      * @return array<string, list<string|Closure>> Regras de validação.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function rules(): array
     {
@@ -81,8 +78,6 @@ abstract class PedidoComentarioRequest extends FormRequest
                  * @param  Closure(string): void  $falhar  Função de erro.
                  *
                  * @since 2.0.0
-                 *
-                 * @version 1.0.0
                  */
                 static function (
                     string $atributo,
@@ -127,8 +122,6 @@ abstract class PedidoComentarioRequest extends FormRequest
      * @return array<string, string> Mensagens de validação.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function messages(): array
     {
@@ -150,8 +143,6 @@ abstract class PedidoComentarioRequest extends FormRequest
      * @return array<string, string> Nomes legíveis dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function attributes(): array
     {
@@ -169,8 +160,6 @@ abstract class PedidoComentarioRequest extends FormRequest
      *                        string não vazia.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     final public function obterConteudo(): string
     {
@@ -197,8 +186,6 @@ abstract class PedidoComentarioRequest extends FormRequest
      * @return string Conteúdo normalizado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarConteudo(
         string $conteudo,
@@ -212,6 +199,7 @@ abstract class PedidoComentarioRequest extends FormRequest
                 "\n",
                 $conteudo,
             ),
+            " \t\n",
         );
     }
 }

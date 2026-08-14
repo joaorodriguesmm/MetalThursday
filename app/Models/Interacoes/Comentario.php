@@ -39,14 +39,12 @@ use InvalidArgumentException;
  * @property int $quantidade_gostos
  * @property bool $gostado_pelo_utilizador_autenticado
  * @property-read Utilizador|null $utilizador
- * @property-read MetalThursday|SeccaoMetalThursday $comentavel
+ * @property-read MetalThursday|SeccaoMetalThursday|null $comentavel
  * @property-read Comentario|null $comentarioPai
  * @property-read Collection<int, Comentario> $respostas
  * @property-read Collection<int, Gosto> $gostos
  *
  * @since 1.0.0
- *
- * @version 3.1.0
  */
 class Comentario extends Model
 {
@@ -56,8 +54,6 @@ class Comentario extends Model
      * Comprimento mínimo permitido para o conteúdo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const COMPRIMENTO_MINIMO_CONTEUDO = 1;
 
@@ -67,8 +63,6 @@ class Comentario extends Model
      * Este valor coincide com a restrição definida na base de dados.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const COMPRIMENTO_MAXIMO_CONTEUDO = 2000;
 
@@ -78,8 +72,6 @@ class Comentario extends Model
      * @var string
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     protected $table = 'comentarios';
 
@@ -93,8 +85,6 @@ class Comentario extends Model
      * @var list<string>
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     protected $fillable = [
         'utilizador_id',
@@ -111,8 +101,6 @@ class Comentario extends Model
      * @return array<string, string> Conversões dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function casts(): array
     {
@@ -132,17 +120,16 @@ class Comentario extends Model
     /**
      * Normaliza e valida o conteúdo do comentário.
      *
-     * As quebras de linha são preservadas num formato uniforme. Os espaços
-     * exteriores são removidos, mas o conteúdo interior não é comprimido para
-     * permitir parágrafos e formatação textual simples.
+     * As quebras de linha são preservadas num formato uniforme. Espaços
+     * ASCII, tabulações e quebras de linha exteriores são removidos, mas o
+     * conteúdo interior não é comprimido para permitir parágrafos e
+     * formatação textual simples.
      *
      * @return Attribute<string, string> Atributo do conteúdo.
      *
      * @throws InvalidArgumentException Quando o conteúdo não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function conteudo(): Attribute
     {
@@ -189,6 +176,7 @@ class Comentario extends Model
 
                 $conteudoNormalizado = trim(
                     $conteudoNormalizado,
+                    " \t\n",
                 );
 
                 $comprimento = mb_strlen(
@@ -229,8 +217,6 @@ class Comentario extends Model
      * @return BelongsTo<Utilizador, $this> Relação com o utilizador.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function utilizador(): BelongsTo
     {
@@ -248,11 +234,12 @@ class Comentario extends Model
      * - `metal_thursday`;
      * - `seccao_metal_thursday`.
      *
+     * A relação pode devolver nulo quando a entidade foi eliminada
+     * logicamente e não foi incluída explicitamente na consulta.
+     *
      * @return MorphTo<Model, $this> Relação com a entidade comentada.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function comentavel(): MorphTo
     {
@@ -272,8 +259,6 @@ class Comentario extends Model
      * @return BelongsTo<Comentario, $this> Relação com o comentário pai.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function comentarioPai(): BelongsTo
     {
@@ -291,8 +276,6 @@ class Comentario extends Model
      * @return HasMany<Comentario, $this> Relação com as respostas.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function respostas(): HasMany
     {
@@ -308,8 +291,6 @@ class Comentario extends Model
      * @return HasMany<Gosto, $this> Relação com os gostos.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function gostos(): HasMany
     {
@@ -328,8 +309,6 @@ class Comentario extends Model
      * @return Builder<Comentario> Consulta filtrada.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     public function scopePrincipais(
         Builder $construtor,
@@ -349,8 +328,6 @@ class Comentario extends Model
      * @return Builder<Comentario> Consulta ordenada.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     public function scopeOrdenadosCronologicamente(
         Builder $construtor,
@@ -377,9 +354,7 @@ class Comentario extends Model
      *
      * @throws InvalidArgumentException Quando o identificador não é positivo.
      *
-     * @since 3.0.0
-     *
-     * @version 1.1.0
+     * @since 2.0.0
      */
     public function scopeComDadosApresentacao(
         Builder $construtor,

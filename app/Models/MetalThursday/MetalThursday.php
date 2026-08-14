@@ -33,7 +33,8 @@ use InvalidArgumentException;
  * próximo utilizador nomeado, contém várias secções e suporta comentários,
  * avaliações e registos de audição através de relações polimórficas.
  *
- * A data é única em toda a aplicação, conforme garantido pela base de dados.
+ * A data é única em toda a aplicação, incluindo entre registos eliminados
+ * logicamente, conforme garantido pela base de dados.
  *
  * @property int $id
  * @property string|null $nome
@@ -60,8 +61,6 @@ use InvalidArgumentException;
  * @property-read bool $ouvido_pelo_utilizador_autenticado
  *
  * @since 1.0.0
- *
- * @version 3.1.0
  */
 class MetalThursday extends Model
 {
@@ -78,8 +77,6 @@ class MetalThursday extends Model
      * Comprimento máximo permitido para o nome.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const COMPRIMENTO_MAXIMO_NOME = 255;
 
@@ -87,8 +84,6 @@ class MetalThursday extends Model
      * Alias do número sequencial da MetalThursday dentro da edição.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const COLUNA_NUMERO_SEMANA_NA_EDICAO =
         'numero_semana_na_edicao';
@@ -97,8 +92,6 @@ class MetalThursday extends Model
      * Alias utilizado pela subconsulta que calcula a posição na edição.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const ALIAS_METAL_THURSDAYS_ANTERIORES =
         'metal_thursdays_anteriores';
@@ -109,8 +102,6 @@ class MetalThursday extends Model
      * @var string
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     protected $table = 'metal_thursdays';
 
@@ -126,8 +117,6 @@ class MetalThursday extends Model
      * @var list<string>
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     protected $fillable = [
         'nome',
@@ -143,8 +132,6 @@ class MetalThursday extends Model
      * @return array<string, string> Conversões dos atributos.
      *
      * @since 1.0.0
-     *
-     * @version 3.1.0
      */
     protected function casts(): array
     {
@@ -171,8 +158,6 @@ class MetalThursday extends Model
      * @return MetalThursdayFactory Factory das MetalThursdays.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected static function newFactory(): MetalThursdayFactory
     {
@@ -191,8 +176,6 @@ class MetalThursday extends Model
      * @throws InvalidArgumentException Quando o nome não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function nome(): Attribute
     {
@@ -279,8 +262,6 @@ class MetalThursday extends Model
      * @return BelongsTo<Edicao, $this> Relação com a edição.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function edicao(): BelongsTo
     {
@@ -301,8 +282,6 @@ class MetalThursday extends Model
      * @return BelongsTo<Utilizador, $this> Relação com o autor.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function autor(): BelongsTo
     {
@@ -321,8 +300,6 @@ class MetalThursday extends Model
      * @return BelongsTo<Utilizador, $this> Relação com o próximo nomeado.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function proximoNomeado(): BelongsTo
     {
@@ -343,8 +320,6 @@ class MetalThursday extends Model
      * @return HasMany<SeccaoMetalThursday, $this> Relação com as secções.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function seccoes(): HasMany
     {
@@ -374,8 +349,6 @@ class MetalThursday extends Model
      * @return Builder<MetalThursday> Consulta com o agregado acrescentado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function scopeComNumeroSemanaNaEdicao(
         Builder $construtor,
@@ -432,8 +405,6 @@ class MetalThursday extends Model
      * @return $this Modelo com o número da semana carregado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function carregarNumeroSemanaNaEdicao(): self
     {

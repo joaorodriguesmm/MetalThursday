@@ -6,6 +6,7 @@ namespace App\Http\Requests\Interacoes;
 
 use App\Models\Autenticacao\Utilizador;
 use App\Models\Interacoes\Avaliacao;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use LogicException;
 
@@ -17,8 +18,6 @@ use LogicException;
  * o pedido HTTP, enquanto o modelo volta a proteger a persistência.
  *
  * @since 1.0.0
- *
- * @version 3.1.0
  */
 final class GuardarAvaliacaoRequest extends FormRequest
 {
@@ -32,8 +31,6 @@ final class GuardarAvaliacaoRequest extends FormRequest
      * @return bool Verdadeiro quando existe um utilizador autenticado válido.
      *
      * @since 1.0.0
-     *
-     * @version 2.1.0
      */
     public function authorize(): bool
     {
@@ -48,9 +45,11 @@ final class GuardarAvaliacaoRequest extends FormRequest
      * É aceite uma vírgula como separador decimal, convertendo-a para o ponto
      * utilizado internamente pelo sistema.
      *
-     * @since 2.0.0
+     * Apenas espaços ASCII exteriores são removidos. Valores com caracteres
+     * de controlo permanecem inalterados para que a validação os rejeite sem
+     * os remover silenciosamente.
      *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     protected function prepareForValidation(): void
     {
@@ -62,12 +61,22 @@ final class GuardarAvaliacaoRequest extends FormRequest
             return;
         }
 
+        if (
+            preg_match(
+                '/[\x00-\x1F\x7F]/',
+                $pontuacao,
+            ) === 1
+        ) {
+            return;
+        }
+
         $this->merge([
             'pontuacao' => str_replace(
                 ',',
                 '.',
                 trim(
                     $pontuacao,
+                    ' ',
                 ),
             ),
         ]);
@@ -79,11 +88,9 @@ final class GuardarAvaliacaoRequest extends FormRequest
      * Os limites e o incremento pertencem exclusivamente ao modelo
      * {@see Avaliacao}.
      *
-     * @return array<string, list<string>> Regras de validação.
+     * @return array<string, list<mixed>> Regras de validação.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function rules(): array
     {
@@ -91,6 +98,7 @@ final class GuardarAvaliacaoRequest extends FormRequest
             'pontuacao' => [
                 'bail',
                 'required',
+                $this->criarRegraAusenciaCaracteresControlo(),
                 'numeric',
 
                 'between:'
@@ -105,13 +113,11 @@ final class GuardarAvaliacaoRequest extends FormRequest
     }
 
     /**
-     * Obtém as mensagens de validação.
+     * Obtém as mensagens de erro específicas.
      *
      * @return array<string, string> Mensagens de validação.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function messages(): array
     {
@@ -145,8 +151,6 @@ final class GuardarAvaliacaoRequest extends FormRequest
      * @return array<string, string> Nomes legíveis dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function attributes(): array
     {
@@ -164,8 +168,6 @@ final class GuardarAvaliacaoRequest extends FormRequest
      *                        numérico.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function obterPontuacao(): float
     {
@@ -193,6 +195,36 @@ final class GuardarAvaliacaoRequest extends FormRequest
     }
 
     /**
+     * Cria a regra que rejeita caracteres de controlo na pontuação textual.
+     *
+     * @return Closure(string, mixed, Closure(string): void): void Regra.
+     *
+     * @since 2.0.0
+     */
+    private function criarRegraAusenciaCaracteresControlo(): Closure
+    {
+        return static function (
+            string $atributo,
+            mixed $valor,
+            Closure $falhar,
+        ): void {
+            if (
+                ! is_string($valor)
+                || preg_match(
+                    '/[\x00-\x1F\x7F]/',
+                    $valor,
+                ) !== 1
+            ) {
+                return;
+            }
+
+            $falhar(
+                'A pontuação selecionada não é válida.',
+            );
+        };
+    }
+
+    /**
      * Formata uma pontuação para apresentação em português.
      *
      * A parte decimal é omitida quando o valor representa um número inteiro.
@@ -201,8 +233,6 @@ final class GuardarAvaliacaoRequest extends FormRequest
      * @return string Pontuação formatada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function formatarPontuacao(
         float $pontuacao,

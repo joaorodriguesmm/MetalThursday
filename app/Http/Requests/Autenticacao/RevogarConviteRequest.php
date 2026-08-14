@@ -16,8 +16,6 @@ use LogicException;
  * confirmação explícita impede revogações acidentais na interface.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class RevogarConviteRequest extends FormRequest
 {
@@ -30,8 +28,6 @@ final class RevogarConviteRequest extends FormRequest
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $errorBag =
         'revogacao_convite';
@@ -43,8 +39,6 @@ final class RevogarConviteRequest extends FormRequest
      *              indicado na rota.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function authorize(): bool
     {
@@ -72,8 +66,6 @@ final class RevogarConviteRequest extends FormRequest
      * @return array<string, list<string>> Regras de validação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function rules(): array
     {
@@ -90,8 +82,6 @@ final class RevogarConviteRequest extends FormRequest
      * @return array<string, string> Mensagens de validação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function messages(): array
     {
@@ -106,8 +96,6 @@ final class RevogarConviteRequest extends FormRequest
      * @return array<string, string> Nomes legíveis dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function attributes(): array
     {
@@ -124,8 +112,6 @@ final class RevogarConviteRequest extends FormRequest
      * @throws LogicException Quando o pedido não possui autenticação válida.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function obterUtilizadorAutenticado(): Utilizador
     {

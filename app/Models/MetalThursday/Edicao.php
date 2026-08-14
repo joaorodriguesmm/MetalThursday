@@ -41,8 +41,6 @@ use InvalidArgumentException;
  * @property-read Collection<int, MusicaFavoritaEdicao> $musicasFavoritas
  *
  * @since 1.0.0
- *
- * @version 3.1.0
  */
 class Edicao extends Model
 {
@@ -56,8 +54,6 @@ class Edicao extends Model
      * Comprimento máximo permitido para o nome.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const COMPRIMENTO_MAXIMO_NOME = 255;
 
@@ -65,8 +61,6 @@ class Edicao extends Model
      * Comprimento máximo permitido para a ligação da compilação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const COMPRIMENTO_MAXIMO_LIGACAO_COMPILACAO = 2048;
 
@@ -76,8 +70,6 @@ class Edicao extends Model
      * @var string
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     protected $table = 'edicoes';
 
@@ -91,8 +83,6 @@ class Edicao extends Model
      * @var list<string>
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     protected $fillable = [
         'nome',
@@ -107,8 +97,6 @@ class Edicao extends Model
      * @var list<string>
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $hidden = [
         'nome_ativo',
@@ -118,8 +106,6 @@ class Edicao extends Model
      * Regista as validações executadas antes da persistência.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected static function booted(): void
     {
@@ -138,8 +124,6 @@ class Edicao extends Model
      * @return array<string, string> Conversões dos atributos.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     protected function casts(): array
     {
@@ -160,8 +144,6 @@ class Edicao extends Model
      * @return EdicaoFactory Factory das edições.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected static function newFactory(): EdicaoFactory
     {
@@ -179,8 +161,6 @@ class Edicao extends Model
      * @throws InvalidArgumentException Quando o nome não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function nome(): Attribute
     {
@@ -251,13 +231,14 @@ class Edicao extends Model
      * HTTP ou HTTPS, sem credenciais, espaços interiores, caracteres de
      * controlo ou barras invertidas, são aceites.
      *
+     * Apenas espaços ASCII exteriores são removidos antes da validação.
+     * Caracteres de controlo permanecem intactos para serem rejeitados.
+     *
      * @return Attribute<string|null, string|null> Atributo da ligação.
      *
      * @throws InvalidArgumentException Quando a ligação não é válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     protected function ligacaoCompilacao(): Attribute
     {
@@ -277,6 +258,7 @@ class Edicao extends Model
 
                 $ligacaoNormalizada = trim(
                     $valor,
+                    ' ',
                 );
 
                 if ($ligacaoNormalizada === '') {
@@ -358,8 +340,6 @@ class Edicao extends Model
      * @return HasMany<MetalThursday, $this> Relação com as MetalThursdays.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function metalThursdays(): HasMany
     {
@@ -385,8 +365,6 @@ class Edicao extends Model
      * @return HasMany<MusicaFavoritaEdicao, $this> Relação com as músicas.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function musicasFavoritas(): HasMany
     {
@@ -418,8 +396,6 @@ class Edicao extends Model
      * @throws InvalidArgumentException Quando o período não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function validarPeriodo(): void
     {

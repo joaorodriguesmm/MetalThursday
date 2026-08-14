@@ -18,8 +18,6 @@ use LogicException;
  * selecionado, o pedido cria explicitamente essa lista vazia.
  *
  * @since 1.0.0
- *
- * @version 3.1.0
  */
 final class AtualizarPermissoesEmailRequest extends FormRequest
 {
@@ -32,8 +30,6 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     protected $errorBag = 'permissoesEmail';
 
@@ -46,8 +42,6 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
      * @return bool Verdadeiro quando existe um utilizador autenticado válido.
      *
      * @since 1.0.0
-     *
-     * @version 2.2.0
      */
     public function authorize(): bool
     {
@@ -70,8 +64,6 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
      * rejeite estruturas associativas ou listas com índices em falta.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function prepareForValidation(): void
     {
@@ -113,15 +105,12 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
      * @return array<string, list<mixed>> Regras de validação.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function rules(): array
     {
         return [
             'permissoes_email' => [
                 'bail',
-                'present',
                 'array',
                 'list',
             ],
@@ -147,14 +136,10 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
      * @return array<string, string> Mensagens de validação.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function messages(): array
     {
         return [
-            'permissoes_email.present' => 'Não foi recebida a lista de permissões de e-mail.',
-
             'permissoes_email.array' => 'As permissões de e-mail devem ser apresentadas numa lista.',
 
             'permissoes_email.list' => 'A lista de permissões de e-mail não tem um formato válido.',
@@ -177,8 +162,6 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
      * @return array<string, string> Nomes legíveis dos atributos.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function attributes(): array
     {
@@ -198,8 +181,6 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
      *                        identificadores inteiros, positivos e distintos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function obterIdentificadoresPermissoes(): array
     {
@@ -254,8 +235,6 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
      * @return mixed Identificador normalizado ou valor original.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function normalizarIdentificador(
         mixed $valor,

@@ -24,8 +24,6 @@ use LogicException;
  * restantes regras de domínio pertencem ao serviço de atualização do perfil.
  *
  * @since 1.0.0
- *
- * @version 3.1.0
  */
 final class AtualizarPerfilRequest extends FormRequest
 {
@@ -36,9 +34,7 @@ final class AtualizarPerfilRequest extends FormRequest
      *
      * @var int
      *
-     * @since 2.2.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const TAMANHO_MAXIMO_FOTOGRAFIA_KILOBYTES =
         10 * 1024;
@@ -52,8 +48,6 @@ final class AtualizarPerfilRequest extends FormRequest
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     protected $errorBag = 'perfil';
 
@@ -66,8 +60,6 @@ final class AtualizarPerfilRequest extends FormRequest
      * @return bool Verdadeiro quando existe um utilizador autenticado válido.
      *
      * @since 1.0.0
-     *
-     * @version 2.1.0
      */
     public function authorize(): bool
     {
@@ -79,15 +71,15 @@ final class AtualizarPerfilRequest extends FormRequest
     /**
      * Normaliza preliminarmente os valores textuais antes da validação.
      *
-     * Valores que não sejam strings são preservados para que as regras de
-     * validação os possam rejeitar corretamente.
+     * Quando um valor cumpre o contrato do respetivo objeto de valor, é
+     * substituído imediatamente pela representação canónica. Valores inválidos
+     * permanecem inalterados para que as regras de validação os rejeitem sem
+     * remover ou transformar silenciosamente caracteres proibidos.
      *
-     * A normalização definitiva é aplicada pelos objetos de valor
-     * {@see NomeUtilizador} e {@see EnderecoEmail}.
+     * Valores que não sejam strings são igualmente preservados para que as
+     * regras de tipo produzam a respetiva mensagem.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function prepareForValidation(): void
     {
@@ -121,8 +113,6 @@ final class AtualizarPerfilRequest extends FormRequest
      *                        válido.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function rules(): array
     {
@@ -175,8 +165,6 @@ final class AtualizarPerfilRequest extends FormRequest
      * @return array<string, string> Mensagens de validação.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function messages(): array
     {
@@ -207,8 +195,6 @@ final class AtualizarPerfilRequest extends FormRequest
      * @return array<string, string> Nomes legíveis dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function attributes(): array
     {
@@ -229,9 +215,7 @@ final class AtualizarPerfilRequest extends FormRequest
      * @throws LogicException Quando o resultado validado deixa de cumprir o
      *                        contrato do objeto de valor.
      *
-     * @since 2.1.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public function obterNome(): string
     {
@@ -260,9 +244,7 @@ final class AtualizarPerfilRequest extends FormRequest
      * @throws LogicException Quando o resultado validado deixa de cumprir o
      *                        contrato do objeto de valor.
      *
-     * @since 2.1.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public function obterEmail(): string
     {
@@ -291,9 +273,7 @@ final class AtualizarPerfilRequest extends FormRequest
      * @throws LogicException Quando o valor recebido não corresponde a um
      *                        ficheiro carregado válido.
      *
-     * @since 2.1.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public function obterFotografia(): ?UploadedFile
     {
@@ -316,34 +296,6 @@ final class AtualizarPerfilRequest extends FormRequest
     }
 
     /**
-     * Obtém o utilizador autenticado através do guard `sessao`.
-     *
-     * @return Utilizador Utilizador autenticado.
-     *
-     * @throws LogicException Quando o pedido é utilizado sem autenticação
-     *                        válida.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.2.0
-     */
-    public function obterUtilizadorAutenticado(): Utilizador
-    {
-        $utilizador =
-            $this->user(
-                'sessao',
-            );
-
-        if (! $utilizador instanceof Utilizador) {
-            throw new LogicException(
-                'Não existe um utilizador autenticado válido para atualizar o perfil.',
-            );
-        }
-
-        return $utilizador;
-    }
-
-    /**
      * Cria a regra de validação do nome do utilizador.
      *
      * A normalização, os limites e os caracteres permitidos pertencem ao
@@ -351,9 +303,7 @@ final class AtualizarPerfilRequest extends FormRequest
      *
      * @return Closure(string, mixed, Closure(string): void): void Regra.
      *
-     * @since 2.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function criarRegraNome(): Closure
     {
@@ -386,9 +336,7 @@ final class AtualizarPerfilRequest extends FormRequest
      *
      * @return Closure(string, mixed, Closure(string): void): void Regra.
      *
-     * @since 2.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function criarRegraEnderecoEmail(): Closure
     {
@@ -414,6 +362,32 @@ final class AtualizarPerfilRequest extends FormRequest
     }
 
     /**
+     * Obtém o utilizador autenticado através do guard `sessao`.
+     *
+     * @return Utilizador Utilizador autenticado.
+     *
+     * @throws LogicException Quando o pedido é utilizado sem autenticação
+     *                        válida.
+     *
+     * @since 2.0.0
+     */
+    private function obterUtilizadorAutenticado(): Utilizador
+    {
+        $utilizador =
+            $this->user(
+                'sessao',
+            );
+
+        if (! $utilizador instanceof Utilizador) {
+            throw new LogicException(
+                'Não existe um utilizador autenticado válido para atualizar o perfil.',
+            );
+        }
+
+        return $utilizador;
+    }
+
+    /**
      * Obtém um texto validado.
      *
      * @param  string  $campo  Nome do campo validado.
@@ -422,9 +396,7 @@ final class AtualizarPerfilRequest extends FormRequest
      * @throws LogicException Quando o valor validado possui um tipo
      *                        inesperado.
      *
-     * @since 2.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterTextoValidado(
         string $campo,
@@ -449,15 +421,14 @@ final class AtualizarPerfilRequest extends FormRequest
     /**
      * Normaliza preliminarmente o nome recebido.
      *
-     * Quando o texto não é UTF-8 válido, o valor original é preservado para
-     * que o objeto de valor o rejeite durante a validação.
+     * Valores válidos são convertidos para a representação canónica definida
+     * por {@see NomeUtilizador}. Valores inválidos são preservados para que a
+     * regra de validação os rejeite sem ocultar caracteres proibidos.
      *
      * @param  mixed  $valor  Valor recebido.
      * @return mixed Nome normalizado ou valor original.
      *
-     * @since 2.1.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function normalizarNome(
         mixed $valor,
@@ -466,39 +437,40 @@ final class AtualizarPerfilRequest extends FormRequest
             return $valor;
         }
 
-        $nome =
-            preg_replace(
-                '/\s+/u',
-                ' ',
-                trim(
-                    $valor,
-                ),
-            );
-
-        return is_string($nome)
-            ? $nome
-            : $valor;
+        try {
+            return NomeUtilizador::deTexto(
+                $valor,
+            )->valor();
+        } catch (InvalidArgumentException) {
+            return $valor;
+        }
     }
 
     /**
      * Normaliza preliminarmente o endereço de e-mail.
      *
+     * Valores válidos são convertidos para a representação canónica definida
+     * por {@see EnderecoEmail}. Valores inválidos são preservados para que a
+     * regra de validação os rejeite sem ocultar caracteres proibidos.
+     *
      * @param  mixed  $valor  Valor recebido.
      * @return mixed Endereço normalizado ou valor original.
      *
-     * @since 2.1.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function normalizarEmail(
         mixed $valor,
     ): mixed {
-        return is_string($valor)
-            ? mb_strtolower(
-                trim(
-                    $valor,
-                ),
-            )
-            : $valor;
+        if (! is_string($valor)) {
+            return $valor;
+        }
+
+        try {
+            return EnderecoEmail::deTexto(
+                $valor,
+            )->valor();
+        } catch (InvalidArgumentException) {
+            return $valor;
+        }
     }
 }

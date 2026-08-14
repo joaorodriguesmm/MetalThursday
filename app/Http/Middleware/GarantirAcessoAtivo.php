@@ -22,8 +22,6 @@ use Symfony\Component\HttpFoundation\Response;
  * redirecionados para o formulário de início de sessão.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class GarantirAcessoAtivo
 {
@@ -37,8 +35,6 @@ final class GarantirAcessoAtivo
      * @return Response Resposta HTTP.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function handle(
         Request $pedido,
@@ -86,8 +82,6 @@ final class GarantirAcessoAtivo
      * @param  Request  $pedido  Pedido HTTP.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function terminarSessao(
         Request $pedido,

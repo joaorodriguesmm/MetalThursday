@@ -17,8 +17,6 @@ use LogicException;
  * selecionado como género pai, evitando ciclos na hierarquia.
  *
  * @since 1.0.0
- *
- * @version 3.1.0
  */
 final class AtualizarGeneroRequest extends PedidoGeneroRequest
 {
@@ -29,8 +27,6 @@ final class AtualizarGeneroRequest extends PedidoGeneroRequest
      * do parâmetro durante a construção das regras.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private ?Genero $generoDaRota = null;
 
@@ -45,8 +41,6 @@ final class AtualizarGeneroRequest extends PedidoGeneroRequest
      * @throws LogicException Quando a rota não contém um género válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function authorize(): bool
     {
@@ -72,8 +66,6 @@ final class AtualizarGeneroRequest extends PedidoGeneroRequest
      * @throws LogicException Quando a rota não contém um género válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function obterRegraUnicidadeNome(): Unique
     {
@@ -100,8 +92,6 @@ final class AtualizarGeneroRequest extends PedidoGeneroRequest
      * @throws LogicException Quando a rota não contém um género válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function obterRegrasAdicionaisGenerosPai(): array
     {
@@ -122,8 +112,6 @@ final class AtualizarGeneroRequest extends PedidoGeneroRequest
      * @throws LogicException Quando a rota não contém um género válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function obterGeneroDaRota(): Genero
     {

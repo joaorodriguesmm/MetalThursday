@@ -18,8 +18,6 @@ use LogicException;
  * é normalizado e validado definitivamente pelo respetivo objeto de valor.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class SuspenderUtilizadorRequest extends FormRequest
 {
@@ -32,8 +30,6 @@ final class SuspenderUtilizadorRequest extends FormRequest
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $errorBag =
         'suspensao';
@@ -48,8 +44,6 @@ final class SuspenderUtilizadorRequest extends FormRequest
      *              utilizador indicado na rota.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function authorize(): bool
     {
@@ -74,12 +68,15 @@ final class SuspenderUtilizadorRequest extends FormRequest
     /**
      * Normaliza preliminarmente o motivo antes da validação.
      *
-     * Valores não textuais e texto cuja codificação não possa ser processada
-     * são preservados para que as regras de validação os rejeitem.
+     * Valores válidos são convertidos para a representação canónica definida
+     * por {@see MotivoSuspensaoUtilizador}. Valores inválidos permanecem
+     * inalterados para que a validação os rejeite sem remover ou transformar
+     * silenciosamente caracteres proibidos.
+     *
+     * Valores que não sejam strings são igualmente preservados para que as
+     * regras de tipo produzam a respetiva mensagem.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function prepareForValidation(): void
     {
@@ -92,16 +89,12 @@ final class SuspenderUtilizadorRequest extends FormRequest
             return;
         }
 
-        $motivo =
-            preg_replace(
-                '/\s+/u',
-                ' ',
-                trim(
+        try {
+            $motivo =
+                MotivoSuspensaoUtilizador::deTexto(
                     $valor,
-                ),
-            );
-
-        if (! is_string($motivo)) {
+                )->valor();
+        } catch (InvalidArgumentException) {
             return;
         }
 
@@ -116,8 +109,6 @@ final class SuspenderUtilizadorRequest extends FormRequest
      * @return array<string, list<mixed>> Regras de validação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function rules(): array
     {
@@ -138,8 +129,6 @@ final class SuspenderUtilizadorRequest extends FormRequest
      * @return array<string, string> Mensagens de validação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function messages(): array
     {
@@ -161,8 +150,6 @@ final class SuspenderUtilizadorRequest extends FormRequest
      * @return array<string, string> Nomes legíveis dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function attributes(): array
     {
@@ -180,8 +167,6 @@ final class SuspenderUtilizadorRequest extends FormRequest
      *                        contrato do objeto de valor.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function obterMotivo(): string
     {
@@ -216,8 +201,6 @@ final class SuspenderUtilizadorRequest extends FormRequest
      * @throws LogicException Quando o pedido não possui autenticação válida.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function obterUtilizadorAutenticado(): Utilizador
     {
@@ -241,8 +224,6 @@ final class SuspenderUtilizadorRequest extends FormRequest
      * @return Closure(string, mixed, Closure(string): void): void Regra.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarRegraMotivo(): Closure
     {

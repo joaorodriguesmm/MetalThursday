@@ -24,8 +24,6 @@ use LogicException;
  * construídas pelo controlador ao invocar o gestor de palavras-passe.
  *
  * @since 1.0.0
- *
- * @version 4.0.0
  */
 final class RedefinirPalavraPasseRequest extends FormRequest
 {
@@ -37,9 +35,7 @@ final class RedefinirPalavraPasseRequest extends FormRequest
      *
      * @var int
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const COMPRIMENTO_MAXIMO_CODIGO_REDEFINICAO = 255;
 
@@ -51,9 +47,7 @@ final class RedefinirPalavraPasseRequest extends FormRequest
      *
      * @var string
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const MENSAGEM_LIGACAO_INVALIDA =
         'A ligação de redefinição é inválida ou já não está disponível. Solicita uma nova ligação.';
@@ -64,8 +58,6 @@ final class RedefinirPalavraPasseRequest extends FormRequest
      * @return bool Verdadeiro para permitir a validação.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function authorize(): bool
     {
@@ -79,8 +71,6 @@ final class RedefinirPalavraPasseRequest extends FormRequest
      * espaços podem fazer parte dos seus valores.
      *
      * @since 2.0.0
-     *
-     * @version 3.0.0
      */
     protected function prepareForValidation(): void
     {
@@ -122,8 +112,6 @@ final class RedefinirPalavraPasseRequest extends FormRequest
      * @return array<string, list<mixed>> Regras de validação.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function rules(): array
     {
@@ -164,9 +152,7 @@ final class RedefinirPalavraPasseRequest extends FormRequest
      *
      * @return list<callable(Validator): void> Validações adicionais.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public function after(): array
     {
@@ -201,8 +187,6 @@ final class RedefinirPalavraPasseRequest extends FormRequest
      * @return array<string, string> Mensagens de validação.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function messages(): array
     {
@@ -239,8 +223,6 @@ final class RedefinirPalavraPasseRequest extends FormRequest
      * @return array<string, string> Nomes legíveis dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function attributes(): array
     {
@@ -260,9 +242,7 @@ final class RedefinirPalavraPasseRequest extends FormRequest
      *
      * @return string Código de redefinição.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public function codigoRedefinicao(): string
     {
@@ -279,9 +259,7 @@ final class RedefinirPalavraPasseRequest extends FormRequest
      * @throws LogicException Quando o resultado validado deixa de cumprir o
      *                        contrato do objeto de valor.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public function email(): string
     {
@@ -307,9 +285,7 @@ final class RedefinirPalavraPasseRequest extends FormRequest
      *
      * @return string Nova palavra-passe em texto simples.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public function palavraPasse(): string
     {
@@ -323,9 +299,7 @@ final class RedefinirPalavraPasseRequest extends FormRequest
      *
      * @return string Confirmação da nova palavra-passe.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public function confirmacaoPalavraPasse(): string
     {
@@ -342,9 +316,7 @@ final class RedefinirPalavraPasseRequest extends FormRequest
      *
      * @return Closure(string, mixed, Closure(string): void): void Regra.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function criarRegraCodigoRedefinicao(): Closure
     {
@@ -382,9 +354,7 @@ final class RedefinirPalavraPasseRequest extends FormRequest
      *
      * @return Closure(string, mixed, Closure(string): void): void Regra.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function criarRegraEnderecoEmail(): Closure
     {
@@ -418,9 +388,7 @@ final class RedefinirPalavraPasseRequest extends FormRequest
      * @throws LogicException Quando o valor validado possui um tipo
      *                        inesperado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterTextoValidado(
         string $campo,

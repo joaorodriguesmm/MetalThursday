@@ -20,8 +20,6 @@ use LogicException;
  * dentro da operação definitiva.
  *
  * @since 1.0.0
- *
- * @version 3.1.0
  */
 final class AtualizarPalavraPasseRequest extends FormRequest
 {
@@ -34,8 +32,6 @@ final class AtualizarPalavraPasseRequest extends FormRequest
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.2.0
      */
     protected $errorBag = 'palavraPasse';
 
@@ -48,8 +44,6 @@ final class AtualizarPalavraPasseRequest extends FormRequest
      * @return bool Verdadeiro quando existe um utilizador autenticado válido.
      *
      * @since 1.0.0
-     *
-     * @version 2.1.0
      */
     public function authorize(): bool
     {
@@ -72,8 +66,6 @@ final class AtualizarPalavraPasseRequest extends FormRequest
      * @return array<string, list<mixed>> Regras de validação.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function rules(): array
     {
@@ -107,8 +99,6 @@ final class AtualizarPalavraPasseRequest extends FormRequest
      * @return array<string, string> Mensagens de validação.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function messages(): array
     {
@@ -145,8 +135,6 @@ final class AtualizarPalavraPasseRequest extends FormRequest
      * @return array<string, string> Nomes legíveis dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function attributes(): array
     {
@@ -167,9 +155,7 @@ final class AtualizarPalavraPasseRequest extends FormRequest
      * @throws LogicException Quando o valor validado possui um tipo
      *                        inesperado.
      *
-     * @since 2.2.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public function obterPalavraPasseAtual(): string
     {
@@ -186,33 +172,12 @@ final class AtualizarPalavraPasseRequest extends FormRequest
      * @throws LogicException Quando o valor validado possui um tipo
      *                        inesperado.
      *
-     * @since 2.1.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public function obterNovaPalavraPasse(): string
     {
         return $this->obterTextoValidado(
             'nova_palavra_passe',
-        );
-    }
-
-    /**
-     * Obtém a confirmação da nova palavra-passe.
-     *
-     * @return string Confirmação da nova palavra-passe.
-     *
-     * @throws LogicException Quando o valor validado possui um tipo
-     *                        inesperado.
-     *
-     * @since 2.2.0
-     *
-     * @version 1.0.0
-     */
-    public function obterConfirmacaoNovaPalavraPasse(): string
-    {
-        return $this->obterTextoValidado(
-            'confirmacao_nova_palavra_passe',
         );
     }
 
@@ -225,9 +190,7 @@ final class AtualizarPalavraPasseRequest extends FormRequest
      * @throws LogicException Quando o valor validado possui um tipo
      *                        inesperado.
      *
-     * @since 2.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterTextoValidado(
         string $campo,

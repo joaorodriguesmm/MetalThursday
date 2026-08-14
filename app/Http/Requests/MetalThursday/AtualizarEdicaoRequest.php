@@ -13,8 +13,6 @@ use LogicException;
  * Valida os dados necessários para atualizar uma edição.
  *
  * @since 1.0.0
- *
- * @version 2.1.0
  */
 final class AtualizarEdicaoRequest extends PedidoEdicaoRequest
 {
@@ -29,8 +27,6 @@ final class AtualizarEdicaoRequest extends PedidoEdicaoRequest
      * @throws LogicException Quando a rota não contém uma edição válida.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     protected function obterRegraUnicidadeNome(): Unique
     {

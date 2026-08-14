@@ -43,8 +43,6 @@ use SensitiveParameter;
  * @property-read Utilizador|null $responsavelRevogacao
  *
  * @since 2.0.0
- *
- * @version 4.0.0
  */
 class Convite extends Model
 {
@@ -55,8 +53,6 @@ class Convite extends Model
      * Comprimento máximo do nome do convidado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const COMPRIMENTO_MAXIMO_NOME_CONVIDADO = 255;
 
@@ -64,8 +60,6 @@ class Convite extends Model
      * Comprimento mínimo permitido para um código de convite.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const COMPRIMENTO_MINIMO_CODIGO = 10;
 
@@ -73,8 +67,6 @@ class Convite extends Model
      * Comprimento máximo permitido para um código de convite.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const COMPRIMENTO_MAXIMO_CODIGO = 128;
 
@@ -84,8 +76,6 @@ class Convite extends Model
      * A constante não inclui delimitadores de expressão regular.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const PADRAO_CODIGO = '[A-Za-z0-9_-]{10,128}';
 
@@ -93,8 +83,6 @@ class Convite extends Model
      * Comprimento do hash hexadecimal SHA-256.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const COMPRIMENTO_HASH_CODIGO = 64;
 
@@ -105,8 +93,6 @@ class Convite extends Model
      * palavras-passe escolhidas pelos utilizadores.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const ALGORITMO_HASH = 'sha256';
 
@@ -116,8 +102,6 @@ class Convite extends Model
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $table = 'convites';
 
@@ -130,8 +114,6 @@ class Convite extends Model
      * @var list<string>
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected $fillable = [
         'nome_convidado',
@@ -145,8 +127,6 @@ class Convite extends Model
      * @var list<string>
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $hidden = [
         'codigo_hash',
@@ -158,8 +138,6 @@ class Convite extends Model
      * @return array<string, string> Conversões dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 3.0.0
      */
     protected function casts(): array
     {
@@ -184,8 +162,6 @@ class Convite extends Model
      * @return ConviteFactory Factory dos convites.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected static function newFactory(): ConviteFactory
     {
@@ -203,8 +179,6 @@ class Convite extends Model
      * @throws InvalidArgumentException Quando o nome não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function nomeConvidado(): Attribute
     {
@@ -283,16 +257,15 @@ class Convite extends Model
     /**
      * Normaliza e valida o endereço de e-mail de destino.
      *
-     * Um valor nulo ou uma string vazia representa um convite não limitado a
-     * um endereço específico.
+     * Um valor nulo ou composto apenas por espaços ASCII representa um convite
+     * não limitado a um endereço específico. Caracteres de controlo não são
+     * removidos silenciosamente antes da validação.
      *
      * @return Attribute<string|null, string|null> Atributo do endereço.
      *
      * @throws InvalidArgumentException Quando o endereço não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function emailDestino(): Attribute
     {
@@ -310,7 +283,12 @@ class Convite extends Model
                     );
                 }
 
-                if (trim($valor) === '') {
+                if (
+                    trim(
+                        $valor,
+                        ' ',
+                    ) === ''
+                ) {
                     return null;
                 }
 
@@ -324,14 +302,16 @@ class Convite extends Model
     /**
      * Normaliza e valida o hash persistido do código.
      *
+     * Espaços ASCII exteriores são removidos e as letras hexadecimais são
+     * convertidas para minúsculas. Caracteres de controlo permanecem
+     * inalterados para serem rejeitados pela validação.
+     *
      * @return Attribute<string, string> Atributo do hash.
      *
      * @throws InvalidArgumentException Quando o hash não é hexadecimal
      *                                  SHA-256.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function codigoHash(): Attribute
     {
@@ -348,6 +328,7 @@ class Convite extends Model
                 $hashNormalizado = strtolower(
                     trim(
                         $valor,
+                        ' ',
                     ),
                 );
 
@@ -376,8 +357,6 @@ class Convite extends Model
      * @return BelongsTo<Utilizador, $this> Relação com o criador.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function criador(): BelongsTo
     {
@@ -393,8 +372,6 @@ class Convite extends Model
      * @return BelongsTo<Utilizador, $this> Relação com o utilizador.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function utilizador(): BelongsTo
     {
@@ -410,8 +387,6 @@ class Convite extends Model
      * @return BelongsTo<Utilizador, $this> Relação com o responsável.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function responsavelRevogacao(): BelongsTo
     {
@@ -430,8 +405,6 @@ class Convite extends Model
      * @return Builder<Convite> Consulta dos convites pendentes.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     public function scopePendentes(
         Builder $construtor,
@@ -461,8 +434,6 @@ class Convite extends Model
      * @return Builder<Convite> Consulta dos convites disponíveis.
      *
      * @since 2.0.0
-     *
-     * @version 3.0.0
      */
     public function scopeDisponiveis(
         Builder $construtor,
@@ -511,8 +482,6 @@ class Convite extends Model
      * @throws InvalidArgumentException Quando o código não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     public function scopeComCodigo(
         Builder $construtor,
@@ -537,8 +506,6 @@ class Convite extends Model
      * @throws InvalidArgumentException Quando o código não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function definirCodigo(
         #[SensitiveParameter]
@@ -558,8 +525,6 @@ class Convite extends Model
      * @throws InvalidArgumentException Quando o código não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function correspondeAoCodigo(
         #[SensitiveParameter]
@@ -594,8 +559,6 @@ class Convite extends Model
      * @return bool Verdadeiro quando o convite foi utilizado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function foiUtilizado(): bool
     {
@@ -609,8 +572,6 @@ class Convite extends Model
      * @return bool Verdadeiro quando o convite foi revogado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function foiRevogado(): bool
     {
@@ -625,8 +586,6 @@ class Convite extends Model
      * @return bool Verdadeiro quando o prazo terminou.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function estaExpirado(
         ?CarbonInterface $momento = null,
@@ -653,8 +612,6 @@ class Convite extends Model
      * @return bool Verdadeiro quando o convite está disponível.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function estaDisponivel(
         ?CarbonInterface $momento = null,
@@ -679,8 +636,6 @@ class Convite extends Model
      *                         utilizador não está persistido.
      *
      * @since 2.0.0
-     *
-     * @version 4.0.0
      */
     public function utilizar(
         Utilizador $utilizador,
@@ -743,8 +698,6 @@ class Convite extends Model
      *                         responsável não está persistido.
      *
      * @since 2.0.0
-     *
-     * @version 3.0.0
      */
     public function revogar(
         Utilizador $responsavel,
@@ -781,8 +734,10 @@ class Convite extends Model
     /**
      * Normaliza e valida um código de convite.
      *
-     * Os espaços exteriores são removidos, mas a capitalização é preservada.
-     * Os códigos são sensíveis a maiúsculas e minúsculas.
+     * Os espaços ASCII exteriores são removidos, mas a capitalização é
+     * preservada. Os códigos são sensíveis a maiúsculas e minúsculas.
+     * Caracteres de controlo permanecem inalterados e são rejeitados pelo
+     * padrão permitido.
      *
      * @param  string  $codigo  Código original.
      * @return string Código normalizado.
@@ -790,8 +745,6 @@ class Convite extends Model
      * @throws InvalidArgumentException Quando o código não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public static function normalizarCodigo(
         #[SensitiveParameter]
@@ -799,6 +752,7 @@ class Convite extends Model
     ): string {
         $codigoNormalizado = trim(
             $codigo,
+            ' ',
         );
 
         $comprimento = strlen(
@@ -830,8 +784,6 @@ class Convite extends Model
      * @throws InvalidArgumentException Quando o código não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public static function calcularHashCodigo(
         #[SensitiveParameter]
@@ -856,8 +808,6 @@ class Convite extends Model
      *                         possui um identificador válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private static function obterIdentificadorUtilizadorPersistido(
         Utilizador $utilizador,

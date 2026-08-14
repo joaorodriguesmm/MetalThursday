@@ -25,8 +25,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read Comentario $comentario
  *
  * @since 1.0.0
- *
- * @version 3.0.0
  */
 class Gosto extends Model
 {
@@ -36,8 +34,6 @@ class Gosto extends Model
      * @var string
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     protected $table = 'gostos';
 
@@ -50,8 +46,6 @@ class Gosto extends Model
      * @var list<string>
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     protected $fillable = [
         'utilizador_id',
@@ -64,8 +58,6 @@ class Gosto extends Model
      * @return array<string, string> Conversões dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function casts(): array
     {
@@ -82,8 +74,6 @@ class Gosto extends Model
      * @return BelongsTo<Utilizador, $this> Relação com o utilizador.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function utilizador(): BelongsTo
     {
@@ -103,8 +93,6 @@ class Gosto extends Model
      * @return BelongsTo<Comentario, $this> Relação com o comentário.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function comentario(): BelongsTo
     {

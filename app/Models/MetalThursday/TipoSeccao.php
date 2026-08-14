@@ -31,8 +31,6 @@ use InvalidArgumentException;
  * @property-read Collection<int, SeccaoMetalThursday> $seccoes
  *
  * @since 1.0.0
- *
- * @version 3.1.0
  */
 class TipoSeccao extends Model
 {
@@ -43,8 +41,6 @@ class TipoSeccao extends Model
      * Comprimento máximo do identificador.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const COMPRIMENTO_MAXIMO_IDENTIFICADOR = 32;
 
@@ -52,19 +48,16 @@ class TipoSeccao extends Model
      * Comprimento máximo do nome.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const COMPRIMENTO_MAXIMO_NOME = 64;
 
     /**
      * Comprimento máximo da descrição.
      *
-     * O valor corresponde à capacidade da coluna SQL `TEXT`.
+     * Este é um limite funcional da aplicação, deliberadamente inferior à
+     * capacidade da coluna SQL `MEDIUMTEXT`.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const COMPRIMENTO_MAXIMO_DESCRICAO = 65_535;
 
@@ -72,8 +65,6 @@ class TipoSeccao extends Model
      * Ordem mínima permitida.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const ORDEM_MINIMA = 1;
 
@@ -81,8 +72,6 @@ class TipoSeccao extends Model
      * Ordem máxima permitida.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const ORDEM_MAXIMA = 255;
 
@@ -92,8 +81,6 @@ class TipoSeccao extends Model
      * @var string
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     protected $table = 'tipos_seccao';
 
@@ -103,8 +90,6 @@ class TipoSeccao extends Model
      * @var list<string>
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     protected $fillable = [
         'identificador',
@@ -120,8 +105,6 @@ class TipoSeccao extends Model
      * @return TipoSeccaoFactory Factory dos tipos de secção.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected static function newFactory(): TipoSeccaoFactory
     {
@@ -131,16 +114,18 @@ class TipoSeccao extends Model
     /**
      * Normaliza e valida o identificador do tipo.
      *
-     * Apenas letras ASCII minúsculas, números e sublinhados interiores são
-     * aceites.
+     * Apenas espaços ASCII exteriores e diferenças de capitalização são
+     * normalizados. O identificador persistido contém exclusivamente letras
+     * ASCII minúsculas, números e sublinhados interiores.
+     *
+     * Restantes caracteres, incluindo caracteres de controlo, permanecem
+     * intactos para serem rejeitados pelo formato permitido.
      *
      * @return Attribute<string, string> Atributo do identificador.
      *
      * @throws InvalidArgumentException Quando o identificador não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     protected function identificador(): Attribute
     {
@@ -162,6 +147,7 @@ class TipoSeccao extends Model
                 $identificadorNormalizado = strtolower(
                     trim(
                         $valor,
+                        ' ',
                     ),
                 );
 
@@ -196,8 +182,6 @@ class TipoSeccao extends Model
      * @throws InvalidArgumentException Quando o nome não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     protected function nome(): Attribute
     {
@@ -261,8 +245,6 @@ class TipoSeccao extends Model
      * @throws InvalidArgumentException Quando a descrição não é válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     protected function descricao(): Attribute
     {
@@ -322,8 +304,6 @@ class TipoSeccao extends Model
      * @throws InvalidArgumentException Quando o valor não é booleano.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function exigeDetalhes(): Attribute
     {
@@ -354,8 +334,6 @@ class TipoSeccao extends Model
      * @throws InvalidArgumentException Quando a ordem não é válida.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function ordem(): Attribute
     {
@@ -396,8 +374,6 @@ class TipoSeccao extends Model
      * @return HasMany<SeccaoMetalThursday, $this> Relação com as secções.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function seccoes(): HasMany
     {
@@ -423,8 +399,6 @@ class TipoSeccao extends Model
      * @throws InvalidArgumentException Quando o texto não é UTF-8 válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private static function validarTextoUtf8(
         string $valor,
@@ -454,8 +428,6 @@ class TipoSeccao extends Model
      *                                  controlo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private static function validarAusenciaCaracteresControlo(
         string $valor,

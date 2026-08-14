@@ -27,12 +27,10 @@ use LogicException;
  * tipo de secção.
  *
  * A validação HTTP apresenta mensagens adequadas ao utilizador. Os modelos e
- * o serviço de persistência voltam a proteger os mesmos contratos antes da
- * escrita na base de dados.
+ * o serviço de persistência mantêm validações próprias antes da escrita na
+ * base de dados.
  *
  * @since 1.0.0
- *
- * @version 3.1.0
  */
 final class GuardarMetalThursdayRequest extends FormRequest
 {
@@ -46,8 +44,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
      * @var int
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private const NUMERO_MAXIMO_SECCOES = 50;
 
@@ -58,8 +54,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
      * nulo, de um parâmetro ainda não consultado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private bool $metalThursdayDaRotaResolvida = false;
 
@@ -67,8 +61,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
      * MetalThursday resolvida através do parâmetro da rota.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private ?MetalThursday $metalThursdayDaRota = null;
 
@@ -84,8 +76,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
      * @throws LogicException Quando existe um parâmetro de rota inválido.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function authorize(): bool
     {
@@ -121,8 +111,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
      * reindexadas pela respetiva ordem no formulário.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function prepareForValidation(): void
     {
@@ -178,8 +166,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
      * @return array<string, list<mixed>> Regras de validação.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function rules(): array
     {
@@ -380,8 +366,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
      * @return list<callable(Validator): void> Validações adicionais.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function after(): array
     {
@@ -406,8 +390,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
      * @return array<string, string> Mensagens de validação.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function messages(): array
     {
@@ -523,8 +505,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
      * @return array<string, string> Nomes legíveis dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function attributes(): array
     {
@@ -565,8 +545,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
      * @param  Validator  $validador  Validador do pedido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function validarDataDentroDaEdicao(
         Validator $validador,
@@ -660,8 +638,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
      * @param  Validator  $validador  Validador do pedido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function validarSeccoes(
         Validator $validador,
@@ -790,8 +766,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
      * @param  array<string, mixed>  $seccao  Dados da secção.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function validarDetalhesObrigatorios(
         Validator $validador,
@@ -837,8 +811,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
      * @param  array<string, mixed>  $seccao  Dados da secção.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function validarAusenciaDeDetalhes(
         Validator $validador,
@@ -875,12 +847,14 @@ final class GuardarMetalThursdayRequest extends FormRequest
     /**
      * Normaliza as secções recebidas.
      *
+     * Os identificadores são preservados durante a criação para que a regra
+     * de proibição possa rejeitar explicitamente referências a secções
+     * existentes.
+     *
      * @param  mixed  $valor  Valor recebido.
      * @return mixed Secções normalizadas ou valor original.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarSeccoes(
         mixed $valor,
@@ -888,9 +862,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
         if (! is_array($valor)) {
             return $valor;
         }
-
-        $metalThursday =
-            $this->obterMetalThursdayDaRota();
 
         $seccoes = [];
 
@@ -902,17 +873,11 @@ final class GuardarMetalThursdayRequest extends FormRequest
                 continue;
             }
 
-            if ($metalThursday instanceof MetalThursday) {
-                $seccao['id'] =
-                    $this->normalizarIdentificador(
-                        $seccao['id']
-                            ?? null,
-                    );
-            } else {
-                unset(
-                    $seccao['id'],
+            $seccao['id'] =
+                $this->normalizarIdentificador(
+                    $seccao['id']
+                        ?? null,
                 );
-            }
 
             $seccao['tipo_secao_id'] =
                 $this->normalizarIdentificador(
@@ -972,8 +937,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
      *                        inesperado.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     private function obterMetalThursdayDaRota(): ?MetalThursday
     {
@@ -1011,8 +974,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
      * @return mixed Identificador normalizado ou valor original.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarIdentificador(
         mixed $valor,
@@ -1037,17 +998,27 @@ final class GuardarMetalThursdayRequest extends FormRequest
     /**
      * Normaliza um texto opcional de uma única linha.
      *
+     * Caracteres de controlo permanecem inalterados para que a regra de
+     * validação os possa rejeitar em vez de os normalizar silenciosamente.
+     *
      * @param  mixed  $valor  Valor recebido.
      * @return mixed Texto normalizado ou valor original.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarTextoLinhaOpcional(
         mixed $valor,
     ): mixed {
         if (! is_string($valor)) {
+            return $valor;
+        }
+
+        if (
+            preg_match(
+                '/[\x00-\x1F\x7F]/',
+                $valor,
+            ) === 1
+        ) {
             return $valor;
         }
 
@@ -1071,12 +1042,13 @@ final class GuardarMetalThursdayRequest extends FormRequest
     /**
      * Normaliza um texto opcional.
      *
+     * Apenas espaços ASCII exteriores são removidos. Os restantes caracteres
+     * permanecem disponíveis para as regras específicas de cada campo.
+     *
      * @param  mixed  $valor  Valor recebido.
      * @return mixed Texto normalizado ou valor original.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function normalizarTextoOpcional(
         mixed $valor,
@@ -1085,10 +1057,10 @@ final class GuardarMetalThursdayRequest extends FormRequest
             return $valor;
         }
 
-        $texto =
-            trim(
-                $valor,
-            );
+        $texto = trim(
+            $valor,
+            ' ',
+        );
 
         return $texto !== ''
             ? $texto
@@ -1098,17 +1070,27 @@ final class GuardarMetalThursdayRequest extends FormRequest
     /**
      * Normaliza um texto com várias linhas.
      *
+     * Tabulações e quebras de linha são permitidas. Os restantes caracteres
+     * de controlo permanecem inalterados para que a validação os rejeite.
+     *
      * @param  mixed  $valor  Valor recebido.
      * @return mixed Texto normalizado ou valor original.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarTextoMultilinha(
         mixed $valor,
     ): mixed {
         if (! is_string($valor)) {
+            return $valor;
+        }
+
+        if (
+            preg_match(
+                '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/',
+                $valor,
+            ) === 1
+        ) {
             return $valor;
         }
 
@@ -1121,6 +1103,7 @@ final class GuardarMetalThursdayRequest extends FormRequest
                 "\n",
                 $valor,
             ),
+            " \t\n",
         );
 
         return $texto !== ''
@@ -1137,8 +1120,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
      * @return Closure(string, mixed, Closure(string): void): void Regra.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarRegraTextoLinha(
         string $mensagemTextoInvalido,
@@ -1197,8 +1178,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
      * @return Closure(string, mixed, Closure(string): void): void Regra.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarRegraTextoMultilinha(
         string $mensagemTextoInvalido,
@@ -1251,8 +1230,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
      * @return Closure(string, mixed, Closure(string): void): void Regra.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarRegraLigacao(): Closure
     {
@@ -1335,8 +1312,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
      * @return bool Verdadeiro quando o valor está vazio.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function valorEstaVazio(
         mixed $valor,

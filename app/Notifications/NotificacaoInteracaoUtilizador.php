@@ -24,8 +24,6 @@ use InvalidArgumentException;
  * fila não recupera o sujeito nem as respetivas relações da base de dados.
  *
  * @since 1.0.0
- *
- * @version 3.1.0
  */
 final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
 {
@@ -33,8 +31,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * Tipo interno correspondente a uma MetalThursday.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const TIPO_METAL_THURSDAY =
         'metal_thursday';
@@ -43,8 +39,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * Tipo interno correspondente a uma secção.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const TIPO_SECCAO =
         'seccao_metal_thursday';
@@ -53,8 +47,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * Tipo interno correspondente a um comentário.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const TIPO_COMENTARIO =
         'comentario';
@@ -63,8 +55,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * Permissão que autoriza todas as comunicações por e-mail.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const PERMISSAO_TODAS =
         'todas';
@@ -73,8 +63,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * Permissão relativa a todas as novas interações.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const PERMISSAO_NOVAS_INTERACOES =
         'novas_interacoes';
@@ -83,8 +71,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * Permissão relativa às interações nas publicações do utilizador.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const PERMISSAO_INTERACOES_PUBLICACOES =
         'interacoes_nas_minhas_publicacoes';
@@ -93,8 +79,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * Tipo interno do sujeito da interação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private readonly string $tipoSujeito;
 
@@ -102,8 +86,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * Identificador do sujeito da interação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private readonly int $identificadorSujeito;
 
@@ -111,8 +93,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * Identificador do utilizador que provocou a interação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private readonly int $identificadorCausador;
 
@@ -120,8 +100,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * Nome do utilizador no momento da interação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private readonly string $nomeCausador;
 
@@ -129,53 +107,41 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * Ação realizada pelo utilizador.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private readonly string $acao;
 
     /**
      * Identificador da MetalThursday relacionada com a interação.
      *
-     * @since 3.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private readonly ?int $identificadorMetalThursday;
 
     /**
      * Identificador do autor da MetalThursday relacionada.
      *
-     * @since 3.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private readonly ?int $identificadorAutorMetalThursday;
 
     /**
      * Descrição do sujeito ou do contexto do comentário.
      *
-     * @since 3.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private readonly string $descricaoContexto;
 
     /**
      * Identificador do autor quando o sujeito é um comentário.
      *
-     * @since 3.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private readonly ?int $identificadorAutorComentario;
 
     /**
      * Nome do autor quando o sujeito é um comentário.
      *
-     * @since 3.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private readonly string $nomeAutorComentario;
 
@@ -192,8 +158,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      *                                  ação não são válidos.
      *
      * @since 1.0.0
-     *
-     * @version 3.1.0
      */
     public function __construct(
         MetalThursday|SeccaoMetalThursday|Comentario $sujeito,
@@ -261,8 +225,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * @return bool Verdadeiro quando o envio está autorizado.
      *
      * @since 1.0.0
-     *
-     * @version 3.1.0
      */
     protected function deveEnviarPorEmail(
         Utilizador $utilizador,
@@ -310,8 +272,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * } Dados persistidos.
      *
      * @since 1.0.0
-     *
-     * @version 3.1.0
      */
     public function toArray(
         Utilizador $utilizador,
@@ -350,8 +310,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * @return string Assunto da mensagem.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     protected function obterAssunto(
         Utilizador $utilizador,
@@ -366,8 +324,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * @return string Conteúdo principal.
      *
      * @since 1.0.0
-     *
-     * @version 3.1.0
      */
     protected function obterLinhaMensagem(
         Utilizador $utilizador,
@@ -384,8 +340,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * @return string Texto do botão.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     protected function obterTextoAcao(
         Utilizador $utilizador,
@@ -400,8 +354,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * @return string Endereço da MetalThursday ou da página principal.
      *
      * @since 1.0.0
-     *
-     * @version 3.1.0
      */
     protected function obterUrlAcao(
         Utilizador $utilizador,
@@ -425,9 +377,7 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      *
      * @return string Título da notificação.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterTituloNotificacao(): string
     {
@@ -453,8 +403,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * @return string Mensagem construída.
      *
      * @since 1.0.0
-     *
-     * @version 3.1.0
      */
     private function obterMensagem(
         Utilizador $utilizador,
@@ -506,8 +454,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * @return string Mensagem construída.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterMensagemComentario(
         Utilizador $utilizador,
@@ -584,9 +530,7 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      *     nome_autor_comentario: string
      * } Retrato escalar do contexto.
      *
-     * @since 3.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function criarRetratoSujeito(
         MetalThursday|SeccaoMetalThursday|Comentario $sujeito,
@@ -620,9 +564,7 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      *     nome_autor_comentario: string
      * } Retrato escalar.
      *
-     * @since 3.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function criarRetratoMetalThursday(
         MetalThursday $metalThursday,
@@ -663,9 +605,7 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      *     nome_autor_comentario: string
      * } Retrato escalar.
      *
-     * @since 3.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function criarRetratoSeccao(
         SeccaoMetalThursday $seccao,
@@ -714,9 +654,7 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      *     nome_autor_comentario: string
      * } Retrato escalar.
      *
-     * @since 3.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function criarRetratoComentario(
         Comentario $comentario,
@@ -774,8 +712,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * @return string Descrição construída.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterDescricaoMetalThursday(
         MetalThursday $metalThursday,
@@ -858,8 +794,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * @return string Descrição construída.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterDescricaoSeccao(
         SeccaoMetalThursday $seccao,
@@ -926,8 +860,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * @return string Classe do ícone.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function obterIcone(): string
     {
@@ -951,8 +883,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * @return string Classe de apresentação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function obterClasseCor(): string
     {
@@ -977,8 +907,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      *                                  fica vazia ou é demasiado extensa.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarAcao(
         string $acao,
@@ -1042,8 +970,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * @return string Nome normalizado ou alternativa.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarNomeUtilizador(
         mixed $nome,
@@ -1078,9 +1004,7 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * @throws InvalidArgumentException Quando o modelo não está persistido ou
      *                                  não possui um identificador válido.
      *
-     * @since 3.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterIdentificadorPersistido(
         Model $modelo,
@@ -1115,12 +1039,14 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
     /**
      * Normaliza um identificador inteiro positivo.
      *
+     * Representações textuais podem conter apenas espaços ASCII exteriores.
+     * Restantes caracteres, incluindo caracteres de controlo, não são
+     * removidos antes da validação.
+     *
      * @param  mixed  $identificador  Valor recebido.
      * @return int|null Identificador normalizado ou nulo.
      *
-     * @since 3.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function normalizarIdentificador(
         mixed $identificador,
@@ -1139,6 +1065,7 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
         $identificadorNormalizado =
             trim(
                 $identificador,
+                ' ',
             );
 
         if (

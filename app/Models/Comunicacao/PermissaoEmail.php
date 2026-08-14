@@ -31,8 +31,6 @@ use InvalidArgumentException;
  * @property-read Collection<int, Utilizador> $utilizadores
  *
  * @since 1.0.0
- *
- * @version 3.1.0
  */
 class PermissaoEmail extends Model
 {
@@ -43,8 +41,6 @@ class PermissaoEmail extends Model
      * Comprimento máximo do identificador.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const COMPRIMENTO_MAXIMO_IDENTIFICADOR = 64;
 
@@ -52,19 +48,16 @@ class PermissaoEmail extends Model
      * Comprimento máximo do nome.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const COMPRIMENTO_MAXIMO_NOME = 100;
 
     /**
      * Comprimento máximo da descrição.
      *
-     * O valor corresponde à capacidade da coluna SQL `TEXT`.
+     * Este é um limite funcional da aplicação, deliberadamente inferior à
+     * capacidade da coluna SQL `MEDIUMTEXT`.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const COMPRIMENTO_MAXIMO_DESCRICAO = 65_535;
 
@@ -72,8 +65,6 @@ class PermissaoEmail extends Model
      * Ordem mínima permitida.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const ORDEM_MINIMA = 1;
 
@@ -81,8 +72,6 @@ class PermissaoEmail extends Model
      * Ordem máxima permitida.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const ORDEM_MAXIMA = 255;
 
@@ -90,8 +79,6 @@ class PermissaoEmail extends Model
      * Nome da tabela intermédia entre permissões e utilizadores.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const TABELA_PERMISSAO_UTILIZADOR =
         'permissao_email_utilizador';
@@ -102,8 +89,6 @@ class PermissaoEmail extends Model
      * @var string
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     protected $table = 'permissoes_email';
 
@@ -113,8 +98,6 @@ class PermissaoEmail extends Model
      * @var list<string>
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     protected $fillable = [
         'identificador',
@@ -129,8 +112,6 @@ class PermissaoEmail extends Model
      * @return PermissaoEmailFactory Factory das permissões.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected static function newFactory(): PermissaoEmailFactory
     {
@@ -141,15 +122,14 @@ class PermissaoEmail extends Model
      * Normaliza e valida o identificador da permissão.
      *
      * Apenas letras ASCII minúsculas, números e sublinhados interiores são
-     * aceites.
+     * aceites. Espaços ASCII exteriores e diferenças de capitalização são
+     * normalizados.
      *
      * @return Attribute<string, string> Atributo do identificador.
      *
      * @throws InvalidArgumentException Quando o identificador não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     protected function identificador(): Attribute
     {
@@ -176,6 +156,7 @@ class PermissaoEmail extends Model
                 $identificadorNormalizado = strtolower(
                     trim(
                         $valor,
+                        ' ',
                     ),
                 );
 
@@ -210,8 +191,6 @@ class PermissaoEmail extends Model
      * @throws InvalidArgumentException Quando o nome não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     protected function nome(): Attribute
     {
@@ -275,8 +254,6 @@ class PermissaoEmail extends Model
      * @throws InvalidArgumentException Quando a descrição não é válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     protected function descricao(): Attribute
     {
@@ -336,8 +313,6 @@ class PermissaoEmail extends Model
      * @throws InvalidArgumentException Quando a ordem não é válida.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function ordem(): Attribute
     {
@@ -374,8 +349,6 @@ class PermissaoEmail extends Model
      * @return BelongsToMany<Utilizador, $this> Relação com os utilizadores.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function utilizadores(): BelongsToMany
     {
@@ -403,8 +376,6 @@ class PermissaoEmail extends Model
      * @throws InvalidArgumentException Quando o texto não é UTF-8 válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private static function validarTextoUtf8(
         string $valor,
@@ -434,8 +405,6 @@ class PermissaoEmail extends Model
      *                                  controlo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private static function validarAusenciaCaracteresControlo(
         string $valor,

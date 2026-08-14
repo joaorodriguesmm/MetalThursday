@@ -16,8 +16,6 @@ use LogicException;
  * asseguradas pela notificação oficial do Laravel.
  *
  * @since 1.0.0
- *
- * @version 2.0.0
  */
 final class NotificacaoVerificacaoEmail extends VerifyEmail
 {
@@ -31,8 +29,6 @@ final class NotificacaoVerificacaoEmail extends VerifyEmail
      *                        válido.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function toMail(
         mixed $notificavel,

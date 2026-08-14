@@ -35,8 +35,6 @@ use InvalidArgumentException;
  * @property-read Utilizador|null $registadoPor
  *
  * @since 1.0.0
- *
- * @version 3.0.0
  */
 class MusicaFavoritaEdicao extends Model
 {
@@ -47,8 +45,6 @@ class MusicaFavoritaEdicao extends Model
      * Posição mínima permitida.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const POSICAO_MINIMA = 1;
 
@@ -56,8 +52,6 @@ class MusicaFavoritaEdicao extends Model
      * Posição máxima permitida.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const POSICAO_MAXIMA = 3;
 
@@ -65,8 +59,6 @@ class MusicaFavoritaEdicao extends Model
      * Número total de posições disponíveis.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const NUMERO_POSICOES = 3;
 
@@ -74,8 +66,6 @@ class MusicaFavoritaEdicao extends Model
      * Comprimento máximo da identificação da música.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const COMPRIMENTO_MAXIMO_MUSICA = 255;
 
@@ -85,8 +75,6 @@ class MusicaFavoritaEdicao extends Model
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $table =
         'musicas_favoritas_edicao';
@@ -101,8 +89,6 @@ class MusicaFavoritaEdicao extends Model
      * @var list<string>
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     protected $fillable = [
         'posicao',
@@ -118,8 +104,6 @@ class MusicaFavoritaEdicao extends Model
      * @return array<string, string> Conversões dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function casts(): array
     {
@@ -138,8 +122,6 @@ class MusicaFavoritaEdicao extends Model
      * @return MusicaFavoritaEdicaoFactory Factory das músicas favoritas.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected static function newFactory(): MusicaFavoritaEdicaoFactory
     {
@@ -158,8 +140,6 @@ class MusicaFavoritaEdicao extends Model
      * @throws InvalidArgumentException Quando a posição não é válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function posicao(): Attribute
     {
@@ -202,8 +182,6 @@ class MusicaFavoritaEdicao extends Model
      * @throws InvalidArgumentException Quando a identificação não é válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function musica(): Attribute
     {
@@ -289,8 +267,6 @@ class MusicaFavoritaEdicao extends Model
      * @return BelongsTo<Edicao, $this> Relação com a edição.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function edicao(): BelongsTo
     {
@@ -311,8 +287,6 @@ class MusicaFavoritaEdicao extends Model
      * @return BelongsTo<Utilizador, $this> Relação com o proprietário.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function utilizador(): BelongsTo
     {
@@ -335,8 +309,6 @@ class MusicaFavoritaEdicao extends Model
      *                                      registo.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function registadoPor(): BelongsTo
     {

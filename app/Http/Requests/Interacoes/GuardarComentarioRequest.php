@@ -11,8 +11,6 @@ use App\Models\Interacoes\Comentario;
  * Valida os dados necessários para publicar um comentário ou uma resposta.
  *
  * @since 1.0.0
- *
- * @version 2.2.0
  */
 final class GuardarComentarioRequest extends PedidoComentarioRequest
 {
@@ -25,8 +23,6 @@ final class GuardarComentarioRequest extends PedidoComentarioRequest
      * @return bool Verdadeiro quando a publicação é autorizada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function authorize(): bool
     {

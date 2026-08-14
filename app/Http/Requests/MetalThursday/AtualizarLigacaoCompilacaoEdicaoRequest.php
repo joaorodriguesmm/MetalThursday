@@ -21,8 +21,6 @@ use LogicException;
  * {@see Edicao} volta a validar o valor antes da persistência.
  *
  * @since 2.0.0
- *
- * @version 2.1.0
  */
 final class AtualizarLigacaoCompilacaoEdicaoRequest extends FormRequest
 {
@@ -35,8 +33,6 @@ final class AtualizarLigacaoCompilacaoEdicaoRequest extends FormRequest
      * @return bool Verdadeiro quando a atualização é autorizada.
      *
      * @since 2.0.0
-     *
-     * @version 3.0.0
      */
     public function authorize(): bool
     {
@@ -59,15 +55,16 @@ final class AtualizarLigacaoCompilacaoEdicaoRequest extends FormRequest
     /**
      * Normaliza a ligação antes da validação.
      *
-     * Uma string vazia é convertida para nulo, permitindo remover a ligação
-     * atualmente associada à edição.
+     * Uma string vazia ou composta apenas por espaços ASCII é convertida para
+     * nulo, permitindo remover a ligação atualmente associada à edição.
+     *
+     * Apenas espaços ASCII exteriores são removidos. Caracteres de controlo
+     * permanecem inalterados para serem rejeitados pelas regras de validação.
      *
      * Valores que não sejam strings permanecem inalterados para que as regras
      * de tipo produzam a mensagem de validação correspondente.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function prepareForValidation(): void
     {
@@ -81,6 +78,7 @@ final class AtualizarLigacaoCompilacaoEdicaoRequest extends FormRequest
 
         $ligacaoNormalizada = trim(
             $ligacao,
+            ' ',
         );
 
         $this->merge([
@@ -100,8 +98,6 @@ final class AtualizarLigacaoCompilacaoEdicaoRequest extends FormRequest
      * @return array<string, list<string|Closure>> Regras de validação.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function rules(): array
     {
@@ -122,8 +118,6 @@ final class AtualizarLigacaoCompilacaoEdicaoRequest extends FormRequest
                  * @param  Closure(string): void  $falhar  Função de erro.
                  *
                  * @since 2.0.0
-                 *
-                 * @version 1.0.0
                  */
                 static function (
                     string $atributo,
@@ -203,8 +197,6 @@ final class AtualizarLigacaoCompilacaoEdicaoRequest extends FormRequest
      * @return array<string, string> Mensagens de validação.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function messages(): array
     {
@@ -228,8 +220,6 @@ final class AtualizarLigacaoCompilacaoEdicaoRequest extends FormRequest
      * @return array<string, string> Nomes legíveis dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function attributes(): array
     {
@@ -249,8 +239,6 @@ final class AtualizarLigacaoCompilacaoEdicaoRequest extends FormRequest
      *                        ligação válida nem o valor nulo esperado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function obterLigacaoCompilacao(): ?string
     {

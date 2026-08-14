@@ -20,8 +20,6 @@ use InvalidArgumentException;
  * mensagem.
  *
  * @since 1.0.0
- *
- * @version 3.1.0
  */
 final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
 {
@@ -31,8 +29,6 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const PERMISSAO_TODAS = 'todas';
 
@@ -42,8 +38,6 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const PERMISSAO_ALERTAS_NOMEACAO =
         'alertas_nomeacao';
@@ -51,27 +45,21 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
     /**
      * Identificador da MetalThursday onde ocorreu a nomeação.
      *
-     * @since 3.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private readonly int $identificadorMetalThursday;
 
     /**
      * Nome do utilizador responsável pela nomeação.
      *
-     * @since 3.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private readonly string $nomeAutor;
 
     /**
      * Prazo apresentado ao utilizador nomeado.
      *
-     * @since 3.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private readonly ?string $prazo;
 
@@ -86,8 +74,6 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
      *                                  identificador válido.
      *
      * @since 1.0.0
-     *
-     * @version 3.1.0
      */
     public function __construct(
         MetalThursday $metalThursday,
@@ -121,8 +107,6 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
      * @return bool Verdadeiro quando o envio está autorizado.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     protected function deveEnviarPorEmail(
         Utilizador $utilizador,
@@ -150,8 +134,6 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
      * } Dados persistidos.
      *
      * @since 1.0.0
-     *
-     * @version 3.1.0
      */
     public function toArray(
         Utilizador $utilizador,
@@ -182,8 +164,6 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
      * @return string Assunto da mensagem.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     protected function obterAssunto(
         Utilizador $utilizador,
@@ -198,8 +178,6 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
      * @return string Conteúdo principal.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     protected function obterLinhaMensagem(
         Utilizador $utilizador,
@@ -214,8 +192,6 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
      * @return string Texto do botão.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     protected function obterTextoAcao(
         Utilizador $utilizador,
@@ -230,8 +206,6 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
      * @return string Endereço da MetalThursday.
      *
      * @since 1.0.0
-     *
-     * @version 3.1.0
      */
     protected function obterUrlAcao(
         Utilizador $utilizador,
@@ -250,8 +224,6 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
      * @return string Mensagem construída.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterMensagem(): string
     {
@@ -276,8 +248,6 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
      * @return string Nome do autor ou valor alternativo.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterNomeAutor(
         MetalThursday $metalThursday,
@@ -309,8 +279,6 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
      *                     está disponível.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterPrazo(
         mixed $data,
@@ -333,15 +301,17 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
     /**
      * Obtém o identificador persistido da MetalThursday.
      *
+     * Representações textuais do identificador podem conter apenas espaços
+     * ASCII exteriores. Restantes caracteres, incluindo caracteres de
+     * controlo, não são removidos antes da validação.
+     *
      * @param  MetalThursday  $metalThursday  MetalThursday recebida.
      * @return int Identificador persistido.
      *
      * @throws InvalidArgumentException Quando o modelo não está persistido ou
      *                                  não possui um identificador válido.
      *
-     * @since 3.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterIdentificadorMetalThursday(
         MetalThursday $metalThursday,
@@ -365,6 +335,7 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
         if (is_string($identificador)) {
             $identificadorNormalizado = trim(
                 $identificador,
+                ' ',
             );
 
             if (

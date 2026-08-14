@@ -15,8 +15,6 @@ use LogicException;
  * confirmação explícita impede reativações acidentais na interface.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class ReativarUtilizadorRequest extends FormRequest
 {
@@ -29,8 +27,6 @@ final class ReativarUtilizadorRequest extends FormRequest
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $errorBag =
         'reativacao';
@@ -42,8 +38,6 @@ final class ReativarUtilizadorRequest extends FormRequest
      *              indicado na rota.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function authorize(): bool
     {
@@ -71,8 +65,6 @@ final class ReativarUtilizadorRequest extends FormRequest
      * @return array<string, list<string>> Regras de validação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function rules(): array
     {
@@ -89,8 +81,6 @@ final class ReativarUtilizadorRequest extends FormRequest
      * @return array<string, string> Mensagens de validação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function messages(): array
     {
@@ -105,8 +95,6 @@ final class ReativarUtilizadorRequest extends FormRequest
      * @return array<string, string> Nomes legíveis dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function attributes(): array
     {
@@ -123,8 +111,6 @@ final class ReativarUtilizadorRequest extends FormRequest
      * @throws LogicException Quando o pedido não possui autenticação válida.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function obterUtilizadorAutenticado(): Utilizador
     {

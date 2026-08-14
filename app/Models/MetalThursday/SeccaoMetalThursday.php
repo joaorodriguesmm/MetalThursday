@@ -65,8 +65,6 @@ use InvalidArgumentException;
  * @property-read bool $ouvido_pelo_utilizador_autenticado
  *
  * @since 1.0.0
- *
- * @version 3.1.0
  */
 class SeccaoMetalThursday extends Model
 {
@@ -83,8 +81,6 @@ class SeccaoMetalThursday extends Model
      * Ordem mínima permitida.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const ORDEM_MINIMA = 1;
 
@@ -92,8 +88,6 @@ class SeccaoMetalThursday extends Model
      * Ordem máxima permitida pela coluna unsigned small integer.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const ORDEM_MAXIMA = 65_535;
 
@@ -101,20 +95,16 @@ class SeccaoMetalThursday extends Model
      * Comprimento máximo permitido para o título.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const COMPRIMENTO_MAXIMO_TITULO = 255;
 
     /**
      * Comprimento máximo permitido para a descrição.
      *
-     * O valor corresponde à capacidade da coluna SQL `TEXT` utilizada pela
-     * tabela das secções.
+     * Este é um limite funcional da aplicação, deliberadamente inferior à
+     * capacidade da coluna SQL `MEDIUMTEXT`.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const COMPRIMENTO_MAXIMO_DESCRICAO = 65_535;
 
@@ -122,8 +112,6 @@ class SeccaoMetalThursday extends Model
      * Comprimento máximo permitido para a ligação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const COMPRIMENTO_MAXIMO_LIGACAO = 2048;
 
@@ -131,8 +119,6 @@ class SeccaoMetalThursday extends Model
      * Primeiro ano permitido pelo domínio musical da aplicação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const ANO_MINIMO = 1900;
 
@@ -140,8 +126,6 @@ class SeccaoMetalThursday extends Model
      * Último ano permitido pelo domínio e pela restrição da base de dados.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const ANO_MAXIMO = 2155;
 
@@ -151,8 +135,6 @@ class SeccaoMetalThursday extends Model
      * @var string
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     protected $table = 'seccoes_metal_thursday';
 
@@ -169,8 +151,6 @@ class SeccaoMetalThursday extends Model
      * @var list<string>
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     protected $fillable = [
         'ordem',
@@ -187,8 +167,6 @@ class SeccaoMetalThursday extends Model
      * @var list<string>
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $hidden = [
         'ordem_ativa',
@@ -198,8 +176,6 @@ class SeccaoMetalThursday extends Model
      * Regista as validações de coerência executadas antes da persistência.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected static function booted(): void
     {
@@ -218,8 +194,6 @@ class SeccaoMetalThursday extends Model
      * @return array<string, string> Conversões dos atributos.
      *
      * @since 1.0.0
-     *
-     * @version 3.1.0
      */
     protected function casts(): array
     {
@@ -246,8 +220,6 @@ class SeccaoMetalThursday extends Model
      * @return SeccaoMetalThursdayFactory Factory das secções.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected static function newFactory(): SeccaoMetalThursdayFactory
     {
@@ -267,8 +239,6 @@ class SeccaoMetalThursday extends Model
      * @throws InvalidArgumentException Quando a ordem não é válida.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     protected function ordem(): Attribute
     {
@@ -310,8 +280,6 @@ class SeccaoMetalThursday extends Model
      * @throws InvalidArgumentException Quando o título não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function titulo(): Attribute
     {
@@ -386,17 +354,15 @@ class SeccaoMetalThursday extends Model
     /**
      * Normaliza e valida a descrição obrigatória da secção.
      *
-     * As quebras de linha são preservadas num formato uniforme. Os espaços
-     * exteriores são removidos, mas os parágrafos e restantes espaços
-     * interiores são preservados.
+     * As quebras de linha são preservadas num formato uniforme. Espaços
+     * ASCII, tabulações e quebras de linha exteriores são removidos, mas os
+     * parágrafos e restantes espaços interiores são preservados.
      *
      * @return Attribute<string, string> Atributo da descrição.
      *
      * @throws InvalidArgumentException Quando a descrição não é válida.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function descricao(): Attribute
     {
@@ -426,15 +392,18 @@ class SeccaoMetalThursday extends Model
                     );
                 }
 
+                $descricaoNormalizada = str_replace(
+                    [
+                        "\r\n",
+                        "\r",
+                    ],
+                    "\n",
+                    $valor,
+                );
+
                 $descricaoNormalizada = trim(
-                    str_replace(
-                        [
-                            "\r\n",
-                            "\r",
-                        ],
-                        "\n",
-                        $valor,
-                    ),
+                    $descricaoNormalizada,
+                    " \t\n",
                 );
 
                 if ($descricaoNormalizada === '') {
@@ -467,13 +436,14 @@ class SeccaoMetalThursday extends Model
      * Um valor nulo ou vazio remove a ligação. Apenas endereços absolutos
      * HTTP ou HTTPS, sem credenciais incorporadas, são aceites.
      *
+     * Apenas espaços ASCII exteriores são removidos antes da validação.
+     * Caracteres de controlo permanecem intactos para serem rejeitados.
+     *
      * @return Attribute<string|null, string|null> Atributo da ligação.
      *
      * @throws InvalidArgumentException Quando a ligação não é válida.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     protected function ligacao(): Attribute
     {
@@ -491,8 +461,14 @@ class SeccaoMetalThursday extends Model
                     );
                 }
 
+                self::validarTextoUtf8(
+                    $valor,
+                    'A ligação da secção contém texto inválido.',
+                );
+
                 $ligacaoNormalizada = trim(
                     $valor,
+                    ' ',
                 );
 
                 if ($ligacaoNormalizada === '') {
@@ -572,8 +548,6 @@ class SeccaoMetalThursday extends Model
      * @throws InvalidArgumentException Quando o ano não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     protected function ano(): Attribute
     {
@@ -620,8 +594,6 @@ class SeccaoMetalThursday extends Model
      * @return Builder<SeccaoMetalThursday> Consulta ordenada.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function scopeOrdenadas(
         Builder $construtor,
@@ -644,8 +616,6 @@ class SeccaoMetalThursday extends Model
      * @return BelongsTo<MetalThursday, $this> Relação com a MetalThursday.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function metalThursday(): BelongsTo
     {
@@ -663,8 +633,6 @@ class SeccaoMetalThursday extends Model
      * @return BelongsTo<TipoSeccao, $this> Relação com o tipo da secção.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function tipoSeccao(): BelongsTo
     {
@@ -686,8 +654,6 @@ class SeccaoMetalThursday extends Model
      * @return BelongsTo<Banda, $this> Relação com a banda.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function banda(): BelongsTo
     {
@@ -709,8 +675,6 @@ class SeccaoMetalThursday extends Model
      *                                  está preenchido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function validarIncorporacao(): void
     {
@@ -738,8 +702,6 @@ class SeccaoMetalThursday extends Model
      * @throws InvalidArgumentException Quando o texto não é UTF-8 válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private static function validarTextoUtf8(
         string $valor,

@@ -40,8 +40,6 @@ use InvalidArgumentException;
  * @property-read Collection<int, Genero> $generos
  *
  * @since 1.0.0
- *
- * @version 3.1.0
  */
 class Banda extends Model
 {
@@ -55,8 +53,6 @@ class Banda extends Model
      * Comprimento máximo do nome.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const COMPRIMENTO_MAXIMO_NOME = 255;
 
@@ -64,8 +60,6 @@ class Banda extends Model
      * Nome da tabela intermédia entre bandas e géneros.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const TABELA_BANDA_GENERO =
         'banda_genero';
@@ -76,8 +70,6 @@ class Banda extends Model
      * @var string
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     protected $table = 'bandas';
 
@@ -91,8 +83,6 @@ class Banda extends Model
      * @var list<string>
      *
      * @since 1.0.0
-     *
-     * @version 3.1.0
      */
     protected $fillable = [
         'nome',
@@ -104,8 +94,6 @@ class Banda extends Model
      * @var list<string>
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $hidden = [
         'nome_ativo',
@@ -117,8 +105,6 @@ class Banda extends Model
      * @return array<string, string> Conversões dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function casts(): array
     {
@@ -137,8 +123,6 @@ class Banda extends Model
      * @return BandaFactory Factory das bandas.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected static function newFactory(): BandaFactory
     {
@@ -153,8 +137,6 @@ class Banda extends Model
      * @throws InvalidArgumentException Quando o nome não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     protected function nome(): Attribute
     {
@@ -224,8 +206,6 @@ class Banda extends Model
      * @return BelongsTo<OrigemGeografica, $this> Relação com a origem.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function origemGeografica(): BelongsTo
     {
@@ -244,8 +224,6 @@ class Banda extends Model
      * @return BelongsToMany<Genero, $this> Relação com os géneros.
      *
      * @since 1.0.0
-     *
-     * @version 2.1.0
      */
     public function generos(): BelongsToMany
     {

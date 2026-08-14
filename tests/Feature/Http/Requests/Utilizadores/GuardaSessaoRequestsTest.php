@@ -95,11 +95,6 @@ final class GuardaSessaoRequestsTest extends TestCase
             $pedidoComSessao->authorize(),
         );
 
-        self::assertSame(
-            $utilizador,
-            $pedidoComSessao->obterUtilizadorAutenticado(),
-        );
-
         $pedidoApenasPredefinido =
             new AtualizarPerfilRequest;
 
@@ -112,13 +107,6 @@ final class GuardaSessaoRequestsTest extends TestCase
         self::assertFalse(
             $pedidoApenasPredefinido->authorize(),
         );
-
-        $this->expectException(
-            LogicException::class,
-        );
-
-        $pedidoApenasPredefinido
-            ->obterUtilizadorAutenticado();
     }
 
     /**

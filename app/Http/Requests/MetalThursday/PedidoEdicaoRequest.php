@@ -8,6 +8,7 @@ use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Unique;
 use LogicException;
 
@@ -22,8 +23,6 @@ use LogicException;
  * das regras e execução das consultas de validação.
  *
  * @since 2.0.0
- *
- * @version 3.0.0
  */
 abstract class PedidoEdicaoRequest extends FormRequest
 {
@@ -34,8 +33,6 @@ abstract class PedidoEdicaoRequest extends FormRequest
      * nulo, de um parâmetro ainda não consultado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private bool $edicaoDaRotaResolvida = false;
 
@@ -43,8 +40,6 @@ abstract class PedidoEdicaoRequest extends FormRequest
      * Edição resolvida através do parâmetro da rota.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private ?Edicao $edicaoDaRota = null;
 
@@ -60,8 +55,6 @@ abstract class PedidoEdicaoRequest extends FormRequest
      * @throws LogicException Quando existe um parâmetro de rota inválido.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function authorize(): bool
     {
@@ -92,13 +85,14 @@ abstract class PedidoEdicaoRequest extends FormRequest
     /**
      * Normaliza os dados antes da validação.
      *
-     * O nome é reduzido a uma única linha, com espaços consecutivos
-     * convertidos num único espaço. As datas são limpas de espaços
-     * exteriores e uma data de fim vazia é convertida para nulo.
+     * O nome é reduzido a uma única linha, com whitespace consecutivo
+     * convertido num único espaço, desde que não contenha caracteres que
+     * devam ser rejeitados pela validação.
+     *
+     * Nas datas são removidos apenas espaços ASCII exteriores. Uma data de
+     * fim vazia é convertida para nulo.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function prepareForValidation(): void
     {
@@ -135,8 +129,6 @@ abstract class PedidoEdicaoRequest extends FormRequest
      * @return array<string, list<string|Closure|Unique>> Regras de validação.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function rules(): array
     {
@@ -156,8 +148,6 @@ abstract class PedidoEdicaoRequest extends FormRequest
                  * @param  Closure(string): void  $falhar  Função de erro.
                  *
                  * @since 2.0.0
-                 *
-                 * @version 1.0.0
                  */
                 static function (
                     string $atributo,
@@ -217,8 +207,6 @@ abstract class PedidoEdicaoRequest extends FormRequest
      * @return array<string, string> Mensagens de validação.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function messages(): array
     {
@@ -250,8 +238,6 @@ abstract class PedidoEdicaoRequest extends FormRequest
      * @return array<string, string> Nomes legíveis dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function attributes(): array
     {
@@ -273,8 +259,6 @@ abstract class PedidoEdicaoRequest extends FormRequest
      * @return Unique Regra de unicidade.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     abstract protected function obterRegraUnicidadeNome(): Unique;
 
@@ -290,8 +274,6 @@ abstract class PedidoEdicaoRequest extends FormRequest
      * @throws LogicException Quando existe um parâmetro com tipo inesperado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     final protected function obterEdicaoDaRota(): ?Edicao
     {
@@ -327,15 +309,14 @@ abstract class PedidoEdicaoRequest extends FormRequest
      * Valores que não sejam strings permanecem inalterados para que as regras
      * de tipo produzam a respetiva mensagem de validação.
      *
-     * Quando a substituição falha devido a texto inválido, o valor original é
-     * devolvido e será rejeitado pela regra adicional de UTF-8.
+     * Texto UTF-8 inválido ou com caracteres de controlo permanece inalterado
+     * para ser rejeitado pelas regras de validação. Nos restantes casos é
+     * aplicada a mesma normalização utilizada pelo modelo {@see Edicao}.
      *
      * @param  mixed  $valor  Valor recebido.
      * @return mixed Nome normalizado ou valor original.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarNome(
         mixed $valor,
@@ -344,34 +325,40 @@ abstract class PedidoEdicaoRequest extends FormRequest
             return $valor;
         }
 
-        $nome = preg_replace(
-            '/\s+/u',
-            ' ',
-            trim(
+        if (
+            preg_match(
+                '//u',
                 $valor,
-            ),
-        );
+            ) !== 1
+            || preg_match(
+                '/[\x00-\x1F\x7F]/',
+                $valor,
+            ) === 1
+        ) {
+            return $valor;
+        }
 
-        return is_string($nome)
-            ? $nome
-            : $valor;
+        return Str::squish(
+            $valor,
+        );
     }
 
     /**
      * Normaliza uma data recebida.
      *
-     * Uma string vazia é convertida para nulo, permitindo que a regra
+     * Apenas espaços ASCII exteriores são removidos. Uma string composta
+     * apenas por espaços é convertida para nulo, permitindo que a regra
      * `nullable` seja aplicada à data de fim.
      *
-     * Valores que não sejam strings permanecem inalterados para que as regras
-     * de validação os rejeitem.
+     * Os restantes caracteres permanecem inalterados para que uma data
+     * inválida seja rejeitada pelas regras de validação.
+     *
+     * Valores que não sejam strings permanecem igualmente inalterados.
      *
      * @param  mixed  $valor  Valor recebido.
      * @return mixed Data normalizada ou valor original.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarData(
         mixed $valor,
@@ -382,6 +369,7 @@ abstract class PedidoEdicaoRequest extends FormRequest
 
         $data = trim(
             $valor,
+            ' ',
         );
 
         return $data !== ''

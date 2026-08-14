@@ -89,8 +89,6 @@ use SensitiveParameter;
  * @property-read Collection<int, MusicaFavoritaEdicao> $musicasFavoritasEdicaoRegistadas
  *
  * @since 1.0.0
- *
- * @version 5.0.0
  */
 class Utilizador extends Authenticatable implements MustVerifyEmail
 {
@@ -103,8 +101,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * Nome do disco que contém as fotografias públicas.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const DISCO_FOTOGRAFIAS =
         'publico';
@@ -113,8 +109,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * Comprimento máximo do caminho persistido da fotografia.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const COMPRIMENTO_MAXIMO_CAMINHO_FOTOGRAFIA =
         255;
@@ -123,8 +117,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * Nome da tabela intermédia entre permissões e utilizadores.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const TABELA_PERMISSAO_UTILIZADOR =
         'permissao_email_utilizador';
@@ -135,8 +127,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @var string
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     protected $table = 'utilizadores';
 
@@ -149,8 +139,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @var list<string>
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     protected $fillable = [
         'nome',
@@ -168,8 +156,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @var list<string>
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     protected $hidden = [
         'password',
@@ -185,8 +171,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @var list<string>
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     protected $appends = [
         'url_fotografia',
@@ -200,8 +184,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return array<string, string> Conversões dos atributos.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     protected function casts(): array
     {
@@ -224,8 +206,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return UtilizadorFactory Factory dos utilizadores.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected static function newFactory(): UtilizadorFactory
     {
@@ -241,8 +221,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      *                                  não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function nome(): Attribute
     {
@@ -272,8 +250,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      *                                  endereço não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function email(): Attribute
     {
@@ -300,8 +276,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return Attribute<string|null, string|null> Atributo da fotografia.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function fotografia(): Attribute
     {
@@ -329,8 +303,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      *                                  válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function motivoSuspensao(): Attribute
     {
@@ -361,8 +333,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return Attribute<string|null, never> Ligação pública da fotografia.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     protected function urlFotografia(): Attribute
     {
@@ -399,8 +369,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return Attribute<string, never> Iniciais do nome.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     protected function iniciais(): Attribute
     {
@@ -429,8 +397,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return Attribute<string, never> Primeiro nome.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     protected function primeiroNome(): Attribute
     {
@@ -460,8 +426,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * pelo Laravel.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function sendEmailVerificationNotification(): void
     {
@@ -481,8 +445,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @throws LogicException Quando não é recebido um token textual válido.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function sendPasswordResetNotification(
         #[SensitiveParameter]
@@ -511,8 +473,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      *                                                 notificações.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function notificacoes(): MorphMany
     {
@@ -530,8 +490,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return MorphMany<NotificacaoPersistida, $this> Relação filtrada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function notificacoesLidas(): MorphMany
     {
@@ -546,8 +504,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return MorphMany<NotificacaoPersistida, $this> Relação filtrada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function notificacoesPorLer(): MorphMany
     {
@@ -566,8 +522,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      *                                                 notificações.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function notifications(): MorphMany
     {
@@ -583,8 +537,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return MorphMany<NotificacaoPersistida, $this> Relação filtrada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function readNotifications(): MorphMany
     {
@@ -600,8 +552,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return MorphMany<NotificacaoPersistida, $this> Relação filtrada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function unreadNotifications(): MorphMany
     {
@@ -614,8 +564,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return BelongsToMany<PermissaoEmail, $this> Relação com as permissões.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function permissoesEmail(): BelongsToMany
     {
@@ -637,24 +585,31 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
     /**
      * Determina se o utilizador possui uma permissão de e-mail.
      *
+     * O identificador é normalizado de acordo com o contrato técnico da
+     * permissão. Apenas espaços ASCII exteriores e diferenças de capitalização
+     * são normalizados; caracteres de controlo permanecem inalterados e são
+     * rejeitados pelo padrão permitido.
+     *
      * @param  string  $identificador  Identificador da permissão.
      * @return bool Verdadeiro quando a permissão está atribuída.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function temPermissaoEmail(
         string $identificador,
     ): bool {
-        $identificadorNormalizado = mb_strtolower(
+        $identificadorNormalizado = strtolower(
             trim(
                 $identificador,
+                ' ',
             ),
         );
 
         if (
             $identificadorNormalizado === ''
+            || strlen(
+                $identificadorNormalizado,
+            ) > PermissaoEmail::COMPRIMENTO_MAXIMO_IDENTIFICADOR
             || preg_match(
                 '/\A[a-z0-9]+(?:_[a-z0-9]+)*\z/',
                 $identificadorNormalizado,
@@ -690,8 +645,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return bool Verdadeiro quando os papéis coincidem.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function possuiPapel(
         PapelUtilizador $papel,
@@ -705,8 +658,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return bool Verdadeiro para administradores e superadministradores.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function possuiPrivilegiosAdministrativos(): bool
     {
@@ -721,8 +672,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return bool Verdadeiro apenas para o superadministrador.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function eSuperAdministrador(): bool
     {
@@ -737,8 +686,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return bool Verdadeiro quando o utilizador não está suspenso.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function temAcessoAtivo(): bool
     {
@@ -751,8 +698,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return bool Verdadeiro quando existe uma suspensão atual.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function estaSuspenso(): bool
     {
@@ -766,8 +711,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return Builder<Utilizador> Consulta filtrada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function scopeComAcessoAtivo(
         Builder $construtor,
@@ -784,8 +727,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return Builder<Utilizador> Consulta filtrada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function scopeSuspensos(
         Builder $construtor,
@@ -809,8 +750,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return Builder<Utilizador> Consulta filtrada.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function scopeSelecionaveis(
         Builder $construtor,
@@ -835,8 +774,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return HasMany<Convite, $this> Relação com os convites.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function convitesCriados(): HasMany
     {
@@ -852,8 +789,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return HasOne<Convite, $this> Relação com o convite utilizado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function conviteUtilizado(): HasOne
     {
@@ -869,8 +804,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return BelongsTo<Utilizador, $this> Relação com o responsável.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function responsavelSuspensao(): BelongsTo
     {
@@ -886,8 +819,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return HasMany<RegistoAcessoUtilizador, $this> Relação com o histórico.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function registosAcesso(): HasMany
     {
@@ -911,8 +842,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      *                                                 realizadas.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function registosAcessoEfetuados(): HasMany
     {
@@ -935,8 +864,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return HasMany<RegistoPapelUtilizador, $this> Relação com o histórico.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function registosPapel(): HasMany
     {
@@ -960,8 +887,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      *                                                realizadas.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function registosPapelEfetuados(): HasMany
     {
@@ -984,8 +909,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return HasMany<Edicao, $this> Relação com as edições.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function edicoesCriadas(): HasMany
     {
@@ -1001,8 +924,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return HasMany<MetalThursday, $this> Relação com as MetalThursdays.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function metalThursdaysComoAutor(): HasMany
     {
@@ -1018,8 +939,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return HasMany<MetalThursday, $this> Relação com as MetalThursdays.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function metalThursdaysComoNomeado(): HasMany
     {
@@ -1035,8 +954,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return HasMany<MetalThursday, $this> Relação com as MetalThursdays.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function metalThursdaysCriadas(): HasMany
     {
@@ -1052,8 +969,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return HasMany<Comentario, $this> Relação com os comentários.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function comentarios(): HasMany
     {
@@ -1069,8 +984,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return HasMany<Gosto, $this> Relação com os gostos.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function gostos(): HasMany
     {
@@ -1086,8 +999,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return HasMany<Audicao, $this> Relação com as audições.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function audicoes(): HasMany
     {
@@ -1103,8 +1014,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return HasMany<Avaliacao, $this> Relação com as avaliações.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function avaliacoes(): HasMany
     {
@@ -1120,8 +1029,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return HasMany<MusicaFavoritaEdicao, $this> Relação com as músicas.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function musicasFavoritasEdicao(): HasMany
     {
@@ -1137,8 +1044,6 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * @return HasMany<MusicaFavoritaEdicao, $this> Relação com as músicas.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function musicasFavoritasEdicaoRegistadas(): HasMany
     {
@@ -1154,14 +1059,15 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
      * Ligações externas, caminhos absolutos, caracteres de controlo,
      * segmentos vazios e travessias de diretórios não são aceites.
      *
+     * Apenas espaços ASCII exteriores são removidos antes da validação.
+     * Caracteres de controlo permanecem intactos para serem rejeitados.
+     *
      * @param  mixed  $caminho  Caminho recebido.
      * @return string|null Caminho normalizado ou nulo.
      *
      * @throws InvalidArgumentException Quando o caminho não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private static function normalizarCaminhoFotografia(
         mixed $caminho,
@@ -1182,6 +1088,7 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
                 '/',
                 $caminho,
             ),
+            ' ',
         );
 
         if ($caminhoNormalizado === '') {

@@ -32,8 +32,6 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * @property-read MetalThursday|SeccaoMetalThursday|null $audivel
  *
  * @since 1.0.0
- *
- * @version 3.0.0
  */
 class Audicao extends Model
 {
@@ -43,8 +41,6 @@ class Audicao extends Model
      * @var string
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     protected $table = 'audicoes';
 
@@ -58,8 +54,6 @@ class Audicao extends Model
      * @var list<string>
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     protected $fillable = [
         'utilizador_id',
@@ -71,8 +65,6 @@ class Audicao extends Model
      * @return array<string, string> Conversões dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function casts(): array
     {
@@ -89,8 +81,6 @@ class Audicao extends Model
      * @return BelongsTo<Utilizador, $this> Relação com o utilizador.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function utilizador(): BelongsTo
     {
@@ -114,8 +104,6 @@ class Audicao extends Model
      * @return MorphTo<Model, $this> Relação com a entidade ouvida.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function audivel(): MorphTo
     {

@@ -6,6 +6,7 @@ namespace App\Http\Requests\Autenticacao;
 
 use App\Models\Autenticacao\Convite;
 use App\Models\Autenticacao\Utilizador;
+use App\ObjetosValor\Utilizadores\EnderecoEmail;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Closure;
@@ -21,8 +22,6 @@ use Throwable;
  * o endereço são confirmados também pelos atributos definitivos do modelo.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class CriarConviteRequest extends FormRequest
 {
@@ -35,8 +34,6 @@ final class CriarConviteRequest extends FormRequest
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $errorBag =
         'criacao_convite';
@@ -48,8 +45,6 @@ final class CriarConviteRequest extends FormRequest
      *              convites.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function authorize(): bool
     {
@@ -68,60 +63,31 @@ final class CriarConviteRequest extends FormRequest
     /**
      * Normaliza os campos textuais antes da validação.
      *
-     * O nome reduz sequências de espaços a um único espaço. Um endereço vazio
-     * passa a representar a ausência de destinatário específico.
+     * Valores válidos são convertidos para as representações canónicas
+     * definidas pelos atributos do modelo {@see Convite}. Valores inválidos
+     * permanecem inalterados para que as regras de validação os rejeitem sem
+     * remover ou transformar silenciosamente caracteres proibidos.
+     *
+     * Um endereço composto apenas por espaços ASCII continua a representar a
+     * ausência de destinatário específico.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function prepareForValidation(): void
     {
-        $nome =
-            $this->input(
-                'nome_convidado',
-            );
+        $this->merge([
+            'nome_convidado' => $this->normalizarNomeConvidado(
+                $this->input(
+                    'nome_convidado',
+                ),
+            ),
 
-        $email =
-            $this->input(
-                'email_destino',
-            );
-
-        $dados = [];
-
-        if (is_string($nome)) {
-            $nomeNormalizado =
-                preg_replace(
-                    '/\s+/u',
-                    ' ',
-                    trim(
-                        $nome,
-                    ),
-                );
-
-            if (is_string($nomeNormalizado)) {
-                $dados['nome_convidado'] =
-                    $nomeNormalizado;
-            }
-        }
-
-        if (is_string($email)) {
-            $emailNormalizado =
-                trim(
-                    $email,
-                );
-
-            $dados['email_destino'] =
-                $emailNormalizado !== ''
-                ? $emailNormalizado
-                : null;
-        }
-
-        if ($dados !== []) {
-            $this->merge(
-                $dados,
-            );
-        }
+            'email_destino' => $this->normalizarEmailDestino(
+                $this->input(
+                    'email_destino',
+                ),
+            ),
+        ]);
     }
 
     /**
@@ -130,8 +96,6 @@ final class CriarConviteRequest extends FormRequest
      * @return array<string, list<mixed>> Regras de validação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function rules(): array
     {
@@ -148,7 +112,7 @@ final class CriarConviteRequest extends FormRequest
                 'bail',
                 'nullable',
                 'string',
-                'max:255',
+                'max:'.EnderecoEmail::COMPRIMENTO_MAXIMO,
                 'email:rfc',
                 $this->criarRegraEmailDestino(),
             ],
@@ -169,8 +133,6 @@ final class CriarConviteRequest extends FormRequest
      * @return array<string, string> Mensagens de validação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function messages(): array
     {
@@ -186,7 +148,10 @@ final class CriarConviteRequest extends FormRequest
 
             'email_destino.string' => 'O endereço de destino deve ser uma sequência de caracteres.',
 
-            'email_destino.max' => 'O endereço de destino não pode ter mais de 255 caracteres.',
+            'email_destino.max' => sprintf(
+                'O endereço de destino não pode ter mais de %d caracteres.',
+                EnderecoEmail::COMPRIMENTO_MAXIMO,
+            ),
 
             'email_destino.email' => 'Indica um endereço de e-mail válido.',
 
@@ -204,8 +169,6 @@ final class CriarConviteRequest extends FormRequest
      * @return array<string, string> Nomes legíveis dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function attributes(): array
     {
@@ -226,8 +189,6 @@ final class CriarConviteRequest extends FormRequest
      * @throws LogicException Quando o resultado validado não é textual.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function obterNomeConvidado(): string
     {
@@ -253,8 +214,6 @@ final class CriarConviteRequest extends FormRequest
      * @throws LogicException Quando o resultado possui um tipo inesperado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function obterEmailDestino(): ?string
     {
@@ -284,8 +243,6 @@ final class CriarConviteRequest extends FormRequest
      * @throws LogicException Quando não é possível reconstruir o momento.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function obterExpiracao(): ?CarbonInterface
     {
@@ -328,8 +285,6 @@ final class CriarConviteRequest extends FormRequest
      * @throws LogicException Quando o pedido não possui autenticação válida.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function obterUtilizadorAutenticado(): Utilizador
     {
@@ -348,13 +303,78 @@ final class CriarConviteRequest extends FormRequest
     }
 
     /**
+     * Normaliza preliminarmente o nome da pessoa convidada.
+     *
+     * Quando o atributo do modelo aceita o valor, é utilizada imediatamente a
+     * respetiva representação canónica. Valores inválidos são preservados para
+     * que a validação os rejeite.
+     *
+     * @param  mixed  $valor  Valor recebido.
+     * @return mixed Nome normalizado ou valor original.
+     *
+     * @since 2.0.0
+     */
+    private function normalizarNomeConvidado(
+        mixed $valor,
+    ): mixed {
+        if (! is_string($valor)) {
+            return $valor;
+        }
+
+        try {
+            $convite =
+                new Convite;
+
+            $convite->nome_convidado =
+                $valor;
+
+            return $convite->nome_convidado;
+        } catch (InvalidArgumentException) {
+            return $valor;
+        }
+    }
+
+    /**
+     * Normaliza preliminarmente o endereço de destino.
+     *
+     * Quando o atributo do modelo aceita o valor, é utilizada imediatamente a
+     * respetiva representação canónica. Valores inválidos são preservados para
+     * que a validação os rejeite.
+     *
+     * @param  mixed  $valor  Valor recebido.
+     * @return mixed Endereço normalizado, nulo ou valor original.
+     *
+     * @since 2.0.0
+     */
+    private function normalizarEmailDestino(
+        mixed $valor,
+    ): mixed {
+        if (
+            $valor !== null
+            && ! is_string($valor)
+        ) {
+            return $valor;
+        }
+
+        try {
+            $convite =
+                new Convite;
+
+            $convite->email_destino =
+                $valor;
+
+            return $convite->email_destino;
+        } catch (InvalidArgumentException) {
+            return $valor;
+        }
+    }
+
+    /**
      * Cria a regra definitiva do nome do convidado.
      *
      * @return Closure(string, mixed, Closure(string): void): void Regra.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarRegraNomeConvidado(): Closure
     {
@@ -387,8 +407,6 @@ final class CriarConviteRequest extends FormRequest
      * @return Closure(string, mixed, Closure(string): void): void Regra.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarRegraEmailDestino(): Closure
     {

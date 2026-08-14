@@ -30,11 +30,9 @@ use InvalidArgumentException;
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
  * @property-read Utilizador $utilizador
- * @property-read MetalThursday|SeccaoMetalThursday $avaliavel
+ * @property-read MetalThursday|SeccaoMetalThursday|null $avaliavel
  *
  * @since 1.0.0
- *
- * @version 3.0.0
  */
 class Avaliacao extends Model
 {
@@ -42,8 +40,6 @@ class Avaliacao extends Model
      * Pontuação mínima permitida.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const PONTUACAO_MINIMA = 0.5;
 
@@ -51,8 +47,6 @@ class Avaliacao extends Model
      * Pontuação máxima permitida.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const PONTUACAO_MAXIMA = 10.0;
 
@@ -60,8 +54,6 @@ class Avaliacao extends Model
      * Incremento permitido entre pontuações.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const INCREMENTO_PONTUACAO = 0.5;
 
@@ -69,8 +61,6 @@ class Avaliacao extends Model
      * Número de casas decimais persistidas.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const CASAS_DECIMAIS_PONTUACAO = 1;
 
@@ -79,8 +69,6 @@ class Avaliacao extends Model
      * modulares diretamente sobre números de vírgula flutuante.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const FATOR_ESCALA = 10;
 
@@ -90,8 +78,6 @@ class Avaliacao extends Model
      * @var string
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     protected $table = 'avaliacoes';
 
@@ -105,8 +91,6 @@ class Avaliacao extends Model
      * @var list<string>
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     protected $fillable = [
         'utilizador_id',
@@ -122,8 +106,6 @@ class Avaliacao extends Model
      * @return array<string, string> Conversões dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function casts(): array
     {
@@ -138,7 +120,11 @@ class Avaliacao extends Model
      * Normaliza e valida a pontuação.
      *
      * São aceites inteiros, números de vírgula flutuante e representações
-     * numéricas textuais que utilizem ponto como separador decimal.
+     * numéricas textuais reconhecidas pelo PHP.
+     *
+     * Nas representações textuais são removidos apenas espaços ASCII
+     * exteriores. Caracteres de controlo não são aceites nem removidos
+     * silenciosamente.
      *
      * O valor persistido possui sempre uma casa decimal.
      *
@@ -148,8 +134,6 @@ class Avaliacao extends Model
      *                                  escala permitida.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function pontuacao(): Attribute
     {
@@ -171,23 +155,31 @@ class Avaliacao extends Model
                     );
                 }
 
-                if (
-                    is_string($valor)
-                    && (
-                        trim($valor) === ''
-                        || ! is_numeric(trim($valor))
-                    )
-                ) {
-                    throw new InvalidArgumentException(
-                        'A pontuação da avaliação deve ser numérica.',
+                if (is_string($valor)) {
+                    $valorNormalizado = trim(
+                        $valor,
+                        ' ',
                     );
+
+                    if (
+                        $valorNormalizado === ''
+                        || preg_match(
+                            '/[\x00-\x1F\x7F]/',
+                            $valorNormalizado,
+                        ) === 1
+                        || ! is_numeric(
+                            $valorNormalizado,
+                        )
+                    ) {
+                        throw new InvalidArgumentException(
+                            'A pontuação da avaliação deve ser numérica.',
+                        );
+                    }
+
+                    $valor = $valorNormalizado;
                 }
 
-                $pontuacao = (float) (
-                    is_string($valor)
-                    ? trim($valor)
-                    : $valor
-                );
+                $pontuacao = (float) $valor;
 
                 if (! is_finite($pontuacao)) {
                     throw new InvalidArgumentException(
@@ -246,8 +238,6 @@ class Avaliacao extends Model
      * @return BelongsTo<Utilizador, $this> Relação com o utilizador.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function utilizador(): BelongsTo
     {
@@ -265,11 +255,12 @@ class Avaliacao extends Model
      * - `metal_thursday`;
      * - `seccao_metal_thursday`.
      *
+     * A relação pode devolver nulo quando a entidade foi eliminada
+     * logicamente e não foi incluída explicitamente na consulta.
+     *
      * @return MorphTo<Model, $this> Relação com a entidade avaliada.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function avaliavel(): MorphTo
     {

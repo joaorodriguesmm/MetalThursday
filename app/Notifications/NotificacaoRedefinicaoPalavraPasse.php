@@ -16,8 +16,6 @@ use LogicException;
  * imediatamente, evitando atrasos numa operação sensível de autenticação.
  *
  * @since 1.0.0
- *
- * @version 2.1.0
  */
 final class NotificacaoRedefinicaoPalavraPasse extends ResetPassword
 {
@@ -31,8 +29,6 @@ final class NotificacaoRedefinicaoPalavraPasse extends ResetPassword
      *                        válido.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function toMail(
         mixed $notificavel,
@@ -88,8 +84,6 @@ final class NotificacaoRedefinicaoPalavraPasse extends ResetPassword
      * @return string Endereço absoluto da redefinição.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     private function obterUrlRedefinicao(
         Utilizador $utilizador,
@@ -116,8 +110,6 @@ final class NotificacaoRedefinicaoPalavraPasse extends ResetPassword
      * @return int Número de minutos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function obterMinutosExpiracao(): int
     {
@@ -158,8 +150,6 @@ final class NotificacaoRedefinicaoPalavraPasse extends ResetPassword
      * @return string Saudação da mensagem.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function obterSaudacao(
         Utilizador $utilizador,

@@ -28,8 +28,6 @@ use LogicException;
  * @property-read Utilizador $responsavel
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 class RegistoPapelUtilizador extends Model
 {
@@ -42,8 +40,6 @@ class RegistoPapelUtilizador extends Model
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $table =
         'registos_papel_utilizadores';
@@ -56,8 +52,6 @@ class RegistoPapelUtilizador extends Model
      * @var bool
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public $timestamps = false;
 
@@ -70,8 +64,6 @@ class RegistoPapelUtilizador extends Model
      * @var list<string>
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $fillable = [];
 
@@ -81,8 +73,6 @@ class RegistoPapelUtilizador extends Model
      * @return array<string, string> Conversões dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function casts(): array
     {
@@ -105,8 +95,6 @@ class RegistoPapelUtilizador extends Model
      * @return RegistoPapelUtilizadorFactory Factory dos registos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected static function newFactory(): RegistoPapelUtilizadorFactory
     {
@@ -120,8 +108,6 @@ class RegistoPapelUtilizador extends Model
      * ciclo de vida dos modelos Eloquent.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected static function booted(): void
     {
@@ -148,8 +134,6 @@ class RegistoPapelUtilizador extends Model
      * @return BelongsTo<Utilizador, $this> Relação com o utilizador afetado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function utilizador(): BelongsTo
     {
@@ -165,8 +149,6 @@ class RegistoPapelUtilizador extends Model
      * @return BelongsTo<Utilizador, $this> Relação com o responsável.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function responsavel(): BelongsTo
     {

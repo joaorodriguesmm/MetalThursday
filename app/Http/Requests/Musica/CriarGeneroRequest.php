@@ -13,8 +13,6 @@ use Illuminate\Validation\Rules\Unique;
  * Valida os dados necessários para criar um género musical.
  *
  * @since 1.0.0
- *
- * @version 3.1.0
  */
 final class CriarGeneroRequest extends PedidoGeneroRequest
 {
@@ -26,8 +24,6 @@ final class CriarGeneroRequest extends PedidoGeneroRequest
      * @return bool Verdadeiro quando a política permite a criação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function authorize(): bool
     {
@@ -51,8 +47,6 @@ final class CriarGeneroRequest extends PedidoGeneroRequest
      * @return Unique Regra de unicidade.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function obterRegraUnicidadeNome(): Unique
     {

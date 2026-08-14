@@ -18,8 +18,6 @@ use LogicException;
  * explícita impede alterações acidentais.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class AlterarPapelUtilizadorRequest extends FormRequest
 {
@@ -32,8 +30,6 @@ final class AlterarPapelUtilizadorRequest extends FormRequest
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $errorBag =
         'papel';
@@ -48,8 +44,6 @@ final class AlterarPapelUtilizadorRequest extends FormRequest
      *              utilizador indicado na rota.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function authorize(): bool
     {
@@ -79,8 +73,6 @@ final class AlterarPapelUtilizadorRequest extends FormRequest
      * rejeite.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function prepareForValidation(): void
     {
@@ -106,8 +98,6 @@ final class AlterarPapelUtilizadorRequest extends FormRequest
      * @return array<string, list<mixed>> Regras de validação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function rules(): array
     {
@@ -133,8 +123,6 @@ final class AlterarPapelUtilizadorRequest extends FormRequest
      * @return array<string, string> Mensagens de validação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function messages(): array
     {
@@ -155,8 +143,6 @@ final class AlterarPapelUtilizadorRequest extends FormRequest
      * @return array<string, string> Nomes legíveis dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function attributes(): array
     {
@@ -176,8 +162,6 @@ final class AlterarPapelUtilizadorRequest extends FormRequest
      *                        contrato da enumeração.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function obterPapelNovo(): PapelUtilizador
     {
@@ -205,8 +189,6 @@ final class AlterarPapelUtilizadorRequest extends FormRequest
      * @throws LogicException Quando o pedido não possui autenticação válida.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function obterUtilizadorAutenticado(): Utilizador
     {

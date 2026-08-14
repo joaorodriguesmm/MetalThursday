@@ -32,8 +32,6 @@ use LogicException;
  * @property-read Utilizador $responsavel
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 class RegistoAcessoUtilizador extends Model
 {
@@ -46,8 +44,6 @@ class RegistoAcessoUtilizador extends Model
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $table =
         'registos_acesso_utilizadores';
@@ -60,8 +56,6 @@ class RegistoAcessoUtilizador extends Model
      * @var bool
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public $timestamps = false;
 
@@ -74,8 +68,6 @@ class RegistoAcessoUtilizador extends Model
      * @var list<string>
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $fillable = [];
 
@@ -85,8 +77,6 @@ class RegistoAcessoUtilizador extends Model
      * @return array<string, string> Conversões dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function casts(): array
     {
@@ -107,8 +97,6 @@ class RegistoAcessoUtilizador extends Model
      * @return RegistoAcessoUtilizadorFactory Factory dos registos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected static function newFactory(): RegistoAcessoUtilizadorFactory
     {
@@ -122,8 +110,6 @@ class RegistoAcessoUtilizador extends Model
      * ciclo de vida dos modelos Eloquent.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected static function booted(): void
     {
@@ -153,8 +139,6 @@ class RegistoAcessoUtilizador extends Model
      *                                  válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function motivo(): Attribute
     {
@@ -185,8 +169,6 @@ class RegistoAcessoUtilizador extends Model
      * @return BelongsTo<Utilizador, $this> Relação com o utilizador afetado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function utilizador(): BelongsTo
     {
@@ -202,8 +184,6 @@ class RegistoAcessoUtilizador extends Model
      * @return BelongsTo<Utilizador, $this> Relação com o responsável.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function responsavel(): BelongsTo
     {
@@ -219,8 +199,6 @@ class RegistoAcessoUtilizador extends Model
      * @return bool Verdadeiro apenas para uma suspensão.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function eSuspensao(): bool
     {
@@ -235,8 +213,6 @@ class RegistoAcessoUtilizador extends Model
      * @return bool Verdadeiro apenas para uma reativação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function eReativacao(): bool
     {

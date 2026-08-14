@@ -21,8 +21,6 @@ use LogicException;
  * valor {@see EnderecoEmail}.
  *
  * @since 1.0.0
- *
- * @version 4.0.0
  */
 final class SolicitarRedefinicaoPalavraPasseRequest extends FormRequest
 {
@@ -32,8 +30,6 @@ final class SolicitarRedefinicaoPalavraPasseRequest extends FormRequest
      * @return bool Verdadeiro para permitir a validação.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function authorize(): bool
     {
@@ -47,8 +43,6 @@ final class SolicitarRedefinicaoPalavraPasseRequest extends FormRequest
      * depois da validação estrutural do pedido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function prepareForValidation(): void
     {
@@ -79,8 +73,6 @@ final class SolicitarRedefinicaoPalavraPasseRequest extends FormRequest
      * @return array<string, list<string|Closure>> Regras de validação.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function rules(): array
     {
@@ -100,8 +92,6 @@ final class SolicitarRedefinicaoPalavraPasseRequest extends FormRequest
      * @return array<string, string> Mensagens de validação.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function messages(): array
     {
@@ -118,8 +108,6 @@ final class SolicitarRedefinicaoPalavraPasseRequest extends FormRequest
      * @return array<string, string> Nomes legíveis dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function attributes(): array
     {
@@ -136,9 +124,7 @@ final class SolicitarRedefinicaoPalavraPasseRequest extends FormRequest
      * @throws LogicException Quando o resultado validado deixa de cumprir o
      *                        contrato do objeto de valor.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public function email(): string
     {
@@ -174,8 +160,6 @@ final class SolicitarRedefinicaoPalavraPasseRequest extends FormRequest
      * @return Closure(string, mixed, Closure(string): void): void Regra.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarRegraEnderecoEmail(): Closure
     {

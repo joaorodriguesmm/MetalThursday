@@ -9,6 +9,7 @@ use App\Models\Musica\Banda;
 use App\Models\Musica\Genero;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Unique;
 
@@ -20,21 +21,19 @@ use Illuminate\Validation\Rules\Unique;
  * correspondentes.
  *
  * @since 2.0.0
- *
- * @version 1.1.0
  */
 abstract class PedidoBandaRequest extends FormRequest
 {
     /**
      * Normaliza os dados antes da validação.
      *
-     * O nome é reduzido a uma única linha, os identificadores numéricos são
-     * convertidos para inteiros e a estrutura original da lista de géneros é
-     * preservada para que a regra `list` possa detetar chaves inválidas.
+     * O nome é normalizado de acordo com o contrato do modelo, desde que não
+     * contenha texto ou caracteres que devam ser rejeitados pela validação.
+     * Os identificadores numéricos são convertidos para inteiros e a estrutura
+     * original da lista de géneros é preservada para que a regra `list` possa
+     * detetar chaves inválidas.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function prepareForValidation(): void
     {
@@ -69,8 +68,6 @@ abstract class PedidoBandaRequest extends FormRequest
      * @return array<string, list<mixed>> Regras de validação.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function rules(): array
     {
@@ -125,8 +122,6 @@ abstract class PedidoBandaRequest extends FormRequest
      * @return array<string, string> Mensagens de validação.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function messages(): array
     {
@@ -172,8 +167,6 @@ abstract class PedidoBandaRequest extends FormRequest
      * @return array<string, string> Nomes legíveis dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function attributes(): array
     {
@@ -197,8 +190,6 @@ abstract class PedidoBandaRequest extends FormRequest
      * @return Unique Regra de unicidade.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     abstract protected function obterRegraUnicidadeNome(): Unique;
 
@@ -211,8 +202,6 @@ abstract class PedidoBandaRequest extends FormRequest
      * @return Closure(string, mixed, Closure(string): void): void Regra.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarRegraNome(): Closure
     {
@@ -254,18 +243,17 @@ abstract class PedidoBandaRequest extends FormRequest
     /**
      * Normaliza o nome da banda.
      *
-     * Os espaços exteriores são removidos e qualquer sequência de espaços
-     * interiores é convertida num único espaço.
+     * Texto UTF-8 inválido ou com caracteres de controlo permanece inalterado
+     * para ser rejeitado pelas regras de validação. Nos restantes casos é
+     * aplicada a mesma normalização utilizada pelo modelo {@see Banda}.
      *
-     * Quando o texto não é UTF-8 válido, o valor original é preservado para
-     * que a regra adicional o rejeite.
+     * Valores que não sejam strings permanecem igualmente inalterados para
+     * que as regras de tipo produzam a respetiva mensagem.
      *
      * @param  mixed  $valor  Valor recebido.
      * @return mixed Nome normalizado ou valor original.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarNome(
         mixed $valor,
@@ -274,17 +262,22 @@ abstract class PedidoBandaRequest extends FormRequest
             return $valor;
         }
 
-        $nome = preg_replace(
-            '/\s+/u',
-            ' ',
-            trim(
+        if (
+            preg_match(
+                '//u',
                 $valor,
-            ),
-        );
+            ) !== 1
+            || preg_match(
+                '/[\x00-\x1F\x7F]/',
+                $valor,
+            ) === 1
+        ) {
+            return $valor;
+        }
 
-        return is_string($nome)
-            ? $nome
-            : $valor;
+        return Str::squish(
+            $valor,
+        );
     }
 
     /**
@@ -298,8 +291,6 @@ abstract class PedidoBandaRequest extends FormRequest
      * @return mixed Identificador normalizado ou valor original.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarIdentificador(
         mixed $valor,
@@ -324,8 +315,6 @@ abstract class PedidoBandaRequest extends FormRequest
      * @return mixed Lista normalizada ou valor original.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarIdentificadores(
         mixed $valor,

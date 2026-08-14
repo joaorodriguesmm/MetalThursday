@@ -44,8 +44,6 @@ use LogicException;
  * @property-read Collection<int, Banda> $bandas
  *
  * @since 1.0.0
- *
- * @version 3.2.0
  */
 class Genero extends Model
 {
@@ -61,8 +59,6 @@ class Genero extends Model
      * Este valor coincide com o comprimento definido na tabela `generos`.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const COMPRIMENTO_MAXIMO_NOME = 100;
 
@@ -70,8 +66,6 @@ class Genero extends Model
      * Nome da tabela intermédia da hierarquia dos géneros.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const TABELA_HIERARQUIA =
         'hierarquia_generos';
@@ -80,8 +74,6 @@ class Genero extends Model
      * Nome da tabela intermédia entre bandas e géneros.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const TABELA_BANDA_GENERO =
         'banda_genero';
@@ -92,8 +84,6 @@ class Genero extends Model
      * @var string
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     protected $table = 'generos';
 
@@ -107,8 +97,6 @@ class Genero extends Model
      * @var list<string>
      *
      * @since 1.0.0
-     *
-     * @version 3.1.0
      */
     protected $fillable = [
         'nome',
@@ -120,8 +108,6 @@ class Genero extends Model
      * @var list<string>
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $hidden = [
         'nome_ativo',
@@ -133,8 +119,6 @@ class Genero extends Model
      * @return array<string, string> Conversões dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function casts(): array
     {
@@ -151,8 +135,6 @@ class Genero extends Model
      * @return GeneroFactory Factory dos géneros.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected static function newFactory(): GeneroFactory
     {
@@ -170,8 +152,6 @@ class Genero extends Model
      * @throws InvalidArgumentException Quando o nome não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function nome(): Attribute
     {
@@ -238,13 +218,12 @@ class Genero extends Model
     /**
      * Obtém os géneros pais diretos.
      *
-     * Os géneros são devolvidos por ordem alfabética.
+     * Os géneros eliminados logicamente não são incluídos. Os restantes são
+     * devolvidos por ordem alfabética.
      *
      * @return BelongsToMany<Genero, $this> Relação com os géneros pais.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function generosPais(): BelongsToMany
     {
@@ -266,13 +245,12 @@ class Genero extends Model
     /**
      * Obtém os géneros filhos diretos.
      *
-     * Os géneros são devolvidos por ordem alfabética.
+     * Os géneros eliminados logicamente não são incluídos. Os restantes são
+     * devolvidos por ordem alfabética.
      *
      * @return BelongsToMany<Genero, $this> Relação com os géneros filhos.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function generosFilhos(): BelongsToMany
     {
@@ -294,13 +272,12 @@ class Genero extends Model
     /**
      * Obtém as bandas associadas ao género.
      *
-     * As bandas são devolvidas por ordem alfabética.
+     * As bandas eliminadas logicamente não são incluídas. As restantes são
+     * devolvidas por ordem alfabética.
      *
      * @return BelongsToMany<Banda, $this> Relação com as bandas.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function bandas(): BelongsToMany
     {
@@ -332,8 +309,6 @@ class Genero extends Model
      * @throws LogicException Quando o género ainda não foi persistido.
      *
      * @since 2.0.0
-     *
-     * @version 3.0.0
      */
     public function obterIdentificadoresComDescendentes(): array
     {

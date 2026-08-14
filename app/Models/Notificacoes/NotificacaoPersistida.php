@@ -27,11 +27,9 @@ use Illuminate\Notifications\DatabaseNotification;
  * @property CarbonImmutable|null $read_at
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
- * @property-read Utilizador $notifiable
+ * @property-read Utilizador|null $notifiable
  *
  * @since 2.0.0
- *
- * @version 1.1.0
  */
 final class NotificacaoPersistida extends DatabaseNotification
 {
@@ -41,8 +39,6 @@ final class NotificacaoPersistida extends DatabaseNotification
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $table = 'notificacoes';
 
@@ -52,8 +48,6 @@ final class NotificacaoPersistida extends DatabaseNotification
      * @var array<string, string>
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $casts = [
         'data' => 'array',

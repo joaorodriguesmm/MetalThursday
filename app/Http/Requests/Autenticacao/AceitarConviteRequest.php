@@ -29,8 +29,6 @@ use LogicException;
  * de dados, porque apenas o respetivo hash é persistido.
  *
  * @since 1.0.0
- *
- * @version 4.0.0
  */
 final class AceitarConviteRequest extends FormRequest
 {
@@ -41,9 +39,7 @@ final class AceitarConviteRequest extends FormRequest
      *
      * @var int
      *
-     * @since 3.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const TAMANHO_MAXIMO_FOTOGRAFIA_KILOBYTES =
         10 * 1024;
@@ -57,8 +53,6 @@ final class AceitarConviteRequest extends FormRequest
      * @return bool Verdadeiro para permitir a validação.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function authorize(): bool
     {
@@ -68,6 +62,11 @@ final class AceitarConviteRequest extends FormRequest
     /**
      * Normaliza os valores recebidos antes da validação.
      *
+     * Valores válidos são convertidos para as representações canónicas
+     * definidas pelos respetivos contratos de domínio. Valores inválidos
+     * permanecem inalterados para que as regras de validação os rejeitem sem
+     * remover ou transformar silenciosamente caracteres proibidos.
+     *
      * O código do convite mantém a capitalização por ser sensível a
      * maiúsculas e minúsculas.
      *
@@ -75,22 +74,15 @@ final class AceitarConviteRequest extends FormRequest
      * uma lista vazia. A ausência de seleção é válida neste formulário.
      *
      * @since 2.0.0
-     *
-     * @version 3.0.0
      */
     protected function prepareForValidation(): void
     {
-        $codigoConvite =
-            $this->input(
-                'codigo_convite',
-            );
-
         $this->merge([
-            'codigo_convite' => is_string($codigoConvite)
-                ? trim(
-                    $codigoConvite,
-                )
-                : $codigoConvite,
+            'codigo_convite' => $this->normalizarCodigoConvite(
+                $this->input(
+                    'codigo_convite',
+                ),
+            ),
 
             'nome' => $this->normalizarNome(
                 $this->input(
@@ -123,8 +115,6 @@ final class AceitarConviteRequest extends FormRequest
      * @return array<string, list<mixed>> Regras de validação.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function rules(): array
     {
@@ -204,8 +194,6 @@ final class AceitarConviteRequest extends FormRequest
      * @return array<string, string> Mensagens de validação.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function messages(): array
     {
@@ -268,8 +256,6 @@ final class AceitarConviteRequest extends FormRequest
      * @return array<string, string> Nomes legíveis dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function attributes(): array
     {
@@ -297,9 +283,7 @@ final class AceitarConviteRequest extends FormRequest
      *
      * @return string Código do convite.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public function codigoConvite(): string
     {
@@ -316,9 +300,7 @@ final class AceitarConviteRequest extends FormRequest
      * @throws LogicException Quando o resultado validado deixa de cumprir o
      *                        contrato do objeto de valor.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public function nome(): string
     {
@@ -347,9 +329,7 @@ final class AceitarConviteRequest extends FormRequest
      * @throws LogicException Quando o resultado validado deixa de cumprir o
      *                        contrato do objeto de valor.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public function email(): string
     {
@@ -375,9 +355,7 @@ final class AceitarConviteRequest extends FormRequest
      *
      * @return string Palavra-passe em texto simples.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public function palavraPasse(): string
     {
@@ -394,9 +372,7 @@ final class AceitarConviteRequest extends FormRequest
      * @throws LogicException Quando o ficheiro validado possui um tipo
      *                        inesperado.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public function fotografia(): ?UploadedFile
     {
@@ -426,9 +402,7 @@ final class AceitarConviteRequest extends FormRequest
      * @throws LogicException Quando a lista validada possui uma estrutura ou
      *                        um tipo inesperado.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public function identificadoresPermissoesEmail(): array
     {
@@ -468,8 +442,6 @@ final class AceitarConviteRequest extends FormRequest
      * @return Closure(string, mixed, Closure(string): void): void Regra.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarRegraNome(): Closure
     {
@@ -503,8 +475,6 @@ final class AceitarConviteRequest extends FormRequest
      * @return Closure(string, mixed, Closure(string): void): void Regra.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarRegraEnderecoEmail(): Closure
     {
@@ -538,9 +508,7 @@ final class AceitarConviteRequest extends FormRequest
      * @throws LogicException Quando o valor validado possui um tipo
      *                        inesperado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterTextoValidado(
         string $campo,
@@ -563,20 +531,44 @@ final class AceitarConviteRequest extends FormRequest
     }
 
     /**
+     * Normaliza preliminarmente o código do convite.
+     *
+     * Quando o código cumpre o contrato de {@see Convite}, é utilizada a
+     * representação canónica. Um valor inválido permanece inalterado para que
+     * as regras de validação o rejeitem sem ocultar caracteres proibidos.
+     *
+     * @param  mixed  $valor  Valor recebido.
+     * @return mixed Código normalizado ou valor original.
+     *
+     * @since 2.0.0
+     */
+    private function normalizarCodigoConvite(
+        mixed $valor,
+    ): mixed {
+        if (! is_string($valor)) {
+            return $valor;
+        }
+
+        try {
+            return Convite::normalizarCodigo(
+                $valor,
+            );
+        } catch (InvalidArgumentException) {
+            return $valor;
+        }
+    }
+
+    /**
      * Normaliza preliminarmente o nome recebido.
      *
-     * A normalização definitiva é aplicada pelo objeto de valor
-     * {@see NomeUtilizador}.
-     *
-     * Quando o texto não é UTF-8 válido, o valor original é preservado para
-     * que a regra do objeto de valor o rejeite.
+     * Quando o nome cumpre o contrato de {@see NomeUtilizador}, é utilizada a
+     * representação canónica. Um valor inválido permanece inalterado para que
+     * a regra do objeto de valor o rejeite sem ocultar caracteres proibidos.
      *
      * @param  mixed  $valor  Valor recebido.
      * @return mixed Nome normalizado ou valor original.
      *
-     * @since 2.1.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function normalizarNome(
         mixed $valor,
@@ -585,40 +577,42 @@ final class AceitarConviteRequest extends FormRequest
             return $valor;
         }
 
-        $nome =
-            preg_replace(
-                '/\s+/u',
-                ' ',
-                trim(
-                    $valor,
-                ),
-            );
-
-        return is_string($nome)
-            ? $nome
-            : $valor;
+        try {
+            return NomeUtilizador::deTexto(
+                $valor,
+            )->valor();
+        } catch (InvalidArgumentException) {
+            return $valor;
+        }
     }
 
     /**
      * Normaliza preliminarmente o endereço de e-mail.
      *
+     * Quando o endereço cumpre o contrato de {@see EnderecoEmail}, é utilizada
+     * a representação canónica. Um valor inválido permanece inalterado para
+     * que a regra do objeto de valor o rejeite sem ocultar caracteres
+     * proibidos.
+     *
      * @param  mixed  $valor  Valor recebido.
      * @return mixed Endereço normalizado ou valor original.
      *
-     * @since 2.1.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function normalizarEmail(
         mixed $valor,
     ): mixed {
-        return is_string($valor)
-            ? mb_strtolower(
-                trim(
-                    $valor,
-                ),
-            )
-            : $valor;
+        if (! is_string($valor)) {
+            return $valor;
+        }
+
+        try {
+            return EnderecoEmail::deTexto(
+                $valor,
+            )->valor();
+        } catch (InvalidArgumentException) {
+            return $valor;
+        }
     }
 
     /**
@@ -633,9 +627,7 @@ final class AceitarConviteRequest extends FormRequest
      * @param  mixed  $valor  Valor recebido.
      * @return mixed Lista normalizada ou valor original.
      *
-     * @since 2.1.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function normalizarPermissoesEmail(
         mixed $valor,
@@ -666,9 +658,7 @@ final class AceitarConviteRequest extends FormRequest
      * @param  mixed  $valor  Valor recebido.
      * @return mixed Identificador normalizado ou valor original.
      *
-     * @since 2.1.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function normalizarIdentificador(
         mixed $valor,

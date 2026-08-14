@@ -29,8 +29,6 @@ use InvalidArgumentException;
  * @property-read Collection<int, Banda> $bandas
  *
  * @since 2.0.0
- *
- * @version 1.1.0
  */
 class OrigemGeografica extends Model
 {
@@ -41,8 +39,6 @@ class OrigemGeografica extends Model
      * Comprimento máximo do nome.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const COMPRIMENTO_MAXIMO_NOME = 100;
 
@@ -50,8 +46,6 @@ class OrigemGeografica extends Model
      * Comprimento mínimo do código.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const COMPRIMENTO_MINIMO_CODIGO = 2;
 
@@ -59,8 +53,6 @@ class OrigemGeografica extends Model
      * Comprimento máximo do código.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const COMPRIMENTO_MAXIMO_CODIGO = 8;
 
@@ -70,8 +62,6 @@ class OrigemGeografica extends Model
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $table = 'origens_geograficas';
 
@@ -81,8 +71,6 @@ class OrigemGeografica extends Model
      * @var list<string>
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected $fillable = [
         'nome',
@@ -95,8 +83,6 @@ class OrigemGeografica extends Model
      * @return OrigemGeograficaFactory Factory das origens geográficas.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected static function newFactory(): OrigemGeograficaFactory
     {
@@ -114,8 +100,6 @@ class OrigemGeografica extends Model
      * @throws InvalidArgumentException Quando o nome não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     protected function nome(): Attribute
     {
@@ -185,13 +169,15 @@ class OrigemGeografica extends Model
      * O código pode corresponder a um código ISO, a uma subdivisão geográfica
      * ou a um identificador próprio da aplicação.
      *
+     * Apenas espaços ASCII exteriores e diferenças de capitalização são
+     * normalizados. Restantes caracteres, incluindo caracteres de controlo,
+     * permanecem intactos para serem rejeitados pelo formato permitido.
+     *
      * @return Attribute<string, string> Atributo do código.
      *
      * @throws InvalidArgumentException Quando o código não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     protected function codigo(): Attribute
     {
@@ -205,9 +191,10 @@ class OrigemGeografica extends Model
                     );
                 }
 
-                $codigoNormalizado = Str::upper(
+                $codigoNormalizado = strtoupper(
                     trim(
                         $valor,
+                        ' ',
                     ),
                 );
 
@@ -245,8 +232,6 @@ class OrigemGeografica extends Model
      * @return HasMany<Banda, $this> Relação com as bandas.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function bandas(): HasMany
     {

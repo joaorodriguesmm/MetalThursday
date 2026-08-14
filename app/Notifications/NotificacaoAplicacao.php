@@ -19,8 +19,6 @@ use LogicException;
  * e-mail válido.
  *
  * @since 1.0.0
- *
- * @version 2.1.0
  */
 abstract class NotificacaoAplicacao extends Notification implements ShouldQueue
 {
@@ -40,8 +38,6 @@ abstract class NotificacaoAplicacao extends Notification implements ShouldQueue
      * @throws LogicException Quando o destinatário não é um utilizador válido.
      *
      * @since 1.0.0
-     *
-     * @version 2.1.0
      */
     public function via(
         object $notificavel,
@@ -82,8 +78,6 @@ abstract class NotificacaoAplicacao extends Notification implements ShouldQueue
      * @throws LogicException Quando o destinatário não é um utilizador válido.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function toMail(
         object $notificavel,
@@ -144,8 +138,6 @@ abstract class NotificacaoAplicacao extends Notification implements ShouldQueue
      * @return bool Verdadeiro quando o envio está autorizado.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     abstract protected function deveEnviarPorEmail(
         Utilizador $utilizador,
@@ -158,8 +150,6 @@ abstract class NotificacaoAplicacao extends Notification implements ShouldQueue
      * @return string Assunto da mensagem.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     abstract protected function obterAssunto(
         Utilizador $utilizador,
@@ -172,8 +162,6 @@ abstract class NotificacaoAplicacao extends Notification implements ShouldQueue
      * @return string Conteúdo principal.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     abstract protected function obterLinhaMensagem(
         Utilizador $utilizador,
@@ -188,8 +176,6 @@ abstract class NotificacaoAplicacao extends Notification implements ShouldQueue
      * @return string|null Texto do botão ou nulo.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     abstract protected function obterTextoAcao(
         Utilizador $utilizador,
@@ -204,8 +190,6 @@ abstract class NotificacaoAplicacao extends Notification implements ShouldQueue
      * @return string|null Endereço da ação ou nulo.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     abstract protected function obterUrlAcao(
         Utilizador $utilizador,
@@ -220,8 +204,6 @@ abstract class NotificacaoAplicacao extends Notification implements ShouldQueue
      * @throws LogicException Quando a entidade não é um utilizador.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function obterUtilizador(
         object $notificavel,
@@ -242,8 +224,6 @@ abstract class NotificacaoAplicacao extends Notification implements ShouldQueue
      * @return bool Verdadeiro quando existe um endereço.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function utilizadorPossuiEmail(
         Utilizador $utilizador,
@@ -266,8 +246,6 @@ abstract class NotificacaoAplicacao extends Notification implements ShouldQueue
      * @return string Saudação da mensagem.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function obterSaudacao(
         Utilizador $utilizador,

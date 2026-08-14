@@ -29,13 +29,11 @@ use LogicException;
  * de autenticação do Laravel. O campo recebido pelo formulário mantém o nome
  * português `palavra_passe`.
  *
- * Uma conta suspensa só é identificada depois de o Laravel confirmar as
- * credenciais. Desta forma, o estado da conta não é revelado a quem não
- * conhece a palavra-passe correta.
+ * O estado da conta só é avaliado depois de o Laravel confirmar as
+ * credenciais. Desta forma, uma suspensão ou um endereço de e-mail não
+ * verificado não são revelados a quem não conhece a palavra-passe correta.
  *
  * @since 1.0.0
- *
- * @version 5.0.1
  */
 final class AutenticarUtilizadorRequest extends FormRequest
 {
@@ -45,8 +43,6 @@ final class AutenticarUtilizadorRequest extends FormRequest
      * @var int
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const MAXIMO_TENTATIVAS = 5;
 
@@ -56,8 +52,6 @@ final class AutenticarUtilizadorRequest extends FormRequest
      * @var int
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const DURACAO_BLOQUEIO_SEGUNDOS = 60;
 
@@ -67,8 +61,6 @@ final class AutenticarUtilizadorRequest extends FormRequest
      * @return bool Verdadeiro para permitir a validação.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function authorize(): bool
     {
@@ -85,8 +77,6 @@ final class AutenticarUtilizadorRequest extends FormRequest
      * realizadas pelo objeto de valor {@see EnderecoEmail}.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function prepareForValidation(): void
     {
@@ -121,8 +111,6 @@ final class AutenticarUtilizadorRequest extends FormRequest
      * @return array<string, list<string|Closure>> Regras de validação.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function rules(): array
     {
@@ -140,8 +128,6 @@ final class AutenticarUtilizadorRequest extends FormRequest
                  * @param  Closure(string): void  $falhar  Função de erro.
                  *
                  * @since 2.0.0
-                 *
-                 * @version 1.0.0
                  */
                 static function (
                     string $atributo,
@@ -184,8 +170,6 @@ final class AutenticarUtilizadorRequest extends FormRequest
      * @return array<string, string> Mensagens de validação.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function messages(): array
     {
@@ -210,8 +194,6 @@ final class AutenticarUtilizadorRequest extends FormRequest
      * @return array<string, string> Nomes legíveis dos atributos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function attributes(): array
     {
@@ -225,34 +207,41 @@ final class AutenticarUtilizadorRequest extends FormRequest
     }
 
     /**
-     * Autentica um utilizador com acesso ativo através do guard da sessão.
+     * Autentica um utilizador autorizado através do guard da sessão.
      *
      * O callback de `attemptWhen` é executado apenas depois de as credenciais
-     * serem confirmadas. Uma conta suspensa recebe uma mensagem específica,
-     * mas uma palavra-passe incorreta continua a produzir apenas o erro
-     * genérico de autenticação.
+     * serem confirmadas. Uma conta suspensa ou com o endereço de e-mail ainda
+     * não verificado é recusada antes de o Laravel iniciar a sessão.
      *
-     * Tentativas com credenciais corretas de uma conta suspensa não aumentam
-     * o limitador de tentativas falhadas.
+     * Uma palavra-passe incorreta continua a produzir apenas o erro genérico
+     * de autenticação, sem revelar o estado da conta.
+     *
+     * Tentativas com credenciais corretas de uma conta suspensa ou com o
+     * endereço de e-mail não verificado não aumentam o limitador de tentativas
+     * falhadas.
      *
      * @throws ValidationException Quando as credenciais são inválidas, a
-     *                             conta está suspensa ou o limite de
+     *                             conta está suspensa, o endereço de e-mail
+     *                             não está verificado ou o limite de
      *                             tentativas foi excedido.
      * @throws LogicException Quando o guard `sessao` não utiliza o driver de
      *                        sessões configurado pela aplicação.
      *
      * @since 1.0.0
-     *
-     * @version 5.0.1
      */
     public function autenticar(): void
     {
-        $this->garantirAusenciaDeLimitacao();
-
         $chaveLimitacao =
             $this->obterChaveLimitacao();
 
+        $this->garantirAusenciaDeLimitacao(
+            $chaveLimitacao,
+        );
+
         $utilizadorSuspenso =
+            false;
+
+        $emailNaoVerificado =
             false;
 
         $guardaSessao =
@@ -266,6 +255,7 @@ final class AutenticarUtilizadorRequest extends FormRequest
                     Authenticatable $utilizador,
                 ) use (
                     &$utilizadorSuspenso,
+                    &$emailNaoVerificado,
                 ): bool {
                     if (! $utilizador instanceof Utilizador) {
                         return false;
@@ -274,7 +264,14 @@ final class AutenticarUtilizadorRequest extends FormRequest
                     $utilizadorSuspenso =
                         $utilizador->estaSuspenso();
 
-                    return ! $utilizadorSuspenso;
+                    if ($utilizadorSuspenso) {
+                        return false;
+                    }
+
+                    $emailNaoVerificado =
+                        ! $utilizador->hasVerifiedEmail();
+
+                    return ! $emailNaoVerificado;
                 },
 
                 $this->manterSessaoIniciada(),
@@ -288,6 +285,16 @@ final class AutenticarUtilizadorRequest extends FormRequest
 
                 throw ValidationException::withMessages([
                     'email' => 'A tua conta encontra-se suspensa.',
+                ]);
+            }
+
+            if ($emailNaoVerificado) {
+                RateLimiter::clear(
+                    $chaveLimitacao,
+                );
+
+                throw ValidationException::withMessages([
+                    'email' => 'Verifica o teu endereço de e-mail antes de iniciares sessão.',
                 ]);
             }
 
@@ -316,9 +323,7 @@ final class AutenticarUtilizadorRequest extends FormRequest
      * @throws LogicException Quando o resultado validado deixa de cumprir o
      *                        contrato do objeto de valor.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public function email(): string
     {
@@ -344,9 +349,7 @@ final class AutenticarUtilizadorRequest extends FormRequest
      *
      * @return string Palavra-passe em texto simples.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public function palavraPasse(): string
     {
@@ -360,9 +363,7 @@ final class AutenticarUtilizadorRequest extends FormRequest
      *
      * @return bool Verdadeiro quando a opção foi selecionada.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public function manterSessaoIniciada(): bool
     {
@@ -385,8 +386,6 @@ final class AutenticarUtilizadorRequest extends FormRequest
      *                        diferente da configurada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function obterGuardaSessao(): SessionGuard
     {
@@ -417,8 +416,6 @@ final class AutenticarUtilizadorRequest extends FormRequest
      * } Credenciais de autenticação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function obterCredenciais(): array
     {
@@ -432,18 +429,16 @@ final class AutenticarUtilizadorRequest extends FormRequest
     /**
      * Impede uma nova tentativa quando o limite foi excedido.
      *
+     * @param  string  $chave  Chave da limitação.
+     *
      * @throws ValidationException Quando o pedido está temporariamente
      *                             bloqueado.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
-    private function garantirAusenciaDeLimitacao(): void
-    {
-        $chave =
-            $this->obterChaveLimitacao();
-
+    private function garantirAusenciaDeLimitacao(
+        string $chave,
+    ): void {
         if (
             ! RateLimiter::tooManyAttempts(
                 $chave,
@@ -491,8 +486,6 @@ final class AutenticarUtilizadorRequest extends FormRequest
      * @return string Chave da limitação.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     private function obterChaveLimitacao(): string
     {
@@ -516,9 +509,7 @@ final class AutenticarUtilizadorRequest extends FormRequest
      *
      * @throws LogicException Quando o valor possui um tipo inesperado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterTextoValidado(
         string $campo,

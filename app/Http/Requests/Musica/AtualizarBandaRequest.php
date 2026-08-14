@@ -14,8 +14,6 @@ use LogicException;
  * Valida os dados necessários para atualizar uma banda.
  *
  * @since 1.0.0
- *
- * @version 3.1.0
  */
 final class AtualizarBandaRequest extends PedidoBandaRequest
 {
@@ -26,8 +24,6 @@ final class AtualizarBandaRequest extends PedidoBandaRequest
      * autorização e a construção das regras.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private ?Banda $bandaDaRota = null;
 
@@ -41,8 +37,6 @@ final class AtualizarBandaRequest extends PedidoBandaRequest
      * @throws LogicException Quando a rota não contém uma banda válida.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function authorize(): bool
     {
@@ -68,8 +62,6 @@ final class AtualizarBandaRequest extends PedidoBandaRequest
      * @throws LogicException Quando a rota não contém uma banda válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function obterRegraUnicidadeNome(): Unique
     {
@@ -93,8 +85,6 @@ final class AtualizarBandaRequest extends PedidoBandaRequest
      * @throws LogicException Quando a rota não contém uma banda válida.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function obterBandaDaRota(): Banda
     {

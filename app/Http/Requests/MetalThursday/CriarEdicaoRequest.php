@@ -12,8 +12,6 @@ use Illuminate\Validation\Rules\Unique;
  * Valida os dados necessários para criar uma edição.
  *
  * @since 1.0.0
- *
- * @version 2.0.0
  */
 final class CriarEdicaoRequest extends PedidoEdicaoRequest
 {
@@ -26,8 +24,6 @@ final class CriarEdicaoRequest extends PedidoEdicaoRequest
      * @return Unique Regra de unicidade.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function obterRegraUnicidadeNome(): Unique
     {

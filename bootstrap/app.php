@@ -24,6 +24,13 @@ return Application::configure(
             Middleware $middleware,
         ): void {
             /*
+             * Restringe os pedidos aos hosts associados ao endereço
+             * configurado da aplicação, protegendo também a geração de
+             * endereços absolutos a partir de pedidos HTTP.
+             */
+            $middleware->trustHosts();
+
+            /*
              * O middleware é acrescentado ao grupo web para que uma conta
              * suspensa seja rejeitada mesmo quando a autenticação resulta de
              * uma sessão antiga ou de um cookie persistente.
