@@ -25,12 +25,11 @@ use Throwable;
  * pertencem à mesma operação transacional.
  *
  * Apenas um superadministrador com acesso ativo pode alterar papéis. Um
- * utilizador não pode alterar o próprio papel e a aplicação preserva sempre
- * pelo menos um superadministrador com acesso ativo.
+ * utilizador não pode alterar o próprio papel. Quando o utilizador afetado
+ * também é superadministrador, estas regras garantem que permanece pelo menos
+ * outro superadministrador com acesso ativo.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class ServicoPapeisUtilizadores
 {
@@ -38,8 +37,6 @@ final class ServicoPapeisUtilizadores
      * Número máximo de tentativas perante conflitos transitórios.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const TENTATIVAS_TRANSACAO =
         3;
@@ -51,8 +48,6 @@ final class ServicoPapeisUtilizadores
      * tokens da funcionalidade «lembrar-me».
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const COMPRIMENTO_TOKEN_PERSISTENTE =
         60;
@@ -65,8 +60,6 @@ final class ServicoPapeisUtilizadores
      *                                                              sessões.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function __construct(
         private readonly ServicoSessoesUtilizador $servicoSessoesUtilizador,
@@ -93,8 +86,6 @@ final class ServicoPapeisUtilizadores
      * @throws Throwable Quando ocorre outro erro durante a transação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function alterar(
         Utilizador $utilizador,
@@ -152,11 +143,6 @@ final class ServicoPapeisUtilizadores
                     );
                 }
 
-                $this->garantirSuperAdministradorRemanescente(
-                    $utilizadorBloqueado,
-                    $papelNovo,
-                );
-
                 $utilizadorBloqueado->papel =
                     $papelNovo;
 
@@ -201,8 +187,6 @@ final class ServicoPapeisUtilizadores
      *                                existir.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function obterUtilizadoresBloqueados(
         int $identificadorUtilizador,
@@ -275,8 +259,6 @@ final class ServicoPapeisUtilizadores
      *                         superadministrador com acesso ativo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function garantirResponsavelAutorizado(
         Utilizador $responsavel,
@@ -302,8 +284,6 @@ final class ServicoPapeisUtilizadores
      * @throws DomainException Quando os identificadores coincidem.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function garantirUtilizadoresDistintos(
         int $identificadorUtilizador,
@@ -322,65 +302,6 @@ final class ServicoPapeisUtilizadores
     }
 
     /**
-     * Garante que permanece pelo menos um superadministrador ativo.
-     *
-     * Quando um superadministrador ativo perde esse papel, todos os
-     * superadministradores ativos são bloqueados antes da contagem. Isto
-     * impede que alterações concorrentes deixem a aplicação sem administração
-     * global ativa.
-     *
-     * @param  Utilizador  $utilizador  Utilizador afetado.
-     * @param  PapelUtilizador  $papelNovo  Novo papel pretendido.
-     *
-     * @throws DomainException Quando seria removido o papel do último
-     *                         superadministrador ativo.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private function garantirSuperAdministradorRemanescente(
-        Utilizador $utilizador,
-        PapelUtilizador $papelNovo,
-    ): void {
-        if (
-            ! $utilizador->eSuperAdministrador()
-            || $utilizador->estaSuspenso()
-            || $papelNovo->eSuperAdministrador()
-        ) {
-            return;
-        }
-
-        $superAdministradoresAtivos =
-            Utilizador::query()
-                ->where(
-                    'papel',
-                    PapelUtilizador::SuperAdministrador->value,
-                )
-                ->whereNull(
-                    'suspenso_em',
-                )
-                ->orderBy(
-                    'id',
-                )
-                ->lockForUpdate()
-                ->get([
-                    'id',
-                ]);
-
-        if (
-            $superAdministradoresAtivos->count()
-            > 1
-        ) {
-            return;
-        }
-
-        throw new DomainException(
-            'Não é possível remover o papel do último superadministrador com acesso ativo.',
-        );
-    }
-
-    /**
      * Cria um registo imutável da alteração do papel.
      *
      * @param  Utilizador  $utilizador  Utilizador afetado.
@@ -391,8 +312,6 @@ final class ServicoPapeisUtilizadores
      * @return RegistoPapelUtilizador Registo criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function registarAlteracaoPapel(
         Utilizador $utilizador,
@@ -436,8 +355,6 @@ final class ServicoPapeisUtilizadores
      * @param  Utilizador  $utilizador  Utilizador bloqueado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function renovarTokenPersistente(
         Utilizador $utilizador,
@@ -461,8 +378,6 @@ final class ServicoPapeisUtilizadores
      *                                  identificador válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function obterIdentificadorUtilizador(
         Utilizador $utilizador,
@@ -525,8 +440,6 @@ final class ServicoPapeisUtilizadores
      * @return CarbonImmutable Momento imutável.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function normalizarMomento(
         ?CarbonInterface $momento,

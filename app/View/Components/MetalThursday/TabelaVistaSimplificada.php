@@ -27,8 +27,6 @@ use LogicException;
  * apresentação, sem executar consultas adicionais durante a renderização.
  *
  * @since 1.0.0
- *
- * @version 4.0.0
  */
 final class TabelaVistaSimplificada extends Component
 {
@@ -37,9 +35,7 @@ final class TabelaVistaSimplificada extends Component
      *
      * @var LengthAwarePaginator<int, SeccaoMetalThursday>
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public readonly LengthAwarePaginator $seccoesSimplificadas;
 
@@ -71,9 +67,7 @@ final class TabelaVistaSimplificada extends Component
      *     }
      * }>
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly array $linhas;
 
@@ -87,8 +81,6 @@ final class TabelaVistaSimplificada extends Component
      *                        não possuem o tipo esperado.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function __construct(
         LengthAwarePaginator $seccoesSimplificadas,
@@ -108,8 +100,6 @@ final class TabelaVistaSimplificada extends Component
      * @return View Vista da tabela simplificada.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function render(): View
     {
@@ -127,9 +117,7 @@ final class TabelaVistaSimplificada extends Component
      *
      * @throws LogicException Quando o paginador contém um modelo inesperado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function prepararLinhas(
         LengthAwarePaginator $seccoes,
@@ -158,9 +146,7 @@ final class TabelaVistaSimplificada extends Component
      * @param  SeccaoMetalThursday  $seccao  Secção apresentada.
      * @return array<string, mixed> Linha preparada.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function prepararLinha(
         SeccaoMetalThursday $seccao,
@@ -346,9 +332,7 @@ final class TabelaVistaSimplificada extends Component
      *
      * @throws LogicException Quando a data possui um tipo inesperado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function prepararData(
         mixed $data,
@@ -386,9 +370,7 @@ final class TabelaVistaSimplificada extends Component
      *
      * @throws LogicException Quando existe um modelo inesperado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function prepararNomesGeneros(
         Collection $generos,
@@ -427,9 +409,7 @@ final class TabelaVistaSimplificada extends Component
      * @param  Collection<int, Model>  $avaliacoes  Avaliações carregadas.
      * @return HtmlString Descrição segura.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function criarDescricaoAvaliacoes(
         Collection $avaliacoes,
@@ -488,9 +468,7 @@ final class TabelaVistaSimplificada extends Component
      * @param  Collection<int, Model>  $audicoes  Audições carregadas.
      * @return HtmlString Descrição segura.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function criarDescricaoAudicoes(
         Collection $audicoes,
@@ -533,9 +511,7 @@ final class TabelaVistaSimplificada extends Component
      * @param  Collection<int, Model>  $avaliacoes  Avaliações carregadas.
      * @return float Média normalizada.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterMediaAvaliacoes(
         SeccaoMetalThursday $seccao,
@@ -574,9 +550,7 @@ final class TabelaVistaSimplificada extends Component
      * @param  Collection<int, Model>  $colecao  Relação correspondente.
      * @return int Contagem normalizada.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterContagem(
         Model $modelo,
@@ -610,9 +584,7 @@ final class TabelaVistaSimplificada extends Component
      * @throws LogicException Quando a relação não está carregada, é nula
      *                        quando obrigatória ou possui tipo inesperado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterModeloRelacionado(
         Model $modelo,
@@ -669,9 +641,7 @@ final class TabelaVistaSimplificada extends Component
      * @throws LogicException Quando a relação não está carregada ou não
      *                        contém uma coleção Eloquent.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterColecaoRelacionada(
         Model $modelo,
@@ -711,9 +681,7 @@ final class TabelaVistaSimplificada extends Component
      *
      * @throws LogicException Quando a secção não está persistida.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterIdentificador(
         SeccaoMetalThursday $seccao,
@@ -740,9 +708,7 @@ final class TabelaVistaSimplificada extends Component
      * @param  mixed  $valor  Valor recebido.
      * @return string|null Texto normalizado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function normalizarTexto(
         mixed $valor,
@@ -767,9 +733,7 @@ final class TabelaVistaSimplificada extends Component
      * @param  mixed  $ano  Ano recebido.
      * @return string Ano normalizado ou travessão.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function normalizarAno(
         mixed $ano,
@@ -790,9 +754,7 @@ final class TabelaVistaSimplificada extends Component
      * @param  mixed  $valor  Valor recebido.
      * @return float Valor normalizado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function normalizarDecimal(
         mixed $valor,
@@ -808,9 +770,7 @@ final class TabelaVistaSimplificada extends Component
      * @param  float  $pontuacao  Pontuação recebida.
      * @return string Pontuação formatada.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function formatarPontuacao(
         float $pontuacao,
@@ -830,9 +790,7 @@ final class TabelaVistaSimplificada extends Component
      * @param  int  $quantidade  Quantidade de avaliações.
      * @return string Descrição acessível.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function criarDescricaoAcessivelAvaliacoes(
         float $media,
@@ -856,9 +814,7 @@ final class TabelaVistaSimplificada extends Component
      * @param  int  $quantidade  Quantidade de audições.
      * @return string Descrição acessível.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function criarDescricaoAcessivelAudicoes(
         int $quantidade,

@@ -15,8 +15,6 @@ use App\Models\Autenticacao\Utilizador;
  * sido utilizado.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class PoliticaConvite
 {
@@ -35,8 +33,6 @@ final class PoliticaConvite
      *                   para continuar a avaliação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function before(
         Utilizador $utilizador,
@@ -71,8 +67,6 @@ final class PoliticaConvite
      * @return bool Falso para utilizadores não autorizados antecipadamente.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function viewAny(
         Utilizador $utilizador,
@@ -90,8 +84,6 @@ final class PoliticaConvite
      * @return bool Falso para utilizadores não autorizados antecipadamente.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function create(
         Utilizador $utilizador,
@@ -110,8 +102,6 @@ final class PoliticaConvite
      * @return bool Verdadeiro quando a revogação pode ser iniciada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function revogar(
         Utilizador $utilizador,
@@ -142,8 +132,6 @@ final class PoliticaConvite
      * @return bool Verdadeiro quando o identificador é válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function possuiIdentificadorValido(
         Utilizador|Convite $modelo,
@@ -151,22 +139,23 @@ final class PoliticaConvite
         $identificador =
             $modelo->getKey();
 
-        if (
-            is_int($identificador)
-            && $identificador > 0
-        ) {
-            return true;
+        if (is_int($identificador)) {
+            return $identificador > 0;
         }
 
-        return is_string($identificador)
-            && trim($identificador) !== ''
-            && ctype_digit(
-                trim(
-                    $identificador,
-                ),
-            )
-            && (int) trim(
+        if (! is_string($identificador)) {
+            return false;
+        }
+
+        $identificadorNormalizado =
+            trim(
                 $identificador,
-            ) > 0;
+            );
+
+        return $identificadorNormalizado !== ''
+            && ctype_digit(
+                $identificadorNormalizado,
+            )
+            && (int) $identificadorNormalizado > 0;
     }
 }

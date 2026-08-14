@@ -20,8 +20,6 @@ use Illuminate\Validation\Rules\Password;
  * convencional do Laravel.
  *
  * @since 1.0.0
- *
- * @version 4.0.1
  */
 final class AppServiceProvider extends ServiceProvider
 {
@@ -29,8 +27,6 @@ final class AppServiceProvider extends ServiceProvider
      * Alias polimórfico persistido para os utilizadores notificáveis.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const ALIAS_POLIMORFICO_UTILIZADOR =
         'utilizador';
@@ -42,8 +38,6 @@ final class AppServiceProvider extends ServiceProvider
      * ciclo de vida dos providers do Laravel.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function boot(): void
     {
@@ -65,8 +59,6 @@ final class AppServiceProvider extends ServiceProvider
      * previamente pela suite automatizada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.1
      */
     private function configurarModelosEloquent(): void
     {
@@ -87,8 +79,6 @@ final class AppServiceProvider extends ServiceProvider
      * notificações persistidas, mas não representa uma entidade de interação.
      *
      * @since 2.0.0
-     *
-     * @version 3.0.0
      */
     private function configurarMapaPolimorfico(): void
     {
@@ -103,8 +93,6 @@ final class AppServiceProvider extends ServiceProvider
      * Configura os requisitos predefinidos das palavras-passe.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function configurarRequisitosPalavraPasse(): void
     {
@@ -117,8 +105,6 @@ final class AppServiceProvider extends ServiceProvider
      * Configura as vistas de paginação para Bootstrap 5.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function configurarPaginacao(): void
     {

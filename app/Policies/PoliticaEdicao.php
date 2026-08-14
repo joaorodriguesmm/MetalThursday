@@ -16,8 +16,6 @@ use App\Models\MetalThursday\Edicao;
  * reservada ao superadministrador.
  *
  * @since 1.0.0
- *
- * @version 2.0.0
  */
 final class PoliticaEdicao
 {
@@ -33,8 +31,6 @@ final class PoliticaEdicao
      *                   continuar a avaliação normal.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function before(
         Utilizador $utilizador,
@@ -55,8 +51,6 @@ final class PoliticaEdicao
      * @return bool Verdadeiro para qualquer utilizador autenticado.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function viewAny(
         Utilizador $utilizador,
@@ -75,8 +69,6 @@ final class PoliticaEdicao
      * @return bool Verdadeiro para qualquer utilizador autenticado.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function view(
         Utilizador $utilizador,
@@ -96,8 +88,6 @@ final class PoliticaEdicao
      *              administrativos.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function create(
         Utilizador $utilizador,
@@ -117,8 +107,6 @@ final class PoliticaEdicao
      *              administrativos.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function update(
         Utilizador $utilizador,
@@ -139,8 +127,6 @@ final class PoliticaEdicao
      *              administrativos.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function delete(
         Utilizador $utilizador,
@@ -161,8 +147,6 @@ final class PoliticaEdicao
      *              administrativos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function restore(
         Utilizador $utilizador,
@@ -185,8 +169,6 @@ final class PoliticaEdicao
      * @return bool Falso para utilizadores que não são superadministradores.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function forceDelete(
         Utilizador $utilizador,

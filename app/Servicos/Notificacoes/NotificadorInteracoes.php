@@ -11,15 +11,14 @@ use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Notifications\NotificacaoInteracaoUtilizador;
 use Illuminate\Contracts\Notifications\Dispatcher as DespachanteNotificacoes;
 use Illuminate\Database\Eloquent\Collection as ColecaoEloquent;
-use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
 
 /**
  * Envia notificações relacionadas com interações dos utilizadores.
  *
  * O serviço exclui o utilizador responsável pela interação e processa os
- * restantes destinatários por lotes, evitando carregar todos os utilizadores
- * simultaneamente em memória.
+ * restantes utilizadores com acesso ativo por lotes, evitando carregá-los
+ * todos simultaneamente em memória.
  *
  * As permissões de e-mail são carregadas juntamente com cada lote. A
  * determinação dos canais da notificação utiliza, assim, a relação já
@@ -30,8 +29,6 @@ use InvalidArgumentException;
  * autenticação.
  *
  * @since 2.0.0
- *
- * @version 2.1.0
  */
 final class NotificadorInteracoes
 {
@@ -39,8 +36,6 @@ final class NotificadorInteracoes
      * Quantidade máxima de destinatários processados em cada lote.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const TAMANHO_LOTE =
         200;
@@ -53,8 +48,6 @@ final class NotificadorInteracoes
      *                                                 notificações.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function __construct(
         private readonly DespachanteNotificacoes $notificacoes,
@@ -64,8 +57,7 @@ final class NotificadorInteracoes
      * Notifica os restantes utilizadores sobre uma interação.
      *
      * O utilizador responsável pela interação é excluído dos destinatários.
-     * Apenas utilizadores pertencentes ao âmbito `selecionaveis` recebem a
-     * notificação.
+     * Apenas utilizadores com acesso ativo recebem a notificação.
      *
      * A notificação é construída antes da consulta dos destinatários, fazendo
      * com que eventuais dados inválidos sejam rejeitados mesmo quando não
@@ -87,23 +79,15 @@ final class NotificadorInteracoes
      *                                  ação não são válidos.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     public function notificarOutrosUtilizadores(
         MetalThursday|SeccaoMetalThursday|Comentario $sujeito,
         Utilizador $causador,
         string $acao,
     ): void {
-        $this->obterIdentificadorPersistido(
-            $sujeito,
-            'O sujeito da interação',
-        );
-
         $identificadorCausador =
-            $this->obterIdentificadorPersistido(
+            $this->obterIdentificadorCausador(
                 $causador,
-                'O utilizador responsável pela interação',
             );
 
         $acaoNormalizada =
@@ -122,7 +106,7 @@ final class NotificadorInteracoes
             ->with([
                 'permissoesEmail',
             ])
-            ->selecionaveis()
+            ->comAcessoAtivo()
             ->whereKeyNot(
                 $identificadorCausador,
             )
@@ -153,37 +137,33 @@ final class NotificadorInteracoes
     }
 
     /**
-     * Obtém o identificador de um modelo persistido.
+     * Obtém o identificador persistido do utilizador causador da interação.
      *
      * Apenas são aceites identificadores inteiros positivos ou
      * representações textuais compostas exclusivamente por algarismos.
      *
-     * @param  Model  $modelo  Modelo recebido.
-     * @param  string  $designacao  Designação utilizada na mensagem.
+     * As representações textuais podem conter apenas espaços ASCII
+     * exteriores. Restantes caracteres não são removidos antes da validação.
+     *
+     * @param  Utilizador  $causador  Utilizador recebido.
      * @return int Identificador persistido.
      *
-     * @throws InvalidArgumentException Quando o modelo não está persistido ou
-     *                                  não possui um identificador válido.
+     * @throws InvalidArgumentException Quando o utilizador não está persistido
+     *                                  ou não possui um identificador válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
-    private function obterIdentificadorPersistido(
-        Model $modelo,
-        string $designacao,
+    private function obterIdentificadorCausador(
+        Utilizador $causador,
     ): int {
-        if (! $modelo->exists) {
+        if (! $causador->exists) {
             throw new InvalidArgumentException(
-                sprintf(
-                    '%s deve estar persistido.',
-                    $designacao,
-                ),
+                'O utilizador responsável pela interação deve estar persistido.',
             );
         }
 
         $identificador =
-            $modelo->getKey();
+            $causador->getKey();
 
         if (
             is_int($identificador)
@@ -192,36 +172,31 @@ final class NotificadorInteracoes
             return $identificador;
         }
 
-        if (! is_string($identificador)) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    '%s deve possuir um identificador válido.',
-                    $designacao,
-                ),
-            );
+        if (is_string($identificador)) {
+            $identificadorNormalizado =
+                trim(
+                    $identificador,
+                    ' ',
+                );
+
+            if (
+                $identificadorNormalizado !== ''
+                && ctype_digit(
+                    $identificadorNormalizado,
+                )
+            ) {
+                $identificadorInteiro =
+                    (int) $identificadorNormalizado;
+
+                if ($identificadorInteiro > 0) {
+                    return $identificadorInteiro;
+                }
+            }
         }
 
-        $identificadorNormalizado =
-            trim(
-                $identificador,
-            );
-
-        if (
-            $identificadorNormalizado === ''
-            || ! ctype_digit(
-                $identificadorNormalizado,
-            )
-            || (int) $identificadorNormalizado < 1
-        ) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    '%s deve possuir um identificador válido.',
-                    $designacao,
-                ),
-            );
-        }
-
-        return (int) $identificadorNormalizado;
+        throw new InvalidArgumentException(
+            'O utilizador responsável pela interação deve possuir um identificador válido.',
+        );
     }
 
     /**
@@ -242,8 +217,6 @@ final class NotificadorInteracoes
      *                                  ou fica vazia depois da normalização.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarAcao(
         string $acao,
@@ -275,16 +248,22 @@ final class NotificadorInteracoes
                 '/\s+/u',
                 ' ',
                 mb_strtolower(
-                    trim(
-                        $acao,
-                    ),
+                    $acao,
                 ),
             );
 
-        if (
-            ! is_string($acaoNormalizada)
-            || $acaoNormalizada === ''
-        ) {
+        if (! is_string($acaoNormalizada)) {
+            throw new InvalidArgumentException(
+                'Não foi possível normalizar a ação da interação.',
+            );
+        }
+
+        $acaoNormalizada =
+            trim(
+                $acaoNormalizada,
+            );
+
+        if ($acaoNormalizada === '') {
             throw new InvalidArgumentException(
                 'A ação da interação não pode estar vazia.',
             );

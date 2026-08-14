@@ -21,65 +21,41 @@ use Illuminate\View\Component;
  * notificações por ler.
  *
  * @since 1.0.0
- *
- * @version 6.0.0
  */
 final class Navegacao extends Component
 {
     /**
-     * Nome utilizado quando o valor recebido é inválido.
-     *
-     * @var string
-     *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
-     */
-    private const NOME_APLICACAO_PREDEFINIDO =
-        'MetalThursday';
-
-    /**
      * Nome apresentado para a aplicação.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly string $nomeAplicacao;
 
     /**
      * Utilizador autenticado.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly Utilizador $utilizadorAutenticado;
 
     /**
      * Quantidade de notificações por ler.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly int $numeroNotificacoesNaoLidas;
 
     /**
      * Indica se a página inicial está ativa.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly bool $paginaInicialAtiva;
 
     /**
      * Indica se uma página do perfil está ativa.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly bool $paginaPerfilAtiva;
 
@@ -87,8 +63,6 @@ final class Navegacao extends Component
      * Indica se a gestão dos utilizadores está ativa.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public readonly bool $paginaUtilizadoresAtiva;
 
@@ -96,8 +70,6 @@ final class Navegacao extends Component
      * Indica se a gestão dos convites está ativa.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public readonly bool $paginaConvitesAtiva;
 
@@ -105,8 +77,6 @@ final class Navegacao extends Component
      * Indica se o utilizador pode gerir utilizadores.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public readonly bool $podeGerirUtilizadores;
 
@@ -114,8 +84,6 @@ final class Navegacao extends Component
      * Indica se o utilizador pode gerir convites.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public readonly bool $podeGerirConvites;
 
@@ -131,8 +99,6 @@ final class Navegacao extends Component
      *                                 autenticado e persistido válido.
      *
      * @since 1.0.0
-     *
-     * @version 6.0.0
      */
     public function __construct(
         Request $pedido,
@@ -141,9 +107,7 @@ final class Navegacao extends Component
         string $nomeAplicacao,
     ) {
         $this->nomeAplicacao =
-            $this->normalizarNomeAplicacao(
-                $nomeAplicacao,
-            );
+            $nomeAplicacao;
 
         $this->utilizadorAutenticado =
             $this->obterUtilizadorAutenticado(
@@ -151,7 +115,7 @@ final class Navegacao extends Component
             );
 
         $this->numeroNotificacoesNaoLidas =
-            (int) $this
+            $this
                 ->utilizadorAutenticado
                 ->notificacoesPorLer()
                 ->count();
@@ -200,8 +164,6 @@ final class Navegacao extends Component
      * @return View Vista da navegação.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function render(): View
     {
@@ -211,39 +173,7 @@ final class Navegacao extends Component
     }
 
     /**
-     * Normaliza o nome da aplicação.
-     *
-     * @param  string  $nomeAplicacao  Nome recebido.
-     * @return string Nome normalizado.
-     *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
-     */
-    private function normalizarNomeAplicacao(
-        string $nomeAplicacao,
-    ): string {
-        $nomeNormalizado =
-            preg_replace(
-                '/\s+/u',
-                ' ',
-                trim(
-                    $nomeAplicacao,
-                ),
-            );
-
-        if (
-            ! is_string($nomeNormalizado)
-            || $nomeNormalizado === ''
-        ) {
-            return self::NOME_APLICACAO_PREDEFINIDO;
-        }
-
-        return $nomeNormalizado;
-    }
-
-    /**
-     * Obtém o utilizador autenticado através do guard da aplicação.
+     * Obtém o utilizador autenticado através da guarda da aplicação.
      *
      * @param  FabricaAutenticacao  $autenticacao  Gestor de autenticação.
      * @return Utilizador Utilizador autenticado.
@@ -251,9 +181,7 @@ final class Navegacao extends Component
      * @throws AuthenticationException Quando não existe um utilizador
      *                                 autenticado e persistido válido.
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterUtilizadorAutenticado(
         FabricaAutenticacao $autenticacao,

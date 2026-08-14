@@ -17,9 +17,7 @@ use LogicException;
  * O componente normaliza o conteúdo persistido e impede que classes CSS,
  * identificadores ou ligações inválidas sejam introduzidos na vista.
  *
- * @since 3.0.0
- *
- * @version 2.0.0
+ * @since 2.0.0
  */
 final class ItemNotificacao extends Component
 {
@@ -28,9 +26,7 @@ final class ItemNotificacao extends Component
      *
      * @var string
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const ICONE_PREDEFINIDO =
         'bi-info-circle';
@@ -40,9 +36,7 @@ final class ItemNotificacao extends Component
      *
      * @var string
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const COR_PREDEFINIDA =
         'text-info';
@@ -52,9 +46,7 @@ final class ItemNotificacao extends Component
      *
      * @var string
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const TITULO_PREDEFINIDO =
         'Nova notificação';
@@ -64,9 +56,7 @@ final class ItemNotificacao extends Component
      *
      * @var string
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const MENSAGEM_PREDEFINIDA =
         'Tens uma nova notificação.';
@@ -76,9 +66,7 @@ final class ItemNotificacao extends Component
      *
      * @var list<string>
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const CORES_PERMITIDAS = [
         'text-primary',
@@ -107,9 +95,7 @@ final class ItemNotificacao extends Component
      *     enderecoMarcarComoLida: string|null
      * }
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly array $dados;
 
@@ -121,9 +107,7 @@ final class ItemNotificacao extends Component
      * @throws LogicException Quando a notificação não está persistida ou não
      *                        possui um identificador UUID válido.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public function __construct(
         NotificacaoPersistida $notificacao,
@@ -200,9 +184,7 @@ final class ItemNotificacao extends Component
      *
      * @return View Vista da notificação.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public function render(): View
     {
@@ -220,9 +202,7 @@ final class ItemNotificacao extends Component
      * @throws LogicException Quando a notificação não está persistida ou não
      *                        possui um identificador UUID válido.
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterIdentificadorNotificacao(
         NotificacaoPersistida $notificacao,
@@ -259,9 +239,7 @@ final class ItemNotificacao extends Component
      * @param  mixed  $valor  Valor recebido.
      * @return string|null Texto normalizado.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function normalizarTexto(
         mixed $valor,
@@ -295,9 +273,7 @@ final class ItemNotificacao extends Component
      * @param  mixed  $valor  Classe recebida.
      * @return string Classe segura.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function normalizarIcone(
         mixed $valor,
@@ -326,9 +302,7 @@ final class ItemNotificacao extends Component
      * @param  mixed  $valor  Classe recebida.
      * @return string Classe segura.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function normalizarCor(
         mixed $valor,
@@ -362,9 +336,7 @@ final class ItemNotificacao extends Component
      * @param  mixed  $valor  Ligação recebida.
      * @return string|null Ligação interna segura.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function normalizarLigacaoInterna(
         mixed $valor,
@@ -459,9 +431,7 @@ final class ItemNotificacao extends Component
      *
      * @return string|null Domínio normalizado ou nulo.
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterHostAplicacao(): ?string
     {

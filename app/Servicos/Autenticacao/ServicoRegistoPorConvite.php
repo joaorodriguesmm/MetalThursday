@@ -34,8 +34,6 @@ use Throwable;
  * compensatória.
  *
  * @since 2.0.0
- *
- * @version 3.0.0
  */
 final class ServicoRegistoPorConvite
 {
@@ -43,8 +41,6 @@ final class ServicoRegistoPorConvite
      * Número máximo de tentativas perante conflitos transitórios.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const TENTATIVAS_TRANSACAO = 3;
 
@@ -63,8 +59,6 @@ final class ServicoRegistoPorConvite
      *                                                                      fotografias.
      *
      * @since 2.0.0
-     *
-     * @version 3.0.0
      */
     public function __construct(
         private readonly ServicoPermissoesEmail $servicoPermissoesEmail,
@@ -102,8 +96,6 @@ final class ServicoRegistoPorConvite
      * @throws Throwable Quando o armazenamento ou o registo falham.
      *
      * @since 2.0.0
-     *
-     * @version 3.0.0
      */
     public function registar(
         #[SensitiveParameter]
@@ -192,8 +184,6 @@ final class ServicoRegistoPorConvite
      * @throws Throwable Quando a transação não pode ser concluída.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function registarTransacionalmente(
         string $codigoHash,
@@ -303,8 +293,6 @@ final class ServicoRegistoPorConvite
      * @throws DomainException Quando os endereços não coincidem.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function validarEmailDestino(
         Convite $convite,
@@ -349,8 +337,6 @@ final class ServicoRegistoPorConvite
      *                                            não pertence ao endereço.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function relancarConflitoRestricaoUnica(
         UniqueConstraintViolationException $excecao,
@@ -383,8 +369,6 @@ final class ServicoRegistoPorConvite
      * @param  Throwable  $excecaoOriginal  Erro que provocou a compensação.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function eliminarFotografiaAposFalha(
         ?string $caminhoFotografia,

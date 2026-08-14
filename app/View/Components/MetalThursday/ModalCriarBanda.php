@@ -22,8 +22,6 @@ use LogicException;
  * formulário.
  *
  * @since 1.0.0
- *
- * @version 4.0.0
  */
 final class ModalCriarBanda extends Component
 {
@@ -35,9 +33,7 @@ final class ModalCriarBanda extends Component
      *     nome: string
      * }>
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly array $origensGeograficas;
 
@@ -49,27 +45,21 @@ final class ModalCriarBanda extends Component
      *     nome: string
      * }>
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly array $generos;
 
     /**
      * Endereço utilizado para guardar uma banda.
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public readonly string $enderecoGuardarBanda;
 
     /**
      * Comprimento máximo permitido para o nome da banda.
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public readonly int $comprimentoMaximoNome;
 
@@ -83,8 +73,6 @@ final class ModalCriarBanda extends Component
      *                        inválidos.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function __construct(
         Collection $origensGeograficas,
@@ -116,8 +104,6 @@ final class ModalCriarBanda extends Component
      * @return View Vista do modal.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function render(): View
     {
@@ -142,9 +128,7 @@ final class ModalCriarBanda extends Component
      * @throws LogicException Quando existe um modelo, identificador ou nome
      *                        inválido.
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function prepararOpcoes(
         Collection $modelos,
@@ -205,9 +189,7 @@ final class ModalCriarBanda extends Component
      * @throws LogicException Quando o modelo não está persistido ou possui
      *                        um identificador inválido.
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterIdentificadorModelo(
         Model $modelo,
@@ -247,9 +229,7 @@ final class ModalCriarBanda extends Component
      *
      * @throws LogicException Quando o modelo não possui um nome válido.
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterNomeModelo(
         Model $modelo,

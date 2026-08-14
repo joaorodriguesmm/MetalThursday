@@ -20,9 +20,7 @@ use LogicException;
  * O componente utiliza exclusivamente relações previamente carregadas,
  * evitando consultas adicionais durante a apresentação.
  *
- * @since 3.0.0
- *
- * @version 2.0.0
+ * @since 2.0.0
  */
 final class CartaoAparicaoMetalThursday extends Component
 {
@@ -42,9 +40,7 @@ final class CartaoAparicaoMetalThursday extends Component
      *     ligacao: string|null
      * }
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly array $dados;
 
@@ -57,9 +53,7 @@ final class CartaoAparicaoMetalThursday extends Component
      * @throws LogicException Quando uma relação necessária não está carregada
      *                        ou possui um tipo inesperado.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public function __construct(
         SeccaoMetalThursday $seccao,
@@ -154,9 +148,7 @@ final class CartaoAparicaoMetalThursday extends Component
      *
      * @return View Vista da aparição.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public function render(): View
     {
@@ -174,9 +166,7 @@ final class CartaoAparicaoMetalThursday extends Component
      * @throws LogicException Quando a relação não está carregada ou possui
      *                        um tipo inesperado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterMetalThursday(
         SeccaoMetalThursday $seccao,
@@ -210,9 +200,7 @@ final class CartaoAparicaoMetalThursday extends Component
      * @throws LogicException Quando a relação não está carregada, é nula ou
      *                        possui um tipo inesperado.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function obterTipoSeccao(
         SeccaoMetalThursday $seccao,
@@ -246,9 +234,7 @@ final class CartaoAparicaoMetalThursday extends Component
      * @throws LogicException Quando a relação não está carregada ou possui
      *                        um tipo inesperado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterNomeAutor(
         MetalThursday $metalThursday,
@@ -288,9 +274,7 @@ final class CartaoAparicaoMetalThursday extends Component
      *
      * @throws LogicException Quando a secção não está persistida.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterIdentificador(
         SeccaoMetalThursday $seccao,
@@ -317,9 +301,7 @@ final class CartaoAparicaoMetalThursday extends Component
      * @param  mixed  $valor  Valor recebido.
      * @return string|null Texto normalizado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function normalizarTexto(
         mixed $valor,
@@ -344,9 +326,7 @@ final class CartaoAparicaoMetalThursday extends Component
      * @param  mixed  $ano  Ano recebido.
      * @return int|null Ano normalizado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function normalizarAno(
         mixed $ano,

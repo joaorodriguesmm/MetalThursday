@@ -24,28 +24,20 @@ use LogicException;
  * a renderização da vista.
  *
  * @since 1.0.0
- *
- * @version 4.0.0
  */
 final class SeccaoComentarios extends Component
 {
     /**
      * Identificador da entidade comentada.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly int $identificadorComentavel;
 
     /**
      * Tipo canónico utilizado pela rota dos comentários.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly string $tipoComentavel;
 
@@ -54,59 +46,42 @@ final class SeccaoComentarios extends Component
      *
      * @var Collection<int, Comentario>
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly Collection $comentarios;
 
     /**
      * Utilizador autenticado.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly Utilizador $utilizadorAutenticado;
 
     /**
      * Endereço utilizado para publicar um comentário.
      *
-     *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public readonly string $enderecoGuardarComentario;
 
     /**
      * Identificador HTML do formulário.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly string $identificadorFormulario;
 
     /**
      * Identificador HTML do campo de conteúdo.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly string $identificadorConteudo;
 
     /**
      * Identificador HTML do contentor de erro.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly string $identificadorErro;
 
@@ -123,8 +98,6 @@ final class SeccaoComentarios extends Component
      *                        corretamente.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function __construct(
         MetalThursday|SeccaoMetalThursday $comentavel,
@@ -176,8 +149,6 @@ final class SeccaoComentarios extends Component
      * @return View Vista da secção de comentários.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function render(): View
     {
@@ -196,9 +167,7 @@ final class SeccaoComentarios extends Component
      * @throws LogicException Quando a entidade não está persistida ou possui
      *                        um identificador inválido.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function obterIdentificadorComentavel(
         MetalThursday|SeccaoMetalThursday $comentavel,
@@ -241,9 +210,7 @@ final class SeccaoComentarios extends Component
      * @throws LogicException Quando a relação não está carregada ou contém
      *                        modelos inesperados.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function obterComentarios(
         MetalThursday|SeccaoMetalThursday $comentavel,
@@ -277,16 +244,14 @@ final class SeccaoComentarios extends Component
     }
 
     /**
-     * Obtém o utilizador autenticado através do guard da aplicação.
+     * Obtém o utilizador autenticado através da guarda da aplicação.
      *
      * @return Utilizador Utilizador autenticado.
      *
      * @throws AuthenticationException Quando não existe um utilizador
      *                                 autenticado e persistido válido.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function obterUtilizadorAutenticado(): Utilizador
     {

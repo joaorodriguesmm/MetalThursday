@@ -27,8 +27,6 @@ use Throwable;
  * secções existentes são bloqueadas para impedir alterações concorrentes.
  *
  * @since 2.0.0
- *
- * @version 2.1.0
  */
 final class ServicoPersistenciaMetalThursday
 {
@@ -36,8 +34,6 @@ final class ServicoPersistenciaMetalThursday
      * Número máximo de tentativas perante conflitos transitórios.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const TENTATIVAS_TRANSACAO = 3;
 
@@ -52,8 +48,6 @@ final class ServicoPersistenciaMetalThursday
      * @throws Throwable Quando ocorre outro erro durante a transação.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     public function criar(
         array $dados,
@@ -136,8 +130,6 @@ final class ServicoPersistenciaMetalThursday
      * @throws Throwable Quando ocorre outro erro durante a transação.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     public function atualizar(
         MetalThursday $metalThursday,
@@ -300,8 +292,6 @@ final class ServicoPersistenciaMetalThursday
      * @throws InvalidArgumentException Quando algum valor não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarDados(
         array $dados,
@@ -438,8 +428,6 @@ final class ServicoPersistenciaMetalThursday
      * @param  array<string, mixed>  $dados  Dados normalizados.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     private function preencherMetalThursday(
         MetalThursday $metalThursday,
@@ -492,8 +480,6 @@ final class ServicoPersistenciaMetalThursday
      * @param  int  $ordem  Posição da secção.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     private function criarSeccao(
         int $identificadorMetalThursday,
@@ -536,8 +522,6 @@ final class ServicoPersistenciaMetalThursday
      *                                  é válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     private function preencherSeccao(
         SeccaoMetalThursday $seccao,
@@ -613,8 +597,6 @@ final class ServicoPersistenciaMetalThursday
      * @throws InvalidArgumentException Quando a combinação não é válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     private function resolverTipoIncorporacao(
         ?string $ligacao,
@@ -647,8 +629,6 @@ final class ServicoPersistenciaMetalThursday
      * @throws InvalidArgumentException Quando alguma relação não existe.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     private function bloquearRelacoesPrincipais(
         array $dados,
@@ -731,8 +711,6 @@ final class ServicoPersistenciaMetalThursday
      * @throws InvalidArgumentException Quando a data não pertence à edição.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function garantirDataDentroDaEdicao(
         string $data,
@@ -775,8 +753,6 @@ final class ServicoPersistenciaMetalThursday
      * @throws InvalidArgumentException Quando falta algum detalhe obrigatório.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function garantirDetalhesObrigatorios(
         array $dados,
@@ -812,8 +788,6 @@ final class ServicoPersistenciaMetalThursday
      * @throws InvalidArgumentException Quando existe um detalhe incompatível.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function garantirAusenciaDetalhes(
         array $dados,
@@ -847,8 +821,6 @@ final class ServicoPersistenciaMetalThursday
      * @throws InvalidArgumentException Quando algum tipo não existe.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterTiposSeccao(
         array $seccoes,
@@ -909,8 +881,6 @@ final class ServicoPersistenciaMetalThursday
      *                        encontrado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterTipoSeccaoDaColecao(
         ColecaoEloquent $tipos,
@@ -942,8 +912,6 @@ final class ServicoPersistenciaMetalThursday
      * @throws InvalidArgumentException Quando alguma banda não existe.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function bloquearBandasUtilizadas(
         array $seccoes,
@@ -1022,8 +990,6 @@ final class ServicoPersistenciaMetalThursday
      *                                  pertence a outra MetalThursday.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function garantirIdentificadoresSeccoesValidos(
         array $seccoes,
@@ -1072,8 +1038,6 @@ final class ServicoPersistenciaMetalThursday
      * @param  int  $numeroSecoesRecebidas  Número de posições finais.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function reservarOrdensTemporarias(
         ColecaoEloquent $seccoes,
@@ -1124,8 +1088,6 @@ final class ServicoPersistenciaMetalThursday
      *                                                                 atuais.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function eliminarSeccoesAusentes(
         array $seccoes,
@@ -1173,8 +1135,6 @@ final class ServicoPersistenciaMetalThursday
      * @throws InvalidArgumentException Quando o modelo não está persistido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterIdentificadorPersistido(
         MetalThursday $modelo,
@@ -1230,8 +1190,6 @@ final class ServicoPersistenciaMetalThursday
      * @throws InvalidArgumentException Quando o identificador não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarIdentificadorObrigatorio(
         mixed $valor,
@@ -1264,8 +1222,6 @@ final class ServicoPersistenciaMetalThursday
      * @throws InvalidArgumentException Quando o valor não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarIdentificadorOpcional(
         mixed $valor,
@@ -1318,8 +1274,6 @@ final class ServicoPersistenciaMetalThursday
      * @throws InvalidArgumentException Quando a data não é válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarData(
         mixed $valor,
@@ -1390,8 +1344,6 @@ final class ServicoPersistenciaMetalThursday
      * @throws InvalidArgumentException Quando o texto não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarTextoLinhaOpcional(
         mixed $valor,
@@ -1437,9 +1389,7 @@ final class ServicoPersistenciaMetalThursday
         $texto = preg_replace(
             '/\s+/u',
             ' ',
-            trim(
-                $valor,
-            ),
+            $valor,
         );
 
         if (! is_string($texto)) {
@@ -1450,6 +1400,10 @@ final class ServicoPersistenciaMetalThursday
                 ),
             );
         }
+
+        $texto = trim(
+            $texto,
+        );
 
         if ($texto === '') {
             return null;
@@ -1482,8 +1436,6 @@ final class ServicoPersistenciaMetalThursday
      * @throws InvalidArgumentException Quando a descrição não é válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarDescricaoObrigatoria(
         mixed $valor,
@@ -1565,8 +1517,6 @@ final class ServicoPersistenciaMetalThursday
      * @throws InvalidArgumentException Quando a ligação não é válida.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarLigacao(
         mixed $valor,
@@ -1596,6 +1546,7 @@ final class ServicoPersistenciaMetalThursday
 
         $ligacao = trim(
             $valor,
+            ' ',
         );
 
         if ($ligacao === '') {
@@ -1643,6 +1594,9 @@ final class ServicoPersistenciaMetalThursday
             || isset(
                 $componentes['pass'],
             )
+            || trim(
+                (string) $componentes['host'],
+            ) === ''
         ) {
             throw new InvalidArgumentException(
                 sprintf(
@@ -1689,8 +1643,6 @@ final class ServicoPersistenciaMetalThursday
      * @throws InvalidArgumentException Quando o valor não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarTipoIncorporacao(
         mixed $valor,
@@ -1744,8 +1696,6 @@ final class ServicoPersistenciaMetalThursday
      * @throws InvalidArgumentException Quando o ano não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarAno(
         mixed $valor,

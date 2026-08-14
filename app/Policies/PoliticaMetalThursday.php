@@ -16,8 +16,6 @@ use App\Models\MetalThursday\MetalThursday;
  * superadministrador.
  *
  * @since 1.0.0
- *
- * @version 2.0.0
  */
 final class PoliticaMetalThursday
 {
@@ -33,8 +31,6 @@ final class PoliticaMetalThursday
      *                   continuar a avaliação normal.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function before(
         Utilizador $utilizador,
@@ -55,8 +51,6 @@ final class PoliticaMetalThursday
      * @return bool Verdadeiro para qualquer utilizador autenticado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function viewAny(
         Utilizador $utilizador,
@@ -75,8 +69,6 @@ final class PoliticaMetalThursday
      * @return bool Verdadeiro para qualquer utilizador autenticado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function view(
         Utilizador $utilizador,
@@ -95,8 +87,6 @@ final class PoliticaMetalThursday
      * @return bool Verdadeiro para qualquer utilizador autenticado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function create(
         Utilizador $utilizador,
@@ -117,8 +107,6 @@ final class PoliticaMetalThursday
      * @return bool Verdadeiro quando o utilizador é autor ou criador.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function update(
         Utilizador $utilizador,
@@ -145,8 +133,6 @@ final class PoliticaMetalThursday
      * @return bool Verdadeiro quando o utilizador criou o registo.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function delete(
         Utilizador $utilizador,
@@ -169,8 +155,6 @@ final class PoliticaMetalThursday
      * @return bool Verdadeiro quando o utilizador criou o registo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function restore(
         Utilizador $utilizador,
@@ -198,8 +182,6 @@ final class PoliticaMetalThursday
      * @return bool Falso para utilizadores que não são superadministradores.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function forceDelete(
         Utilizador $utilizador,
@@ -216,8 +198,6 @@ final class PoliticaMetalThursday
      * @return bool Verdadeiro quando os identificadores coincidem.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function utilizadorEAutor(
         Utilizador $utilizador,
@@ -237,8 +217,6 @@ final class PoliticaMetalThursday
      * @return bool Verdadeiro quando os identificadores coincidem.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function utilizadorECriador(
         Utilizador $utilizador,
@@ -258,8 +236,6 @@ final class PoliticaMetalThursday
      * @return bool Verdadeiro quando ambos são válidos e coincidem.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function identificadoresCoincidem(
         mixed $primeiroIdentificador,

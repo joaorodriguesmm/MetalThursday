@@ -16,8 +16,6 @@ use SensitiveParameter;
  * redefinição da palavra-passe, bem como em comandos e serviços internos.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 final class RequisitosPalavraPasse
 {
@@ -27,8 +25,6 @@ final class RequisitosPalavraPasse
      * @var int
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const COMPRIMENTO_MINIMO = 12;
 
@@ -41,8 +37,6 @@ final class RequisitosPalavraPasse
      * @var int
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const COMPRIMENTO_MAXIMO = 4096;
 
@@ -50,8 +44,6 @@ final class RequisitosPalavraPasse
      * Impede a instanciação desta classe utilitária.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function __construct() {}
 
@@ -61,8 +53,6 @@ final class RequisitosPalavraPasse
      * @return int Comprimento mínimo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public static function comprimentoMinimo(): int
     {
@@ -75,8 +65,6 @@ final class RequisitosPalavraPasse
      * @return int Comprimento máximo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public static function comprimentoMaximo(): int
     {
@@ -92,8 +80,6 @@ final class RequisitosPalavraPasse
      * @return Password Regra configurada.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public static function regra(): Password
     {
@@ -111,8 +97,6 @@ final class RequisitosPalavraPasse
      * @return array<int, string|Password> Regras de validação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public static function regrasObrigatorias(): array
     {
@@ -137,8 +121,6 @@ final class RequisitosPalavraPasse
      *                                  requisitos de segurança.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public static function validar(
         #[SensitiveParameter]

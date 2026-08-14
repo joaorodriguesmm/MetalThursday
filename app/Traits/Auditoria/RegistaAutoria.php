@@ -22,8 +22,6 @@ use Illuminate\Support\Facades\Auth;
  * @mixin Model
  *
  * @since 1.0.0
- *
- * @version 3.0.0
  */
 trait RegistaAutoria
 {
@@ -37,8 +35,6 @@ trait RegistaAutoria
      * @param  mixed  $callback  Callback do evento.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     abstract public static function creating($callback);
 
@@ -52,8 +48,6 @@ trait RegistaAutoria
      * @param  mixed  $callback  Callback do evento.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     abstract public static function updating($callback);
 
@@ -64,8 +58,6 @@ trait RegistaAutoria
      * Eloquent o execute automaticamente durante o arranque do modelo.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public static function bootRegistaAutoria(): void
     {
@@ -132,8 +124,6 @@ trait RegistaAutoria
      * @return BelongsTo<Utilizador, $this> Relação com o utilizador criador.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function criadoPor(): BelongsTo
     {
@@ -153,8 +143,6 @@ trait RegistaAutoria
      *                                      responsável pela atualização.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function atualizadoPor(): BelongsTo
     {
@@ -174,8 +162,6 @@ trait RegistaAutoria
      * @return int|null Identificador do utilizador ou nulo.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private static function obterIdentificadorUtilizadorAutenticado(): ?int
     {

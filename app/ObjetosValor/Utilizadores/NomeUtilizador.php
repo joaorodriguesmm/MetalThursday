@@ -16,8 +16,6 @@ use Stringable;
  * consecutivos.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 final readonly class NomeUtilizador implements JsonSerializable, Stringable
 {
@@ -28,8 +26,6 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
      * utilizem o mesmo limite do objeto de valor.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public const COMPRIMENTO_MINIMO = 3;
 
@@ -40,8 +36,6 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
      * utilizem o mesmo limite do objeto de valor.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public const COMPRIMENTO_MAXIMO = 255;
 
@@ -51,8 +45,6 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
      * @param  string  $valor  Nome normalizado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function __construct(
         private string $valor,
@@ -67,8 +59,6 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
      * @throws InvalidArgumentException Quando o nome não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public static function deTexto(
         string $nome,
@@ -104,8 +94,6 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
      * @return string Nome normalizado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function valor(): string
     {
@@ -118,8 +106,6 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
      * @return string Primeiro nome.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function primeiroNome(): string
     {
@@ -135,8 +121,6 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
      * @return string Iniciais em maiúsculas.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     public function iniciais(): string
     {
@@ -181,8 +165,6 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
      * @return bool Verdadeiro quando os valores coincidem.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     public function igualA(
         self $outro,
@@ -198,8 +180,6 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
      * @return string Nome normalizado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function __toString(): string
     {
@@ -215,8 +195,6 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
      * @return string Nome normalizado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function jsonSerialize(): string
     {
@@ -236,8 +214,6 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
      * @throws InvalidArgumentException Quando a normalização falha.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private static function normalizar(
         string $nome,
@@ -267,8 +243,6 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
      * @throws InvalidArgumentException Quando o texto não é UTF-8 válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private static function validarCodificacao(
         string $nome,
@@ -295,8 +269,6 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
      * @throws InvalidArgumentException Quando o nome está vazio.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private static function validarObrigatoriedade(
         string $nome,
@@ -318,8 +290,6 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
      * @throws InvalidArgumentException Quando o comprimento não é permitido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private static function validarComprimento(
         string $nome,
@@ -361,8 +331,6 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
      * @throws InvalidArgumentException Quando existem caracteres inválidos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private static function validarCaracteresControlo(
         string $nome,
@@ -387,29 +355,12 @@ final readonly class NomeUtilizador implements JsonSerializable, Stringable
      * @return non-empty-list<string> Elementos do nome.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     private function partes(): array
     {
-        $partes = preg_split(
-            '/\s+/u',
+        return explode(
+            ' ',
             $this->valor,
-            -1,
-            PREG_SPLIT_NO_EMPTY,
-        );
-
-        if (
-            ! is_array($partes)
-            || $partes === []
-        ) {
-            return [
-                $this->valor,
-            ];
-        }
-
-        return array_values(
-            $partes,
         );
     }
 }

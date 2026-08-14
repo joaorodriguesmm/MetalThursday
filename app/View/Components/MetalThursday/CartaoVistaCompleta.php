@@ -27,8 +27,6 @@ use LogicException;
  * apresentação do cartão e das respetivas secções.
  *
  * @since 1.0.0
- *
- * @version 4.0.0
  */
 final class CartaoVistaCompleta extends Component
 {
@@ -37,9 +35,7 @@ final class CartaoVistaCompleta extends Component
      *
      * @var float
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const PONTUACAO_MINIMA = 0.0;
 
@@ -48,69 +44,49 @@ final class CartaoVistaCompleta extends Component
      *
      * @var float
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const PONTUACAO_MAXIMA = 10.0;
 
     /**
      * MetalThursday apresentada.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly MetalThursday $registoMetalThursday;
 
     /**
      * Identificador da MetalThursday.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly int $identificadorMetalThursday;
 
     /**
      * Tipo público da MetalThursday nas rotas de interação.
      *
-     *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public readonly string $tipoInteracaoMetalThursday;
 
     /**
      * Título completo da MetalThursday.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly string $tituloMetalThursday;
 
     /**
      * Nome do autor.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly string $nomeAutor;
 
     /**
      * Nome do próximo utilizador nomeado.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly string $nomeProximoNomeado;
 
@@ -130,9 +106,7 @@ final class CartaoVistaCompleta extends Component
      *     descricaoAvaliacoes: HtmlString
      * }
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly array $interacoesMetalThursday;
 
@@ -164,29 +138,21 @@ final class CartaoVistaCompleta extends Component
      *     }|null
      * }>
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly array $seccoesPreparadas;
 
     /**
      * Identificador do contentor dos comentários da MetalThursday.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly string $identificadorComentariosMetalThursday;
 
     /**
      * Nome utilizado no formulário de avaliação da MetalThursday.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly string $nomeAvaliavelMetalThursday;
 
@@ -199,8 +165,6 @@ final class CartaoVistaCompleta extends Component
      *                        relação obrigatória não está carregada.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function __construct(
         MetalThursday $registoMetalThursday,
@@ -288,13 +252,11 @@ final class CartaoVistaCompleta extends Component
     }
 
     /**
-     * Obtém a view do componente.
+     * Obtém a vista do componente.
      *
-     * @return View View do cartão completo.
+     * @return View Vista do cartão completo.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function render(): View
     {
@@ -312,9 +274,7 @@ final class CartaoVistaCompleta extends Component
      * @throws LogicException Quando uma secção ou relação possui um tipo
      *                        inesperado.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function prepararSeccoes(
         Collection $seccoes,
@@ -428,9 +388,7 @@ final class CartaoVistaCompleta extends Component
      * @param  string  $textoNaoOuvido  Texto quando não está ouvido.
      * @return array<string, mixed> Dados das interações.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function prepararInteracoes(
         MetalThursday|SeccaoMetalThursday $modelo,
@@ -540,9 +498,7 @@ final class CartaoVistaCompleta extends Component
      *
      * @throws LogicException Quando a data possui um tipo inesperado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function criarTituloMetalThursday(
         MetalThursday $metalThursday,
@@ -613,9 +569,7 @@ final class CartaoVistaCompleta extends Component
      * @param  string|null  $titulo  Título opcional.
      * @return string Título preparado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function criarTituloSeccao(
         SeccaoMetalThursday $seccao,
@@ -644,9 +598,7 @@ final class CartaoVistaCompleta extends Component
      * @param  string  $mensagemVazia  Mensagem apresentada sem audições.
      * @return HtmlString Descrição segura.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function criarDescricaoAudicoes(
         Collection $audicoes,
@@ -689,9 +641,7 @@ final class CartaoVistaCompleta extends Component
      * @param  string  $mensagemVazia  Mensagem apresentada sem avaliações.
      * @return HtmlString Descrição segura.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function criarDescricaoAvaliacoes(
         Collection $avaliacoes,
@@ -751,9 +701,7 @@ final class CartaoVistaCompleta extends Component
      *
      * @throws LogicException Quando a relação possui um tipo inesperado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterEdicao(
         MetalThursday $metalThursday,
@@ -789,9 +737,7 @@ final class CartaoVistaCompleta extends Component
      *
      * @throws LogicException Quando a relação não está carregada ou é inválida.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterTipoSeccao(
         SeccaoMetalThursday $seccao,
@@ -824,9 +770,7 @@ final class CartaoVistaCompleta extends Component
      *
      * @throws LogicException Quando a relação possui um tipo inesperado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterBanda(
         SeccaoMetalThursday $seccao,
@@ -864,9 +808,7 @@ final class CartaoVistaCompleta extends Component
      * @throws LogicException Quando a relação não está carregada ou possui
      *                        um tipo inesperado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterUtilizadorRelacionado(
         Model $modelo,
@@ -911,9 +853,7 @@ final class CartaoVistaCompleta extends Component
      * @throws LogicException Quando a relação não está carregada ou não
      *                        contém uma coleção Eloquent.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterColecaoCarregada(
         Model $modelo,
@@ -953,9 +893,7 @@ final class CartaoVistaCompleta extends Component
      * @param  string  $relacao  Relação correspondente.
      * @return int Contagem normalizada.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function obterContagem(
         Model $modelo,
@@ -991,9 +929,7 @@ final class CartaoVistaCompleta extends Component
      * @param  Collection<int, Model>  $avaliacoes  Avaliações carregadas.
      * @return float Média normalizada.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterMediaAvaliacoes(
         Model $modelo,
@@ -1027,9 +963,7 @@ final class CartaoVistaCompleta extends Component
      *
      * @throws LogicException Quando o modelo não está persistido.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function obterIdentificador(
         Model $modelo,
@@ -1061,9 +995,7 @@ final class CartaoVistaCompleta extends Component
      * @param  mixed  $valor  Valor recebido.
      * @return string|null Texto normalizado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function normalizarTexto(
         mixed $valor,
@@ -1088,9 +1020,7 @@ final class CartaoVistaCompleta extends Component
      * @param  mixed  $valor  Valor recebido.
      * @return int|null Número normalizado.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function normalizarInteiroPositivo(
         mixed $valor,
@@ -1117,9 +1047,7 @@ final class CartaoVistaCompleta extends Component
      * @param  mixed  $valor  Valor recebido.
      * @return int|null Número normalizado.
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function normalizarInteiroNaoNegativo(
         mixed $valor,
@@ -1146,9 +1074,7 @@ final class CartaoVistaCompleta extends Component
      * @param  mixed  $valor  Valor recebido.
      * @return float Número normalizado.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function normalizarDecimal(
         mixed $valor,
@@ -1179,9 +1105,7 @@ final class CartaoVistaCompleta extends Component
      * @param  float  $pontuacao  Pontuação recebida.
      * @return string Pontuação formatada.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function formatarPontuacao(
         float $pontuacao,

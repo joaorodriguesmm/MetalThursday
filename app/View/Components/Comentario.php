@@ -16,46 +16,32 @@ use LogicException;
 /**
  * Prepara a apresentação de um comentário e das respetivas respostas.
  *
- * O componente exige que as relações `utilizador` e `respostas` tenham**
- * Prepara a apresentação de um comentário e das respetivas respostas.
- *
- * O componente exige que as relações sido
+ * O componente exige que as relações `utilizador` e `respostas` tenham sido
  * previamente carregadas, impedindo consultas implícitas durante a
  * renderização recursiva da árvore de comentários.
  *
  * @since 1.0.0
- *
- * @version 4.0.0
  */
 final class Comentario extends Component
 {
     /**
      * Comentário apresentado.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly ModeloComentario $comentario;
 
     /**
      * Identificador do comentário apresentado.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly int $identificadorComentario;
 
     /**
      * Identificador do comentário principal da árvore.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly int $identificadorPrincipal;
 
@@ -64,70 +50,49 @@ final class Comentario extends Component
      *
      * Pode ser nulo quando o utilizador tiver sido removido.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly ?Utilizador $utilizador;
 
     /**
      * Utilizador autenticado que pode publicar uma resposta.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly ?Utilizador $utilizadorAutenticado;
 
     /**
      * Nome apresentado como autor do comentário.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly string $nomeUtilizador;
 
     /**
      * Quantidade de gostos atribuídos ao comentário.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly int $quantidadeGostos;
 
     /**
      * Indica se o utilizador autenticado atribuiu gosto ao comentário.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly bool $temGosto;
 
     /**
      * Descrição acessível da ação de gosto.
      *
-     *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public readonly string $descricaoAcaoGosto;
 
     /**
      * Momento de criação do comentário.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly ?CarbonInterface $momentoCriacao;
 
@@ -136,9 +101,7 @@ final class Comentario extends Component
      *
      * @var Collection<int, ModeloComentario>
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly Collection $respostas;
 
@@ -154,8 +117,6 @@ final class Comentario extends Component
      *                        não está carregada ou possui um tipo inesperado.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function __construct(
         ModeloComentario $comentario,
@@ -237,8 +198,6 @@ final class Comentario extends Component
      * @return View Vista responsável pela apresentação.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function render(): View
     {
@@ -256,9 +215,7 @@ final class Comentario extends Component
      * @throws LogicException Quando o comentário não está persistido ou o
      *                        identificador não é um inteiro positivo.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function obterIdentificadorComentario(
         ModeloComentario $comentario,
@@ -304,9 +261,7 @@ final class Comentario extends Component
      *
      * @throws LogicException Quando o identificador fornecido é inválido.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function normalizarIdentificadorPrincipal(
         int|string|null $identificador,
@@ -345,9 +300,7 @@ final class Comentario extends Component
      * @throws LogicException Quando a relação não está carregada ou possui
      *                        um tipo inesperado.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function obterUtilizadorComentario(
         ModeloComentario $comentario,
@@ -383,9 +336,7 @@ final class Comentario extends Component
      * @throws LogicException Quando a relação não está carregada ou possui
      *                        um tipo inesperado.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function obterRespostas(
         ModeloComentario $comentario,
@@ -426,9 +377,7 @@ final class Comentario extends Component
      *
      * @throws LogicException Quando o valor possui um tipo inesperado.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function obterMomentoCriacao(
         ModeloComentario $comentario,
@@ -448,15 +397,13 @@ final class Comentario extends Component
     }
 
     /**
-     * Obtém o utilizador autenticado através do guard da aplicação.
+     * Obtém o utilizador autenticado através da guarda da aplicação.
      *
      * @return Utilizador|null Utilizador autenticado ou nulo.
      *
-     * @throws LogicException Quando o guard devolve um tipo inesperado.
+     * @throws LogicException Quando a guarda devolve um tipo inesperado.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function obterUtilizadorAutenticado(): ?Utilizador
     {
@@ -469,7 +416,7 @@ final class Comentario extends Component
             && ! $utilizador instanceof Utilizador
         ) {
             throw new LogicException(
-                'O guard sessao devolveu um utilizador de tipo inesperado.',
+                'A guarda `sessao` devolveu um utilizador de tipo inesperado.',
             );
         }
 

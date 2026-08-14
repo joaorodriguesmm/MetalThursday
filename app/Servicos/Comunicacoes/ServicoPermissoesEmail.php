@@ -21,8 +21,6 @@ use Throwable;
  * contrário, inicia uma transação própria.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 final class ServicoPermissoesEmail
 {
@@ -33,8 +31,6 @@ final class ServicoPermissoesEmail
      * transação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const TENTATIVAS_TRANSACAO = 3;
 
@@ -51,8 +47,6 @@ final class ServicoPermissoesEmail
      *                                  válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function normalizarIdentificadores(
         array $identificadores,
@@ -100,8 +94,6 @@ final class ServicoPermissoesEmail
      * @throws Throwable Quando ocorre outro erro durante a transação.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function sincronizar(
         Utilizador $utilizador,
@@ -163,8 +155,6 @@ final class ServicoPermissoesEmail
      * @throws ModelNotFoundException Quando o utilizador deixou de existir.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function sincronizarDentroDaTransacao(
         int $identificadorUtilizador,
@@ -206,8 +196,6 @@ final class ServicoPermissoesEmail
      * @throws InvalidArgumentException Quando alguma permissão não existe.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function validarExistencia(
         array $identificadores,
@@ -268,8 +256,6 @@ final class ServicoPermissoesEmail
      *                                  positivo.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarIdentificador(
         mixed $identificador,
@@ -313,8 +299,6 @@ final class ServicoPermissoesEmail
      *                                  identificador válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterIdentificadorUtilizador(
         Utilizador $utilizador,

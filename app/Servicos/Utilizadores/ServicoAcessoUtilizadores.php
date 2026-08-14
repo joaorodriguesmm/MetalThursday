@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Servicos\Utilizadores;
 
 use App\Enumeracoes\AcaoAcessoUtilizador;
-use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\RegistoAcessoUtilizador;
 use App\Models\Autenticacao\Utilizador;
 use App\ObjetosValor\Utilizadores\MotivoSuspensaoUtilizador;
@@ -27,12 +26,11 @@ use Throwable;
  * persistente e as sessões pertencem à mesma operação transacional.
  *
  * Apenas um superadministrador com acesso ativo pode executar alterações de
- * acesso. Um utilizador não pode suspender-se ou reativar-se a si próprio e
- * nunca pode ser suspenso o último superadministrador com acesso ativo.
+ * acesso. Um utilizador não pode suspender-se ou reativar-se a si próprio.
+ * Quando o utilizador afetado também é superadministrador, estas regras
+ * garantem que permanece pelo menos outro superadministrador com acesso ativo.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class ServicoAcessoUtilizadores
 {
@@ -40,8 +38,6 @@ final class ServicoAcessoUtilizadores
      * Número máximo de tentativas perante conflitos transitórios.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const TENTATIVAS_TRANSACAO =
         3;
@@ -53,8 +49,6 @@ final class ServicoAcessoUtilizadores
      * tokens da funcionalidade «lembrar-me».
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const COMPRIMENTO_TOKEN_PERSISTENTE =
         60;
@@ -67,8 +61,6 @@ final class ServicoAcessoUtilizadores
      *                                                              sessões.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function __construct(
         private readonly ServicoSessoesUtilizador $servicoSessoesUtilizador,
@@ -98,8 +90,6 @@ final class ServicoAcessoUtilizadores
      * @throws Throwable Quando ocorre outro erro durante a transação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function suspender(
         Utilizador $utilizador,
@@ -159,10 +149,6 @@ final class ServicoAcessoUtilizadores
                     );
                 }
 
-                $this->garantirSuperAdministradorRemanescente(
-                    $utilizadorBloqueado,
-                );
-
                 $utilizadorBloqueado->suspenso_em =
                     $momentoSuspensao;
 
@@ -220,8 +206,6 @@ final class ServicoAcessoUtilizadores
      * @throws Throwable Quando ocorre outro erro durante a transação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function reativar(
         Utilizador $utilizador,
@@ -328,8 +312,6 @@ final class ServicoAcessoUtilizadores
      * @throws Throwable Quando ocorre outro erro durante a transação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function encerrarSessoes(
         Utilizador $utilizador,
@@ -395,8 +377,6 @@ final class ServicoAcessoUtilizadores
      *                                existir.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function obterUtilizadoresBloqueados(
         int $identificadorUtilizador,
@@ -469,8 +449,6 @@ final class ServicoAcessoUtilizadores
      *                         superadministrador com acesso ativo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function garantirResponsavelAutorizado(
         Utilizador $responsavel,
@@ -496,8 +474,6 @@ final class ServicoAcessoUtilizadores
      * @throws DomainException Quando os identificadores coincidem.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function garantirUtilizadoresDistintos(
         int $identificadorUtilizador,
@@ -516,58 +492,6 @@ final class ServicoAcessoUtilizadores
     }
 
     /**
-     * Garante que permanece pelo menos um superadministrador ativo.
-     *
-     * Quando o utilizador afetado é superadministrador, todos os
-     * superadministradores são bloqueados antes da contagem. Isto impede que
-     * suspensões concorrentes deixem a aplicação sem administração ativa.
-     *
-     * @param  Utilizador  $utilizador  Utilizador a suspender.
-     *
-     * @throws DomainException Quando seria suspenso o último
-     *                         superadministrador ativo.
-     *
-     * @since 2.0.0
-     *
-     * @version 1.0.0
-     */
-    private function garantirSuperAdministradorRemanescente(
-        Utilizador $utilizador,
-    ): void {
-        if (! $utilizador->eSuperAdministrador()) {
-            return;
-        }
-
-        $superAdministradoresAtivos =
-            Utilizador::query()
-                ->where(
-                    'papel',
-                    PapelUtilizador::SuperAdministrador->value,
-                )
-                ->whereNull(
-                    'suspenso_em',
-                )
-                ->orderBy(
-                    'id',
-                )
-                ->lockForUpdate()
-                ->get([
-                    'id',
-                ]);
-
-        if (
-            $superAdministradoresAtivos->count()
-            > 1
-        ) {
-            return;
-        }
-
-        throw new DomainException(
-            'Não é possível suspender o último superadministrador com acesso ativo.',
-        );
-    }
-
-    /**
      * Cria um registo imutável da alteração de acesso.
      *
      * @param  Utilizador  $utilizador  Utilizador afetado.
@@ -578,8 +502,6 @@ final class ServicoAcessoUtilizadores
      * @return RegistoAcessoUtilizador Registo criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function registarAlteracaoAcesso(
         Utilizador $utilizador,
@@ -623,8 +545,6 @@ final class ServicoAcessoUtilizadores
      * @param  Utilizador  $utilizador  Utilizador bloqueado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function renovarTokenPersistente(
         Utilizador $utilizador,
@@ -648,8 +568,6 @@ final class ServicoAcessoUtilizadores
      *                                  identificador válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function obterIdentificadorUtilizador(
         Utilizador $utilizador,
@@ -712,8 +630,6 @@ final class ServicoAcessoUtilizadores
      * @return CarbonImmutable Momento imutável.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function normalizarMomento(
         ?CarbonInterface $momento,

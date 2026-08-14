@@ -16,8 +16,6 @@ use Stringable;
  * de maiúsculas e minúsculas.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 final readonly class EnderecoEmail implements JsonSerializable, Stringable
 {
@@ -28,8 +26,6 @@ final readonly class EnderecoEmail implements JsonSerializable, Stringable
      * utilizem o mesmo limite do objeto de valor.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public const COMPRIMENTO_MAXIMO = 255;
 
@@ -39,8 +35,6 @@ final readonly class EnderecoEmail implements JsonSerializable, Stringable
      * @param  string  $valor  Endereço normalizado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function __construct(
         private string $valor,
@@ -55,8 +49,6 @@ final readonly class EnderecoEmail implements JsonSerializable, Stringable
      * @throws InvalidArgumentException Quando o endereço não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public static function deTexto(
         string $email,
@@ -94,8 +86,6 @@ final readonly class EnderecoEmail implements JsonSerializable, Stringable
      * @return string Endereço normalizado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function valor(): string
     {
@@ -109,8 +99,6 @@ final readonly class EnderecoEmail implements JsonSerializable, Stringable
      * @return bool Verdadeiro quando os endereços coincidem.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     public function igualA(
         self $outro,
@@ -126,8 +114,6 @@ final readonly class EnderecoEmail implements JsonSerializable, Stringable
      * @return string Endereço normalizado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function __toString(): string
     {
@@ -143,8 +129,6 @@ final readonly class EnderecoEmail implements JsonSerializable, Stringable
      * @return string Endereço normalizado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function jsonSerialize(): string
     {
@@ -159,8 +143,6 @@ final readonly class EnderecoEmail implements JsonSerializable, Stringable
      * @throws InvalidArgumentException Quando o endereço está vazio.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private static function validarObrigatoriedade(
         string $email,
@@ -182,8 +164,6 @@ final readonly class EnderecoEmail implements JsonSerializable, Stringable
      * @throws InvalidArgumentException Quando o endereço excede o limite.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private static function validarComprimento(
         string $email,
@@ -216,8 +196,6 @@ final readonly class EnderecoEmail implements JsonSerializable, Stringable
      * @throws InvalidArgumentException Quando existem caracteres de controlo.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private static function validarCaracteresControlo(
         string $email,
@@ -244,8 +222,6 @@ final readonly class EnderecoEmail implements JsonSerializable, Stringable
      * @throws InvalidArgumentException Quando o formato não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private static function validarFormato(
         string $email,

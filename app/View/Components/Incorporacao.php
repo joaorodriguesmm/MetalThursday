@@ -16,19 +16,14 @@ use Illuminate\View\Component;
  * A validação da ligação e a construção segura do HTML são delegadas ao
  * serviço RenderizadorIncorporacoes.
  *
- * @since 3.0.0
- *
- * @version 2.0.0
+ * @since 2.0.0
  */
 final class Incorporacao extends Component
 {
     /**
      * Conteúdo HTML validado da incorporação.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly HtmlString $conteudo;
 
@@ -41,9 +36,7 @@ final class Incorporacao extends Component
      *                                                                pela validação
      *                                                                e renderização.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public function __construct(
         SeccaoMetalThursday $seccao,
@@ -60,9 +53,7 @@ final class Incorporacao extends Component
      *
      * @return View Vista da incorporação.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public function render(): View
     {

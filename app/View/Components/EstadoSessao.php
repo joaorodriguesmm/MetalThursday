@@ -16,8 +16,6 @@ use Stringable;
  * a prioridade definida: erro, aviso, sucesso e informação.
  *
  * @since 1.0.0
- *
- * @version 4.0.0
  */
 final class EstadoSessao extends Component
 {
@@ -32,9 +30,7 @@ final class EstadoSessao extends Component
      *     prioridadeAnuncio: string
      * }>
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private const CONFIGURACOES_MENSAGENS = [
         'erro' => [
@@ -62,50 +58,35 @@ final class EstadoSessao extends Component
     /**
      * Indica se existe uma mensagem para apresentar.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly bool $temMensagem;
 
     /**
      * Mensagem apresentada.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly ?string $mensagem;
 
     /**
      * Classe visual do alerta.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly ?string $classeAlerta;
 
     /**
      * Função de acessibilidade do alerta.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly ?string $funcaoAcessivel;
 
     /**
      * Prioridade utilizada no anúncio da mensagem.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly ?string $prioridadeAnuncio;
 
@@ -113,8 +94,6 @@ final class EstadoSessao extends Component
      * Cria uma nova instância do componente.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function __construct()
     {
@@ -147,8 +126,6 @@ final class EstadoSessao extends Component
      * @return View Vista da mensagem de sessão.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function render(): View
     {
@@ -167,9 +144,7 @@ final class EstadoSessao extends Component
      *     prioridadeAnuncio: string
      * }|null Configuração da mensagem selecionada ou nulo.
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterConfiguracaoMensagem(): ?array
     {
@@ -207,9 +182,7 @@ final class EstadoSessao extends Component
      * @param  mixed  $valor  Valor obtido da sessão.
      * @return string|null Mensagem normalizada ou nulo.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function normalizarMensagem(
         mixed $valor,

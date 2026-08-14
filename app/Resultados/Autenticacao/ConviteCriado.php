@@ -20,28 +20,20 @@ use SensitiveParameter;
  * código original em sessões, filas ou outros mecanismos de persistência.
  *
  * @since 2.0.0
- *
- * @version 1.1.0
  */
 final readonly class ConviteCriado
 {
     /**
      * Convite persistido na base de dados.
      *
-     *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private Convite $convite;
 
     /**
      * Código original do convite.
      *
-     *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private string $codigo;
 
@@ -55,8 +47,6 @@ final readonly class ConviteCriado
      *                                  persistido ou o código não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     public function __construct(
         Convite $convite,
@@ -81,8 +71,6 @@ final readonly class ConviteCriado
      * @return Convite Convite criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function obterConvite(): Convite
     {
@@ -98,8 +86,6 @@ final readonly class ConviteCriado
      * @return string Código original do convite.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function obterCodigo(): string
     {
@@ -117,8 +103,6 @@ final readonly class ConviteCriado
      * } Representação segura para depuração.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     public function __debugInfo(): array
     {
@@ -139,8 +123,6 @@ final readonly class ConviteCriado
      * @throws LogicException Sempre que seja tentada a serialização.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function __serialize(): array
     {
@@ -157,8 +139,6 @@ final readonly class ConviteCriado
      * @throws InvalidArgumentException Quando o convite não está persistido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private static function validarConvitePersistido(
         Convite $convite,
@@ -186,23 +166,23 @@ final readonly class ConviteCriado
      * @throws InvalidArgumentException Quando o código não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private static function validarCodigo(
         #[SensitiveParameter]
         string $codigo,
     ): void {
-        if (
-            $codigo === ''
-            || trim($codigo) === ''
-        ) {
+        $codigoSemEspacosExteriores =
+            trim(
+                $codigo,
+            );
+
+        if ($codigoSemEspacosExteriores === '') {
             throw new InvalidArgumentException(
                 'O código do convite não pode estar vazio.',
             );
         }
 
-        if ($codigo !== trim($codigo)) {
+        if ($codigo !== $codigoSemEspacosExteriores) {
             throw new InvalidArgumentException(
                 'O código do convite não pode conter espaços exteriores.',
             );

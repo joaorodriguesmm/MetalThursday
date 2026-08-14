@@ -14,9 +14,7 @@ use Stringable;
  * A classe centraliza o nome da aplicação, o idioma do documento, o ano
  * atual e a composição segura do título apresentado no documento HTML.
  *
- * @since 3.0.0
- *
- * @version 2.0.0
+ * @since 2.0.0
  */
 abstract class LayoutBase extends Component
 {
@@ -25,9 +23,7 @@ abstract class LayoutBase extends Component
      *
      * @var string
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const NOME_APLICACAO_PREDEFINIDO = 'MetalThursday';
 
@@ -36,48 +32,35 @@ abstract class LayoutBase extends Component
      *
      * @var string
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const IDIOMA_PREDEFINIDO = 'pt-PT';
 
     /**
      * Nome da aplicação.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly string $nomeAplicacao;
 
     /**
      * Idioma utilizado no documento HTML.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly string $idiomaDocumento;
 
     /**
      * Ano apresentado no rodapé.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly int $anoAtual;
 
     /**
      * Cria uma nova instância do layout.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public function __construct()
     {
@@ -110,9 +93,7 @@ abstract class LayoutBase extends Component
      *                                                   através do slot.
      * @return string Título completo do documento.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public function tituloDocumento(
         Htmlable|Stringable|string|null $titulo = null,
@@ -139,9 +120,7 @@ abstract class LayoutBase extends Component
      * @param  mixed  $nome  Valor configurado.
      * @return string Nome normalizado.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function normalizarNomeAplicacao(
         mixed $nome,
@@ -180,9 +159,7 @@ abstract class LayoutBase extends Component
      * @param  string  $idioma  Idioma configurado.
      * @return string Idioma normalizado.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function normalizarIdioma(
         string $idioma,
@@ -214,9 +191,7 @@ abstract class LayoutBase extends Component
      * @param  Htmlable|Stringable|string|null  $titulo  Conteúdo recebido.
      * @return string|null Título normalizado ou nulo.
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function normalizarTitulo(
         Htmlable|Stringable|string|null $titulo,

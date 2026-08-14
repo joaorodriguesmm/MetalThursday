@@ -18,8 +18,6 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
  * @mixin Model
  *
  * @since 2.0.0
- *
- * @version 1.1.0
  */
 trait TemComentarios
 {
@@ -29,8 +27,6 @@ trait TemComentarios
      * @return MorphMany<Comentario, $this> Relação com os comentários.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function comentarios(): MorphMany
     {

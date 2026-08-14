@@ -29,8 +29,6 @@ use Throwable;
  * executadas com bloqueios pessimistas.
  *
  * @since 2.0.0
- *
- * @version 3.0.0
  */
 final class ServicoConvites
 {
@@ -38,8 +36,6 @@ final class ServicoConvites
      * Prefixo identificativo dos códigos de convite.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const PREFIXO_CODIGO = 'MT-';
 
@@ -50,8 +46,6 @@ final class ServicoConvites
      * codificação Base64 URL-safe.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const BYTES_ALEATORIOS = 32;
 
@@ -59,8 +53,6 @@ final class ServicoConvites
      * Número máximo de tentativas perante uma colisão do hash.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const MAXIMO_TENTATIVAS_GERACAO = 3;
 
@@ -69,8 +61,6 @@ final class ServicoConvites
      * transação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const TENTATIVAS_TRANSACAO = 3;
 
@@ -97,8 +87,6 @@ final class ServicoConvites
      * @throws Throwable Quando ocorre outro erro durante a persistência.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function criar(
         string $nomeConvidado,
@@ -188,8 +176,6 @@ final class ServicoConvites
      * @throws InvalidArgumentException Quando o código não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function encontrarDisponivelPorCodigo(
         #[SensitiveParameter]
@@ -225,8 +211,6 @@ final class ServicoConvites
      * @throws Throwable Quando ocorre outro erro durante a transação.
      *
      * @since 2.0.0
-     *
-     * @version 3.0.0
      */
     public function revogar(
         Convite $convite,
@@ -307,8 +291,6 @@ final class ServicoConvites
      * @throws Throwable Quando não é possível obter bytes aleatórios.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function gerarCodigo(): string
     {
@@ -343,8 +325,6 @@ final class ServicoConvites
      *                                  identificador válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function garantirCriadorPersistido(
         ?Utilizador $criador,
@@ -374,18 +354,21 @@ final class ServicoConvites
             return;
         }
 
-        if (
-            is_string($identificador)
-            && ctype_digit(
+        if (is_string($identificador)) {
+            $identificadorNormalizado =
                 trim(
                     $identificador,
-                ),
-            )
-            && (int) trim(
-                $identificador,
-            ) > 0
-        ) {
-            return;
+                );
+
+            if (
+                $identificadorNormalizado !== ''
+                && ctype_digit(
+                    $identificadorNormalizado,
+                )
+                && (int) $identificadorNormalizado > 0
+            ) {
+                return;
+            }
         }
 
         throw new InvalidArgumentException(
@@ -402,8 +385,6 @@ final class ServicoConvites
      *                         superadministrador com acesso ativo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function garantirResponsavelAutorizado(
         Utilizador $responsavel,
@@ -429,8 +410,6 @@ final class ServicoConvites
      * @throws InvalidArgumentException Quando o convite não está persistido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterIdentificadorConvite(
         Convite $convite,
@@ -486,8 +465,6 @@ final class ServicoConvites
      *                                  identificador válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function obterIdentificadorUtilizador(
         Utilizador $responsavel,
@@ -538,8 +515,6 @@ final class ServicoConvites
      * @throws InvalidArgumentException Quando a data não está no futuro.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarExpiracao(
         ?CarbonInterface $expiraEm,

@@ -18,9 +18,7 @@ use LogicException;
  * utilizadores concluíram as respetivas escolhas e prepara os campos
  * utilizados pelo formulário.
  *
- * @since 3.0.0
- *
- * @version 2.0.0
+ * @since 2.0.0
  */
 final class ServicoApresentacaoDetalhesEdicao
 {
@@ -49,14 +47,12 @@ final class ServicoApresentacaoDetalhesEdicao
      * @throws LogicException Quando a edição ou algum utilizador não possui
      *                        um identificador persistido válido.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public function preparar(
         Edicao $edicao,
     ): array {
-        $this->obterIdentificadorEdicao(
+        $this->validarEdicaoPersistida(
             $edicao,
         );
 
@@ -119,9 +115,7 @@ final class ServicoApresentacaoDetalhesEdicao
      *
      * @return ColecaoEloquent<int, Utilizador> Utilizadores selecionáveis.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function obterUtilizadores(): ColecaoEloquent
     {
@@ -145,9 +139,7 @@ final class ServicoApresentacaoDetalhesEdicao
      * @return Collection<int, Collection<int, MusicaFavoritaEdicao>>
      *                                                                Músicas favoritas agrupadas por utilizador.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function obterMusicasFavoritasPorUtilizador(
         Edicao $edicao,
@@ -197,9 +189,7 @@ final class ServicoApresentacaoDetalhesEdicao
      *     valorPredefinido: string
      * }> Campos preparados.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function prepararCampos(
         int $identificadorUtilizador,
@@ -264,9 +254,7 @@ final class ServicoApresentacaoDetalhesEdicao
      * }>  $grupos  Grupos preparados.
      * @return bool Verdadeiro quando todas as escolhas estão concluídas.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function determinarSeEstaBloqueada(
         array $grupos,
@@ -307,21 +295,18 @@ final class ServicoApresentacaoDetalhesEdicao
     }
 
     /**
-     * Obtém o identificador persistido da edição.
+     * Confirma que a edição possui um identificador persistido válido.
      *
      * @param  Edicao  $edicao  Edição recebida.
-     * @return int Identificador da edição.
      *
      * @throws LogicException Quando a edição não está persistida ou o
      *                        identificador não é um inteiro positivo.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
-    private function obterIdentificadorEdicao(
+    private function validarEdicaoPersistida(
         Edicao $edicao,
-    ): int {
+    ): void {
         if (! $edicao->exists) {
             throw new LogicException(
                 'A edição deve estar persistida antes de preparar os respetivos detalhes.',
@@ -335,32 +320,28 @@ final class ServicoApresentacaoDetalhesEdicao
             is_int($identificador)
             && $identificador > 0
         ) {
-            return $identificador;
+            return;
         }
 
-        if (! is_string($identificador)) {
-            throw new LogicException(
-                'A edição deve possuir um identificador válido.',
+        if (is_string($identificador)) {
+            $identificadorNormalizado = trim(
+                $identificador,
             );
+
+            if (
+                $identificadorNormalizado !== ''
+                && ctype_digit(
+                    $identificadorNormalizado,
+                )
+                && (int) $identificadorNormalizado > 0
+            ) {
+                return;
+            }
         }
 
-        $identificadorNormalizado = trim(
-            $identificador,
+        throw new LogicException(
+            'A edição deve possuir um identificador válido.',
         );
-
-        if (
-            $identificadorNormalizado === ''
-            || ! ctype_digit(
-                $identificadorNormalizado,
-            )
-            || (int) $identificadorNormalizado < 1
-        ) {
-            throw new LogicException(
-                'A edição deve possuir um identificador válido.',
-            );
-        }
-
-        return (int) $identificadorNormalizado;
     }
 
     /**
@@ -372,9 +353,7 @@ final class ServicoApresentacaoDetalhesEdicao
      * @throws LogicException Quando o utilizador não está persistido ou o
      *                        identificador não é um inteiro positivo.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function obterIdentificadorUtilizador(
         Utilizador $utilizador,
@@ -430,9 +409,7 @@ final class ServicoApresentacaoDetalhesEdicao
      * @param  Edicao  $edicao  Edição apresentada.
      * @return string|null Ligação da compilação ou nula.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function obterLigacaoCompilacao(
         Edicao $edicao,

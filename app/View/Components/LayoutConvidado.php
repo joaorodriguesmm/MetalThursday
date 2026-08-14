@@ -12,8 +12,6 @@ use Illuminate\Contracts\View\View;
  * Os dados comuns do documento são preparados pela classe LayoutBase.
  *
  * @since 1.0.0
- *
- * @version 4.0.0
  */
 final class LayoutConvidado extends LayoutBase
 {
@@ -23,8 +21,6 @@ final class LayoutConvidado extends LayoutBase
      * @return View Vista do layout.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function render(): View
     {

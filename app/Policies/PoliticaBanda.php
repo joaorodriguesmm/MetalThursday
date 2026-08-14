@@ -15,8 +15,6 @@ use App\Models\Musica\Banda;
  * o superadministrador.
  *
  * @since 1.0.0
- *
- * @version 2.0.0
  */
 final class PoliticaBanda
 {
@@ -32,8 +30,6 @@ final class PoliticaBanda
      *                   continuar a avaliação normal.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function before(
         Utilizador $utilizador,
@@ -54,8 +50,6 @@ final class PoliticaBanda
      * @return bool Verdadeiro para qualquer utilizador autenticado.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function viewAny(
         Utilizador $utilizador,
@@ -74,8 +68,6 @@ final class PoliticaBanda
      * @return bool Verdadeiro para qualquer utilizador autenticado.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function view(
         Utilizador $utilizador,
@@ -94,8 +86,6 @@ final class PoliticaBanda
      * @return bool Verdadeiro para qualquer utilizador autenticado.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function create(
         Utilizador $utilizador,
@@ -114,8 +104,6 @@ final class PoliticaBanda
      * @return bool Verdadeiro quando o utilizador criou a banda.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function update(
         Utilizador $utilizador,
@@ -138,8 +126,6 @@ final class PoliticaBanda
      * @return bool Verdadeiro quando o utilizador criou a banda.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function delete(
         Utilizador $utilizador,
@@ -162,8 +148,6 @@ final class PoliticaBanda
      * @return bool Verdadeiro quando o utilizador criou a banda.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function restore(
         Utilizador $utilizador,
@@ -189,8 +173,6 @@ final class PoliticaBanda
      * @return bool Falso para utilizadores comuns.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function forceDelete(
         Utilizador $utilizador,
@@ -207,8 +189,6 @@ final class PoliticaBanda
      * @return bool Verdadeiro quando os identificadores coincidem.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function utilizadorCriouBanda(
         Utilizador $utilizador,

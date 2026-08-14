@@ -9,9 +9,9 @@ use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MusicaFavoritaEdicao;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
+use RuntimeException;
 use Throwable;
 
 /**
@@ -24,8 +24,6 @@ use Throwable;
  * transação, impedindo alterações concorrentes incompatíveis.
  *
  * @since 2.0.0
- *
- * @version 2.1.0
  */
 final class ServicoMusicasFavoritasEdicao
 {
@@ -33,8 +31,6 @@ final class ServicoMusicasFavoritasEdicao
      * Número máximo de tentativas perante conflitos transitórios.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const TENTATIVAS_TRANSACAO = 3;
 
@@ -58,8 +54,6 @@ final class ServicoMusicasFavoritasEdicao
      * @throws Throwable Quando ocorre outro erro durante a transação.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function sincronizar(
         Edicao $edicao,
@@ -121,8 +115,6 @@ final class ServicoMusicasFavoritasEdicao
      * @throws ValidationException Quando os dados não são válidos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarMusicasFavoritas(
         array $musicasFavoritas,
@@ -179,8 +171,6 @@ final class ServicoMusicasFavoritasEdicao
      *                             positivo.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarIdentificadorUtilizador(
         int|string $identificador,
@@ -223,8 +213,6 @@ final class ServicoMusicasFavoritasEdicao
      * @throws ValidationException Quando as posições não são válidas.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     private function normalizarMusicasUtilizador(
         int $identificadorUtilizador,
@@ -248,7 +236,6 @@ final class ServicoMusicasFavoritasEdicao
         }
 
         $musicas = [];
-        $musicasUtilizadas = [];
 
         foreach (
             $entradasRecebidas as $indice => $entradaRecebida
@@ -257,69 +244,153 @@ final class ServicoMusicasFavoritasEdicao
                 MusicaFavoritaEdicao::POSICAO_MINIMA
                 + $indice;
 
-            $musica =
+            $musicas[$posicao] =
                 $this->normalizarMusica(
                     $entradaRecebida,
                     $identificadorUtilizador,
                     $indice,
                 );
+        }
 
-            if ($musica === null) {
-                $musicas[$posicao] = null;
+        $this->validarUnicidadeMusicas(
+            $identificadorUtilizador,
+            $musicas,
+        );
 
-                continue;
-            }
+        return $musicas;
+    }
 
-            $chaveMusica =
-                $this->normalizarChaveComparacaoMusica(
-                    $musica,
-                );
+    /**
+     * Confirma que a mesma música não ocupa duas posições.
+     *
+     * A comparação utiliza os pesos da própria collation
+     * `utf8mb4_unicode_ci`, correspondendo ao contrato do índice único da
+     * tabela em vez de aproximar esse comportamento através de transliteração.
+     *
+     * @param  int  $identificadorUtilizador  Identificador do utilizador.
+     * @param  array<int, string|null>  $musicas  Músicas normalizadas.
+     *
+     * @throws ValidationException Quando existem músicas equivalentes segundo
+     *                             a collation da base de dados.
+     * @throws RuntimeException Quando não é possível obter uma chave de
+     *                          comparação.
+     *
+     * @since 2.0.0
+     */
+    private function validarUnicidadeMusicas(
+        int $identificadorUtilizador,
+        array $musicas,
+    ): void {
+        $chavesUtilizadas = [];
 
+        foreach (
+            $this->obterChavesComparacaoMusicas(
+                $musicas,
+            ) as $posicao => $chave
+        ) {
             if (
                 array_key_exists(
-                    $chaveMusica,
-                    $musicasUtilizadas,
+                    $chave,
+                    $chavesUtilizadas,
                 )
             ) {
+                $indice =
+                    $posicao
+                    - MusicaFavoritaEdicao::POSICAO_MINIMA;
+
                 throw ValidationException::withMessages([
-                    sprintf(
-                        'musicas_favoritas.%d.%d',
+                    $this->obterChaveMusica(
                         $identificadorUtilizador,
                         $indice,
                     ) => 'A mesma música não pode ocupar duas posições.',
                 ]);
             }
 
-            $musicasUtilizadas[$chaveMusica] = true;
-            $musicas[$posicao] = $musica;
+            $chavesUtilizadas[$chave] = true;
         }
-
-        return $musicas;
     }
 
     /**
-     * Normaliza uma música para comparação de unicidade.
+     * Obtém as chaves de comparação das músicas segundo a collation da tabela.
      *
-     * A base de dados utiliza a collation `utf8mb4_unicode_ci`, que não
-     * distingue maiúsculas nem acentos. A chave reproduz esse contrato antes
-     * da escrita, evitando que uma repetição previsível seja convertida numa
-     * exceção de integridade da base de dados.
+     * Todas as músicas não nulas do utilizador são avaliadas numa única
+     * consulta. `WEIGHT_STRING` devolve o peso utilizado pela MariaDB para
+     * ordenar e comparar o valor segundo `utf8mb4_unicode_ci`.
      *
-     * @param  string  $musica  Música já normalizada para persistência.
-     * @return string Chave utilizada na comparação.
+     * @param  array<int, string|null>  $musicas  Músicas normalizadas.
+     * @return array<int, string> Chaves indexadas pela posição.
+     *
+     * @throws RuntimeException Quando a base de dados não devolve as chaves
+     *                          esperadas.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
-    private function normalizarChaveComparacaoMusica(
-        string $musica,
-    ): string {
-        return Str::lower(
-            Str::ascii(
-                $musica,
+    private function obterChavesComparacaoMusicas(
+        array $musicas,
+    ): array {
+        $expressoes = [];
+        $parametros = [];
+        $posicoes = [];
+
+        foreach ($musicas as $posicao => $musica) {
+            if ($musica === null) {
+                continue;
+            }
+
+            $expressoes[] = sprintf(
+                <<<'SQL'
+                HEX(
+                    WEIGHT_STRING(
+                        CONVERT(? USING utf8mb4)
+                        COLLATE utf8mb4_unicode_ci
+                    )
+                ) AS chave_%d
+                SQL,
+                $posicao,
+            );
+
+            $parametros[] = $musica;
+            $posicoes[] = $posicao;
+        }
+
+        if ($expressoes === []) {
+            return [];
+        }
+
+        $resultado = DB::selectOne(
+            'SELECT '.implode(
+                ', ',
+                $expressoes,
             ),
+            $parametros,
         );
+
+        if ($resultado === null) {
+            throw new RuntimeException(
+                'Não foi possível comparar as músicas favoritas.',
+            );
+        }
+
+        $chaves = [];
+
+        foreach ($posicoes as $posicao) {
+            $nomeAtributo =
+                "chave_{$posicao}";
+
+            $chave =
+                $resultado->{$nomeAtributo}
+                ?? null;
+
+            if (! is_string($chave)) {
+                throw new RuntimeException(
+                    'Não foi possível obter a chave de comparação de uma música favorita.',
+                );
+            }
+
+            $chaves[$posicao] = $chave;
+        }
+
+        return $chaves;
     }
 
     /**
@@ -333,8 +404,6 @@ final class ServicoMusicasFavoritasEdicao
      * @throws ValidationException Quando o valor não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarMusica(
         mixed $entrada,
@@ -356,6 +425,20 @@ final class ServicoMusicasFavoritasEdicao
 
         if (
             preg_match(
+                '//u',
+                $entrada,
+            ) !== 1
+        ) {
+            throw ValidationException::withMessages([
+                $this->obterChaveMusica(
+                    $identificadorUtilizador,
+                    $indice,
+                ) => 'A música indicada contém texto inválido.',
+            ]);
+        }
+
+        if (
+            preg_match(
                 '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/',
                 $entrada,
             ) === 1
@@ -371,9 +454,7 @@ final class ServicoMusicasFavoritasEdicao
         $musica = preg_replace(
             '/\s+/u',
             ' ',
-            trim(
-                $entrada,
-            ),
+            $entrada,
         );
 
         if (! is_string($musica)) {
@@ -384,6 +465,10 @@ final class ServicoMusicasFavoritasEdicao
                 ) => 'Não foi possível normalizar a música indicada.',
             ]);
         }
+
+        $musica = trim(
+            $musica,
+        );
 
         if ($musica === '') {
             return null;
@@ -416,8 +501,6 @@ final class ServicoMusicasFavoritasEdicao
      * @return string Chave correspondente no pedido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function obterChaveMusica(
         int $identificadorUtilizador,
@@ -440,8 +523,6 @@ final class ServicoMusicasFavoritasEdicao
      *                                  não possui um identificador válido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterIdentificadorEdicao(
         Edicao $edicao,
@@ -497,8 +578,6 @@ final class ServicoMusicasFavoritasEdicao
      *                                  identificador válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function obterIdentificadorRegistador(
         Utilizador $registador,
@@ -551,8 +630,6 @@ final class ServicoMusicasFavoritasEdicao
      * @throws ValidationException Quando a edição deixou de existir.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function bloquearEdicao(
         int $identificadorEdicao,
@@ -588,8 +665,6 @@ final class ServicoMusicasFavoritasEdicao
      *                             não pode ser selecionado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function bloquearEValidarUtilizadores(
         int $identificadorRegistador,
@@ -686,8 +761,6 @@ final class ServicoMusicasFavoritasEdicao
      *                                        registo.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function substituirMusicasFavoritas(
         int $identificadorEdicao,

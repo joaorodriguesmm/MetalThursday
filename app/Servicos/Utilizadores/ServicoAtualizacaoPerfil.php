@@ -26,8 +26,6 @@ use Throwable;
  * transações SQL.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 final class ServicoAtualizacaoPerfil
 {
@@ -35,8 +33,6 @@ final class ServicoAtualizacaoPerfil
      * Número máximo de tentativas perante conflitos transitórios.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const TENTATIVAS_TRANSACAO = 3;
 
@@ -49,8 +45,6 @@ final class ServicoAtualizacaoPerfil
      *                                                            fotografias.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function __construct(
         private readonly ServicoFotografiasUtilizador $servicoFotografias,
@@ -78,8 +72,6 @@ final class ServicoAtualizacaoPerfil
      * @throws Throwable Quando ocorre outro erro.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function atualizar(
         Utilizador $utilizador,
@@ -129,9 +121,7 @@ final class ServicoAtualizacaoPerfil
                             ->firstOrFail();
 
                     $caminhoFotografiaAnterior =
-                        $this->normalizarCaminhoPersistido(
-                            $utilizadorBloqueado->fotografia,
-                        );
+                        $utilizadorBloqueado->fotografia;
 
                     $emailAlterado =
                         $this->emailFoiAlterado(
@@ -229,8 +219,6 @@ final class ServicoAtualizacaoPerfil
      *                                  persistido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterIdentificadorUtilizador(
         Utilizador $utilizador,
@@ -283,8 +271,6 @@ final class ServicoAtualizacaoPerfil
      * @return bool Verdadeiro quando o endereço foi alterado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function emailFoiAlterado(
         Utilizador $utilizador,
@@ -318,8 +304,6 @@ final class ServicoAtualizacaoPerfil
      * @throws DomainException Quando o endereço já está em utilização.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function garantirEmailDisponivel(
         EnderecoEmail $email,
@@ -347,8 +331,6 @@ final class ServicoAtualizacaoPerfil
      * @return bool Verdadeiro quando existe outro utilizador com o endereço.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function emailPertenceAOutroUtilizador(
         EnderecoEmail $email,
@@ -366,35 +348,6 @@ final class ServicoAtualizacaoPerfil
     }
 
     /**
-     * Normaliza um caminho de fotografia persistido.
-     *
-     * A validação de segurança definitiva é realizada pelo serviço de
-     * fotografias no momento da eliminação.
-     *
-     * @param  mixed  $caminho  Valor persistido.
-     * @return string|null Caminho normalizado ou nulo.
-     *
-     * @since 2.0.0
-     *
-     * @version 2.0.0
-     */
-    private function normalizarCaminhoPersistido(
-        mixed $caminho,
-    ): ?string {
-        if (! is_string($caminho)) {
-            return null;
-        }
-
-        $caminhoNormalizado = trim(
-            $caminho,
-        );
-
-        return $caminhoNormalizado !== ''
-            ? $caminhoNormalizado
-            : null;
-    }
-
-    /**
      * Elimina a fotografia nova quando a atualização falha.
      *
      * A exceção original nunca é substituída por uma eventual falha da
@@ -404,8 +357,6 @@ final class ServicoAtualizacaoPerfil
      * @param  Throwable  $excecaoOriginal  Erro que provocou a compensação.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function eliminarFotografiaNovaAposFalha(
         ?string $caminho,
@@ -446,8 +397,6 @@ final class ServicoAtualizacaoPerfil
      * @param  string  $caminho  Caminho da fotografia anterior.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function eliminarFotografiaAnterior(
         string $caminho,

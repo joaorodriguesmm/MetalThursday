@@ -17,13 +17,11 @@ use LogicException;
  * Adiciona suporte a avaliações polimórficas a um modelo Eloquent.
  *
  * Disponibiliza a relação com todas as avaliações e a pontuação atribuída pelo
- * utilizador autenticado através do guard `sessao`.
+ * utilizador autenticado através da guarda `sessao`.
  *
  * @mixin Model
  *
  * @since 2.0.0
- *
- * @version 2.1.0
  */
 trait TemAvaliacoes
 {
@@ -33,8 +31,6 @@ trait TemAvaliacoes
      * @return MorphMany<Avaliacao, $this> Relação com as avaliações.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function avaliacoes(): MorphMany
     {
@@ -58,8 +54,6 @@ trait TemAvaliacoes
      * @return MorphOne<Avaliacao, $this> Relação com a avaliação.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function avaliacaoUtilizadorAutenticado(): MorphOne
     {
@@ -101,8 +95,6 @@ trait TemAvaliacoes
      *                        necessária não foi carregada.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     protected function pontuacaoUtilizadorAutenticado(): Attribute
     {
@@ -145,7 +137,7 @@ trait TemAvaliacoes
     /**
      * Obtém o identificador do utilizador autenticado para as avaliações.
      *
-     * O método confirma que o objeto autenticado através do guard `sessao`
+     * O método confirma que o objeto autenticado através da guarda `sessao`
      * corresponde a um utilizador persistido e possui um identificador inteiro
      * positivo.
      *
@@ -155,8 +147,6 @@ trait TemAvaliacoes
      * @return int|null Identificador do utilizador ou nulo.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterIdentificadorUtilizadorParaAvaliacoes(): ?int
     {

@@ -18,8 +18,6 @@ use RuntimeException;
  * de outros ficheiros do disco público.
  *
  * @since 2.0.0
- *
- * @version 3.0.0
  */
 final class ServicoFotografiasUtilizador
 {
@@ -27,8 +25,6 @@ final class ServicoFotografiasUtilizador
      * Disco utilizado para armazenar as fotografias.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private const DISCO_PUBLICO =
         'publico';
@@ -37,8 +33,6 @@ final class ServicoFotografiasUtilizador
      * Diretório das fotografias dos utilizadores.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const DIRETORIO_FOTOGRAFIAS =
         'fotografias/utilizadores';
@@ -50,8 +44,6 @@ final class ServicoFotografiasUtilizador
      * `utilizadores.fotografia`.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private const COMPRIMENTO_MAXIMO_CAMINHO =
         255;
@@ -70,8 +62,6 @@ final class ServicoFotografiasUtilizador
      *                          caminho inesperado.
      *
      * @since 2.0.0
-     *
-     * @version 3.0.0
      */
     public function guardar(
         UploadedFile $fotografia,
@@ -126,8 +116,6 @@ final class ServicoFotografiasUtilizador
      *                          uma tentativa de eliminação falhada.
      *
      * @since 2.0.0
-     *
-     * @version 3.0.0
      */
     public function eliminar(
         ?string $caminho,
@@ -197,8 +185,6 @@ final class ServicoFotografiasUtilizador
      * @return FilesystemAdapter Adaptador do disco público.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function obterDiscoPublico(): FilesystemAdapter
     {
@@ -219,8 +205,6 @@ final class ServicoFotografiasUtilizador
      * @throws InvalidArgumentException Quando o carregamento falhou.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function validarFotografia(
         UploadedFile $fotografia,
@@ -248,8 +232,6 @@ final class ServicoFotografiasUtilizador
      * @throws InvalidArgumentException Quando o caminho não é seguro.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarCaminho(
         string $caminho,
@@ -360,8 +342,6 @@ final class ServicoFotografiasUtilizador
      * @return bool Verdadeiro quando o ficheiro é gerido pela aplicação.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function caminhoPertenceAoDiretorioPermitido(
         string $caminho,

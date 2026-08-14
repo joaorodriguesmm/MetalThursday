@@ -16,8 +16,6 @@ use Illuminate\Support\HtmlString;
  * durante a apresentação da página.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 final class RenderizadorIncorporacoes
 {
@@ -27,8 +25,6 @@ final class RenderizadorIncorporacoes
      * @var list<string>
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const HOSTS_YOUTUBE = [
         'youtube.com',
@@ -47,8 +43,6 @@ final class RenderizadorIncorporacoes
      * @var list<string>
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const SEGMENTOS_VIDEO_YOUTUBE = [
         'embed',
@@ -60,8 +54,6 @@ final class RenderizadorIncorporacoes
      * Comprimento exato de um identificador de vídeo do YouTube.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const COMPRIMENTO_IDENTIFICADOR_VIDEO = 11;
 
@@ -69,8 +61,6 @@ final class RenderizadorIncorporacoes
      * Comprimento mínimo de um identificador de lista de reprodução.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const COMPRIMENTO_MINIMO_IDENTIFICADOR_LISTA = 10;
 
@@ -78,8 +68,6 @@ final class RenderizadorIncorporacoes
      * Comprimento máximo de um identificador de lista de reprodução.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const COMPRIMENTO_MAXIMO_IDENTIFICADOR_LISTA = 150;
 
@@ -95,8 +83,6 @@ final class RenderizadorIncorporacoes
      * @return HtmlString Conteúdo HTML validado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function renderizar(
         SeccaoMetalThursday $seccao,
@@ -147,8 +133,6 @@ final class RenderizadorIncorporacoes
      * }> Definições das incorporações reconhecidas.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function definicoesParaJavaScript(): array
     {
@@ -189,8 +173,6 @@ final class RenderizadorIncorporacoes
      * @return string HTML da incorporação ou texto vazio.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function renderizarVideoYouTube(
         string $ligacao,
@@ -222,8 +204,6 @@ final class RenderizadorIncorporacoes
      * @return string HTML da incorporação ou texto vazio.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function renderizarListaReproducaoYouTube(
         string $ligacao,
@@ -259,8 +239,6 @@ final class RenderizadorIncorporacoes
      * @return string HTML do iframe.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function renderizarIframe(
         string $origem,
@@ -298,8 +276,6 @@ HTML;
      * @return string HTML do botão.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function renderizarLigacaoExterna(
         string $ligacao,
@@ -334,8 +310,6 @@ HTML;
      * @return string|null Ligação válida ou nula.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function normalizarLigacao(
         mixed $valor,
@@ -433,8 +407,6 @@ HTML;
      * @return string|null Identificador ou nulo.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function extrairIdentificadorVideoYouTube(
         string $ligacao,
@@ -504,8 +476,6 @@ HTML;
      * @return string|null Identificador ou nulo.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function extrairIdentificadorListaYouTube(
         string $ligacao,
@@ -558,8 +528,6 @@ HTML;
      * }|null Componentes reconhecidos ou nulos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function decomporLigacaoYouTube(
         string $ligacao,
@@ -642,8 +610,6 @@ HTML;
      * @return string|null Identificador válido ou nulo.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function validarIdentificadorVideo(
         mixed $identificador,
@@ -671,8 +637,6 @@ HTML;
      * @return string Valor escapado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function escaparAtributo(
         string $valor,

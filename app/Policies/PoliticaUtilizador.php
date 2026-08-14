@@ -13,8 +13,6 @@ use App\Models\Autenticacao\Utilizador;
  * superadministradores com acesso ativo.
  *
  * @since 2.0.0
- *
- * @version 4.0.0
  */
 final class PoliticaUtilizador
 {
@@ -35,8 +33,6 @@ final class PoliticaUtilizador
      *                   continuar a avaliação normal.
      *
      * @since 2.0.0
-     *
-     * @version 4.0.0
      */
     public function before(
         Utilizador $utilizador,
@@ -75,8 +71,6 @@ final class PoliticaUtilizador
      *              ativos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function viewAny(
         Utilizador $utilizador,
@@ -99,8 +93,6 @@ final class PoliticaUtilizador
      *              ativos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function view(
         Utilizador $utilizador,
@@ -120,8 +112,6 @@ final class PoliticaUtilizador
      * @return bool Verdadeiro quando a suspensão pode ser iniciada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function suspender(
         Utilizador $utilizador,
@@ -145,8 +135,6 @@ final class PoliticaUtilizador
      * @return bool Verdadeiro quando a reativação pode ser iniciada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function reativar(
         Utilizador $utilizador,
@@ -172,8 +160,6 @@ final class PoliticaUtilizador
      * @return bool Verdadeiro quando as sessões podem ser encerradas.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function encerrarSessoes(
         Utilizador $utilizador,
@@ -199,8 +185,6 @@ final class PoliticaUtilizador
      * @return bool Verdadeiro quando a alteração pode ser iniciada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function alterarPapel(
         Utilizador $utilizador,
@@ -221,8 +205,6 @@ final class PoliticaUtilizador
      *              o responsável é um superadministrador ativo.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function podeGerirUtilizador(
         Utilizador $responsavel,

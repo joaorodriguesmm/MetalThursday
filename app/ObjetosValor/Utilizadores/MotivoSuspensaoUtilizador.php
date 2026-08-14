@@ -16,8 +16,6 @@ use Stringable;
  * persistência.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final readonly class MotivoSuspensaoUtilizador implements JsonSerializable, Stringable
 {
@@ -28,8 +26,6 @@ final readonly class MotivoSuspensaoUtilizador implements JsonSerializable, Stri
      * utilizem o mesmo limite.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public const COMPRIMENTO_MAXIMO = 1000;
 
@@ -39,8 +35,6 @@ final readonly class MotivoSuspensaoUtilizador implements JsonSerializable, Stri
      * @param  string  $valor  Motivo normalizado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function __construct(
         private string $valor,
@@ -55,8 +49,6 @@ final readonly class MotivoSuspensaoUtilizador implements JsonSerializable, Stri
      * @throws InvalidArgumentException Quando o motivo não é válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public static function deTexto(
         string $motivo,
@@ -92,8 +84,6 @@ final readonly class MotivoSuspensaoUtilizador implements JsonSerializable, Stri
      * @return string Motivo normalizado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function valor(): string
     {
@@ -107,8 +97,6 @@ final readonly class MotivoSuspensaoUtilizador implements JsonSerializable, Stri
      * @return bool Verdadeiro quando os valores coincidem.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function igualA(
         self $outro,
@@ -124,8 +112,6 @@ final readonly class MotivoSuspensaoUtilizador implements JsonSerializable, Stri
      * @return string Motivo normalizado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function __toString(): string
     {
@@ -141,8 +127,6 @@ final readonly class MotivoSuspensaoUtilizador implements JsonSerializable, Stri
      * @return string Motivo normalizado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function jsonSerialize(): string
     {
@@ -158,8 +142,6 @@ final readonly class MotivoSuspensaoUtilizador implements JsonSerializable, Stri
      * @throws InvalidArgumentException Quando a normalização falha.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private static function normalizar(
         string $motivo,
@@ -189,8 +171,6 @@ final readonly class MotivoSuspensaoUtilizador implements JsonSerializable, Stri
      * @throws InvalidArgumentException Quando o texto não é UTF-8 válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private static function validarCodificacao(
         string $motivo,
@@ -217,8 +197,6 @@ final readonly class MotivoSuspensaoUtilizador implements JsonSerializable, Stri
      * @throws InvalidArgumentException Quando o motivo está vazio.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private static function validarObrigatoriedade(
         string $motivo,
@@ -240,8 +218,6 @@ final readonly class MotivoSuspensaoUtilizador implements JsonSerializable, Stri
      * @throws InvalidArgumentException Quando o motivo excede o limite.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private static function validarComprimento(
         string $motivo,
@@ -274,8 +250,6 @@ final readonly class MotivoSuspensaoUtilizador implements JsonSerializable, Stri
      * @throws InvalidArgumentException Quando existem caracteres inválidos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private static function validarCaracteresControlo(
         string $motivo,

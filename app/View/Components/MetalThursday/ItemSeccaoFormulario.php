@@ -22,8 +22,6 @@ use LogicException;
  * e disponibiliza os valores canónicos dos tipos de incorporação.
  *
  * @since 1.0.0
- *
- * @version 4.0.0
  */
 final class ItemSeccaoFormulario extends Component
 {
@@ -33,10 +31,7 @@ final class ItemSeccaoFormulario extends Component
      * Pode ser um número ou um marcador temporário utilizado pelo modelo
      * HTML que o JavaScript substitui ao adicionar uma nova secção.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public readonly string $indice;
 
@@ -45,9 +40,7 @@ final class ItemSeccaoFormulario extends Component
      *
      * @var Collection<int, TipoSeccao>
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public readonly Collection $tiposSeccao;
 
@@ -56,29 +49,21 @@ final class ItemSeccaoFormulario extends Component
      *
      * @var Collection<int, Banda>
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public readonly Collection $bandas;
 
     /**
      * Prefixo utilizado pelas chaves de validação.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private readonly string $prefixoCampo;
 
     /**
      * Nome base utilizado pelos campos HTML.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public readonly string $nomeBaseCampo;
 
@@ -96,9 +81,7 @@ final class ItemSeccaoFormulario extends Component
      *     descricao: string
      * }
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public readonly array $valores;
 
@@ -120,9 +103,7 @@ final class ItemSeccaoFormulario extends Component
      *     escolhaLigacao: string
      * }
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public readonly array $identificadores;
 
@@ -139,9 +120,7 @@ final class ItemSeccaoFormulario extends Component
      *     descricao: string
      * }
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public readonly array $chavesErro;
 
@@ -154,69 +133,49 @@ final class ItemSeccaoFormulario extends Component
      *     ligacao: string
      * }
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public readonly array $tiposIncorporacao;
 
     /**
      * Indica se o tipo de secção selecionado exige detalhes musicais.
      *
-     *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public readonly bool $exigeDetalhes;
 
     /**
      * Ano mínimo permitido.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public readonly int $anoMinimo;
 
     /**
      * Ano máximo permitido.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public readonly int $anoMaximo;
 
     /**
      * Comprimento máximo permitido para o título.
      *
-     *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public readonly int $comprimentoMaximoTitulo;
 
     /**
      * Comprimento máximo permitido para a ligação.
      *
-     *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public readonly int $comprimentoMaximoLigacao;
 
     /**
      * Comprimento máximo permitido para a descrição.
      *
-     *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     public readonly int $comprimentoMaximoDescricao;
 
@@ -235,8 +194,6 @@ final class ItemSeccaoFormulario extends Component
      * @throws LogicException Quando o índice ou as coleções são inválidos.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function __construct(
         Request $pedido,
@@ -418,8 +375,6 @@ final class ItemSeccaoFormulario extends Component
      * @return View Vista do item de secção.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function render(): View
     {
@@ -439,9 +394,7 @@ final class ItemSeccaoFormulario extends Component
      * @param  mixed  $valorPredefinido  Valor utilizado por omissão.
      * @return mixed Valor encontrado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function obterValorCampo(
         Request $pedido,
@@ -473,9 +426,7 @@ final class ItemSeccaoFormulario extends Component
      *
      * @throws LogicException Quando o índice não é válido.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function normalizarIndice(
         int|string $indice,
@@ -506,9 +457,7 @@ final class ItemSeccaoFormulario extends Component
      * @param  mixed  $valor  Valor recebido.
      * @return string Texto normalizado.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function normalizarTexto(
         mixed $valor,
@@ -542,9 +491,7 @@ final class ItemSeccaoFormulario extends Component
      * @param  mixed  $valor  Valor recebido.
      * @return string Valor canónico.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function normalizarTipoIncorporacao(
         mixed $valor,
@@ -568,9 +515,7 @@ final class ItemSeccaoFormulario extends Component
      * @param  Collection<int, TipoSeccao>  $tiposSeccao  Tipos disponíveis.
      * @return bool Verdadeiro quando o tipo exige detalhes musicais.
      *
-     * @since 4.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function tipoExigeDetalhes(
         string $identificadorTipo,
@@ -601,9 +546,7 @@ final class ItemSeccaoFormulario extends Component
      *
      * @throws LogicException Quando existe um modelo inesperado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function validarTiposSeccao(
         Collection $tiposSeccao,
@@ -624,9 +567,7 @@ final class ItemSeccaoFormulario extends Component
      *
      * @throws LogicException Quando existe um modelo inesperado.
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private function validarBandas(
         Collection $bandas,

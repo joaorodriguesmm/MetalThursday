@@ -27,8 +27,6 @@ use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvid
  * convencional de autorização do Laravel.
  *
  * @since 1.0.0
- *
- * @version 4.0.0
  */
 final class AuthServiceProvider extends ServiceProvider
 {
@@ -41,8 +39,6 @@ final class AuthServiceProvider extends ServiceProvider
      * @var array<class-string, class-string>
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     protected $policies = [
         Utilizador::class => PoliticaUtilizador::class,

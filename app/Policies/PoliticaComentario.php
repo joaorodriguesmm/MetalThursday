@@ -15,8 +15,6 @@ use App\Models\Interacoes\Comentario;
  * superadministrador, que é autorizado antecipadamente.
  *
  * @since 1.0.0
- *
- * @version 2.0.0
  */
 final class PoliticaComentario
 {
@@ -32,8 +30,6 @@ final class PoliticaComentario
      *                   continuar a avaliação normal.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function before(
         Utilizador $utilizador,
@@ -54,8 +50,6 @@ final class PoliticaComentario
      * @return bool Verdadeiro para qualquer utilizador autenticado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function viewAny(
         Utilizador $utilizador,
@@ -74,8 +68,6 @@ final class PoliticaComentario
      * @return bool Verdadeiro para qualquer utilizador autenticado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function view(
         Utilizador $utilizador,
@@ -94,8 +86,6 @@ final class PoliticaComentario
      * @return bool Verdadeiro para qualquer utilizador autenticado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function create(
         Utilizador $utilizador,
@@ -114,8 +104,6 @@ final class PoliticaComentario
      * @return bool Verdadeiro quando o utilizador é o autor.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function update(
         Utilizador $utilizador,
@@ -138,8 +126,6 @@ final class PoliticaComentario
      * @return bool Verdadeiro quando o utilizador é o autor.
      *
      * @since 1.0.0
-     *
-     * @version 2.0.0
      */
     public function delete(
         Utilizador $utilizador,
@@ -159,8 +145,6 @@ final class PoliticaComentario
      * @return bool Verdadeiro quando os identificadores coincidem.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function utilizadorEAutor(
         Utilizador $utilizador,

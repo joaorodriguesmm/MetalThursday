@@ -18,8 +18,6 @@ use InvalidArgumentException;
  * durante uma operação transacional de acesso.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class ServicoSessoesUtilizador
 {
@@ -35,8 +33,6 @@ final class ServicoSessoesUtilizador
      *                                  identificador válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function encerrarTodas(
         Utilizador $utilizador,
@@ -74,8 +70,6 @@ final class ServicoSessoesUtilizador
      *                                  identificador inteiro positivo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function obterIdentificadorUtilizador(
         Utilizador $utilizador,

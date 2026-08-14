@@ -16,8 +16,6 @@ use Illuminate\View\Component;
  * modelo ou um ponto de interrogação.
  *
  * @since 1.0.0
- *
- * @version 4.0.0
  */
 final class Avatar extends Component
 {
@@ -26,9 +24,7 @@ final class Avatar extends Component
      *
      * @var int
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const TAMANHO_PREDEFINIDO = 40;
 
@@ -37,9 +33,7 @@ final class Avatar extends Component
      *
      * @var int
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const TAMANHO_MINIMO = 16;
 
@@ -48,69 +42,49 @@ final class Avatar extends Component
      *
      * @var int
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const TAMANHO_MAXIMO = 256;
 
     /**
      * Tamanho normalizado do avatar, em píxeis.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly int $tamanho;
 
     /**
      * URL normalizada da fotografia.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly string $urlFotografia;
 
     /**
      * Iniciais apresentadas na ausência de fotografia.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly string $iniciais;
 
     /**
      * Indica se existe uma fotografia disponível.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly bool $temFotografia;
 
     /**
      * Indica se o avatar é meramente decorativo.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly bool $avatarDecorativo;
 
     /**
      * Descrição acessível do avatar.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly string $descricaoAvatar;
 
@@ -125,8 +99,6 @@ final class Avatar extends Component
      * @param  string|null  $descricao  Descrição acessível pretendida.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function __construct(
         ?Utilizador $utilizador = null,
@@ -183,8 +155,6 @@ final class Avatar extends Component
      * @return View Vista do avatar.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function render(): View
     {
@@ -202,9 +172,7 @@ final class Avatar extends Component
      * @param  int|string|null  $tamanho  Tamanho recebido.
      * @return int Tamanho normalizado.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function normalizarTamanho(
         int|string|null $tamanho,
@@ -249,9 +217,7 @@ final class Avatar extends Component
      * @param  string|null  $iniciais  Iniciais recebidas.
      * @return string Iniciais normalizadas ou ponto de interrogação.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function normalizarIniciais(
         ?string $iniciais,

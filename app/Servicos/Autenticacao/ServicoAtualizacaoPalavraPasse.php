@@ -29,8 +29,6 @@ use Throwable;
  * «lembrar-me».
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 final class ServicoAtualizacaoPalavraPasse
 {
@@ -38,8 +36,6 @@ final class ServicoAtualizacaoPalavraPasse
      * Número máximo de tentativas perante conflitos transitórios da transação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const TENTATIVAS_TRANSACAO = 3;
 
@@ -50,8 +46,6 @@ final class ServicoAtualizacaoPalavraPasse
      * tokens da funcionalidade «lembrar-me».
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const COMPRIMENTO_TOKEN_PERSISTENTE = 60;
 
@@ -81,8 +75,6 @@ final class ServicoAtualizacaoPalavraPasse
      * @throws Throwable Quando ocorre outro erro durante a transação.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function atualizar(
         Utilizador $utilizador,
@@ -166,8 +158,6 @@ final class ServicoAtualizacaoPalavraPasse
      *                                  identificador inteiro positivo.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterIdentificadorUtilizador(
         Utilizador $utilizador,
@@ -222,8 +212,6 @@ final class ServicoAtualizacaoPalavraPasse
      *                                    hash utilizável.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function obterHashPalavraPasseAtual(
         Utilizador $utilizador,
@@ -253,8 +241,6 @@ final class ServicoAtualizacaoPalavraPasse
      *                                    corresponde.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function validarPalavraPasseAtual(
         #[SensitiveParameter]
@@ -285,8 +271,6 @@ final class ServicoAtualizacaoPalavraPasse
      * @throws NovaPalavraPasseIgualAAtual Quando as palavras-passe coincidem.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function validarNovaPalavraPasseDiferente(
         #[SensitiveParameter]

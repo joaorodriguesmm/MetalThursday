@@ -13,8 +13,6 @@ use App\Models\Autenticacao\Utilizador;
  * modificou o respetivo endereço de e-mail.
  *
  * @since 2.0.0
- *
- * @version 1.1.0
  */
 final readonly class PerfilAtualizado
 {
@@ -25,8 +23,6 @@ final readonly class PerfilAtualizado
      * @param  bool  $emailAlterado  Indica se o endereço de e-mail foi alterado.
      *
      * @since 2.0.0
-     *
-     * @version 1.1.0
      */
     public function __construct(
         private Utilizador $utilizador,
@@ -39,8 +35,6 @@ final readonly class PerfilAtualizado
      * @return Utilizador Utilizador atualizado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function obterUtilizador(): Utilizador
     {
@@ -53,8 +47,6 @@ final readonly class PerfilAtualizado
      * @return bool Verdadeiro quando o endereço de e-mail mudou.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function emailFoiAlterado(): bool
     {

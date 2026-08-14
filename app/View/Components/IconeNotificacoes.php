@@ -16,8 +16,6 @@ use Illuminate\View\Component;
  * visualmente, mantendo a quantidade integral na descrição acessível.
  *
  * @since 1.0.0
- *
- * @version 4.0.0
  */
 final class IconeNotificacoes extends Component
 {
@@ -26,49 +24,35 @@ final class IconeNotificacoes extends Component
      *
      * @var int
      *
-     * @since 3.0.0
-     *
-     * @version 1.0.0
+     * @since 2.0.0
      */
     private const LIMITE_QUANTIDADE_VISIVEL = 99;
 
     /**
      * Quantidade apresentada visualmente.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly string $quantidadeVisivel;
 
     /**
      * Descrição acessível da ligação.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly string $descricao;
 
     /**
      * Indica se a página de notificações está ativa.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly bool $paginaAtiva;
 
     /**
      * Indica se existem notificações por ler.
      *
-     *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     public readonly bool $temNotificacoesPorLer;
 
@@ -79,8 +63,6 @@ final class IconeNotificacoes extends Component
      * @param  int|string|null  $quantidade  Quantidade recebida.
      *
      * @since 1.0.0
-     *
-     * @version 4.0.0
      */
     public function __construct(
         Request $pedido,
@@ -117,8 +99,6 @@ final class IconeNotificacoes extends Component
      * @return View Vista do ícone de notificações.
      *
      * @since 1.0.0
-     *
-     * @version 3.0.0
      */
     public function render(): View
     {
@@ -136,9 +116,7 @@ final class IconeNotificacoes extends Component
      * @param  int|string|null  $quantidade  Quantidade recebida.
      * @return int Quantidade normalizada.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function normalizarQuantidade(
         int|string|null $quantidade,
@@ -177,9 +155,7 @@ final class IconeNotificacoes extends Component
      * @param  int  $quantidade  Quantidade de notificações por ler.
      * @return string Descrição acessível.
      *
-     * @since 3.0.0
-     *
-     * @version 2.0.0
+     * @since 2.0.0
      */
     private function criarDescricao(
         int $quantidade,
