@@ -11,8 +11,6 @@ use PHPUnit\Framework\TestCase;
  * Testa a enumeração das respostas binárias.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 final class RespostaBinariaTest extends TestCase
 {
@@ -20,8 +18,6 @@ final class RespostaBinariaTest extends TestCase
      * Confirma que os valores públicos portugueses são reconhecidos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function test_reconhece_valores_publicos_portugueses(): void
     {
@@ -44,8 +40,6 @@ final class RespostaBinariaTest extends TestCase
      * Confirma que os valores textuais são normalizados.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_normaliza_espacos_e_maiusculas(): void
     {
@@ -68,8 +62,6 @@ final class RespostaBinariaTest extends TestCase
      * Confirma que os valores ingleses antigos não são reconhecidos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function test_rejeita_valores_ingleses_antigos(): void
     {
@@ -90,8 +82,6 @@ final class RespostaBinariaTest extends TestCase
      * Confirma que valores inválidos não originam uma resposta.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function test_rejeita_valores_invalidos(): void
     {
@@ -130,8 +120,6 @@ final class RespostaBinariaTest extends TestCase
      * Confirma a criação explícita a partir de valores booleanos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_cria_respostas_a_partir_de_booleanos(): void
     {
@@ -154,8 +142,6 @@ final class RespostaBinariaTest extends TestCase
      * Confirma a conversão das respostas para valores booleanos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function test_converte_respostas_para_booleanos(): void
     {
@@ -172,8 +158,6 @@ final class RespostaBinariaTest extends TestCase
      * Confirma as etiquetas apresentadas ao utilizador.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_devolve_etiquetas_portuguesas(): void
     {

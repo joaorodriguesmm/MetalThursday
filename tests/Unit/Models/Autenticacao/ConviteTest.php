@@ -19,8 +19,6 @@ use Tests\TestCase;
  * estado, normalização e segurança implementadas diretamente pelo modelo.
  *
  * @since 2.0.0
- *
- * @version 3.0.0
  */
 final class ConviteTest extends TestCase
 {
@@ -28,8 +26,6 @@ final class ConviteTest extends TestCase
      * Confirma que o hash remove os espaços exteriores do código.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function calcula_o_hash_do_codigo_normalizado(): void
@@ -56,8 +52,6 @@ final class ConviteTest extends TestCase
      * definidos pelo modelo.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function distingue_maiusculas_de_minusculas_no_codigo(): void
@@ -80,8 +74,6 @@ final class ConviteTest extends TestCase
      * Confirma que um código vazio não pode ser convertido em hash.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_um_codigo_vazio(): void
@@ -103,8 +95,6 @@ final class ConviteTest extends TestCase
      * Confirma que códigos demasiado curtos são rejeitados.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_um_codigo_demasiado_curto(): void
@@ -126,8 +116,6 @@ final class ConviteTest extends TestCase
      * Confirma que códigos com caracteres não permitidos são rejeitados.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_um_codigo_com_caracteres_invalidos(): void
@@ -149,8 +137,6 @@ final class ConviteTest extends TestCase
      * Confirma que o modelo guarda apenas o hash do código.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function define_apenas_o_hash_do_codigo_no_modelo(): void
@@ -187,8 +173,6 @@ final class ConviteTest extends TestCase
      * Confirma que um convite pendente e sem expiração está disponível.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function considera_disponivel_um_convite_pendente(): void
@@ -225,8 +209,6 @@ final class ConviteTest extends TestCase
      * Confirma que o convite expira exatamente no momento definido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function considera_expirado_o_convite_no_limite_temporal(): void
@@ -257,8 +239,6 @@ final class ConviteTest extends TestCase
      * Confirma que a utilização associa o utilizador e regista o momento.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function utiliza_um_convite_disponivel(): void
@@ -334,8 +314,6 @@ final class ConviteTest extends TestCase
      * exige apenas um responsável persistido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function revoga_um_convite_com_responsavel_persistido(): void
@@ -400,8 +378,6 @@ final class ConviteTest extends TestCase
      * Confirma que um convite revogado não pode ser utilizado.
      *
      * @since 2.0.0
-     *
-     * @version 3.0.0
      */
     #[Test]
     public function impede_a_utilizacao_de_um_convite_revogado(): void
@@ -446,8 +422,6 @@ final class ConviteTest extends TestCase
      * Confirma que revogar novamente preserva a primeira auditoria.
      *
      * @since 2.0.0
-     *
-     * @version 3.0.0
      */
     #[Test]
     public function mantem_a_primeira_data_e_o_primeiro_responsavel_ao_revogar_novamente(): void
@@ -510,8 +484,6 @@ final class ConviteTest extends TestCase
      * Confirma que a revogação exige um responsável persistido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_responsavel_nao_persistido_ao_revogar(): void
@@ -536,8 +508,6 @@ final class ConviteTest extends TestCase
      * Confirma que um convite utilizado não pode ser revogado.
      *
      * @since 2.0.0
-     *
-     * @version 3.0.0
      */
     #[Test]
     public function impede_a_revogacao_de_um_convite_utilizado(): void
@@ -585,8 +555,6 @@ final class ConviteTest extends TestCase
      * @return Utilizador Utilizador configurado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarUtilizadorPersistido(
         int $identificador,

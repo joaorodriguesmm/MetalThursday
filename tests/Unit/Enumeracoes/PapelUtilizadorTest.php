@@ -11,8 +11,6 @@ use PHPUnit\Framework\TestCase;
  * Testa a enumeração dos papéis dos utilizadores.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class PapelUtilizadorTest extends TestCase
 {
@@ -20,8 +18,6 @@ final class PapelUtilizadorTest extends TestCase
      * Confirma que os valores públicos portugueses são reconhecidos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_reconhece_valores_publicos_portugueses(): void
     {
@@ -51,8 +47,6 @@ final class PapelUtilizadorTest extends TestCase
      * Confirma que os valores textuais são normalizados.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_normaliza_espacos_e_maiusculas(): void
     {
@@ -82,8 +76,6 @@ final class PapelUtilizadorTest extends TestCase
      * Confirma que nomes alternativos e valores inválidos são rejeitados.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_rejeita_aliases_e_valores_invalidos(): void
     {
@@ -128,8 +120,6 @@ final class PapelUtilizadorTest extends TestCase
      * Confirma as etiquetas apresentadas ao utilizador.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_devolve_etiquetas_portuguesas(): void
     {
@@ -153,8 +143,6 @@ final class PapelUtilizadorTest extends TestCase
      * Confirma quais papéis possuem privilégios administrativos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_distingue_privilegios_administrativos(): void
     {
@@ -178,8 +166,6 @@ final class PapelUtilizadorTest extends TestCase
      * Confirma que apenas o papel global é um superadministrador.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_distingue_o_superadministrador(): void
     {

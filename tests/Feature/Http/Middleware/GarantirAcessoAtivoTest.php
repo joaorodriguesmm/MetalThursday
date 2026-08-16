@@ -24,8 +24,6 @@ use Tests\TestCase;
  * Testa a interrupção da autenticação de utilizadores suspensos.
  *
  * @since 2.0.0
- *
- * @version 1.0.1
  */
 final class GarantirAcessoAtivoTest extends TestCase
 {
@@ -35,8 +33,6 @@ final class GarantirAcessoAtivoTest extends TestCase
      * URI da rota isolada utilizada pelos testes.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const URI_TESTE =
         '__testes/acesso-ativo';
@@ -45,8 +41,6 @@ final class GarantirAcessoAtivoTest extends TestCase
      * Caminho HTTP da rota isolada utilizada pelos testes.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const CAMINHO_TESTE =
         '/__testes/acesso-ativo';
@@ -58,8 +52,6 @@ final class GarantirAcessoAtivoTest extends TestCase
      * PHPUnit.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.1
      */
     protected function setUp(): void
     {
@@ -79,8 +71,6 @@ final class GarantirAcessoAtivoTest extends TestCase
      * Confirma que um visitante pode prosseguir normalmente.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function permite_o_pedido_de_um_visitante(): void
@@ -103,8 +93,6 @@ final class GarantirAcessoAtivoTest extends TestCase
      * Confirma que um utilizador com acesso ativo pode prosseguir.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function permite_o_pedido_de_um_utilizador_com_acesso_ativo(): void
@@ -136,8 +124,6 @@ final class GarantirAcessoAtivoTest extends TestCase
      * está suspenso.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function termina_a_sessao_de_um_utilizador_suspenso(): void
@@ -196,8 +182,6 @@ final class GarantirAcessoAtivoTest extends TestCase
      * Confirma a resposta proibida para pedidos que esperam JSON.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_em_json_um_utilizador_suspenso(): void
@@ -239,8 +223,6 @@ final class GarantirAcessoAtivoTest extends TestCase
      * protege a aplicação quando o cookie ainda é tecnicamente válido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_a_autenticacao_recuperada_por_cookie_persistente(): void
@@ -358,8 +340,6 @@ final class GarantirAcessoAtivoTest extends TestCase
      * @return SessionGuard Guard utilizado pela aplicação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function obterGuardaSessao(): SessionGuard
     {
@@ -386,8 +366,6 @@ final class GarantirAcessoAtivoTest extends TestCase
      * @throws LogicException Quando o cookie não está presente.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function obterCookieDaResposta(
         TestResponse $resposta,
@@ -421,8 +399,6 @@ final class GarantirAcessoAtivoTest extends TestCase
      *                        inesperado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function limparAutenticacaoAtual(
         SessionGuard $guarda,
@@ -451,8 +427,6 @@ final class GarantirAcessoAtivoTest extends TestCase
      * @return Utilizador Superadministrador criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarSuperAdministrador(): Utilizador
     {

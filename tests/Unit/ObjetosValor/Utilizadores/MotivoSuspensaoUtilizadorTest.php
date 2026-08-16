@@ -12,8 +12,6 @@ use PHPUnit\Framework\TestCase;
  * Testa o objeto de valor dos motivos de suspensão.
  *
  * @since 2.0.0
- *
- * @version 1.0.1
  */
 final class MotivoSuspensaoUtilizadorTest extends TestCase
 {
@@ -21,8 +19,6 @@ final class MotivoSuspensaoUtilizadorTest extends TestCase
      * Confirma a normalização dos espaços do motivo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_normaliza_os_espacos_do_motivo(): void
     {
@@ -40,8 +36,6 @@ final class MotivoSuspensaoUtilizadorTest extends TestCase
      * Confirma que a grafia e a pontuação são preservadas.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_preserva_a_grafia_do_motivo(): void
     {
@@ -59,8 +53,6 @@ final class MotivoSuspensaoUtilizadorTest extends TestCase
      * Confirma a comparação entre motivos normalizados.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_compara_motivos_normalizados(): void
     {
@@ -93,8 +85,6 @@ final class MotivoSuspensaoUtilizadorTest extends TestCase
      * Confirma as conversões textual e JSON do motivo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.1
      */
     public function test_converte_o_motivo_para_texto_e_json(): void
     {
@@ -121,8 +111,6 @@ final class MotivoSuspensaoUtilizadorTest extends TestCase
      * Confirma que o comprimento máximo é aceite.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_aceita_o_comprimento_maximo(): void
     {
@@ -147,8 +135,6 @@ final class MotivoSuspensaoUtilizadorTest extends TestCase
      * Confirma que um motivo vazio é rejeitado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_rejeita_um_motivo_vazio(): void
     {
@@ -165,8 +151,6 @@ final class MotivoSuspensaoUtilizadorTest extends TestCase
      * Confirma que um motivo demasiado longo é rejeitado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_rejeita_um_motivo_demasiado_longo(): void
     {
@@ -186,8 +170,6 @@ final class MotivoSuspensaoUtilizadorTest extends TestCase
      * Confirma que caracteres de controlo inválidos são rejeitados.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_rejeita_caracteres_de_controlo_invalidos(): void
     {
@@ -204,8 +186,6 @@ final class MotivoSuspensaoUtilizadorTest extends TestCase
      * Confirma que texto com codificação inválida é rejeitado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_rejeita_texto_com_codificacao_invalida(): void
     {

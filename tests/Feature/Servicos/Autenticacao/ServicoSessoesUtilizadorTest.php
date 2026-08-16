@@ -17,8 +17,6 @@ use Tests\TestCase;
  * Testa o encerramento das sessões persistidas dos utilizadores.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class ServicoSessoesUtilizadorTest extends TestCase
 {
@@ -28,8 +26,6 @@ final class ServicoSessoesUtilizadorTest extends TestCase
      * Serviço testado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private ServicoSessoesUtilizador $servico;
 
@@ -40,8 +36,6 @@ final class ServicoSessoesUtilizadorTest extends TestCase
      * PHPUnit.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function setUp(): void
     {
@@ -55,8 +49,6 @@ final class ServicoSessoesUtilizadorTest extends TestCase
      * Confirma que são eliminadas apenas as sessões do utilizador indicado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function encerra_todas_as_sessoes_do_utilizador(): void
@@ -123,8 +115,6 @@ final class ServicoSessoesUtilizadorTest extends TestCase
      * Confirma que a inexistência de sessões devolve zero.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function devolve_zero_quando_o_utilizador_nao_possui_sessoes(): void
@@ -146,8 +136,6 @@ final class ServicoSessoesUtilizadorTest extends TestCase
      * Confirma que a eliminação participa numa transação exterior.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function reverte_o_encerramento_quando_a_transacao_exterior_falha(): void
@@ -203,8 +191,6 @@ final class ServicoSessoesUtilizadorTest extends TestCase
      * Confirma que um utilizador não persistido é rejeitado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_um_utilizador_nao_persistido(): void
@@ -227,8 +213,6 @@ final class ServicoSessoesUtilizadorTest extends TestCase
      * @param  string  $identificador  Identificador da sessão.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarSessao(
         Utilizador $utilizador,

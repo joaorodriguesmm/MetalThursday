@@ -21,8 +21,6 @@ use Tests\TestCase;
  * secções.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class ServicoPersistenciaMetalThursdayTest extends TestCase
 {
@@ -33,11 +31,9 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
      * física correta da secção.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
-    public function cria_metal_thursday_com_secao_detalhada(): void
+    public function cria_metal_thursday_com_seccao_detalhada(): void
     {
         $utilizador = Utilizador::factory()
             ->create();
@@ -123,8 +119,6 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
      * a restrição única das posições ativas.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function atualiza_e_reordena_seccoes_existentes(): void
@@ -255,8 +249,6 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
      * Form Request.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_data_fora_do_periodo_da_edicao(): void
@@ -310,11 +302,9 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
      * Confirma que uma secção detalhada exige todos os respetivos campos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
-    public function rejeita_secao_detalhada_incompleta(): void
+    public function rejeita_seccao_detalhada_incompleta(): void
     {
         $edicao =
             $this->criarEdicao();
@@ -365,8 +355,6 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
      * Confirma que os tipos simples não aceitam detalhes musicais.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_detalhes_num_tipo_simples(): void
@@ -426,8 +414,6 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
      * @return Edicao Edição criada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarEdicao(): Edicao
     {
@@ -454,8 +440,6 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
      * @return array<string, mixed> Dados da secção.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function dadosSeccaoSimples(
         TipoSeccao $tipoSeccao,
@@ -486,8 +470,6 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
      * @return ServicoPersistenciaMetalThursday Serviço criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function servico(): ServicoPersistenciaMetalThursday
     {

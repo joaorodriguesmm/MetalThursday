@@ -23,8 +23,6 @@ use Tests\TestCase;
  * Testa a gestão transacional do acesso dos utilizadores.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class ServicoAcessoUtilizadoresTest extends TestCase
 {
@@ -34,8 +32,6 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
      * Serviço testado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private ServicoAcessoUtilizadores $servico;
 
@@ -46,8 +42,6 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
      * PHPUnit.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function setUp(): void
     {
@@ -63,8 +57,6 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
      * Confirma a suspensão completa de um utilizador.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function suspende_o_utilizador_e_invalida_as_autenticacoes(): void
@@ -198,8 +190,6 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
      * Confirma a reativação completa de um utilizador.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function reativa_o_utilizador_sem_restaurar_sessoes(): void
@@ -305,8 +295,6 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
      * estado do acesso.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function encerra_as_sessoes_sem_alterar_o_estado_do_acesso(): void
@@ -375,8 +363,6 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
      * Confirma que um utilizador não pode suspender-se a si próprio.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_a_autossuspensao(): void
@@ -401,8 +387,6 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
      * Confirma que um utilizador comum não pode gerir o acesso.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_um_responsavel_sem_papel_de_superadministrador(): void
@@ -467,8 +451,6 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
      * Confirma que um superadministrador suspenso não pode gerir o acesso.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_um_superadministrador_suspenso(): void
@@ -506,8 +488,6 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
      * Confirma que uma segunda suspensão é rejeitada sem efeitos colaterais.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_um_utilizador_ja_suspenso(): void
@@ -574,8 +554,6 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
      * Confirma que um utilizador já ativo não pode ser reativado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_um_utilizador_que_ja_possui_acesso_ativo(): void
@@ -603,8 +581,6 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
      * superadministrador ativo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function preserva_um_superadministrador_com_acesso_ativo(): void
@@ -649,8 +625,6 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
      * exterior.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function reverte_toda_a_suspensao_quando_a_transacao_exterior_falha(): void
@@ -731,8 +705,6 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
      * Confirma que um utilizador afetado não persistido é rejeitado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_um_utilizador_afetado_nao_persistido(): void
@@ -757,8 +729,6 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
      * Confirma que um responsável não persistido é rejeitado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_um_responsavel_nao_persistido(): void
@@ -785,8 +755,6 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
      * @return Utilizador Superadministrador criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarSuperAdministrador(): Utilizador
     {
@@ -804,8 +772,6 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
      * @param  string  $identificador  Identificador da sessão.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarSessao(
         Utilizador $utilizador,
@@ -835,8 +801,6 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
      * @return int Número de sessões.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function contarSessoes(
         Utilizador $utilizador,

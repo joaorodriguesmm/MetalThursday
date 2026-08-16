@@ -21,8 +21,6 @@ use Tests\TestCase;
  * Testa os retratos escalares das notificações de interações.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class NotificacaoInteracaoUtilizadorTest extends TestCase
 {
@@ -33,8 +31,6 @@ final class NotificacaoInteracaoUtilizadorTest extends TestCase
      * não consulta a base de dados durante a construção das mensagens.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function seccao_preserva_retrato_sem_consultas_posteriores(): void
@@ -168,8 +164,6 @@ final class NotificacaoInteracaoUtilizadorTest extends TestCase
      * mantendo a mensagem específica para o autor do comentário.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function comentario_preserva_autor_e_contexto_sem_consultas(): void

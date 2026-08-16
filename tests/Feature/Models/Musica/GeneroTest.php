@@ -19,8 +19,6 @@ use Tests\TestCase;
  * obtenção dos descendentes não volta a introduzir uma consulta por género.
  *
  * @since 2.0.0
- *
- * @version 1.1.0
  */
 final class GeneroTest extends TestCase
 {
@@ -33,8 +31,6 @@ final class GeneroTest extends TestCase
      * vez no resultado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function obtem_genero_e_descendentes_numa_unica_consulta(): void
@@ -112,8 +108,6 @@ final class GeneroTest extends TestCase
      * Confirma que ciclos inválidos não provocam uma travessia infinita.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function termina_a_travessia_perante_um_ciclo_invalido(): void
@@ -154,8 +148,6 @@ final class GeneroTest extends TestCase
      * pertencem à hierarquia ativa.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function ignora_ramos_iniciados_por_generos_eliminados(): void
@@ -198,8 +190,6 @@ final class GeneroTest extends TestCase
      * Confirma que o nome de um género eliminado pode ser reutilizado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function permite_reutilizar_nome_de_genero_eliminado(): void
@@ -242,8 +232,6 @@ final class GeneroTest extends TestCase
      * Confirma que dois géneros ativos não podem partilhar o mesmo nome.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function impede_nomes_repetidos_entre_generos_ativos(): void
@@ -265,8 +253,6 @@ final class GeneroTest extends TestCase
      * Confirma que um género não pode ser relacionado consigo próprio.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function impede_relacao_de_um_genero_consigo_proprio(): void
@@ -292,8 +278,6 @@ final class GeneroTest extends TestCase
      * Confirma que um género não persistido não pode iniciar a travessia.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_um_genero_nao_persistido(): void
@@ -313,8 +297,6 @@ final class GeneroTest extends TestCase
      * @return Genero Género criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarGenero(
         string $nome,

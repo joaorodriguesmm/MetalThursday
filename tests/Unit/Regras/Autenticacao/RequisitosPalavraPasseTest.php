@@ -17,8 +17,6 @@ use Tests\TestCase;
  * serviços de validação e tradução do framework.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 final class RequisitosPalavraPasseTest extends TestCase
 {
@@ -26,8 +24,6 @@ final class RequisitosPalavraPasseTest extends TestCase
      * Confirma os limites de comprimento publicados pela classe.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_disponibiliza_os_limites_de_comprimento(): void
     {
@@ -46,8 +42,6 @@ final class RequisitosPalavraPasseTest extends TestCase
      * Confirma que a fábrica devolve uma regra Password.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function test_cria_uma_regra_de_palavra_passe(): void
     {
@@ -61,8 +55,6 @@ final class RequisitosPalavraPasseTest extends TestCase
      * Confirma as regras utilizadas para palavras-passe obrigatórias.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_disponibiliza_as_regras_obrigatorias(): void
     {
@@ -104,8 +96,6 @@ final class RequisitosPalavraPasseTest extends TestCase
      * Confirma que uma palavra-passe forte é aceite.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function test_aceita_uma_palavra_passe_forte(): void
     {
@@ -124,8 +114,6 @@ final class RequisitosPalavraPasseTest extends TestCase
      * @param  string  $palavraPasse  Palavra-passe insegura.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[DataProvider('fornecerPalavrasPasseInvalidas')]
     public function test_rejeita_palavras_passe_invalidas(
@@ -146,8 +134,6 @@ final class RequisitosPalavraPasseTest extends TestCase
      * @return iterable<string, array{0: string}> Palavras-passe inválidas.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public static function fornecerPalavrasPasseInvalidas(): iterable
     {

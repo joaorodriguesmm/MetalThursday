@@ -19,8 +19,6 @@ use Tests\TestCase;
  * Testa o serviço responsável pela alteração da palavra-passe.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 final class ServicoAtualizacaoPalavraPasseTest extends TestCase
 {
@@ -32,8 +30,6 @@ final class ServicoAtualizacaoPalavraPasseTest extends TestCase
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const PALAVRA_PASSE_ATUAL =
         'PalavraPasse#Atual2026';
@@ -44,8 +40,6 @@ final class ServicoAtualizacaoPalavraPasseTest extends TestCase
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const NOVA_PALAVRA_PASSE =
         'NovaPalavraPasse#2026';
@@ -56,8 +50,6 @@ final class ServicoAtualizacaoPalavraPasseTest extends TestCase
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const TOKEN_PERSISTENTE_INICIAL =
         'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -66,8 +58,6 @@ final class ServicoAtualizacaoPalavraPasseTest extends TestCase
      * Serviço testado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private ServicoAtualizacaoPalavraPasse $servicoPalavraPasse;
 
@@ -75,8 +65,6 @@ final class ServicoAtualizacaoPalavraPasseTest extends TestCase
      * Prepara cada teste.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function setUp(): void
     {
@@ -91,8 +79,6 @@ final class ServicoAtualizacaoPalavraPasseTest extends TestCase
      * token de autenticação persistente.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function altera_palavra_passe_com_sucesso(): void
@@ -208,8 +194,6 @@ final class ServicoAtualizacaoPalavraPasseTest extends TestCase
      * A hash e o token persistidos devem permanecer inalterados.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_palavra_passe_atual_incorreta(): void
@@ -270,8 +254,6 @@ final class ServicoAtualizacaoPalavraPasseTest extends TestCase
      * A hash e o token persistidos devem permanecer inalterados.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_nova_palavra_passe_igual_a_atual(): void
@@ -335,8 +317,6 @@ final class ServicoAtualizacaoPalavraPasseTest extends TestCase
      * utilizador.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_nova_palavra_passe_insegura(): void
@@ -394,8 +374,6 @@ final class ServicoAtualizacaoPalavraPasseTest extends TestCase
      * Rejeita um utilizador que ainda não esteja persistido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_utilizador_nao_persistido(): void
@@ -435,8 +413,6 @@ final class ServicoAtualizacaoPalavraPasseTest extends TestCase
      * @return Utilizador Utilizador criado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function criarUtilizador(
         string $palavraPasse,

@@ -22,8 +22,6 @@ use Tests\TestCase;
  * Testa o carregamento dos destinatários das notificações de interações.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class NotificadorInteracoesTest extends TestCase
 {
@@ -34,8 +32,6 @@ final class NotificadorInteracoesTest extends TestCase
      * dos canais não executa consultas adicionais por destinatário.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function carrega_permissoes_sem_consultas_por_destinatario(): void

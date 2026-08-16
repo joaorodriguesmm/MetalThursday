@@ -17,8 +17,6 @@ use Tests\TestCase;
  * Testa o modelo do histórico dos papéis dos utilizadores.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class RegistoPapelUtilizadorTest extends TestCase
 {
@@ -28,8 +26,6 @@ final class RegistoPapelUtilizadorTest extends TestCase
      * Confirma os casts e as relações de uma alteração.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function carrega_uma_alteracao_com_os_contratos_esperados(): void
@@ -110,8 +106,6 @@ final class RegistoPapelUtilizadorTest extends TestCase
      * o mais antigo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function ordena_o_historico_do_mais_recente_para_o_mais_antigo(): void
@@ -191,8 +185,6 @@ final class RegistoPapelUtilizadorTest extends TestCase
      * Confirma a relação das alterações efetuadas pelo responsável.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function obtem_as_alteracoes_efetuadas_pelo_responsavel(): void
@@ -233,8 +225,6 @@ final class RegistoPapelUtilizadorTest extends TestCase
      * Confirma que um registo persistido não pode ser alterado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function impede_a_alteracao_de_um_registo_persistido(): void
@@ -257,8 +247,6 @@ final class RegistoPapelUtilizadorTest extends TestCase
      * Confirma que um registo persistido não pode ser eliminado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function impede_a_eliminacao_de_um_registo_persistido(): void

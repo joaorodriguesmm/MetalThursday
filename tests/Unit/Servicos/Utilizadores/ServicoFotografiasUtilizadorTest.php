@@ -17,8 +17,6 @@ use Tests\TestCase;
  * Testa o serviço responsável pelas fotografias dos utilizadores.
  *
  * @since 2.0.0
- *
- * @version 2.1.0
  */
 final class ServicoFotografiasUtilizadorTest extends TestCase
 {
@@ -26,8 +24,6 @@ final class ServicoFotografiasUtilizadorTest extends TestCase
      * Serviço testado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private ServicoFotografiasUtilizador $servicoFotografias;
 
@@ -38,8 +34,6 @@ final class ServicoFotografiasUtilizadorTest extends TestCase
      * os métodos de asserção disponibilizados pelo adaptador do Laravel.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private FilesystemAdapter $discoPublico;
 
@@ -47,8 +41,6 @@ final class ServicoFotografiasUtilizadorTest extends TestCase
      * Prepara cada teste.
      *
      * @since 2.0.0
-     *
-     * @version 2.1.0
      */
     protected function setUp(): void
     {
@@ -74,8 +66,6 @@ final class ServicoFotografiasUtilizadorTest extends TestCase
      * Confirma que uma fotografia é guardada no diretório autorizado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function guarda_fotografia_no_diretorio_dos_utilizadores(): void
@@ -109,8 +99,6 @@ final class ServicoFotografiasUtilizadorTest extends TestCase
      * Confirma que uma fotografia gerida pela aplicação pode ser eliminada.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function elimina_fotografia_do_diretorio_autorizado(): void
@@ -136,8 +124,6 @@ final class ServicoFotografiasUtilizadorTest extends TestCase
      * Confirma que eliminar um ficheiro inexistente é uma operação idempotente.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function considera_eliminado_um_ficheiro_inexistente(): void
@@ -160,8 +146,6 @@ final class ServicoFotografiasUtilizadorTest extends TestCase
      * @param  string|null  $caminho  Caminho testado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     #[DataProvider('fornecerCaminhosSemFotografia')]
@@ -183,8 +167,6 @@ final class ServicoFotografiasUtilizadorTest extends TestCase
      * @return array<string, array{0: string|null}> Caminhos testados.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public static function fornecerCaminhosSemFotografia(): array
     {
@@ -207,8 +189,6 @@ final class ServicoFotografiasUtilizadorTest extends TestCase
      * Impede a eliminação de ficheiros fora do diretório autorizado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_caminho_fora_do_diretorio_autorizado(): void
@@ -244,8 +224,6 @@ final class ServicoFotografiasUtilizadorTest extends TestCase
      * Confirma que o diretório histórico já não é autorizado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_o_diretorio_historico(): void
@@ -267,8 +245,6 @@ final class ServicoFotografiasUtilizadorTest extends TestCase
      * Impede caminhos com tentativa de travessia de diretórios.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_travessia_de_diretorios(): void
@@ -290,8 +266,6 @@ final class ServicoFotografiasUtilizadorTest extends TestCase
      * Confirma que separadores de diretórios do Windows são rejeitados.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_separadores_de_diretorios_do_windows(): void
@@ -313,8 +287,6 @@ final class ServicoFotografiasUtilizadorTest extends TestCase
      * Confirma que não são permitidos subdiretórios adicionais.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_subdiretorios_dentro_do_diretorio_autorizado(): void

@@ -21,8 +21,6 @@ use Tests\TestCase;
  * Testa a utilização explícita do guard `sessao` nos pedidos dos convites.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class GuardaSessaoConvitesRequestsTest extends TestCase
 {
@@ -32,8 +30,6 @@ final class GuardaSessaoConvitesRequestsTest extends TestCase
      * Confirma o guard utilizado pelo pedido de criação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function pedido_criacao_utiliza_guarda_sessao(): void
@@ -84,8 +80,6 @@ final class GuardaSessaoConvitesRequestsTest extends TestCase
      * Confirma o guard utilizado pelo pedido de revogação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function pedido_revogacao_utiliza_guarda_sessao(): void
@@ -154,8 +148,6 @@ final class GuardaSessaoConvitesRequestsTest extends TestCase
      * @param  Utilizador|null  $utilizadorPredefinido  Utilizador sem guard.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function configurarUtilizadores(
         FormRequest $pedido,
@@ -178,8 +170,6 @@ final class GuardaSessaoConvitesRequestsTest extends TestCase
      * @param  Convite  $convite  Convite da rota.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function configurarConviteDaRota(
         FormRequest $pedido,
@@ -217,8 +207,6 @@ final class GuardaSessaoConvitesRequestsTest extends TestCase
      * @return Utilizador Superadministrador criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarSuperAdministrador(): Utilizador
     {

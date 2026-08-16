@@ -16,8 +16,6 @@ use Tests\TestCase;
  * Testa a autorização dos pedidos de comentários.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class PedidosComentarioRequestTest extends TestCase
 {
@@ -28,8 +26,6 @@ final class PedidosComentarioRequestTest extends TestCase
      * um comentário.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function utilizador_autenticado_recebe_erros_de_validacao_ao_publicar(): void
@@ -69,8 +65,6 @@ final class PedidosComentarioRequestTest extends TestCase
      * a um comentário.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function utilizador_autenticado_recebe_erros_de_validacao_ao_responder(): void
@@ -110,8 +104,6 @@ final class PedidosComentarioRequestTest extends TestCase
      * validação de uma atualização.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function utilizador_que_nao_e_autor_e_rejeitado_antes_da_validacao(): void
@@ -154,8 +146,6 @@ final class PedidosComentarioRequestTest extends TestCase
      * Confirma que o autor alcança a validação da atualização.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function autor_recebe_erros_de_validacao_na_atualizacao(): void
@@ -194,8 +184,6 @@ final class PedidosComentarioRequestTest extends TestCase
      * @return Comentario Comentário criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarComentario(
         Utilizador $autor,

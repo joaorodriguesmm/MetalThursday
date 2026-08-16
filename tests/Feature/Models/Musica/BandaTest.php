@@ -15,8 +15,6 @@ use Tests\TestCase;
  * Testa os contratos persistidos do modelo das bandas.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class BandaTest extends TestCase
 {
@@ -26,8 +24,6 @@ final class BandaTest extends TestCase
      * Confirma que a coluna gerada de unicidade permanece interna.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function omite_nome_ativo_da_serializacao(): void
@@ -68,8 +64,6 @@ final class BandaTest extends TestCase
      * Confirma que o modelo não converte silenciosamente valores não textuais.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_nome_nao_textual(): void
@@ -87,8 +81,6 @@ final class BandaTest extends TestCase
      * Confirma que o nome não aceita caracteres de controlo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_caracteres_de_controlo_no_nome(): void

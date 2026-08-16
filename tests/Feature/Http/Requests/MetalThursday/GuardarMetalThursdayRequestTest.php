@@ -14,8 +14,6 @@ use Tests\TestCase;
  * Testa a autorização do pedido de gravação de MetalThursdays.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class GuardarMetalThursdayRequestTest extends TestCase
 {
@@ -29,8 +27,6 @@ final class GuardarMetalThursdayRequestTest extends TestCase
      * validação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_utilizador_sem_autorizacao_antes_da_validacao(): void
@@ -84,8 +80,6 @@ final class GuardarMetalThursdayRequestTest extends TestCase
      * Confirma que um utilizador autorizado alcança a validação dos dados.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function utilizador_autorizado_recebe_erros_de_validacao(): void
@@ -133,8 +127,6 @@ final class GuardarMetalThursdayRequestTest extends TestCase
      * @return array<string, mixed> Dados inválidos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function dadosInvalidos(): array
     {

@@ -22,8 +22,6 @@ use Tests\TestCase;
  * Testa o serviço responsável pela atualização do perfil.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 final class ServicoAtualizacaoPerfilTest extends TestCase
 {
@@ -35,8 +33,6 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const DISCO_PUBLICO =
         'publico';
@@ -47,8 +43,6 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const DIRETORIO_FOTOGRAFIAS =
         'fotografias/utilizadores';
@@ -59,8 +53,6 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const PALAVRA_PASSE =
         'PalavraPasse#Segura2026';
@@ -69,8 +61,6 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
      * Serviço testado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private ServicoAtualizacaoPerfil $servicoPerfil;
 
@@ -78,8 +68,6 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
      * Prepara cada teste.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function setUp(): void
     {
@@ -102,8 +90,6 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
      * ocorre depois da normalização aplicada pelo objeto de valor.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function atualiza_nome_sem_invalidar_email_inalterado(): void
@@ -182,10 +168,12 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
             ),
         );
 
-        Storage::disk(
-            self::DISCO_PUBLICO,
-        )->assertExists(
-            $caminhoFotografia,
+        self::assertTrue(
+            Storage::disk(
+                self::DISCO_PUBLICO,
+            )->exists(
+                $caminhoFotografia,
+            ),
         );
 
         $this->assertDatabaseHas(
@@ -210,8 +198,6 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
      * Invalida a verificação quando o endereço de e-mail é alterado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function altera_email_e_invalida_verificacao(): void
@@ -282,8 +268,6 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
      * dados.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function substitui_fotografia_e_elimina_a_anterior(): void
@@ -350,16 +334,20 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
             $caminhoNovo,
         );
 
-        Storage::disk(
-            self::DISCO_PUBLICO,
-        )->assertMissing(
-            $caminhoAnterior,
+        self::assertFalse(
+            Storage::disk(
+                self::DISCO_PUBLICO,
+            )->exists(
+                $caminhoAnterior,
+            ),
         );
 
-        Storage::disk(
-            self::DISCO_PUBLICO,
-        )->assertExists(
-            $caminhoNovo,
+        self::assertTrue(
+            Storage::disk(
+                self::DISCO_PUBLICO,
+            )->exists(
+                $caminhoNovo,
+            ),
         );
 
         self::assertSame(
@@ -401,8 +389,6 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
      * com outro utilizador.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function conflito_de_email_reverte_atualizacao_e_limpa_fotografia_nova(): void
@@ -492,10 +478,12 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
             ),
         );
 
-        Storage::disk(
-            self::DISCO_PUBLICO,
-        )->assertExists(
-            $caminhoAnterior,
+        self::assertTrue(
+            Storage::disk(
+                self::DISCO_PUBLICO,
+            )->exists(
+                $caminhoAnterior,
+            ),
         );
 
         self::assertSame(
@@ -545,8 +533,6 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
      * @param  string  $email  Endereço recebido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     #[DataProvider('fornecerDadosInvalidos')]
@@ -619,8 +605,6 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
      *                                                           inválidos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public static function fornecerDadosInvalidos(): array
     {
@@ -643,8 +627,6 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
      * Rejeita a atualização de um utilizador ainda não persistido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_utilizador_nao_persistido(): void
@@ -684,8 +666,6 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
      * @return Utilizador Utilizador criado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function criarUtilizador(
         string $nome,

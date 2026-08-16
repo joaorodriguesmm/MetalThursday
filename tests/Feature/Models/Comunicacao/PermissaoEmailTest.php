@@ -16,8 +16,6 @@ use Tests\TestCase;
  * Testa os contratos do modelo das permissões de e-mail.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class PermissaoEmailTest extends TestCase
 {
@@ -27,8 +25,6 @@ final class PermissaoEmailTest extends TestCase
      * Confirma a normalização dos campos textuais.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function normaliza_campos_textuais(): void
@@ -64,8 +60,6 @@ final class PermissaoEmailTest extends TestCase
      * Confirma que o identificador não converte valores não textuais.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_identificador_nao_textual(): void
@@ -83,8 +77,6 @@ final class PermissaoEmailTest extends TestCase
      * Confirma que o nome não converte valores não textuais.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_nome_nao_textual(): void
@@ -102,8 +94,6 @@ final class PermissaoEmailTest extends TestCase
      * Confirma que a descrição não converte valores não textuais.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_descricao_nao_textual(): void
@@ -121,8 +111,6 @@ final class PermissaoEmailTest extends TestCase
      * Confirma que o nome rejeita caracteres de controlo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_caracteres_de_controlo_no_nome(): void
@@ -141,8 +129,6 @@ final class PermissaoEmailTest extends TestCase
      * Confirma que a descrição rejeita caracteres de controlo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_caracteres_de_controlo_na_descricao(): void
@@ -161,8 +147,6 @@ final class PermissaoEmailTest extends TestCase
      * Confirma que a base de dados rejeita a ordem zero.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function base_de_dados_rejeita_ordem_zero(): void

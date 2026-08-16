@@ -19,8 +19,6 @@ use Tests\TestCase;
  * pela base de dados sem introduzir uma consulta por registo apresentado.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class MetalThursdayTest extends TestCase
 {
@@ -33,8 +31,6 @@ final class MetalThursdayTest extends TestCase
      * devem alterar a posição dos registos ativos apresentados.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function carrega_numeros_semana_numa_unica_consulta(): void
@@ -129,8 +125,6 @@ final class MetalThursdayTest extends TestCase
      * alias não pode ficar marcado para persistência.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function carrega_numero_semana_explicitamente_sem_consultas_repetidas(): void
@@ -206,8 +200,6 @@ final class MetalThursdayTest extends TestCase
      * @return Edicao Edição criada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarEdicao(
         string $nome,
@@ -237,8 +229,6 @@ final class MetalThursdayTest extends TestCase
      * @return MetalThursday MetalThursday criada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarMetalThursday(
         Edicao $edicao,

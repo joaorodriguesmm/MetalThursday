@@ -17,8 +17,6 @@ use Tests\TestCase;
  * Testa os atributos de interação dependentes do utilizador autenticado.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class InteracoesUtilizadorAutenticadoTest extends TestCase
 {
@@ -32,8 +30,6 @@ final class InteracoesUtilizadorAutenticadoTest extends TestCase
      * inteiramente da relação em memória.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function pontuacao_exige_relacao_carregada_sem_consulta_oculta(): void
@@ -102,8 +98,6 @@ final class InteracoesUtilizadorAutenticadoTest extends TestCase
      * carregada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function estado_audicao_exige_relacao_carregada_sem_consulta_oculta(): void
@@ -169,8 +163,6 @@ final class InteracoesUtilizadorAutenticadoTest extends TestCase
      * consultas adicionais.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function visitante_recebe_valores_neutros_sem_consultas(): void

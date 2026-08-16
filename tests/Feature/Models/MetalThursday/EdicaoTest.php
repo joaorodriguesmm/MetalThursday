@@ -14,8 +14,6 @@ use Tests\TestCase;
  * Testa os contratos do modelo das edições.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class EdicaoTest extends TestCase
 {
@@ -25,8 +23,6 @@ final class EdicaoTest extends TestCase
      * Confirma a normalização do nome e da ligação da compilação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function normaliza_nome_e_ligacao_compilacao(): void
@@ -61,8 +57,6 @@ final class EdicaoTest extends TestCase
      * Confirma que a ligação não aceita valores não textuais.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_ligacao_compilacao_nao_textual(): void
@@ -80,8 +74,6 @@ final class EdicaoTest extends TestCase
      * Confirma que a ligação não aceita credenciais incorporadas.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_ligacao_compilacao_com_credenciais(): void
@@ -100,8 +92,6 @@ final class EdicaoTest extends TestCase
      * Confirma que a ligação não aceita barras invertidas.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_ligacao_compilacao_com_barra_invertida(): void
@@ -120,8 +110,6 @@ final class EdicaoTest extends TestCase
      * Confirma que a data final não pode anteceder a data inicial.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_periodo_invertido(): void

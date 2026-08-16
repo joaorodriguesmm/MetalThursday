@@ -19,8 +19,6 @@ use Tests\TestCase;
  * Testa os contratos do modelo e da tabela das secções.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class SeccaoMetalThursdayTest extends TestCase
 {
@@ -30,8 +28,6 @@ final class SeccaoMetalThursdayTest extends TestCase
      * Confirma os limites aceites para a ordem e o ano.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function aceita_limites_de_ordem_e_ano(): void
@@ -75,8 +71,6 @@ final class SeccaoMetalThursdayTest extends TestCase
      * Confirma que uma ordem acima da capacidade da coluna é rejeitada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_ordem_acima_do_limite(): void
@@ -95,8 +89,6 @@ final class SeccaoMetalThursdayTest extends TestCase
      * Confirma que uma ligação com barra invertida é rejeitada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_ligacao_com_barra_invertida(): void
@@ -115,8 +107,6 @@ final class SeccaoMetalThursdayTest extends TestCase
      * Confirma que uma ligação sem tipo de incorporação não é persistida.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_ligacao_sem_tipo_de_incorporacao(): void
@@ -137,8 +127,6 @@ final class SeccaoMetalThursdayTest extends TestCase
      * Confirma que um tipo de incorporação sem ligação não é persistido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_tipo_de_incorporacao_sem_ligacao(): void
@@ -159,8 +147,6 @@ final class SeccaoMetalThursdayTest extends TestCase
      * Confirma que a base de dados rejeita um ano superior ao contrato.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function base_de_dados_rejeita_ano_acima_do_limite(): void
@@ -185,8 +171,6 @@ final class SeccaoMetalThursdayTest extends TestCase
      * Confirma que a base de dados exige ligação e tipo em conjunto.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function base_de_dados_rejeita_incorporacao_incompleta(): void
@@ -215,8 +199,6 @@ final class SeccaoMetalThursdayTest extends TestCase
      * @return array<string, mixed> Dados mínimos válidos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarDadosBase(): array
     {

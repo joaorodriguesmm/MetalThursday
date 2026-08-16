@@ -21,8 +21,6 @@ use Tests\TestCase;
  * MetalThursday.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class NotificacoesMetalThursdayTest extends TestCase
 {
@@ -33,8 +31,6 @@ final class NotificacoesMetalThursdayTest extends TestCase
      * da criação e não consulta a base de dados depois de ser serializada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function publicacao_preserva_retrato_sem_consultas_posteriores(): void
@@ -152,8 +148,6 @@ final class NotificacoesMetalThursdayTest extends TestCase
      * momento da criação sem consultas posteriores.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function nomeacao_preserva_retrato_sem_consultas_posteriores(): void

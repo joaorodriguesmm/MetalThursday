@@ -13,18 +13,13 @@ use PHPUnit\Framework\TestCase;
  * Testa o objeto de valor do endereço de e-mail.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class EnderecoEmailTest extends TestCase
 {
     /**
      * Confirma que o endereço é normalizado.
      *
-     *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_normaliza_o_endereco_de_email(): void
     {
@@ -51,10 +46,7 @@ final class EnderecoEmailTest extends TestCase
     /**
      * Confirma que endereços equivalentes são considerados iguais.
      *
-     *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_compara_enderecos_normalizados(): void
     {
@@ -74,10 +66,7 @@ final class EnderecoEmailTest extends TestCase
     /**
      * Confirma que endereços diferentes não são considerados iguais.
      *
-     *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_distingue_enderecos_diferentes(): void
     {
@@ -97,11 +86,9 @@ final class EnderecoEmailTest extends TestCase
     /**
      * Confirma que endereços inválidos são rejeitados.
      *
-     * @param  string  $email  - Endereço inválido.
+     * @param  string  $email  Endereço inválido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[DataProvider('fornecerEnderecosInvalidos')]
     public function test_rejeita_enderecos_invalidos(
@@ -117,11 +104,9 @@ final class EnderecoEmailTest extends TestCase
     /**
      * Fornece endereços inválidos.
      *
-     * @return iterable<string, array{0: string}> - Endereços inválidos.
+     * @return iterable<string, array{0: string}> Endereços inválidos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public static function fornecerEnderecosInvalidos(): iterable
     {

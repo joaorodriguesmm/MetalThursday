@@ -21,8 +21,6 @@ use Tests\TestCase;
  * Testa a alteração transacional dos papéis dos utilizadores.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class ServicoPapeisUtilizadoresTest extends TestCase
 {
@@ -32,8 +30,6 @@ final class ServicoPapeisUtilizadoresTest extends TestCase
      * Serviço testado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private ServicoPapeisUtilizadores $servico;
 
@@ -44,8 +40,6 @@ final class ServicoPapeisUtilizadoresTest extends TestCase
      * PHPUnit.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     protected function setUp(): void
     {
@@ -61,8 +55,6 @@ final class ServicoPapeisUtilizadoresTest extends TestCase
      * Confirma a alteração completa do papel de um utilizador.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function altera_o_papel_e_invalida_as_autenticacoes(): void
@@ -142,8 +134,6 @@ final class ServicoPapeisUtilizadoresTest extends TestCase
      * Confirma que a alteração do papel preserva a suspensão atual.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function altera_o_papel_sem_modificar_a_suspensao(): void
@@ -207,8 +197,6 @@ final class ServicoPapeisUtilizadoresTest extends TestCase
      * Confirma que um utilizador não pode alterar o próprio papel.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_a_alteracao_do_proprio_papel(): void
@@ -238,8 +226,6 @@ final class ServicoPapeisUtilizadoresTest extends TestCase
      * rejeitado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_um_responsavel_sem_papel_de_superadministrador(): void
@@ -276,8 +262,6 @@ final class ServicoPapeisUtilizadoresTest extends TestCase
      * Confirma que um superadministrador suspenso não pode gerir papéis.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_um_superadministrador_suspenso(): void
@@ -317,8 +301,6 @@ final class ServicoPapeisUtilizadoresTest extends TestCase
      * colaterais.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_um_papel_ja_atribuido(): void
@@ -397,8 +379,6 @@ final class ServicoPapeisUtilizadoresTest extends TestCase
      * outro superadministrador ativo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function preserva_um_superadministrador_com_acesso_ativo(): void
@@ -448,8 +428,6 @@ final class ServicoPapeisUtilizadoresTest extends TestCase
      * Confirma que todos os efeitos pertencem à transação exterior.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function reverte_toda_a_alteracao_quando_a_transacao_exterior_falha(): void
@@ -538,8 +516,6 @@ final class ServicoPapeisUtilizadoresTest extends TestCase
      * Confirma que um utilizador afetado não persistido é rejeitado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_um_utilizador_afetado_nao_persistido(): void
@@ -561,8 +537,6 @@ final class ServicoPapeisUtilizadoresTest extends TestCase
      * Confirma que um responsável não persistido é rejeitado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_um_responsavel_nao_persistido(): void
@@ -586,8 +560,6 @@ final class ServicoPapeisUtilizadoresTest extends TestCase
      * @return Utilizador Superadministrador criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarSuperAdministrador(): Utilizador
     {
@@ -605,8 +577,6 @@ final class ServicoPapeisUtilizadoresTest extends TestCase
      * @param  string  $identificador  Identificador da sessão.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarSessao(
         Utilizador $utilizador,

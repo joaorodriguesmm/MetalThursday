@@ -16,8 +16,6 @@ use Tests\TestCase;
  * Testa a autorização do pedido utilizado para guardar avaliações.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class GuardarAvaliacaoRequestTest extends TestCase
 {
@@ -27,8 +25,6 @@ final class GuardarAvaliacaoRequestTest extends TestCase
      * Confirma que o pedido utiliza exclusivamente o guard `sessao`.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function pedido_utiliza_exclusivamente_guarda_sessao(): void
@@ -72,8 +68,6 @@ final class GuardarAvaliacaoRequestTest extends TestCase
      * pontuação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function utilizador_autenticado_recebe_erros_de_validacao(): void

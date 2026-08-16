@@ -24,8 +24,6 @@ use Tests\TestCase;
  * ambiente de testes.
  *
  * @since 2.0.0
- *
- * @version 3.0.0
  */
 final class ServicoConvitesTest extends TestCase
 {
@@ -35,8 +33,6 @@ final class ServicoConvitesTest extends TestCase
      * Repõe o relógio global depois de cada teste.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function tearDown(): void
     {
@@ -51,8 +47,6 @@ final class ServicoConvitesTest extends TestCase
      * Apenas o hash SHA-256 do código deve ser persistido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function cria_e_persiste_um_convite_seguro(): void
@@ -199,8 +193,6 @@ final class ServicoConvitesTest extends TestCase
      * Confirma que apenas convites disponíveis são encontrados.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function encontra_um_convite_disponivel_pelo_codigo(): void
@@ -250,8 +242,6 @@ final class ServicoConvitesTest extends TestCase
      * Confirma que um convite expirado deixa de estar disponível.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function nao_encontra_um_convite_expirado(): void
@@ -311,8 +301,6 @@ final class ServicoConvitesTest extends TestCase
      * O primeiro momento e o primeiro responsável são preservados.
      *
      * @since 2.0.0
-     *
-     * @version 3.0.0
      */
     #[Test]
     public function revoga_um_convite_pendente(): void
@@ -444,8 +432,6 @@ final class ServicoConvitesTest extends TestCase
      * Confirma que um convite expirado continua a poder ser revogado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function revoga_um_convite_expirado(): void
@@ -479,8 +465,6 @@ final class ServicoConvitesTest extends TestCase
      * Confirma que apenas superadministradores podem revogar convites.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_responsavel_sem_papel_de_superadministrador(): void
@@ -512,8 +496,6 @@ final class ServicoConvitesTest extends TestCase
      * Confirma que um superadministrador suspenso não pode revogar convites.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_superadministrador_suspenso(): void
@@ -552,8 +534,6 @@ final class ServicoConvitesTest extends TestCase
      * Confirma que o responsável deve estar persistido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_responsavel_nao_persistido(): void
@@ -582,8 +562,6 @@ final class ServicoConvitesTest extends TestCase
      * Confirma que um convite utilizado não pode ser revogado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_convite_ja_utilizado(): void
@@ -622,8 +600,6 @@ final class ServicoConvitesTest extends TestCase
      * Confirma que não é possível criar um convite já expirado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_uma_data_de_expiracao_no_passado(): void
@@ -658,8 +634,6 @@ final class ServicoConvitesTest extends TestCase
      * @return Utilizador Utilizador criado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function criarUtilizador(): Utilizador
     {
@@ -694,8 +668,6 @@ final class ServicoConvitesTest extends TestCase
      * @return Utilizador Superadministrador criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarSuperAdministrador(): Utilizador
     {

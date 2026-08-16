@@ -14,8 +14,6 @@ use Tests\TestCase;
  * Testa os contratos persistidos das origens geográficas.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class OrigemGeograficaTest extends TestCase
 {
@@ -28,8 +26,6 @@ final class OrigemGeograficaTest extends TestCase
      * estados de factories.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function factory_cria_origem_com_dados_conhecidos(): void
@@ -67,8 +63,6 @@ final class OrigemGeograficaTest extends TestCase
      * Confirma que o nome não converte valores não textuais.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_nome_nao_textual(): void
@@ -86,8 +80,6 @@ final class OrigemGeograficaTest extends TestCase
      * Confirma que o código não converte valores não textuais.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_codigo_nao_textual(): void
@@ -105,8 +97,6 @@ final class OrigemGeograficaTest extends TestCase
      * Confirma que o nome rejeita caracteres de controlo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_caracteres_de_controlo_no_nome(): void
@@ -124,8 +114,6 @@ final class OrigemGeograficaTest extends TestCase
      * Confirma que o código rejeita hífenes exteriores ou consecutivos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_codigo_com_formato_invalido(): void

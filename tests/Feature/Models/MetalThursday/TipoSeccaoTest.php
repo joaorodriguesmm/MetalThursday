@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Models\MetalThursday;
 
 use App\Models\MetalThursday\TipoSeccao;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -14,19 +13,13 @@ use Tests\TestCase;
  * Testa os contratos do modelo dos tipos de secção.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class TipoSeccaoTest extends TestCase
 {
-    use RefreshDatabase;
-
     /**
      * Confirma que os campos textuais são normalizados.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function normaliza_campos_textuais(): void
@@ -62,8 +55,6 @@ final class TipoSeccaoTest extends TestCase
      * Confirma que o identificador não converte valores não textuais.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_identificador_nao_textual(): void
@@ -81,8 +72,6 @@ final class TipoSeccaoTest extends TestCase
      * Confirma que o nome não converte valores não textuais.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_nome_nao_textual(): void
@@ -100,8 +89,6 @@ final class TipoSeccaoTest extends TestCase
      * Confirma que a descrição não converte valores não textuais.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_descricao_nao_textual(): void
@@ -119,8 +106,6 @@ final class TipoSeccaoTest extends TestCase
      * Confirma que o nome rejeita caracteres de controlo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_caracteres_de_controlo_no_nome(): void
@@ -138,8 +123,6 @@ final class TipoSeccaoTest extends TestCase
      * Confirma que a descrição rejeita caracteres de controlo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_caracteres_de_controlo_na_descricao(): void

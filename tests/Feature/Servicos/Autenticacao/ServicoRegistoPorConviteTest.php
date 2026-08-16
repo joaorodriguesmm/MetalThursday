@@ -23,8 +23,6 @@ use Tests\TestCase;
  * Testa o registo transacional de utilizadores através de convites.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 final class ServicoRegistoPorConviteTest extends TestCase
 {
@@ -36,8 +34,6 @@ final class ServicoRegistoPorConviteTest extends TestCase
      * @var string
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private const PALAVRA_PASSE =
         'MetalThursday#2026';
@@ -46,8 +42,6 @@ final class ServicoRegistoPorConviteTest extends TestCase
      * Serviço testado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private ServicoRegistoPorConvite $servico;
 
@@ -55,8 +49,6 @@ final class ServicoRegistoPorConviteTest extends TestCase
      * Prepara cada teste.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function setUp(): void
     {
@@ -76,8 +68,6 @@ final class ServicoRegistoPorConviteTest extends TestCase
      * permissões são sincronizadas e o convite é utilizado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function regista_utilizador_e_utiliza_convite(): void
@@ -165,10 +155,12 @@ final class ServicoRegistoPorConviteTest extends TestCase
             $utilizador->fotografia,
         );
 
-        Storage::disk(
-            'publico',
-        )->assertExists(
-            $utilizador->fotografia,
+        self::assertTrue(
+            Storage::disk(
+                'publico',
+            )->exists(
+                $utilizador->fotografia,
+            ),
         );
 
         $hashPalavraPasse =
@@ -266,8 +258,6 @@ final class ServicoRegistoPorConviteTest extends TestCase
      * Confirma que o mesmo convite não pode ser reutilizado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function nao_permite_reutilizar_convite(): void
@@ -342,8 +332,6 @@ final class ServicoRegistoPorConviteTest extends TestCase
      * Confirma que um endereço diferente do destinatário é rejeitado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_email_diferente_do_destinatario(): void
@@ -402,8 +390,6 @@ final class ServicoRegistoPorConviteTest extends TestCase
      * fotografia armazenada antes da falha.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function permissao_inexistente_reverte_toda_a_transacao(): void
@@ -485,8 +471,6 @@ final class ServicoRegistoPorConviteTest extends TestCase
      * fotografia armazenada é eliminada depois do rollback.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function email_duplicado_nao_consome_o_convite(): void
@@ -563,8 +547,6 @@ final class ServicoRegistoPorConviteTest extends TestCase
      * Confirma que um convite expirado não pode ser utilizado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_convite_expirado(): void
@@ -628,8 +610,6 @@ final class ServicoRegistoPorConviteTest extends TestCase
      * armazenamento da fotografia e da abertura da transação.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_palavra_passe_insegura(): void
@@ -706,8 +686,6 @@ final class ServicoRegistoPorConviteTest extends TestCase
      * @return Convite Convite persistido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function criarConvite(
         string $codigo,
@@ -743,8 +721,6 @@ final class ServicoRegistoPorConviteTest extends TestCase
      * @return PermissaoEmail Permissão persistida.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function criarPermissao(
         string $nome,
@@ -780,8 +756,6 @@ final class ServicoRegistoPorConviteTest extends TestCase
      * @return Utilizador Utilizador persistido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function criarUtilizadorExistente(
         string $email,
@@ -817,8 +791,6 @@ final class ServicoRegistoPorConviteTest extends TestCase
      * @return list<int> Identificadores ordenados.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function obterIdentificadoresPermissoes(
         Utilizador $utilizador,

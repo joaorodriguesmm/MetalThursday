@@ -17,8 +17,6 @@ use Tests\TestCase;
  * Testa o modelo dos registos de acesso dos utilizadores.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class RegistoAcessoUtilizadorTest extends TestCase
 {
@@ -28,8 +26,6 @@ final class RegistoAcessoUtilizadorTest extends TestCase
      * Confirma os casts e as relações de uma suspensão.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function carrega_uma_suspensao_com_os_contratos_esperados(): void
@@ -70,8 +66,6 @@ final class RegistoAcessoUtilizadorTest extends TestCase
      * Confirma a normalização do motivo pelo modelo.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function normaliza_o_motivo_da_suspensao(): void
@@ -93,8 +87,6 @@ final class RegistoAcessoUtilizadorTest extends TestCase
      * Confirma que um motivo não textual é rejeitado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_um_motivo_nao_textual(): void
@@ -112,8 +104,6 @@ final class RegistoAcessoUtilizadorTest extends TestCase
      * Confirma que um registo persistido não pode ser alterado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function impede_a_alteracao_de_um_registo_persistido(): void
@@ -136,8 +126,6 @@ final class RegistoAcessoUtilizadorTest extends TestCase
      * Confirma que um registo persistido não pode ser eliminado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function impede_a_eliminacao_de_um_registo_persistido(): void

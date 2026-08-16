@@ -7,7 +7,6 @@ namespace Tests\Feature\Notifications;
 use App\Models\Autenticacao\Utilizador;
 use App\Notifications\NotificacaoAplicacao;
 use Illuminate\Database\Events\QueryExecuted;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -16,20 +15,14 @@ use Tests\TestCase;
  * Testa o comportamento comum das notificações da aplicação.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class NotificacaoAplicacaoTest extends TestCase
 {
-    use RefreshDatabase;
-
     /**
      * Confirma que um destinatário sem endereço de e-mail não provoca a
      * consulta das respetivas permissões.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function destinatario_sem_email_nao_consulta_permissoes(): void
@@ -58,8 +51,6 @@ final class NotificacaoAplicacaoTest extends TestCase
                  * Número de verificações das preferências de e-mail.
                  *
                  * @since 2.0.0
-                 *
-                 * @version 1.0.0
                  */
                 public int $numeroVerificacoesPermissao =
                     0;
@@ -71,8 +62,6 @@ final class NotificacaoAplicacaoTest extends TestCase
                  * @return bool Verdadeiro quando possui a permissão.
                  *
                  * @since 2.0.0
-                 *
-                 * @version 1.0.0
                  */
                 protected function deveEnviarPorEmail(
                     Utilizador $utilizador,
@@ -91,8 +80,6 @@ final class NotificacaoAplicacaoTest extends TestCase
                  * @return string Assunto da mensagem.
                  *
                  * @since 2.0.0
-                 *
-                 * @version 1.0.0
                  */
                 protected function obterAssunto(
                     Utilizador $utilizador,
@@ -107,8 +94,6 @@ final class NotificacaoAplicacaoTest extends TestCase
                  * @return string Conteúdo principal.
                  *
                  * @since 2.0.0
-                 *
-                 * @version 1.0.0
                  */
                 protected function obterLinhaMensagem(
                     Utilizador $utilizador,
@@ -123,8 +108,6 @@ final class NotificacaoAplicacaoTest extends TestCase
                  * @return string|null Texto da ação.
                  *
                  * @since 2.0.0
-                 *
-                 * @version 1.0.0
                  */
                 protected function obterTextoAcao(
                     Utilizador $utilizador,
@@ -139,8 +122,6 @@ final class NotificacaoAplicacaoTest extends TestCase
                  * @return string|null Endereço da ação.
                  *
                  * @since 2.0.0
-                 *
-                 * @version 1.0.0
                  */
                 protected function obterUrlAcao(
                     Utilizador $utilizador,

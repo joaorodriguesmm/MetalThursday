@@ -11,8 +11,6 @@ use PHPUnit\Framework\TestCase;
  * Testa a enumeração das alterações de acesso dos utilizadores.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class AcaoAcessoUtilizadorTest extends TestCase
 {
@@ -20,8 +18,6 @@ final class AcaoAcessoUtilizadorTest extends TestCase
      * Confirma que os valores públicos portugueses são reconhecidos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_reconhece_valores_publicos_portugueses(): void
     {
@@ -44,8 +40,6 @@ final class AcaoAcessoUtilizadorTest extends TestCase
      * Confirma que espaços exteriores e maiúsculas são normalizados.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_normaliza_espacos_e_maiusculas(): void
     {
@@ -68,8 +62,6 @@ final class AcaoAcessoUtilizadorTest extends TestCase
      * Confirma que aliases e valores inválidos são rejeitados.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_rejeita_aliases_e_valores_invalidos(): void
     {
@@ -114,8 +106,6 @@ final class AcaoAcessoUtilizadorTest extends TestCase
      * Confirma as etiquetas portuguesas das ações.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_devolve_etiquetas_portuguesas(): void
     {
@@ -134,8 +124,6 @@ final class AcaoAcessoUtilizadorTest extends TestCase
      * Confirma a distinção entre suspensão e reativação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_distingue_as_acoes(): void
     {

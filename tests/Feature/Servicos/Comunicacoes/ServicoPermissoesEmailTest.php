@@ -17,8 +17,6 @@ use Tests\TestCase;
  * Testa o serviço de gestão das permissões de e-mail.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 final class ServicoPermissoesEmailTest extends TestCase
 {
@@ -28,8 +26,6 @@ final class ServicoPermissoesEmailTest extends TestCase
      * Serviço testado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private ServicoPermissoesEmail $servico;
 
@@ -37,8 +33,6 @@ final class ServicoPermissoesEmailTest extends TestCase
      * Prepara cada teste.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     protected function setUp(): void
     {
@@ -54,8 +48,6 @@ final class ServicoPermissoesEmailTest extends TestCase
      * ordenados.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function normaliza_identificadores_das_permissoes(): void
@@ -87,8 +79,6 @@ final class ServicoPermissoesEmailTest extends TestCase
      * Confirma que valores inválidos são rejeitados.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_identificadores_invalidos(): void
@@ -118,8 +108,6 @@ final class ServicoPermissoesEmailTest extends TestCase
      * previamente carregada deve ser invalidada depois da sincronização.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function sincroniza_permissoes_do_utilizador(): void
@@ -221,8 +209,6 @@ final class ServicoPermissoesEmailTest extends TestCase
      * Confirma que uma lista vazia remove todas as permissões existentes.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function lista_vazia_remove_todas_as_permissoes(): void
@@ -285,8 +271,6 @@ final class ServicoPermissoesEmailTest extends TestCase
      * associações atuais.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function permissao_inexistente_nao_altera_as_associacoes(): void
@@ -362,8 +346,6 @@ final class ServicoPermissoesEmailTest extends TestCase
      * Confirma que um utilizador não persistido é rejeitado.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     #[Test]
     public function rejeita_utilizador_nao_persistido(): void
@@ -392,8 +374,6 @@ final class ServicoPermissoesEmailTest extends TestCase
      * @return Utilizador Utilizador persistido.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function criarUtilizador(): Utilizador
     {
@@ -430,8 +410,6 @@ final class ServicoPermissoesEmailTest extends TestCase
      * @return PermissaoEmail Permissão persistida.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     private function criarPermissao(
         string $nome,
@@ -467,8 +445,6 @@ final class ServicoPermissoesEmailTest extends TestCase
      * @return list<int> Identificadores ordenados.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function obterIdentificadoresPermissoes(
         Utilizador $utilizador,

@@ -12,18 +12,13 @@ use PHPUnit\Framework\TestCase;
  * Testa o objeto de valor do nome do utilizador.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class NomeUtilizadorTest extends TestCase
 {
     /**
      * Confirma que espaços exteriores e consecutivos são removidos.
      *
-     *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_normaliza_espacos_do_nome(): void
     {
@@ -50,10 +45,7 @@ final class NomeUtilizadorTest extends TestCase
     /**
      * Confirma a obtenção do primeiro nome.
      *
-     *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_obtem_o_primeiro_nome(): void
     {
@@ -70,10 +62,7 @@ final class NomeUtilizadorTest extends TestCase
     /**
      * Confirma as iniciais de um nome composto.
      *
-     *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_obtem_as_iniciais_de_nome_composto(): void
     {
@@ -90,10 +79,7 @@ final class NomeUtilizadorTest extends TestCase
     /**
      * Confirma as iniciais de um nome simples.
      *
-     *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_obtem_duas_iniciais_de_nome_simples(): void
     {
@@ -108,10 +94,7 @@ final class NomeUtilizadorTest extends TestCase
     /**
      * Confirma que dois nomes com o mesmo valor são iguais.
      *
-     *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_compara_nomes_normalizados(): void
     {
@@ -131,10 +114,7 @@ final class NomeUtilizadorTest extends TestCase
     /**
      * Confirma que nomes diferentes não são considerados iguais.
      *
-     *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_distingue_nomes_diferentes(): void
     {
@@ -154,10 +134,7 @@ final class NomeUtilizadorTest extends TestCase
     /**
      * Confirma que um nome vazio é rejeitado.
      *
-     *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_rejeita_nome_vazio(): void
     {
@@ -171,10 +148,7 @@ final class NomeUtilizadorTest extends TestCase
     /**
      * Confirma que um nome demasiado curto é rejeitado.
      *
-     *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_rejeita_nome_demasiado_curto(): void
     {
@@ -188,10 +162,7 @@ final class NomeUtilizadorTest extends TestCase
     /**
      * Confirma que um nome demasiado longo é rejeitado.
      *
-     *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_rejeita_nome_demasiado_longo(): void
     {

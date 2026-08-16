@@ -11,8 +11,6 @@ use PHPUnit\Framework\TestCase;
  * Testa a enumeração das direções de ordenação.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 final class DirecaoOrdenacaoTest extends TestCase
 {
@@ -20,8 +18,6 @@ final class DirecaoOrdenacaoTest extends TestCase
      * Confirma que os valores públicos portugueses são reconhecidos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function test_reconhece_valores_publicos_portugueses(): void
     {
@@ -44,8 +40,6 @@ final class DirecaoOrdenacaoTest extends TestCase
      * Confirma que os valores textuais são normalizados.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_normaliza_espacos_e_maiusculas(): void
     {
@@ -68,8 +62,6 @@ final class DirecaoOrdenacaoTest extends TestCase
      * Confirma que os valores técnicos do SQL não são parâmetros públicos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function test_rejeita_valores_tecnicos_do_sql(): void
     {
@@ -90,8 +82,6 @@ final class DirecaoOrdenacaoTest extends TestCase
      * Confirma que valores inválidos não originam uma direção.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function test_rejeita_valores_invalidos(): void
     {
@@ -124,8 +114,6 @@ final class DirecaoOrdenacaoTest extends TestCase
      * Confirma as etiquetas apresentadas ao utilizador.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_devolve_etiquetas_portuguesas(): void
     {
@@ -144,8 +132,6 @@ final class DirecaoOrdenacaoTest extends TestCase
      * Confirma a conversão para os valores utilizados pelo SQL.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function test_converte_direcao_para_sql(): void
     {

@@ -11,8 +11,6 @@ use PHPUnit\Framework\TestCase;
  * Testa a enumeração das ordenações das MetalThursdays.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 final class OrdenacaoMetalThursdayTest extends TestCase
 {
@@ -20,8 +18,6 @@ final class OrdenacaoMetalThursdayTest extends TestCase
      * Confirma que os valores públicos portugueses são reconhecidos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function test_reconhece_valores_publicos_portugueses(): void
     {
@@ -51,8 +47,6 @@ final class OrdenacaoMetalThursdayTest extends TestCase
      * Confirma que os valores textuais são normalizados.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_normaliza_espacos_e_maiusculas(): void
     {
@@ -82,8 +76,6 @@ final class OrdenacaoMetalThursdayTest extends TestCase
      * Confirma que os contratos antigos e aliases não são reconhecidos.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function test_rejeita_valores_antigos_e_aliases(): void
     {
@@ -122,8 +114,6 @@ final class OrdenacaoMetalThursdayTest extends TestCase
      * Confirma que valores inválidos não originam uma ordenação.
      *
      * @since 2.0.0
-     *
-     * @version 2.0.0
      */
     public function test_rejeita_valores_invalidos(): void
     {
@@ -156,8 +146,6 @@ final class OrdenacaoMetalThursdayTest extends TestCase
      * Confirma as etiquetas apresentadas ao utilizador.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     public function test_devolve_etiquetas_portuguesas(): void
     {

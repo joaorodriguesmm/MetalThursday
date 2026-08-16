@@ -15,8 +15,6 @@ use Tests\TestCase;
  * Testa a autorização dos pedidos dos dados principais das edições.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class PedidoEdicaoRequestTest extends TestCase
 {
@@ -27,8 +25,6 @@ final class PedidoEdicaoRequestTest extends TestCase
      * criação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_criacao_sem_autorizacao_antes_da_validacao(): void
@@ -60,8 +56,6 @@ final class PedidoEdicaoRequestTest extends TestCase
      * criação.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function administrador_recebe_erros_de_validacao_na_criacao(): void
@@ -93,8 +87,6 @@ final class PedidoEdicaoRequestTest extends TestCase
      * atualização.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_atualizacao_sem_autorizacao_antes_da_validacao(): void
@@ -135,8 +127,6 @@ final class PedidoEdicaoRequestTest extends TestCase
      * atualização.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function administrador_recebe_erros_de_validacao_na_atualizacao(): void
@@ -173,8 +163,6 @@ final class PedidoEdicaoRequestTest extends TestCase
      * @return Utilizador Utilizador criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarUtilizadorComum(): Utilizador
     {
@@ -187,14 +175,9 @@ final class PedidoEdicaoRequestTest extends TestCase
     /**
      * Cria um utilizador com privilégios administrativos.
      *
-     * O papel é fornecido diretamente para não depender do estado
-     * personalizado ainda não auditado da factory dos utilizadores.
-     *
      * @return Utilizador Administrador criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarAdministrador(): Utilizador
     {
@@ -210,8 +193,6 @@ final class PedidoEdicaoRequestTest extends TestCase
      * @return array<string, mixed> Dados inválidos.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function dadosInvalidos(): array
     {

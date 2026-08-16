@@ -17,8 +17,6 @@ use Tests\TestCase;
  * Testa a sincronização transacional das músicas favoritas de uma edição.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 final class ServicoMusicasFavoritasEdicaoTest extends TestCase
 {
@@ -31,8 +29,6 @@ final class ServicoMusicasFavoritasEdicaoTest extends TestCase
      * utilizadores permanecem inalteradas.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function sincroniza_apenas_utilizadores_recebidos(): void
@@ -152,8 +148,6 @@ final class ServicoMusicasFavoritasEdicaoTest extends TestCase
      * contrato fixo do pedido.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function remove_escolhas_quando_todas_as_posicoes_estao_vazias(): void
@@ -215,8 +209,6 @@ final class ServicoMusicasFavoritasEdicaoTest extends TestCase
      * único da tabela.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function rejeita_musica_repetida_sem_distinguir_acentos_ou_maiusculas(): void
@@ -280,8 +272,6 @@ final class ServicoMusicasFavoritasEdicaoTest extends TestCase
      * Confirma que um utilizador indisponível não altera escolhas existentes.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function utilizador_inexistente_nao_altera_escolhas_existentes(): void
@@ -352,8 +342,6 @@ final class ServicoMusicasFavoritasEdicaoTest extends TestCase
      * @return MusicaFavoritaEdicao Música favorita criada.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function criarMusicaFavorita(
         Edicao $edicao,
@@ -387,8 +375,6 @@ final class ServicoMusicasFavoritasEdicaoTest extends TestCase
      * @return ServicoMusicasFavoritasEdicao Serviço criado.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function servico(): ServicoMusicasFavoritasEdicao
     {

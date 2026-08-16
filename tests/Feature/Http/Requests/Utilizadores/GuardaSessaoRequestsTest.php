@@ -22,8 +22,6 @@ use Tests\TestCase;
  * Testa a utilização explícita do guard `sessao` nos pedidos do utilizador.
  *
  * @since 2.0.0
- *
- * @version 2.0.0
  */
 final class GuardaSessaoRequestsTest extends TestCase
 {
@@ -33,8 +31,6 @@ final class GuardaSessaoRequestsTest extends TestCase
      * Confirma que o pedido da palavra-passe utiliza apenas o guard `sessao`.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function pedido_palavra_passe_utiliza_guarda_sessao(): void
@@ -73,8 +69,6 @@ final class GuardaSessaoRequestsTest extends TestCase
      * Confirma que o pedido do perfil utiliza apenas o guard `sessao`.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function pedido_perfil_utiliza_guarda_sessao(): void
@@ -113,8 +107,6 @@ final class GuardaSessaoRequestsTest extends TestCase
      * Confirma que o pedido das permissões utiliza apenas o guard `sessao`.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function pedido_permissoes_email_utiliza_guarda_sessao(): void
@@ -154,8 +146,6 @@ final class GuardaSessaoRequestsTest extends TestCase
      * `sessao`.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     #[Test]
     public function pedido_alteracao_papel_utiliza_guarda_sessao(): void
@@ -230,8 +220,6 @@ final class GuardaSessaoRequestsTest extends TestCase
      *                                                  sem guard.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function configurarUtilizadores(
         FormRequest $pedido,
@@ -254,8 +242,6 @@ final class GuardaSessaoRequestsTest extends TestCase
      * @param  Utilizador  $utilizador  Utilizador da rota.
      *
      * @since 2.0.0
-     *
-     * @version 1.0.0
      */
     private function configurarUtilizadorDaRota(
         FormRequest $pedido,
