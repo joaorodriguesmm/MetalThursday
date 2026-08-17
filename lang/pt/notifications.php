@@ -9,8 +9,6 @@ declare(strict_types=1);
  * pelos templates de notificações do Laravel.
  *
  * @since 1.0.0
- *
- * @version 1.1.0
  */
 return [
     'salutation' => 'Com os melhores cumprimentos,',

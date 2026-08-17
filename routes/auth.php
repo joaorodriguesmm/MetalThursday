@@ -24,8 +24,6 @@ use Illuminate\Support\Facades\Route;
  * `sessao`.
  *
  * @since 1.0.0
- *
- * @version 5.0.0
  */
 
 /*

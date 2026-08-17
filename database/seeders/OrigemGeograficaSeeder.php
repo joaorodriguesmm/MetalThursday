@@ -59,7 +59,7 @@ final class OrigemGeograficaSeeder extends Seeder
         'BN' => 'Brunei',
         'BG' => 'Bulgária',
         'BF' => 'Burquina Faso',
-        'BI' => 'Burúndi',
+        'BI' => 'Burundi',
         'BT' => 'Butão',
         'CV' => 'Cabo Verde',
         'CM' => 'Camarões',

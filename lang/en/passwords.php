@@ -9,8 +9,6 @@ declare(strict_types=1);
  * pelo sistema de recuperação de palavras-passe do Laravel.
  *
  * @since 1.0.0
- *
- * @version 1.1.0
  */
 return [
     'reset' => 'Your password has been reset.',

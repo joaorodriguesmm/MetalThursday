@@ -9,8 +9,6 @@ declare(strict_types=1);
  * utilizadas pelo sistema de validação do Laravel.
  *
  * @since 1.0.0
- *
- * @version 1.1.0
  */
 return [
     'accepted' => 'O campo :attribute deve ser aceite.',
@@ -54,6 +52,7 @@ return [
     'doesnt_end_with' => 'O campo :attribute não deve terminar com nenhum dos seguintes valores: :values.',
     'doesnt_start_with' => 'O campo :attribute não deve começar com nenhum dos seguintes valores: :values.',
     'email' => 'O campo :attribute deve ser um endereço de email válido.',
+    'encoding' => 'O campo :attribute deve usar a codificação :encoding.',
     'ends_with' => 'O campo :attribute deve terminar com um dos seguintes valores: :values.',
     'enum' => 'O valor selecionado para :attribute é inválido.',
     'exists' => 'O valor selecionado para :attribute é inválido.',

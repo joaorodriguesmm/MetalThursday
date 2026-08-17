@@ -6,8 +6,6 @@ declare(strict_types=1);
  * Inclui os ficheiros de rotas HTTP separados por funcionalidade.
  *
  * @since 1.0.0
- *
- * @version 4.0.0
  */
 
 require __DIR__.'/auth.php';

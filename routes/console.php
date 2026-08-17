@@ -8,6 +8,4 @@ declare(strict_types=1);
  * Atualmente, a aplicação não possui comandos deste tipo.
  *
  * @since 1.0.0
- *
- * @version 2.0.0
  */

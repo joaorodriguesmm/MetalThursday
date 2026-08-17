@@ -9,8 +9,6 @@ declare(strict_types=1);
  * pelo sistema de autenticação do Laravel.
  *
  * @since 1.0.0
- *
- * @version 1.1.0
  */
 return [
     'failed' => 'As credenciais indicadas estão incorretas.',

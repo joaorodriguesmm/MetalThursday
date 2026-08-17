@@ -13,8 +13,6 @@ use Illuminate\Support\Facades\Route;
  * dos utilizadores.
  *
  * @since 2.0.0
- *
- * @version 5.0.0
  */
 Route::middleware([
     'auth:sessao',
@@ -40,7 +38,7 @@ Route::middleware([
             );
 
             Route::get(
-                '/{utilizador}',
+                '{utilizador}',
                 [
                     ControladorUtilizador::class,
                     'detalhes',
@@ -54,7 +52,7 @@ Route::middleware([
                 );
 
             Route::patch(
-                '/{utilizador}/papel',
+                '{utilizador}/papel',
                 [
                     ControladorUtilizador::class,
                     'alterarPapel',
@@ -68,7 +66,7 @@ Route::middleware([
                 );
 
             Route::patch(
-                '/{utilizador}/suspender',
+                '{utilizador}/suspender',
                 [
                     ControladorUtilizador::class,
                     'suspender',
@@ -82,7 +80,7 @@ Route::middleware([
                 );
 
             Route::patch(
-                '/{utilizador}/reativar',
+                '{utilizador}/reativar',
                 [
                     ControladorUtilizador::class,
                     'reativar',
@@ -96,7 +94,7 @@ Route::middleware([
                 );
 
             Route::delete(
-                '/{utilizador}/sessoes',
+                '{utilizador}/sessoes',
                 [
                     ControladorUtilizador::class,
                     'encerrarSessoes',

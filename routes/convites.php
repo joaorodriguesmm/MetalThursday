@@ -13,8 +13,6 @@ use Illuminate\Support\Facades\Route;
  * autorização através da política dos convites.
  *
  * @since 2.0.0
- *
- * @version 1.0.0
  */
 Route::middleware([
     'auth:sessao',
@@ -40,7 +38,7 @@ Route::middleware([
             );
 
             Route::get(
-                '/criar',
+                'criar',
                 [
                     ControladorConvite::class,
                     'criar',
@@ -60,7 +58,7 @@ Route::middleware([
             );
 
             Route::patch(
-                '/{convite}/revogar',
+                '{convite}/revogar',
                 [
                     ControladorConvite::class,
                     'revogar',

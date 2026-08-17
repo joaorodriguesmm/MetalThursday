@@ -9,7 +9,7 @@
         "laravel",
         "blade"
     ],
-    "license": "MIT",
+    "license": "proprietary",
     "require": {
         "php": "^8.2",
         "laravel/framework": "^12.61.1",

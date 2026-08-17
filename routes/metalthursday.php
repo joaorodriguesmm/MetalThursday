@@ -21,8 +21,6 @@ use Illuminate\Support\Facades\Route;
  * `sessao`, uma sessão autenticada válida e um endereço de e-mail verificado.
  *
  * @since 1.0.0
- *
- * @version 4.0.0
  */
 Route::middleware([
     'auth:sessao',

@@ -2,19 +2,19 @@
 
 ![Version](https://img.shields.io/badge/version-1.0.0-red)
 ![Laravel](https://img.shields.io/badge/Laravel-framework-red?logo=laravel)
-![License](https://img.shields.io/badge/license-MIT-blue)
 
 ## 📖 Sobre o projeto
 
-O **MetalThursday** é o website de uma rubrica semanal, criada por um grupo de amigos, dedicada à partilha de álbuns e músicas de metal. Todas as quintas-feiras, o grupo reúne e divulga as suas descobertas e recomendações dentro do género, num espaço próprio para preservar e organizar essas partilhas ao longo do tempo.
+O **MetalThursday** é a aplicação web de uma rubrica semanal, criada por um grupo de amigos, dedicada à partilha de álbuns e músicas de metal. Todas as quintas-feiras, o grupo reúne-se para partilhar descobertas e recomendações dentro do género, preservando e organizando essas escolhas ao longo do tempo.
 
 ## 🛠️ Tecnologias
 
 - **Backend:** PHP / Laravel
-- **Templates:** Blade
-- **Frontend:** JavaScript, SCSS
-- **Build tool:** Vite
-- **Gestor de dependências:** Composer + NPM
+- **Vistas:** Blade
+- **Frontend:** JavaScript / SCSS
+- **Compilação de assets:** Vite
+- **Gestão de dependências:** Composer / npm
+- **Base de dados:** MariaDB
 
 ## 🚀 Instalação
 
@@ -22,7 +22,8 @@ O **MetalThursday** é o website de uma rubrica semanal, criada por um grupo de 
 
 - PHP >= 8.2
 - Composer
-- Node.js + NPM
+- Node.js 22.13+ (22.x) ou 24.x
+- npm
 - MariaDB
 
 ### Passos
@@ -36,59 +37,65 @@ cd MetalThursday
 composer install
 
 # 3. Instalar dependências JavaScript
-npm install
+npm ci
 
 # 4. Configurar o ambiente
 cp .env.example .env
 php artisan key:generate
 
-# 5. Configurar a base de dados no ficheiro .env e depois correr as migrações
+# 5. Configurar a base de dados no ficheiro .env e executar as migrações
 php artisan migrate
+```
 
-# 6. Compilar os assets
+Para iniciar o ambiente de desenvolvimento completo — servidor Laravel, processamento da fila e Vite — executa:
+
+```bash
+composer desenvolver
+```
+
+A aplicação ficará disponível em `http://127.0.0.1:8000`.
+
+Para gerar os assets destinados a produção sem iniciar o ambiente de desenvolvimento:
+
+```bash
 npm run compilar
-
-# 7. Iniciar o servidor local
-php artisan serve
 ```
 
-Durante o desenvolvimento, o Vite pode ser iniciado num segundo terminal:
+## ✅ Validação
+
+Antes de integrar alterações, podem ser executadas as principais validações locais:
 
 ```bash
-npm run desenvolver
+./vendor/bin/pint --test
+composer testar
+npm run validar
 ```
-
-Se forem utilizadas funcionalidades processadas em fila, inicia também um worker:
-
-```bash
-php artisan queue:listen --tries=1
-```
-
-A aplicação ficará disponível em `http://localhost:8000`.
 
 ## 📂 Estrutura do projeto
 
 ```text
 MetalThursday/
-├── app/          # Lógica da aplicação (Controllers, Models, etc.)
-├── bootstrap/    # Ficheiros de arranque da framework
-├── config/       # Ficheiros de configuração
+├── app/          # Lógica da aplicação (controladores, modelos, serviços, etc.)
+├── bootstrap/    # Arranque da aplicação
+├── config/       # Configuração
 ├── database/     # Migrações, seeders e factories
-├── lang/         # Ficheiros de tradução
-├── public/       # Ponto de entrada público
-├── resources/    # Views (Blade), CSS/SCSS, JS
+├── lang/         # Traduções
+├── public/       # Ponto de entrada público e assets públicos
+├── resources/    # Vistas Blade, SCSS e JavaScript
 ├── routes/       # Definição de rotas
-└── storage/      # Ficheiros gerados/logs/cache
+└── storage/      # Ficheiros gerados, cache e registos
 ```
 
 ## 🔒 Projeto fechado
 
 Este é um projeto pessoal, mantido apenas pelo grupo de amigos do MetalThursday. Não são aceites pull requests, issues ou outras contribuições externas.
 
-## 📄 Licença
+## ©️ Direitos de autor
 
-Este projeto está licenciado sob a licença MIT — consulta o ficheiro [LICENSE](LICENSE) para mais detalhes.
+Código proprietário. Todos os direitos reservados.
 
-## 📌 Versão atual
+Não é concedida autorização para utilizar, copiar, modificar, distribuir ou sublicenciar este código fora das permissões estritamente necessárias ao funcionamento dos serviços utilizados para alojar o repositório.
 
-**v1.0.0** (28/12/2025) — consulta o [CHANGELOG.md](CHANGELOG.md) para o histórico de alterações.
+## 📌 Versão publicada
+
+**v1.0.0** (2025-12-28) — consulta o [CHANGELOG.md](CHANGELOG.md) para o histórico de alterações e alterações ainda não publicadas.

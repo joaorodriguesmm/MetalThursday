@@ -11,8 +11,6 @@ use Illuminate\Http\Request;
  * internamente pelo Laravel.
  *
  * @since 1.0.0
- *
- * @version 1.1.0
  */
 define('LARAVEL_START', microtime(true));
 
