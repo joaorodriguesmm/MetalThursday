@@ -8,7 +8,6 @@
     preparados por App\Http\Controllers\Utilizadores\ControladorUtilizador.
 
     @since 2.0.0
-    @version 2.0.0
 --}}
 
 <x-layout-aplicacao>

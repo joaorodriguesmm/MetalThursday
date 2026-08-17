@@ -6,7 +6,6 @@
     anteriormente submetidos.
 
     @since 1.0.0
-    @version 3.0.0
 --}}
 
 <section
@@ -46,6 +45,7 @@
                             name="palavra_passe_atual"
                             placeholder="Palavra-passe atual"
                             autocomplete="current-password"
+                            maxlength="{{ App\Regras\Autenticacao\RequisitosPalavraPasse::comprimentoMaximo() }}"
                             aria-describedby="erro-palavra-passe-atual"
                             required
                             @error(
@@ -108,6 +108,8 @@
                             name="nova_palavra_passe"
                             placeholder="Nova palavra-passe"
                             autocomplete="new-password"
+                            minlength="{{ App\Regras\Autenticacao\RequisitosPalavraPasse::comprimentoMinimo() }}"
+                            maxlength="{{ App\Regras\Autenticacao\RequisitosPalavraPasse::comprimentoMaximo() }}"
                             aria-describedby="ajuda-nova-palavra-passe erro-nova-palavra-passe"
                             required
                             @error(
@@ -163,8 +165,10 @@
                     id="ajuda-nova-palavra-passe"
                     class="form-text"
                 >
-                    Utiliza pelo menos 12 caracteres, incluindo maiúsculas,
-                    minúsculas, números e símbolos.
+                    Utiliza pelo menos
+                    {{ App\Regras\Autenticacao\RequisitosPalavraPasse::comprimentoMinimo() }}
+                    caracteres, incluindo maiúsculas, minúsculas, números e
+                    símbolos.
                 </div>
             </div>
 
@@ -178,6 +182,7 @@
                             name="confirmacao_nova_palavra_passe"
                             placeholder="Confirmar nova palavra-passe"
                             autocomplete="new-password"
+                            maxlength="{{ App\Regras\Autenticacao\RequisitosPalavraPasse::comprimentoMaximo() }}"
                             aria-describedby="erro-confirmacao-nova-palavra-passe"
                             required
                             @error(

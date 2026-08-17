@@ -5,7 +5,6 @@
     associadas ao modelo App\Models\MetalThursday\Edicao.
 
     @since 1.0.0
-    @version 3.0.0
 --}}
 
 <x-layout-aplicacao>

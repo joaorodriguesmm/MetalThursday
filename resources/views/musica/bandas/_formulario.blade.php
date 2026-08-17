@@ -5,7 +5,6 @@
     pelo controlador responsável pelas bandas.
 
     @since 1.0.0
-    @version 4.0.0
 --}}
 
 <form

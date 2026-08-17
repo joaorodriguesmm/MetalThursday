@@ -7,7 +7,6 @@
     Os erros de validação são obtidos através do saco de erros "perfil".
 
     @since 1.0.0
-    @version 4.0.0
 --}}
 
 <section
@@ -95,8 +94,8 @@
                                 }}"
                                 placeholder="Nome"
                                 autocomplete="name"
-                                minlength="3"
-                                maxlength="255"
+                                minlength="{{ App\ObjetosValor\Utilizadores\NomeUtilizador::COMPRIMENTO_MINIMO }}"
+                                maxlength="{{ App\ObjetosValor\Utilizadores\NomeUtilizador::COMPRIMENTO_MAXIMO }}"
                                 aria-describedby="erro-nome"
                                 required
                                 @error('nome', 'perfil')
@@ -193,7 +192,7 @@
                         }}"
                         placeholder="Endereço de e-mail"
                         autocomplete="email"
-                        maxlength="255"
+                        maxlength="{{ App\ObjetosValor\Utilizadores\EnderecoEmail::COMPRIMENTO_MAXIMO }}"
                         aria-describedby="ajuda-email erro-email"
                         required
                         @error('email', 'perfil')

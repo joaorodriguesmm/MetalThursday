@@ -9,7 +9,6 @@
     quando não é selecionada qualquer relação hierárquica.
 
     @since 1.0.0
-    @version 4.1.0
 --}}
 
 @can(

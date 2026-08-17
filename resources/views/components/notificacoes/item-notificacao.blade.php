@@ -4,8 +4,7 @@
     Todos os valores e endereços utilizados na apresentação são preparados
     pela classe App\View\Components\Notificacoes\ItemNotificacao.
 
-    @since 3.0.0
-    @version 2.0.0
+    @since 2.0.0
 --}}
 
 <article

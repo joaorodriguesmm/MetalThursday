@@ -5,7 +5,6 @@
     App\Http\Controllers\Musica\ControladorGenero.
 
     @since 1.0.0
-    @version 3.0.0
 --}}
 
 <x-layout-aplicacao>

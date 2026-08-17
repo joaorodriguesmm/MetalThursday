@@ -9,7 +9,6 @@
     Cada estrela permite selecionar também o respetivo meio valor.
 
     @since 1.0.0
-    @version 4.0.0
 --}}
 
 <div

@@ -5,7 +5,6 @@
     interno do sistema de paginação do Laravel.
 
     @since 1.0.0
-    @version 3.0.0
 --}}
 
 @if ($paginator->hasPages())
@@ -77,6 +76,7 @@
                     <li
                         class="page-item disabled"
                         aria-disabled="true"
+                        aria-label="Primeira página"
                     >
                         <span
                             class="page-link"
@@ -104,6 +104,7 @@
                     <li
                         class="page-item disabled"
                         aria-disabled="true"
+                        aria-label="Página anterior"
                     >
                         <span
                             class="page-link"
@@ -196,6 +197,7 @@
                     <li
                         class="page-item disabled"
                         aria-disabled="true"
+                        aria-label="Página seguinte"
                     >
                         <span
                             class="page-link"
@@ -227,6 +229,7 @@
                     <li
                         class="page-item disabled"
                         aria-disabled="true"
+                        aria-label="Última página"
                     >
                         <span
                             class="page-link"

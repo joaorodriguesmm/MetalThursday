@@ -2,7 +2,6 @@
     Apresenta o formulário administrativo de criação de um convite.
 
     @since 2.0.0
-    @version 1.0.0
 --}}
 
 <x-layout-aplicacao>

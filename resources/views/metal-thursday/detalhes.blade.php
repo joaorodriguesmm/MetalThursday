@@ -5,7 +5,6 @@
     avaliações, audições e ações de gestão autorizadas.
 
     @since 1.0.0
-    @version 4.0.0
 --}}
 
 <x-layout-aplicacao>

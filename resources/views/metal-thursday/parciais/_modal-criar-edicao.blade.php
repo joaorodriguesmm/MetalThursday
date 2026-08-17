@@ -6,7 +6,6 @@
     associados aos respetivos campos pelo gestor global de formulários AJAX.
 
     @since 1.0.0
-    @version 3.0.0
 --}}
 
 @can(
@@ -73,7 +72,7 @@
                                 type="text"
                                 name="nome"
                                 placeholder="Nome da edição"
-                                maxlength="255"
+                                maxlength="{{ App\Models\MetalThursday\Edicao::COMPRIMENTO_MAXIMO_NOME }}"
                                 aria-describedby="erro-nome-nova-edicao"
                                 required
                             >

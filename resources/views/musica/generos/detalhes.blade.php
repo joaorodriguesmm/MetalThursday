@@ -5,7 +5,6 @@
     são preparados pelo App\Http\Controllers\Musica\ControladorGenero.
 
     @since 1.0.0
-    @version 4.0.0
 --}}
 
 <x-layout-aplicacao>

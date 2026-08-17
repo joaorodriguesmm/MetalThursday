@@ -6,7 +6,6 @@
     App\Servicos\MetalThursday\ServicoApresentacaoDetalhesEdicao.
 
     @since 1.0.0
-    @version 4.0.0
 --}}
 
 <x-layout-aplicacao>

@@ -5,7 +5,6 @@
     do Laravel e, por isso, devem permanecer inalterados.
 
     @since 1.0.0
-    @version 2.0.0
 --}}
 
 <x-mail::message>
@@ -53,6 +52,9 @@
 {{-- Despedida --}}
 @if (! empty($salutation))
 {{ $salutation }}
+@else
+Cumprimentos,<br>
+{{ config('app.name') }}
 @endif
 
 {{-- Ligação alternativa --}}

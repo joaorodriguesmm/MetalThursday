@@ -2,7 +2,6 @@
     Apresenta um painel de destaque num e-mail Markdown.
 
     @since 1.0.0
-    @version 2.0.0
 --}}
 
 <table

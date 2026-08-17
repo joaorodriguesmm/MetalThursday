@@ -7,7 +7,6 @@
     App\Http\Controllers\MetalThursday\ControladorMetalThursday.
 
     @since 1.0.0
-    @version 3.0.0
 --}}
 
 <div class="row">
@@ -183,7 +182,7 @@
             name="nome"
             value="{{ old('nome', $metalThursday?->nome) }}"
             placeholder="Exemplo: Especial de Natal"
-            maxlength="255"
+            maxlength="{{ App\Models\MetalThursday\MetalThursday::COMPRIMENTO_MAXIMO_NOME }}"
             aria-describedby="erro-nome-metal-thursday"
             @error('nome')
                 aria-invalid="true"

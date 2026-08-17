@@ -9,7 +9,6 @@
     App\View\Components\Musica\Bandas\CartaoAparicaoMetalThursday.
 
     @since 1.0.0
-    @version 4.0.0
 --}}
 
 <x-layout-aplicacao>
