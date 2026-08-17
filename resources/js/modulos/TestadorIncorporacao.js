@@ -2,7 +2,6 @@
  * Gere o teste e a pré-visualização de ligações incorporáveis.
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 class TestadorIncorporacao {
     /**
@@ -10,8 +9,7 @@ class TestadorIncorporacao {
      *
      * @type {Readonly<Record<string, string>>}
      *
-     * @since 3.0.0
-     * @version 1.0.0
+     * @since 2.0.0
      */
     static TIPOS = Object.freeze({
         ligacao:
@@ -29,8 +27,7 @@ class TestadorIncorporacao {
      *
      * @type {ReadonlyArray<string>}
      *
-     * @since 3.0.0
-     * @version 1.0.0
+     * @since 2.0.0
      */
     static HOSTS_YOUTUBE = Object.freeze([
         'youtube.com',
@@ -48,8 +45,7 @@ class TestadorIncorporacao {
      *
      * @type {ReadonlyArray<string>}
      *
-     * @since 3.0.0
-     * @version 1.0.0
+     * @since 2.0.0
      */
     static SEGMENTOS_VIDEO_YOUTUBE = Object.freeze([
         'embed',
@@ -58,7 +54,19 @@ class TestadorIncorporacao {
     ]);
 
     /**
-     * Cria um testador de incorporação para uma secção.
+     * Segmentos especiais de incorporação que não representam vídeos.
+     *
+     * @type {ReadonlyArray<string>}
+     *
+     * @since 2.0.0
+     */
+    static IDENTIFICADORES_EMBED_NAO_VIDEO = Object.freeze([
+        'live_stream',
+        'videoseries',
+    ]);
+
+    /**
+     * Cria e inicializa um testador de incorporação para uma secção.
      *
      * @param {HTMLElement} elementoSeccao Elemento principal da secção.
      * @param {Array<object>} fornecedoresIncorporacao
@@ -67,7 +75,6 @@ class TestadorIncorporacao {
      * @throws {TypeError} Quando as definições são inválidas.
      *
      * @since 1.0.0
-     * @version 3.0.0
      */
     constructor(
         elementoSeccao,
@@ -108,69 +115,88 @@ class TestadorIncorporacao {
             )
             ?? null;
 
+        this.opcaoVideo =
+            this.seccao?.querySelector(
+                '.opcao-incorporacao-video',
+            )
+            ?? null;
+
+        this.previsualizacaoVideo =
+            this.seccao?.querySelector(
+                '.previsualizacao-video',
+            )
+            ?? null;
+
+        this.opcaoListaReproducao =
+            this.seccao?.querySelector(
+                '.opcao-incorporacao-lista-reproducao',
+            )
+            ?? null;
+
+        this.previsualizacaoListaReproducao =
+            this.seccao?.querySelector(
+                '.previsualizacao-lista-reproducao',
+            )
+            ?? null;
+
+        this.opcaoLigacao =
+            this.seccao?.querySelector(
+                `.escolha-incorporacao[value="${TestadorIncorporacao.TIPOS.ligacao}"]`,
+            )
+            ?? null;
+
         this.fornecedores =
             this.normalizarFornecedores(
                 fornecedoresIncorporacao,
             );
 
-        this.previsualizacoesApresentadas =
-            new Set();
-
-        this.iniciado =
-            false;
-
-        this.aoClicarTestar =
-            () => this.testar();
-
-        this.aoAlterarEscolha =
-            (evento) => this.atualizarEscolha(evento);
-
-        if (this.estaAtivo()) {
-            this.iniciar();
+        if (!this.estaAtivo()) {
+            return;
         }
+
+        this.botaoTestar.addEventListener(
+            'click',
+            () => {
+                this.testar();
+            },
+        );
+
+        this.campoLigacao.addEventListener(
+            'input',
+            () => {
+                this.invalidarTesteAnterior();
+            },
+        );
+
+        this.contentorResultados.addEventListener(
+            'change',
+            (evento) => {
+                this.atualizarEscolha(
+                    evento,
+                );
+            },
+        );
     }
 
     /**
-     * Verifica se foram encontrados os elementos obrigatórios.
+     * Verifica se foram encontrados todos os elementos obrigatórios.
      *
      * @returns {boolean} Verdadeiro quando o testador pode funcionar.
      *
      * @since 2.0.0
-     * @version 2.0.0
      */
     estaAtivo() {
         return this.seccao instanceof HTMLElement
             && this.campoLigacao instanceof HTMLInputElement
             && this.botaoTestar instanceof HTMLButtonElement
             && this.contentorResultados instanceof HTMLElement
-            && this.campoTipoIncorporacao instanceof HTMLInputElement;
-    }
-
-    /**
-     * Inicia os eventos do testador.
-     *
-     * @returns {void}
-     *
-     * @since 1.0.0
-     * @version 2.0.0
-     */
-    iniciar() {
-        if (!this.estaAtivo() || this.iniciado) {
-            return;
-        }
-
-        this.botaoTestar.addEventListener(
-            'click',
-            this.aoClicarTestar,
-        );
-
-        this.contentorResultados.addEventListener(
-            'change',
-            this.aoAlterarEscolha,
-        );
-
-        this.iniciado =
-            true;
+            && this.campoTipoIncorporacao instanceof HTMLInputElement
+            && this.areaEstado instanceof HTMLElement
+            && this.opcaoVideo instanceof HTMLElement
+            && this.previsualizacaoVideo instanceof HTMLElement
+            && this.opcaoListaReproducao instanceof HTMLElement
+            && this.previsualizacaoListaReproducao instanceof HTMLElement
+            && this.opcaoLigacao instanceof HTMLInputElement;
     }
 
     /**
@@ -179,7 +205,6 @@ class TestadorIncorporacao {
      * @returns {void}
      *
      * @since 1.0.0
-     * @version 3.0.0
      */
     testar() {
         if (!this.estaAtivo()) {
@@ -203,7 +228,8 @@ class TestadorIncorporacao {
             return;
         }
 
-        this.apresentarCarregamento();
+        const previsualizacoesApresentadas =
+            new Set();
 
         let encontrouIncorporacao =
             false;
@@ -221,6 +247,7 @@ class TestadorIncorporacao {
                     fornecedor.tipo,
                     fornecedor.etiqueta,
                     identificador,
+                    previsualizacoesApresentadas,
                 )
             ) {
                 encontrouIncorporacao =
@@ -236,6 +263,7 @@ class TestadorIncorporacao {
                     incorporacao.tipo,
                     incorporacao.etiqueta,
                     incorporacao.identificador,
+                    previsualizacoesApresentadas,
                 )
             ) {
                 encontrouIncorporacao =
@@ -254,6 +282,32 @@ class TestadorIncorporacao {
     }
 
     /**
+     * Invalida o resultado anterior quando a ligação é alterada.
+     *
+     * Uma escolha de incorporação pertence à ligação que foi testada. Se essa
+     * ligação mudar, o formulário deve regressar ao tipo seguro por defeito.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    invalidarTesteAnterior() {
+        if (!this.estaAtivo()) {
+            return;
+        }
+
+        if (
+            this.contentorResultados.hidden
+            && this.campoTipoIncorporacao.value
+                === TestadorIncorporacao.TIPOS.ligacao
+        ) {
+            return;
+        }
+
+        this.repor();
+    }
+
+    /**
      * Normaliza as definições recebidas do servidor.
      *
      * @param {unknown} fornecedores Definições recebidas.
@@ -266,8 +320,7 @@ class TestadorIncorporacao {
      *
      * @throws {TypeError} Quando alguma definição é inválida.
      *
-     * @since 3.0.0
-     * @version 1.0.0
+     * @since 2.0.0
      */
     normalizarFornecedores(fornecedores) {
         if (!Array.isArray(fornecedores)) {
@@ -337,7 +390,6 @@ class TestadorIncorporacao {
      * @returns {string|null} Identificador encontrado ou nulo.
      *
      * @since 2.0.0
-     * @version 2.0.0
      */
     detetarIdentificador(
         fornecedor,
@@ -373,8 +425,7 @@ class TestadorIncorporacao {
      *     identificador: string
      * }>} Incorporações detetadas.
      *
-     * @since 3.0.0
-     * @version 1.0.0
+     * @since 2.0.0
      */
     detetarIncorporacoesYouTube(ligacao) {
         let url;
@@ -396,7 +447,9 @@ class TestadorIncorporacao {
                 );
 
         if (
-            !['http:', 'https:'].includes(url.protocol)
+            !['http:', 'https:'].includes(
+                url.protocol,
+            )
             || !TestadorIncorporacao
                 .HOSTS_YOUTUBE
                 .includes(host)
@@ -442,15 +495,20 @@ class TestadorIncorporacao {
                         segmento !== '',
                 );
 
-        let identificadorVideo;
+        const primeiroSegmento =
+            segmentos[0]
+            ?? '';
+
+        let identificadorVideo =
+            null;
 
         if (
             ['youtu.be', 'www.youtu.be']
                 .includes(host)
         ) {
             identificadorVideo =
-                segmentos[0]
-                ?? null;
+                primeiroSegmento
+                || null;
         } else {
             const identificadorParametro =
                 url.searchParams.get(
@@ -464,16 +522,25 @@ class TestadorIncorporacao {
                 TestadorIncorporacao
                     .SEGMENTOS_VIDEO_YOUTUBE
                     .includes(
-                        segmentos[0]
-                        ?? '',
+                        primeiroSegmento,
                     )
             ) {
-                identificadorVideo =
+                const identificadorSegmento =
                     segmentos[1]
                     ?? null;
-            } else {
-                identificadorVideo =
-                    null;
+
+                if (
+                    primeiroSegmento !== 'embed'
+                    || !TestadorIncorporacao
+                        .IDENTIFICADORES_EMBED_NAO_VIDEO
+                        .includes(
+                            identificadorSegmento
+                            ?? '',
+                        )
+                ) {
+                    identificadorVideo =
+                        identificadorSegmento;
+                }
             }
         }
 
@@ -506,21 +573,19 @@ class TestadorIncorporacao {
      * @param {string} tipo Tipo da incorporação.
      * @param {string} etiqueta Etiqueta apresentada.
      * @param {string} identificador Identificador externo.
+     * @param {Set<string>} previsualizacoesApresentadas
+     *     Chaves já apresentadas durante o teste atual.
      *
      * @returns {boolean} Indica se a pré-visualização foi apresentada.
      *
      * @since 1.0.0
-     * @version 3.0.0
      */
     apresentarPrevisualizacao(
         tipo,
         etiqueta,
         identificador,
+        previsualizacoesApresentadas,
     ) {
-        if (!(this.seccao instanceof HTMLElement)) {
-            return false;
-        }
-
         const urlIncorporacao =
             this.criarUrlIncorporacao(
                 tipo,
@@ -544,33 +609,17 @@ class TestadorIncorporacao {
             `${tipo}:${identificador}`;
 
         if (
-            this.previsualizacoesApresentadas.has(
+            previsualizacoesApresentadas.has(
                 chavePrevisualizacao,
             )
         ) {
             return false;
         }
 
-        const contentorOpcao =
-            this.seccao.querySelector(
-                configuracaoVisual.seletorOpcao,
-            );
-
-        const contentorPrevisualizacao =
-            this.seccao.querySelector(
-                configuracaoVisual
-                    .seletorPrevisualizacao,
-            );
-
-        if (
-            !(contentorOpcao instanceof HTMLElement)
-            || !(contentorPrevisualizacao instanceof HTMLElement)
-        ) {
-            return false;
-        }
-
         const iframe =
-            document.createElement('iframe');
+            document.createElement(
+                'iframe',
+            );
 
         iframe.className =
             'w-100 border-0';
@@ -601,14 +650,17 @@ class TestadorIncorporacao {
         iframe.allowFullscreen =
             true;
 
-        contentorPrevisualizacao.replaceChildren(
-            iframe,
-        );
+        configuracaoVisual
+            .contentorPrevisualizacao
+            .replaceChildren(
+                iframe,
+            );
 
-        contentorOpcao.hidden =
-            false;
+        configuracaoVisual
+            .contentorOpcao
+            .hidden = false;
 
-        this.previsualizacoesApresentadas.add(
+        previsualizacoesApresentadas.add(
             chavePrevisualizacao,
         );
 
@@ -616,37 +668,40 @@ class TestadorIncorporacao {
     }
 
     /**
-     * Obtém os seletores visuais associados a um tipo.
+     * Obtém os elementos visuais associados a um tipo.
      *
      * @param {string} tipo Tipo da incorporação.
      *
      * @returns {{
-     *     seletorOpcao: string,
-     *     seletorPrevisualizacao: string
-     * }|null} Seletores ou nulo.
+     *     contentorOpcao: HTMLElement,
+     *     contentorPrevisualizacao: HTMLElement
+     * }|null} Elementos associados ou nulo.
      *
-     * @since 3.0.0
-     * @version 1.0.0
+     * @since 2.0.0
      */
     obterConfiguracaoVisual(tipo) {
+        if (!this.estaAtivo()) {
+            return null;
+        }
+
         switch (tipo) {
             case TestadorIncorporacao.TIPOS.videoYouTube:
                 return {
-                    seletorOpcao:
-                        '.opcao-incorporacao-video',
+                    contentorOpcao:
+                        this.opcaoVideo,
 
-                    seletorPrevisualizacao:
-                        '.previsualizacao-video',
+                    contentorPrevisualizacao:
+                        this.previsualizacaoVideo,
                 };
 
             case TestadorIncorporacao.TIPOS
                 .listaReproducaoYouTube:
                 return {
-                    seletorOpcao:
-                        '.opcao-incorporacao-lista-reproducao',
+                    contentorOpcao:
+                        this.opcaoListaReproducao,
 
-                    seletorPrevisualizacao:
-                        '.previsualizacao-lista-reproducao',
+                    contentorPrevisualizacao:
+                        this.previsualizacaoListaReproducao,
                 };
 
             default:
@@ -663,7 +718,6 @@ class TestadorIncorporacao {
      * @returns {string|null} Endereço da incorporação ou nulo.
      *
      * @since 2.0.0
-     * @version 2.0.0
      */
     criarUrlIncorporacao(
         tipo,
@@ -719,11 +773,8 @@ class TestadorIncorporacao {
      * @returns {void}
      *
      * @since 1.0.0
-     * @version 3.0.0
      */
-    atualizarEscolha(
-        evento,
-    ) {
+    atualizarEscolha(evento) {
         const campo =
             evento.target;
 
@@ -732,53 +783,20 @@ class TestadorIncorporacao {
             || !campo.classList.contains(
                 'escolha-incorporacao',
             )
-            || !(this.campoTipoIncorporacao instanceof HTMLInputElement)
+            || !campo.checked
+            || !Object.values(
+                TestadorIncorporacao.TIPOS,
+            ).includes(
+                campo.value,
+            )
+            || !(this.campoTipoIncorporacao
+                instanceof HTMLInputElement)
         ) {
             return;
         }
 
         this.campoTipoIncorporacao.value =
             campo.value;
-    }
-
-    /**
-     * Apresenta o estado de carregamento.
-     *
-     * @returns {void}
-     *
-     * @since 2.0.0
-     * @version 2.0.0
-     */
-    apresentarCarregamento() {
-        if (!(this.areaEstado instanceof HTMLElement)) {
-            return;
-        }
-
-        const indicador =
-            document.createElement('span');
-
-        indicador.className =
-            'spinner-border spinner-border-sm';
-
-        indicador.setAttribute(
-            'role',
-            'status',
-        );
-
-        indicador.setAttribute(
-            'aria-hidden',
-            'true',
-        );
-
-        this.areaEstado.className =
-            'estado-teste-incorporacao small mb-2';
-
-        this.areaEstado.replaceChildren(
-            indicador,
-            document.createTextNode(
-                ' A gerar pré-visualizações...',
-            ),
-        );
     }
 
     /**
@@ -790,7 +808,6 @@ class TestadorIncorporacao {
      * @returns {void}
      *
      * @since 2.0.0
-     * @version 2.0.0
      */
     apresentarEstado(
         mensagem,
@@ -803,14 +820,16 @@ class TestadorIncorporacao {
         this.areaEstado.textContent =
             mensagem;
 
-        this.areaEstado.className = [
-            'estado-teste-incorporacao',
-            'small',
-            'mb-2',
+        this.areaEstado.classList.remove(
+            'text-success',
+            'text-warning',
+        );
+
+        this.areaEstado.classList.add(
             tipo === 'sucesso'
                 ? 'text-success'
                 : 'text-warning',
-        ].join(' ');
+        );
     }
 
     /**
@@ -819,111 +838,40 @@ class TestadorIncorporacao {
      * @returns {void}
      *
      * @since 1.0.0
-     * @version 3.0.0
      */
     repor() {
-        if (!(this.seccao instanceof HTMLElement)) {
+        if (!this.estaAtivo()) {
             return;
         }
 
-        if (this.contentorResultados instanceof HTMLElement) {
-            this.contentorResultados.hidden =
-                true;
-        }
+        this.contentorResultados.hidden =
+            true;
 
-        [
-            {
-                seletorOpcao:
-                    '.opcao-incorporacao-video',
+        this.opcaoVideo.hidden =
+            true;
 
-                seletorPrevisualizacao:
-                    '.previsualizacao-video',
-            },
-            {
-                seletorOpcao:
-                    '.opcao-incorporacao-lista-reproducao',
+        this.opcaoListaReproducao.hidden =
+            true;
 
-                seletorPrevisualizacao:
-                    '.previsualizacao-lista-reproducao',
-            },
-        ].forEach((configuracao) => {
-            const contentorOpcao =
-                this.seccao.querySelector(
-                    configuracao.seletorOpcao,
-                );
+        this.previsualizacaoVideo
+            .replaceChildren();
 
-            const contentorPrevisualizacao =
-                this.seccao.querySelector(
-                    configuracao.seletorPrevisualizacao,
-                );
+        this.previsualizacaoListaReproducao
+            .replaceChildren();
 
-            if (contentorOpcao instanceof HTMLElement) {
-                contentorOpcao.hidden =
-                    true;
-            }
+        this.areaEstado.textContent =
+            '';
 
-            if (
-                contentorPrevisualizacao
-                instanceof HTMLElement
-            ) {
-                contentorPrevisualizacao.replaceChildren();
-            }
-        });
-
-        if (this.areaEstado instanceof HTMLElement) {
-            this.areaEstado.textContent =
-                '';
-
-            this.areaEstado.className =
-                'estado-teste-incorporacao small mb-2';
-        }
-
-        const opcaoLigacao =
-            this.seccao.querySelector(
-                `.escolha-incorporacao[value="${TestadorIncorporacao.TIPOS.ligacao}"]`,
-            );
-
-        if (opcaoLigacao instanceof HTMLInputElement) {
-            opcaoLigacao.checked =
-                true;
-        }
-
-        if (
-            this.campoTipoIncorporacao
-            instanceof HTMLInputElement
-        ) {
-            this.campoTipoIncorporacao.value =
-                TestadorIncorporacao.TIPOS.ligacao;
-        }
-
-        this.previsualizacoesApresentadas.clear();
-    }
-
-    /**
-     * Remove os eventos associados ao testador.
-     *
-     * @returns {void}
-     *
-     * @since 2.0.0
-     * @version 1.0.0
-     */
-    destruir() {
-        if (!this.iniciado) {
-            return;
-        }
-
-        this.botaoTestar?.removeEventListener(
-            'click',
-            this.aoClicarTestar,
+        this.areaEstado.classList.remove(
+            'text-success',
+            'text-warning',
         );
 
-        this.contentorResultados?.removeEventListener(
-            'change',
-            this.aoAlterarEscolha,
-        );
+        this.opcaoLigacao.checked =
+            true;
 
-        this.iniciado =
-            false;
+        this.campoTipoIncorporacao.value =
+            TestadorIncorporacao.TIPOS.ligacao;
     }
 }
 

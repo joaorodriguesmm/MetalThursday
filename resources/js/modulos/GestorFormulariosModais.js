@@ -8,11 +8,10 @@ import ValidadorFormulario from './ValidadorFormulario';
  * configurado.
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 class GestorFormulariosModais {
     /**
-     * Cria um gestor de formulários de janelas modais.
+     * Cria e inicializa os formulários de janelas modais.
      *
      * Cada configuração deve possuir:
      *
@@ -24,10 +23,10 @@ class GestorFormulariosModais {
      *
      * @param {Array<object>} configuracoesModais
      *     Configurações dos formulários.
-     * @throws {TypeError} Quando as configurações não são uma lista.
+     *
+     * @throws {TypeError} Quando as configurações são inválidas.
      *
      * @since 1.0.0
-     * @version 2.0.0
      */
     constructor(configuracoesModais) {
         if (!Array.isArray(configuracoesModais)) {
@@ -36,234 +35,166 @@ class GestorFormulariosModais {
             );
         }
 
-        this.configuracoesModais =
-            configuracoesModais;
+        const formulariosConfigurados = new Set();
 
-        this.registosFormularios =
-            new Map();
-
-        this.iniciado =
-            false;
-
-        this.iniciar();
-    }
-
-    /**
-     * Inicia os formulários configurados.
-     *
-     * @returns {void}
-     *
-     * @since 1.0.0
-     * @version 2.0.0
-     */
-    iniciar() {
-        if (this.iniciado) {
-            return;
-        }
-
-        this.configuracoesModais.forEach(
-            (configuracao) => {
-                this.inicializarFormulario(
+        configuracoesModais.forEach((configuracao) => {
+            const configuracaoNormalizada =
+                this.normalizarConfiguracao(
                     configuracao,
                 );
-            },
-        );
 
-        this.iniciado =
-            true;
+            if (
+                formulariosConfigurados.has(
+                    configuracaoNormalizada.idFormulario,
+                )
+            ) {
+                throw new TypeError(
+                    `O formulário "${configuracaoNormalizada.idFormulario}" está configurado mais do que uma vez.`,
+                );
+            }
+
+            formulariosConfigurados.add(
+                configuracaoNormalizada.idFormulario,
+            );
+
+            this.inicializarFormulario(
+                configuracaoNormalizada,
+            );
+        });
     }
 
     /**
-     * Inicializa um formulário configurado.
+     * Inicializa um formulário configurado quando este existe no documento.
      *
-     * @param {object} configuracao Configuração do formulário.
+     * @param {object} configuracao Configuração normalizada.
      *
      * @returns {void}
      *
      * @since 2.0.0
-     * @version 2.0.0
      */
-    inicializarFormulario(
-        configuracao,
-    ) {
-        if (!this.eConfiguracaoValida(configuracao)) {
-            throw new TypeError(
-                'Foi recebida uma configuração de formulário modal inválida.',
-            );
-        }
-
-        const formulario =
-            document.getElementById(
-                configuracao.idFormulario,
-            );
+    inicializarFormulario(configuracao) {
+        const formulario = document.getElementById(
+            configuracao.idFormulario,
+        );
 
         if (!(formulario instanceof HTMLFormElement)) {
             return;
         }
 
-        if (
-            this.registosFormularios.has(
-                formulario,
-            )
-        ) {
-            return;
-        }
+        const tratadorAjax = new TratadorFormularioAjax(
+            configuracao.idFormulario,
+            configuracao.url,
+            configuracao.aoSucesso,
+        );
 
-        const tratadorAjax =
-            new TratadorFormularioAjax(
-                configuracao.idFormulario,
-                configuracao.url,
-                async (dadosResposta) => {
-                    await this.executarAcaoSucesso(
-                        configuracao,
-                        dadosResposta,
-                    );
-                },
-            );
-
-        const validador =
-            new ValidadorFormulario(
-                formulario,
-                {
-                    regras:
-                        configuracao.regrasValidacao
-                        ?? {},
-
-                    mensagens:
-                        configuracao.mensagensValidacao
-                        ?? {},
-
-                    aoSucesso: () => {
-                        /*
-                         * A promessa não é devolvida porque o validador exige
-                         * uma função de sucesso síncrona.
-                         */
-                        tratadorAjax.submeter();
-                    },
-                },
-            );
-
-        this.registosFormularios.set(
+        new ValidadorFormulario(
             formulario,
-            validador,
+            {
+                regras: configuracao.regrasValidacao,
+                mensagens:
+                    configuracao.mensagensValidacao,
+
+                aoSucesso: () => {
+                    void tratadorAjax.submeter();
+                },
+            },
         );
     }
 
     /**
-     * Executa a função configurada para uma submissão bem-sucedida.
+     * Valida e normaliza a configuração de um formulário modal.
      *
-     * @param {object} configuracao Configuração do formulário.
-     * @param {unknown} dadosResposta Dados devolvidos pelo servidor.
+     * @param {unknown} configuracao Configuração recebida.
      *
-     * @returns {Promise<void>}
+     * @returns {{
+     *     idFormulario: string,
+     *     url: string,
+     *     regrasValidacao: object,
+     *     mensagensValidacao: object,
+     *     aoSucesso: Function|null
+     * }} Configuração normalizada.
      *
-     * @since 2.0.0
-     * @version 1.0.0
-     */
-    async executarAcaoSucesso(
-        configuracao,
-        dadosResposta,
-    ) {
-        if (
-            typeof configuracao.aoSucesso
-            !== 'function'
-        ) {
-            return;
-        }
-
-        await configuracao.aoSucesso(
-            dadosResposta,
-        );
-    }
-
-    /**
-     * Verifica se uma configuração pode ser utilizada.
-     *
-     * @param {unknown} configuracao Configuração a verificar.
-     *
-     * @returns {boolean} Verdadeiro quando a configuração é válida.
+     * @throws {TypeError} Quando a configuração é inválida.
      *
      * @since 2.0.0
-     * @version 2.0.0
      */
-    eConfiguracaoValida(
-        configuracao,
-    ) {
-        if (
-            typeof configuracao !== 'object'
-            || configuracao === null
-            || Array.isArray(configuracao)
-        ) {
-            return false;
+    normalizarConfiguracao(configuracao) {
+        if (!this.eObjeto(configuracao)) {
+            throw new TypeError(
+                'Foi recebida uma configuração de formulário modal inválida.',
+            );
         }
 
         if (
             typeof configuracao.idFormulario !== 'string'
             || configuracao.idFormulario.trim() === ''
         ) {
-            return false;
+            throw new TypeError(
+                'Cada formulário modal deve possuir um identificador válido.',
+            );
         }
 
         if (
             typeof configuracao.url !== 'string'
             || configuracao.url.trim() === ''
         ) {
-            return false;
+            throw new TypeError(
+                'Cada formulário modal deve possuir um endereço de submissão válido.',
+            );
         }
+
+        const regrasValidacao =
+            configuracao.regrasValidacao ?? {};
+
+        const mensagensValidacao =
+            configuracao.mensagensValidacao ?? {};
 
         if (
-            configuracao.aoSucesso !== undefined
-            && configuracao.aoSucesso !== null
-            && typeof configuracao.aoSucesso !== 'function'
+            !this.eObjeto(regrasValidacao)
+            || !this.eObjeto(mensagensValidacao)
         ) {
-            return false;
+            throw new TypeError(
+                'As regras e mensagens de validação dos formulários modais devem ser objetos.',
+            );
         }
 
-        return this.eObjetoOpcional(
-            configuracao.regrasValidacao,
-        )
-            && this.eObjetoOpcional(
-                configuracao.mensagensValidacao,
+        const aoSucesso =
+            configuracao.aoSucesso ?? null;
+
+        if (
+            aoSucesso !== null
+            && typeof aoSucesso !== 'function'
+        ) {
+            throw new TypeError(
+                'A função de sucesso do formulário modal é inválida.',
             );
+        }
+
+        return {
+            idFormulario:
+                configuracao.idFormulario.trim(),
+
+            url: configuracao.url.trim(),
+
+            regrasValidacao,
+            mensagensValidacao,
+            aoSucesso,
+        };
     }
 
     /**
-     * Verifica se um valor opcional é um objeto válido.
+     * Verifica se um valor é um objeto não nulo.
      *
      * @param {unknown} valor Valor recebido.
      *
-     * @returns {boolean} Verdadeiro quando o valor é omitido ou é um objeto.
-     *
-     * @since 3.0.0
-     * @version 1.0.0
-     */
-    eObjetoOpcional(valor) {
-        return valor === undefined
-            || valor === null
-            || (
-                typeof valor === 'object'
-                && !Array.isArray(valor)
-            );
-    }
-
-    /**
-     * Remove os eventos associados aos formulários.
-     *
-     * @returns {void}
+     * @returns {boolean} Verdadeiro quando o valor é um objeto simples.
      *
      * @since 2.0.0
-     * @version 2.0.0
      */
-    destruir() {
-        this.registosFormularios.forEach(
-            (validador) => {
-                validador.destruir();
-            },
-        );
-
-        this.registosFormularios.clear();
-        this.iniciado =
-            false;
+    eObjeto(valor) {
+        return typeof valor === 'object'
+            && valor !== null
+            && !Array.isArray(valor);
     }
 }
 

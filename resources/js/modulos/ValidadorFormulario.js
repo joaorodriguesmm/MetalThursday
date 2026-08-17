@@ -6,190 +6,89 @@
  * servidor.
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 class ValidadorFormulario {
     /**
-     * Cria o validador.
+     * Cria e inicializa o validador.
      *
-     * @param {string|HTMLFormElement} formularioOuSeletor - Formulário ou
-     * respetivo seletor CSS.
-     * @param {Object} configuracao - Configuração do validador.
-     * @param {Object<string, Array<string|Function>>} configuracao.regras -
-     * Regras organizadas pelo atributo `name` dos campos.
-     * @param {Object<string, Object<string, string>>}
-     * [configuracao.mensagens={}] - Mensagens personalizadas.
-     * @param {Function|null} [configuracao.aoSucesso=null] - Função executada
-     * quando o formulário é válido.
-     * @param {Function|null} [configuracao.validadorPersonalizado=null] -
-     * Validação adicional do formulário.
-     * @param {Array<string>} [configuracao.eventosTempoReal] - Eventos usados
-     * depois da primeira tentativa de submissão.
+     * @param {string|HTMLFormElement} formularioOuSeletor Formulário ou seletor.
+     * @param {object} configuracao Configuração do validador.
      *
      * @throws {TypeError} Quando o formulário ou a configuração são inválidos.
      *
      * @since 1.0.0
-     * @version 2.0.0
      */
-    constructor(
-        formularioOuSeletor,
-        configuracao = {},
-    ) {
-        /**
-         * Formulário gerido.
-         *
-         * @type {HTMLFormElement}
-         *
-         * @since 1.0.0
-         * @version 2.0.0
-         */
-        this.formulario = this.obterFormulario(
-            formularioOuSeletor,
-        );
-
-        /**
-         * Configuração normalizada.
-         *
-         * @type {Readonly<Object>}
-         *
-         * @since 2.0.0
-         * @version 1.0.0
-         */
-        this.configuracao = this.normalizarConfiguracao(
-            configuracao,
-        );
-
-        /**
-         * Regras de validação.
-         *
-         * @type {Readonly<Object<string, ReadonlyArray<string|Function>>>}
-         *
-         * @since 1.0.0
-         * @version 2.0.0
-         */
+    constructor(formularioOuSeletor, configuracao = {}) {
+        this.formulario = this.obterFormulario(formularioOuSeletor);
+        this.configuracao = this.normalizarConfiguracao(configuracao);
         this.regras = this.configuracao.regras;
-
-        /**
-         * Mensagens personalizadas.
-         *
-         * @type {Readonly<Object<string, Object<string, string>>>}
-         *
-         * @since 1.0.0
-         * @version 2.0.0
-         */
         this.mensagens = this.configuracao.mensagens;
-
-        /**
-         * Erros atualmente registados.
-         *
-         * @type {Map<string, Array<string>>}
-         *
-         * @since 1.0.0
-         * @version 2.0.0
-         */
         this.erros = new Map();
-
-        /**
-         * Indica se já ocorreu uma tentativa de submissão.
-         *
-         * @type {boolean}
-         *
-         * @since 1.0.0
-         * @version 2.0.0
-         */
         this.tentouSubmeter = false;
+        this.dependencias = this.criarMapaDependencias(this.regras);
 
-        /**
-         * Referências estáveis dos manipuladores.
-         *
-         * @since 2.0.0
-         * @version 1.0.0
-         */
-        this.manipularSubmissao =
-            this.manipularSubmissao.bind(this);
+        this.formulario.setAttribute('novalidate', '');
 
-        this.manipularInteracao =
-            this.manipularInteracao.bind(this);
+        this.formulario.addEventListener('submit', (evento) => {
+            this.manipularSubmissao(evento);
+        });
 
-        this.manipularReposicao =
-            this.manipularReposicao.bind(this);
+        this.formulario.addEventListener('reset', () => {
+            this.manipularReposicao();
+        });
 
-        this.formulario.setAttribute(
-            'novalidate',
-            '',
-        );
-
-        this.configurarEventos();
+        this.configuracao.eventosTempoReal.forEach((tipoEvento) => {
+            this.formulario.addEventListener(tipoEvento, (evento) => {
+                this.manipularInteracao(evento);
+            });
+        });
     }
 
     /**
      * Valida todos os campos configurados.
      *
-     * @param {Object} opcoes - Opções da validação.
-     * @param {boolean} [opcoes.focarPrimeiroErro=true] - Indica se o primeiro
-     * campo inválido deve receber foco.
+     * @param {object} opcoes Opções da validação.
+     * @param {boolean} [opcoes.focarPrimeiroErro=true]
+     *     Indica se o primeiro campo inválido deve receber foco.
      *
-     * @return {boolean} Verdadeiro quando todos os campos são válidos.
+     * @returns {boolean} Verdadeiro quando todos os campos são válidos.
      *
      * @since 1.0.0
-     * @version 2.0.0
      */
-    validarTudo({
-        focarPrimeiroErro = true,
-    } = {}) {
+    validarTudo({ focarPrimeiroErro = true } = {}) {
         let formularioValido = true;
-        let primeiroCampoInvalido = null;
 
-        Object.keys(this.regras).forEach(
-            (nomeCampo) => {
-                const campoValido =
-                    this.validarCampoPorNome(
-                        nomeCampo,
-                        this.regras[nomeCampo],
-                        this.mensagens[nomeCampo] ?? {},
-                    );
+        Object.keys(this.regras).forEach((nomeCampo) => {
+            const campoValido = this.validarCampoPorNome(
+                nomeCampo,
+                this.regras[nomeCampo],
+                this.mensagens[nomeCampo] ?? {},
+            );
 
-                if (campoValido) {
-                    return;
-                }
-
+            if (!campoValido) {
                 formularioValido = false;
+            }
+        });
 
-                if (primeiroCampoInvalido === null) {
-                    primeiroCampoInvalido =
-                        this.obterCampos(nomeCampo)[0] ?? null;
-                }
-            },
-        );
-
-        if (
-            !formularioValido
-            && focarPrimeiroErro
-            && primeiroCampoInvalido instanceof HTMLElement
-        ) {
-            primeiroCampoInvalido.focus();
+        if (!formularioValido && focarPrimeiroErro) {
+            this.focarPrimeiroCampoInvalido();
         }
 
         return formularioValido;
     }
 
     /**
-     * Valida o campo indicado.
+     * Valida um campo com as regras configuradas.
      *
      * @param {string|HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement}
-     * campoOuNome - Campo ou respetivo nome.
+     *     campoOuNome Campo ou respetivo nome.
      *
-     * @return {boolean} Verdadeiro quando o campo é válido.
-     *
-     * @throws {TypeError} Quando não é possível determinar o campo.
+     * @returns {boolean} Verdadeiro quando o campo é válido.
      *
      * @since 1.0.0
-     * @version 2.0.0
      */
     validarCampo(campoOuNome) {
-        const nomeCampo = this.obterNomeCampo(
-            campoOuNome,
-        );
+        const nomeCampo = this.obterNomeCampo(campoOuNome);
 
         return this.validarCampoPorNome(
             nomeCampo,
@@ -202,28 +101,19 @@ class ValidadorFormulario {
      * Valida um campo com regras e mensagens específicas.
      *
      * @param {string|HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement}
-     * campoOuNome - Campo ou respetivo nome.
-     * @param {Array<string|Function>} regras - Regras temporárias.
-     * @param {Object<string, string>} [mensagens={}] - Mensagens temporárias.
+     *     campoOuNome Campo ou respetivo nome.
+     * @param {Array<string|Function>} regras Regras temporárias.
+     * @param {Record<string, string>} [mensagens={}] Mensagens temporárias.
      *
-     * @return {boolean} Verdadeiro quando o campo é válido.
+     * @returns {boolean} Verdadeiro quando o campo é válido.
      *
      * @since 1.0.0
-     * @version 2.0.0
      */
-    validarCampoComRegras(
-        campoOuNome,
-        regras,
-        mensagens = {},
-    ) {
-        const nomeCampo = this.obterNomeCampo(
-            campoOuNome,
-        );
+    validarCampoComRegras(campoOuNome, regras, mensagens = {}) {
+        const nomeCampo = this.obterNomeCampo(campoOuNome);
 
-        this.validarListaRegras(
-            nomeCampo,
-            regras,
-        );
+        this.validarListaRegras(nomeCampo, regras);
+        this.validarMensagensCampo(nomeCampo, mensagens);
 
         return this.validarCampoPorNome(
             nomeCampo,
@@ -235,158 +125,91 @@ class ValidadorFormulario {
     /**
      * Regista manualmente um erro num campo.
      *
-     * Pode ser utilizado por validadores personalizados.
+     * @param {string} nomeCampo Nome do campo.
+     * @param {string} mensagem Mensagem apresentada.
      *
-     * @param {string} nomeCampo - Nome do campo.
-     * @param {string} mensagem - Mensagem apresentada.
-     *
-     * @return {void}
+     * @returns {void}
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
-    definirErro(
-        nomeCampo,
-        mensagem,
-    ) {
-        const mensagemNormalizada = String(
-            mensagem,
-        ).trim();
+    definirErro(nomeCampo, mensagem) {
+        const nomeNormalizado = this.normalizarNomeCampo(nomeCampo);
 
-        if (mensagemNormalizada === '') {
+        if (typeof mensagem !== 'string' || mensagem.trim() === '') {
             throw new TypeError(
-                'A mensagem de erro não pode estar vazia.',
+                'A mensagem de erro deve ser uma cadeia de caracteres não vazia.',
             );
         }
 
-        const campos = this.obterCampos(nomeCampo);
+        const mensagemNormalizada = mensagem.trim();
+        const campos = this.obterCampos(nomeNormalizado, true);
 
-        this.erros.set(
-            nomeCampo,
-            [mensagemNormalizada],
-        );
-
-        this.apresentarErros(
-            campos,
-            [mensagemNormalizada],
-        );
+        this.erros.set(nomeNormalizado, [mensagemNormalizada]);
+        this.apresentarErros(campos, [mensagemNormalizada]);
     }
 
     /**
      * Limpa o erro de um campo.
      *
-     * @param {string} nomeCampo - Nome do campo.
+     * @param {string} nomeCampo Nome do campo.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     limparErroCampo(nomeCampo) {
-        const campos = this.obterCampos(nomeCampo);
+        const nomeNormalizado = this.normalizarNomeCampo(nomeCampo);
+        const campos = this.obterCampos(nomeNormalizado, true);
 
-        this.erros.delete(nomeCampo);
-
-        this.apresentarErros(
-            campos,
-            [],
-        );
+        this.erros.delete(nomeNormalizado);
+        this.apresentarErros(campos, []);
     }
 
     /**
      * Obtém uma cópia dos erros atuais.
      *
-     * @return {Object<string, Array<string>>} Erros por campo.
+     * @returns {Record<string, Array<string>>} Erros por campo.
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     obterErros() {
         return Object.fromEntries(
-            Array.from(
-                this.erros.entries(),
-                ([nomeCampo, mensagens]) => [
-                    nomeCampo,
-                    [...mensagens],
-                ],
-            ),
-        );
-    }
-
-    /**
-     * Remove os eventos configurados pelo módulo.
-     *
-     * @return {void}
-     *
-     * @since 2.0.0
-     * @version 1.0.0
-     */
-    destruir() {
-        this.formulario.removeEventListener(
-            'submit',
-            this.manipularSubmissao,
-        );
-
-        this.formulario.removeEventListener(
-            'reset',
-            this.manipularReposicao,
-        );
-
-        this.configuracao.eventosTempoReal.forEach(
-            (tipoEvento) => {
-                this.formulario.removeEventListener(
-                    tipoEvento,
-                    this.manipularInteracao,
-                );
-            },
+            Array.from(this.erros.entries(), ([nomeCampo, mensagens]) => [
+                nomeCampo,
+                [...mensagens],
+            ]),
         );
     }
 
     /**
      * Valida um campo pelo respetivo nome.
      *
-     * @param {string} nomeCampo - Nome do campo.
-     * @param {Array<string|Function>} regras - Regras aplicáveis.
-     * @param {Object<string, string>} mensagens - Mensagens personalizadas.
+     * @param {string} nomeCampo Nome do campo.
+     * @param {Array<string|Function>} regras Regras aplicáveis.
+     * @param {Record<string, string>} mensagens Mensagens personalizadas.
      *
-     * @return {boolean} Verdadeiro quando o campo é válido.
+     * @returns {boolean} Verdadeiro quando o campo é válido.
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
-    validarCampoPorNome(
-        nomeCampo,
-        regras,
-        mensagens,
-    ) {
+    validarCampoPorNome(nomeCampo, regras, mensagens) {
         const campos = this.obterCampos(nomeCampo);
 
         if (campos.length === 0) {
             throw new Error(
-                `Não foi encontrado nenhum campo com o nome "${nomeCampo}".`,
+                `Não foi encontrado nenhum campo ativo com o nome "${nomeCampo}".`,
             );
         }
 
         const valor = this.obterValor(campos);
+        const campoObrigatorio = regras.some((regra) => (
+            typeof regra === 'string'
+            && this.analisarRegra(regra).nome === 'obrigatorio'
+        ));
 
-        const campoObrigatorio = regras.some(
-            (regra) => (
-                typeof regra === 'string'
-                && this.analisarRegra(regra).nome
-                    === 'obrigatorio'
-            ),
-        );
-
-        if (
-            !campoObrigatorio
-            && this.estaVazio(valor)
-        ) {
+        if (!campoObrigatorio && this.estaVazio(valor)) {
             this.erros.delete(nomeCampo);
-
-            this.apresentarErros(
-                campos,
-                [],
-            );
+            this.apresentarErros(campos, []);
 
             return true;
         }
@@ -411,24 +234,17 @@ class ValidadorFormulario {
 
             if (mensagem !== null) {
                 errosCampo.push(mensagem);
-
                 break;
             }
         }
 
         if (errosCampo.length > 0) {
-            this.erros.set(
-                nomeCampo,
-                errosCampo,
-            );
+            this.erros.set(nomeCampo, errosCampo);
         } else {
             this.erros.delete(nomeCampo);
         }
 
-        this.apresentarErros(
-            campos,
-            errosCampo,
-        );
+        this.apresentarErros(campos, errosCampo);
 
         return errosCampo.length === 0;
     }
@@ -436,31 +252,12 @@ class ValidadorFormulario {
     /**
      * Valida uma regra textual.
      *
-     * @param {string} nomeCampo - Nome do campo.
-     * @param {Array<HTMLElement>} campos - Campos associados.
-     * @param {mixed} valor - Valor recebido.
-     * @param {string} regra - Regra textual.
-     * @param {Object<string, string>} mensagens - Mensagens personalizadas.
-     *
-     * @return {string|null} Mensagem de erro ou nulo.
-     *
-     * @throws {Error} Quando a regra não é reconhecida.
+     * @returns {string|null} Mensagem de erro ou nulo.
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
-    validarRegraTextual(
-        nomeCampo,
-        campos,
-        valor,
-        regra,
-        mensagens,
-    ) {
-        const {
-            nome,
-            parametro,
-        } = this.analisarRegra(regra);
-
+    validarRegraTextual(nomeCampo, campos, valor, regra, mensagens) {
+        const { nome, parametro } = this.analisarRegra(regra);
         let valido;
 
         switch (nome) {
@@ -474,28 +271,19 @@ class ValidadorFormulario {
 
             case 'minimo':
                 valido = this.obterComprimento(valor)
-                    >= this.obterParametroNumerico(
-                        nome,
-                        parametro,
-                    );
+                    >= this.obterParametroNumerico(nome, parametro);
                 break;
 
             case 'maximo':
                 valido = this.obterComprimento(valor)
-                    <= this.obterParametroNumerico(
-                        nome,
-                        parametro,
-                    );
+                    <= this.obterParametroNumerico(nome, parametro);
                 break;
 
             case 'confirmado':
                 valido = this.valoresIguais(
                     valor,
                     this.obterValor(
-                        this.obterCamposObrigatorios(
-                            parametro,
-                            nome,
-                        ),
+                        this.obterCamposObrigatorios(parametro, nome),
                     ),
                 );
                 break;
@@ -504,10 +292,7 @@ class ValidadorFormulario {
                 valido = !this.valoresIguais(
                     valor,
                     this.obterValor(
-                        this.obterCamposObrigatorios(
-                            parametro,
-                            nome,
-                        ),
+                        this.obterCamposObrigatorios(parametro, nome),
                     ),
                 );
                 break;
@@ -519,58 +304,37 @@ class ValidadorFormulario {
             case 'posterior_ou_igual': {
                 const outraData = this.criarData(
                     this.obterValor(
-                        this.obterCamposObrigatorios(
-                            parametro,
-                            nome,
-                        ),
+                        this.obterCamposObrigatorios(parametro, nome),
                     ),
                 );
-
                 const dataAtual = this.criarData(valor);
 
-                valido = (
-                    dataAtual === null
+                valido = dataAtual === null
                     || outraData === null
-                    || dataAtual.getTime()
-                        >= outraData.getTime()
-                );
-
+                    || dataAtual.getTime() >= outraData.getTime();
                 break;
             }
 
             case 'maiuscula':
-                valido = (
-                    typeof valor === 'string'
-                    && /\p{Lu}/u.test(valor)
-                );
+                valido = typeof valor === 'string' && /\p{Lu}/u.test(valor);
                 break;
 
             case 'minuscula':
-                valido = (
-                    typeof valor === 'string'
-                    && /\p{Ll}/u.test(valor)
-                );
+                valido = typeof valor === 'string' && /\p{Ll}/u.test(valor);
                 break;
 
             case 'numero':
-                valido = (
-                    typeof valor === 'string'
-                    && /\p{N}/u.test(valor)
-                );
+                valido = typeof valor === 'string' && /\p{N}/u.test(valor);
                 break;
 
             case 'simbolo':
-                valido = (
-                    typeof valor === 'string'
-                    && /[^\p{L}\p{N}\s]/u.test(valor)
-                );
+                valido = typeof valor === 'string'
+                    && /[^\p{L}\p{N}\s]/u.test(valor);
                 break;
 
             case 'inteiro':
-                valido = (
-                    typeof valor === 'string'
-                    && /^-?\d+$/.test(valor.trim())
-                );
+                valido = typeof valor === 'string'
+                    && /^-?\d+$/u.test(valor.trim());
                 break;
 
             default:
@@ -579,12 +343,9 @@ class ValidadorFormulario {
                 );
         }
 
-        if (valido) {
-            return null;
-        }
-
-        return mensagens[nome]
-            ?? this.criarMensagemPadrao(
+        return valido
+            ? null
+            : mensagens[nome] ?? this.criarMensagemPadrao(
                 nomeCampo,
                 campos,
                 nome,
@@ -595,28 +356,11 @@ class ValidadorFormulario {
     /**
      * Executa uma regra personalizada.
      *
-     * A regra pode devolver `true`, `null` ou `undefined` para indicar sucesso,
-     * `false` para uma mensagem genérica, ou uma string para uma mensagem
-     * específica.
-     *
-     * @param {Function} regra - Regra personalizada.
-     * @param {string} nomeCampo - Nome do campo.
-     * @param {Array<HTMLElement>} campos - Campos associados.
-     * @param {mixed} valor - Valor recebido.
-     *
-     * @return {string|null} Mensagem de erro ou nulo.
-     *
-     * @throws {TypeError} Quando o resultado não é reconhecido.
+     * @returns {string|null} Mensagem de erro ou nulo.
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
-    executarRegraPersonalizada(
-        regra,
-        nomeCampo,
-        campos,
-        valor,
-    ) {
+    executarRegraPersonalizada(regra, nomeCampo, campos, valor) {
         const resultado = regra({
             nomeCampo,
             campos: [...campos],
@@ -624,6 +368,12 @@ class ValidadorFormulario {
             formulario: this.formulario,
             validador: this,
         });
+
+        if (resultado instanceof Promise) {
+            throw new TypeError(
+                'Uma regra personalizada não pode ser assíncrona.',
+            );
+        }
 
         if (
             resultado === true
@@ -634,116 +384,146 @@ class ValidadorFormulario {
         }
 
         if (resultado === false) {
-            return `O campo '${this.obterNomeAmigavel(campos, nomeCampo)}' é inválido.`;
+            return `O campo '${this.obterNomeAmigavel(
+                campos,
+                nomeCampo,
+            )}' é inválido.`;
         }
 
-        if (typeof resultado === 'string') {
-            return resultado;
+        if (typeof resultado === 'string' && resultado.trim() !== '') {
+            return resultado.trim();
         }
 
         throw new TypeError(
-            'Uma regra personalizada deve devolver uma mensagem, um booleano ou nulo.',
+            'Uma regra personalizada deve devolver uma mensagem não vazia, um booleano ou nulo.',
         );
     }
 
     /**
      * Apresenta ou remove os erros de um conjunto de campos.
      *
-     * @param {Array<HTMLElement>} campos - Campos associados.
-     * @param {Array<string>} erros - Mensagens de erro.
+     * @param {Array<HTMLElement>} campos Campos associados.
+     * @param {Array<string>} erros Mensagens de erro.
      *
-     * @return {void}
+     * @returns {void}
      *
      * @since 1.0.0
-     * @version 3.0.0
      */
-    apresentarErros(
-        campos,
-        erros,
-    ) {
+    apresentarErros(campos, erros) {
         const possuiErro = erros.length > 0;
 
         campos.forEach((campo) => {
-            campo.classList.toggle(
-                'is-invalid',
-                possuiErro,
-            );
-
-            if (possuiErro) {
-                campo.setAttribute(
-                    'aria-invalid',
-                    'true',
-                );
-            } else {
-                campo.removeAttribute(
-                    'aria-invalid',
-                );
-            }
+            this.definirEstadoCampo(campo, possuiErro);
         });
 
-        const grupos = Array.from(
-            new Set(
-                campos
-                    .map(
-                        (campo) => campo.closest(
-                            '.grupo-campo-formulario',
-                        ),
-                    )
-                    .filter(
-                        (grupo) => grupo instanceof HTMLElement,
-                    ),
-            ),
-        );
-
-        grupos.forEach((grupo) => {
-            const elementoErro = grupo.querySelector(
-                '.invalid-feedback',
-            );
-
-            if (!(elementoErro instanceof HTMLElement)) {
-                return;
-            }
-
-            elementoErro.setAttribute(
-                'role',
-                'alert',
-            );
-
-            elementoErro.setAttribute(
-                'aria-live',
-                'polite',
-            );
-
-            elementoErro.textContent =
-                possuiErro ? erros[0] : '';
-
-            elementoErro.classList.toggle(
-                'd-block',
-                possuiErro,
-            );
+        this.obterElementosFeedback(campos).forEach((elementoFeedback) => {
+            elementoFeedback.textContent = possuiErro ? erros[0] : '';
+            elementoFeedback.classList.toggle('d-block', possuiErro);
+            elementoFeedback.style.removeProperty('display');
 
             if (possuiErro) {
-                elementoErro.removeAttribute(
-                    'hidden',
-                );
+                elementoFeedback.removeAttribute('hidden');
             } else {
-                elementoErro.setAttribute(
-                    'hidden',
-                    '',
-                );
+                elementoFeedback.setAttribute('hidden', '');
             }
         });
     }
 
     /**
+     * Atualiza o estado inválido de um campo e do respetivo Tom Select.
+     *
+     * @since 2.0.0
+     */
+    definirEstadoCampo(campo, possuiErro) {
+        campo.classList.toggle('is-invalid', possuiErro);
+
+        if (possuiErro) {
+            campo.setAttribute('aria-invalid', 'true');
+        } else {
+            campo.removeAttribute('aria-invalid');
+        }
+
+        if (!(campo instanceof HTMLSelectElement) || !campo.tomselect) {
+            return;
+        }
+
+        const wrapper = campo.tomselect.wrapper;
+        const controlo = campo.tomselect.control_input;
+
+        if (wrapper instanceof HTMLElement) {
+            wrapper.classList.toggle('is-invalid', possuiErro);
+        }
+
+        if (controlo instanceof HTMLElement) {
+            if (possuiErro) {
+                controlo.setAttribute('aria-invalid', 'true');
+            } else {
+                controlo.removeAttribute('aria-invalid');
+            }
+        }
+    }
+
+    /**
+     * Obtém os elementos de feedback associados aos campos.
+     *
+     * @returns {Array<HTMLElement>} Elementos únicos encontrados.
+     *
+     * @since 2.0.0
+     */
+    obterElementosFeedback(campos) {
+        return Array.from(new Set(
+            campos
+                .map((campo) => this.obterElementoFeedback(campo))
+                .filter((elemento) => elemento instanceof HTMLElement),
+        ));
+    }
+
+    /**
+     * Obtém o feedback correspondente a um campo.
+     *
+     * @returns {HTMLElement|null} Elemento encontrado ou nulo.
+     *
+     * @since 2.0.0
+     */
+    obterElementoFeedback(campo) {
+        const identificadores = (campo.getAttribute('aria-describedby') ?? '')
+            .split(/\s+/u)
+            .filter((identificador) => identificador !== '');
+
+        for (const identificador of identificadores) {
+            const elemento = document.getElementById(identificador);
+
+            if (
+                elemento instanceof HTMLElement
+                && this.formulario.contains(elemento)
+                && elemento.classList.contains('invalid-feedback')
+            ) {
+                return elemento;
+            }
+        }
+
+        if (campo.id.trim() !== '') {
+            const elemento = document.getElementById(`erro-${campo.id.trim()}`);
+
+            if (
+                elemento instanceof HTMLElement
+                && this.formulario.contains(elemento)
+                && elemento.classList.contains('invalid-feedback')
+            ) {
+                return elemento;
+            }
+        }
+
+        const grupo = campo.closest('.grupo-campo-formulario');
+        const feedback = grupo?.querySelector('.invalid-feedback');
+
+        return feedback instanceof HTMLElement ? feedback : null;
+    }
+
+    /**
      * Processa a submissão do formulário.
      *
-     * @param {SubmitEvent} evento - Evento de submissão.
-     *
-     * @return {void}
-     *
      * @since 1.0.0
-     * @version 2.0.0
      */
     manipularSubmissao(evento) {
         this.tentouSubmeter = true;
@@ -751,19 +531,16 @@ class ValidadorFormulario {
         const validacaoEstatica = this.validarTudo({
             focarPrimeiroErro: false,
         });
-
         let validacaoPersonalizada = true;
 
         if (
             validacaoEstatica
-            && typeof this.configuracao
-                .validadorPersonalizado === 'function'
+            && typeof this.configuracao.validadorPersonalizado === 'function'
         ) {
-            const resultado = this.configuracao
-                .validadorPersonalizado(
-                    this,
-                    this.formulario,
-                );
+            const resultado = this.configuracao.validadorPersonalizado(
+                this,
+                this.formulario,
+            );
 
             if (resultado instanceof Promise) {
                 throw new TypeError(
@@ -774,21 +551,13 @@ class ValidadorFormulario {
             validacaoPersonalizada = resultado !== false;
         }
 
-        if (
-            !validacaoEstatica
-            || !validacaoPersonalizada
-        ) {
+        if (!validacaoEstatica || !validacaoPersonalizada) {
             evento.preventDefault();
-
             this.focarPrimeiroCampoInvalido();
-
             return;
         }
 
-        if (
-            typeof this.configuracao.aoSucesso
-            !== 'function'
-        ) {
+        if (typeof this.configuracao.aoSucesso !== 'function') {
             return;
         }
 
@@ -809,165 +578,169 @@ class ValidadorFormulario {
     /**
      * Processa eventos de validação em tempo real.
      *
-     * @param {Event} evento - Evento ocorrido no formulário.
-     *
-     * @return {void}
-     *
      * @since 1.0.0
-     * @version 2.0.0
      */
     manipularInteracao(evento) {
-        if (!this.tentouSubmeter) {
+        if (!this.tentouSubmeter || !this.eCampoValidavel(evento.target)) {
             return;
         }
 
-        const campo = evento.target;
+        const nomeCampo = evento.target.name.trim();
 
-        if (!this.eCampoValidavel(campo)) {
+        if (nomeCampo === '') {
             return;
         }
 
-        if (!Object.hasOwn(this.regras, campo.name)) {
-            return;
+        if (Object.hasOwn(this.regras, nomeCampo)) {
+            this.validarCampo(nomeCampo);
         }
 
-        this.validarCampo(campo);
+        this.validarCamposDependentes(nomeCampo);
+    }
+
+    /**
+     * Revalida os campos cujo resultado depende do campo alterado.
+     *
+     * @since 2.0.0
+     */
+    validarCamposDependentes(nomeCampo) {
+        const dependentes = this.dependencias.get(nomeCampo);
+
+        dependentes?.forEach((nomeDependente) => {
+            if (this.obterCampos(nomeDependente).length === 0) {
+                this.limparErroCampo(nomeDependente);
+                return;
+            }
+
+            this.validarCampo(nomeDependente);
+        });
     }
 
     /**
      * Processa a reposição do formulário.
      *
-     * @return {void}
-     *
      * @since 2.0.0
-     * @version 1.0.0
      */
     manipularReposicao() {
-        window.setTimeout(
-            () => {
-                this.tentouSubmeter = false;
-
-                Object.keys(this.regras).forEach(
-                    (nomeCampo) => {
-                        this.limparErroCampo(nomeCampo);
-                    },
-                );
-            },
-            0,
-        );
+        window.setTimeout(() => {
+            this.tentouSubmeter = false;
+            this.limparTodosErros();
+        }, 0);
     }
 
     /**
-     * Configura os eventos do formulário.
-     *
-     * @return {void}
-     *
-     * @since 1.0.0
-     * @version 2.0.0
-     */
-    configurarEventos() {
-        this.formulario.addEventListener(
-            'submit',
-            this.manipularSubmissao,
-        );
-
-        this.formulario.addEventListener(
-            'reset',
-            this.manipularReposicao,
-        );
-
-        this.configuracao.eventosTempoReal.forEach(
-            (tipoEvento) => {
-                this.formulario.addEventListener(
-                    tipoEvento,
-                    this.manipularInteracao,
-                );
-            },
-        );
-    }
-
-    /**
-     * Foca o primeiro campo atualmente inválido.
-     *
-     * @return {void}
+     * Limpa todos os estados de validação existentes no formulário.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     */
+    limparTodosErros() {
+        this.erros.clear();
+
+        Array.from(this.formulario.elements).forEach((elemento) => {
+            if (this.eCampoValidavel(elemento)) {
+                this.definirEstadoCampo(elemento, false);
+            }
+        });
+
+        this.formulario.querySelectorAll('.invalid-feedback')
+            .forEach((elemento) => {
+                if (!(elemento instanceof HTMLElement)) {
+                    return;
+                }
+
+                elemento.textContent = '';
+                elemento.classList.remove('d-block');
+                elemento.style.removeProperty('display');
+                elemento.setAttribute('hidden', '');
+            });
+    }
+
+    /**
+     * Foca o primeiro campo inválido de acordo com a ordem da DOM.
+     *
+     * @since 2.0.0
      */
     focarPrimeiroCampoInvalido() {
-        for (const nomeCampo of this.erros.keys()) {
-            const campo = this.obterCampos(nomeCampo)
-                .find(
-                    (elemento) => (
-                        elemento instanceof HTMLElement
-                        && !elemento.hasAttribute('hidden')
-                    ),
-                );
+        const campo = Array.from(this.formulario.elements).find((elemento) => (
+            this.eCampoValidavel(elemento)
+            && elemento.getAttribute('aria-invalid') === 'true'
+            && this.eCampoFocavel(elemento)
+        ));
 
-            if (campo instanceof HTMLElement) {
-                campo.focus();
-
-                return;
-            }
+        if (this.eCampoValidavel(campo)) {
+            this.focarCampo(campo);
         }
+    }
+
+    /**
+     * Determina se um campo pode receber foco de forma útil.
+     *
+     * @returns {boolean} Verdadeiro quando o campo é focável.
+     *
+     * @since 2.0.0
+     */
+    eCampoFocavel(campo) {
+        return !campo.disabled
+            && !(campo instanceof HTMLInputElement && campo.type === 'hidden')
+            && campo.closest('[hidden], .d-none') === null;
+    }
+
+    /**
+     * Coloca o foco num campo inválido.
+     *
+     * @since 2.0.0
+     */
+    focarCampo(campo) {
+        if (
+            campo instanceof HTMLSelectElement
+            && campo.tomselect
+            && typeof campo.tomselect.focus === 'function'
+        ) {
+            campo.tomselect.focus();
+            return;
+        }
+
+        campo.focus();
     }
 
     /**
      * Obtém os campos associados a um nome.
      *
-     * @param {string} nomeCampo - Nome procurado.
+     * @param {string} nomeCampo Nome procurado.
+     * @param {boolean} [incluirDesativados=false]
+     *     Indica se os campos desativados devem ser incluídos.
      *
-     * @return {Array<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>}
-     * Campos encontrados.
+     * @returns {Array<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>}
+     *     Campos encontrados.
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
-    obterCampos(nomeCampo) {
-        return Array.from(
-            this.formulario.elements,
-        ).filter(
-            (elemento) => (
-                this.eCampoValidavel(elemento)
-                && elemento.name === nomeCampo
-                && !elemento.disabled
-            ),
-        );
+    obterCampos(nomeCampo, incluirDesativados = false) {
+        return Array.from(this.formulario.elements).filter((elemento) => (
+            this.eCampoValidavel(elemento)
+            && elemento.name === nomeCampo
+            && (incluirDesativados || !elemento.disabled)
+        ));
     }
 
     /**
      * Obtém obrigatoriamente os campos associados.
      *
-     * @param {string|null} nomeCampo - Nome procurado.
-     * @param {string} regra - Regra que exige o campo.
-     *
-     * @return {Array<HTMLElement>} Campos encontrados.
-     *
-     * @throws {Error} Quando o parâmetro ou o campo não existem.
-     *
      * @since 2.0.0
-     * @version 1.0.0
      */
-    obterCamposObrigatorios(
-        nomeCampo,
-        regra,
-    ) {
-        if (
-            typeof nomeCampo !== 'string'
-            || nomeCampo.trim() === ''
-        ) {
+    obterCamposObrigatorios(nomeCampo, regra) {
+        if (typeof nomeCampo !== 'string' || nomeCampo.trim() === '') {
             throw new Error(
                 `A regra "${regra}" exige o nome de outro campo.`,
             );
         }
 
-        const campos = this.obterCampos(
-            nomeCampo,
-        );
+        const nomeNormalizado = nomeCampo.trim();
+        const campos = this.obterCampos(nomeNormalizado);
 
         if (campos.length === 0) {
             throw new Error(
-                `A regra "${regra}" referencia o campo inexistente "${nomeCampo}".`,
+                `A regra "${regra}" referencia o campo inexistente ou desativado "${nomeNormalizado}".`,
             );
         }
 
@@ -977,13 +750,7 @@ class ValidadorFormulario {
     /**
      * Obtém o valor de um conjunto de campos.
      *
-     * @param {Array<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>}
-     * campos - Campos associados.
-     *
-     * @return {mixed} Valor normalizado.
-     *
      * @since 2.0.0
-     * @version 1.0.0
      */
     obterValor(campos) {
         const primeiroCampo = campos[0];
@@ -991,26 +758,16 @@ class ValidadorFormulario {
         if (primeiroCampo instanceof HTMLInputElement) {
             if (primeiroCampo.type === 'checkbox') {
                 return campos
-                    .filter(
-                        (campo) => (
-                            campo instanceof HTMLInputElement
-                            && campo.checked
-                        ),
-                    )
+                    .filter((campo) => (
+                        campo instanceof HTMLInputElement && campo.checked
+                    ))
                     .map((campo) => campo.value);
             }
 
             if (primeiroCampo.type === 'radio') {
-                const selecionado = campos.find(
-                    (campo) => (
-                        campo instanceof HTMLInputElement
-                        && campo.checked
-                    ),
-                );
-
-                return selecionado instanceof HTMLInputElement
-                    ? selecionado.value
-                    : '';
+                return campos.find((campo) => (
+                    campo instanceof HTMLInputElement && campo.checked
+                ))?.value ?? '';
             }
 
             if (primeiroCampo.type === 'file') {
@@ -1030,18 +787,13 @@ class ValidadorFormulario {
             );
         }
 
-        return primeiroCampo.value;
+        return primeiroCampo?.value ?? '';
     }
 
     /**
      * Determina se um valor está vazio.
      *
-     * @param {mixed} valor - Valor recebido.
-     *
-     * @return {boolean} Verdadeiro quando não contém informação.
-     *
      * @since 2.0.0
-     * @version 1.0.0
      */
     estaVazio(valor) {
         if (valor === null || valor === undefined) {
@@ -1052,28 +804,16 @@ class ValidadorFormulario {
             return valor.length === 0;
         }
 
-        if (typeof valor === 'string') {
-            return valor.trim() === '';
-        }
-
-        return false;
+        return typeof valor === 'string' ? valor.trim() === '' : false;
     }
 
     /**
      * Obtém o comprimento de um valor.
      *
-     * @param {mixed} valor - Valor recebido.
-     *
-     * @return {number} Comprimento obtido.
-     *
      * @since 2.0.0
-     * @version 1.0.0
      */
     obterComprimento(valor) {
-        if (
-            typeof valor === 'string'
-            || Array.isArray(valor)
-        ) {
+        if (typeof valor === 'string' || Array.isArray(valor)) {
             return valor.length;
         }
 
@@ -1083,57 +823,33 @@ class ValidadorFormulario {
     /**
      * Valida um endereço de e-mail.
      *
-     * @param {mixed} valor - Valor recebido.
-     *
-     * @return {boolean} Verdadeiro quando o formato é plausível.
-     *
      * @since 2.0.0
-     * @version 1.0.0
      */
     validarEmail(valor) {
-        return (
-            typeof valor === 'string'
-            && /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(
-                valor.trim(),
-            )
-        );
+        return typeof valor === 'string'
+            && /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(valor.trim());
     }
 
     /**
      * Cria uma data válida.
      *
-     * @param {mixed} valor - Valor recebido.
-     *
-     * @return {Date|null} Data ou nulo.
-     *
      * @since 2.0.0
-     * @version 1.0.0
      */
     criarData(valor) {
-        if (
-            typeof valor !== 'string'
-            || valor.trim() === ''
-        ) {
+        if (typeof valor !== 'string' || valor.trim() === '') {
             return null;
         }
 
         const valorNormalizado = valor.trim();
         const correspondencia = valorNormalizado.match(
-            /^(\d{4})-(\d{2})-(\d{2})$/,
+            /^(\d{4})-(\d{2})-(\d{2})$/u,
         );
 
         if (correspondencia !== null) {
             const ano = Number(correspondencia[1]);
             const mes = Number(correspondencia[2]);
             const dia = Number(correspondencia[3]);
-
-            const data = new Date(
-                Date.UTC(
-                    ano,
-                    mes - 1,
-                    dia,
-                ),
-            );
+            const data = new Date(Date.UTC(ano, mes - 1, dia));
 
             if (
                 data.getUTCFullYear() !== ano
@@ -1146,68 +862,43 @@ class ValidadorFormulario {
             return data;
         }
 
-        const instante = Date.parse(
-            valorNormalizado,
-        );
+        const instante = Date.parse(valorNormalizado);
 
-        return Number.isNaN(instante)
-            ? null
-            : new Date(instante);
+        return Number.isNaN(instante) ? null : new Date(instante);
     }
 
     /**
      * Determina se dois valores são iguais.
      *
-     * @param {mixed} primeiroValor - Primeiro valor.
-     * @param {mixed} segundoValor - Segundo valor.
-     *
-     * @return {boolean} Verdadeiro quando coincidem.
-     *
      * @since 2.0.0
-     * @version 1.0.0
      */
-    valoresIguais(
-        primeiroValor,
-        segundoValor,
-    ) {
-        if (
-            Array.isArray(primeiroValor)
-            || Array.isArray(segundoValor)
-        ) {
+    valoresIguais(primeiroValor, segundoValor) {
+        if (Array.isArray(primeiroValor) || Array.isArray(segundoValor)) {
             return JSON.stringify(primeiroValor)
                 === JSON.stringify(segundoValor);
         }
 
-        return String(primeiroValor ?? '')
-            === String(segundoValor ?? '');
+        return String(primeiroValor ?? '') === String(segundoValor ?? '');
     }
 
     /**
      * Analisa uma regra textual.
      *
-     * @param {string} regra - Regra recebida.
-     *
-     * @return {{nome: string, parametro: string|null}} Regra analisada.
-     *
-     * @throws {TypeError} Quando a regra é inválida.
-     *
      * @since 2.0.0
-     * @version 1.0.0
      */
     analisarRegra(regra) {
-        if (
-            typeof regra !== 'string'
-            || regra.trim() === ''
-        ) {
+        if (typeof regra !== 'string' || regra.trim() === '') {
             throw new TypeError(
-                'Cada regra deve ser uma sequência de caracteres não vazia.',
+                'Cada regra deve ser uma cadeia de caracteres não vazia.',
             );
         }
 
-        const [
-            nome,
-            ...partesParametro
-        ] = regra.trim().split(':');
+        const [nomeRecebido, ...partesParametro] = regra.trim().split(':');
+        const nome = nomeRecebido.trim();
+
+        if (nome === '') {
+            throw new TypeError('Cada regra deve possuir um nome válido.');
+        }
 
         return {
             nome,
@@ -1220,26 +911,18 @@ class ValidadorFormulario {
     /**
      * Obtém um parâmetro numérico de uma regra.
      *
-     * @param {string} regra - Nome da regra.
-     * @param {string|null} parametro - Parâmetro recebido.
-     *
-     * @return {number} Parâmetro inteiro não negativo.
-     *
-     * @throws {Error} Quando o parâmetro não é válido.
-     *
      * @since 2.0.0
-     * @version 1.0.0
      */
-    obterParametroNumerico(
-        regra,
-        parametro,
-    ) {
+    obterParametroNumerico(regra, parametro) {
+        if (typeof parametro !== 'string' || parametro.trim() === '') {
+            throw new Error(
+                `A regra "${regra}" exige um número inteiro não negativo.`,
+            );
+        }
+
         const numero = Number(parametro);
 
-        if (
-            !Number.isInteger(numero)
-            || numero < 0
-        ) {
+        if (!Number.isInteger(numero) || numero < 0) {
             throw new Error(
                 `A regra "${regra}" exige um número inteiro não negativo.`,
             );
@@ -1251,94 +934,43 @@ class ValidadorFormulario {
     /**
      * Cria a mensagem padrão de uma regra.
      *
-     * @param {string} nomeCampo - Nome técnico do campo.
-     * @param {Array<HTMLElement>} campos - Campos associados.
-     * @param {string} regra - Regra aplicada.
-     * @param {string|null} parametro - Parâmetro da regra.
-     *
-     * @return {string} Mensagem de erro.
-     *
      * @since 2.0.0
-     * @version 1.0.0
      */
-    criarMensagemPadrao(
-        nomeCampo,
-        campos,
-        regra,
-        parametro,
-    ) {
-        const nomeAmigavel =
-            this.obterNomeAmigavel(
-                campos,
-                nomeCampo,
-            );
-
+    criarMensagemPadrao(nomeCampo, campos, regra, parametro) {
+        const nomeAmigavel = this.obterNomeAmigavel(campos, nomeCampo);
         const mensagens = {
-            obrigatorio:
-                `O campo '${nomeAmigavel}' é obrigatório.`,
-
-            email:
-                'Por favor, insere um endereço de e-mail válido.',
-
+            obrigatorio: `O campo '${nomeAmigavel}' é obrigatório.`,
+            email: 'Por favor, insere um endereço de e-mail válido.',
             minimo:
                 `O campo '${nomeAmigavel}' deve ter, pelo menos, ${parametro} caracteres.`,
-
             maximo:
                 `O campo '${nomeAmigavel}' não pode ter mais de ${parametro} caracteres.`,
-
-            confirmado:
-                'A confirmação não coincide.',
-
-            diferente:
-                `O campo '${nomeAmigavel}' deve ser diferente.`,
-
-            data:
-                `O campo '${nomeAmigavel}' deve conter uma data válida.`,
-
+            confirmado: 'A confirmação não coincide.',
+            diferente: `O campo '${nomeAmigavel}' deve ser diferente.`,
+            data: `O campo '${nomeAmigavel}' deve conter uma data válida.`,
             posterior_ou_igual:
                 `O campo '${nomeAmigavel}' deve conter uma data igual ou posterior a '${this.obterNomeAmigavel(
-                    this.obterCamposObrigatorios(
-                        parametro,
-                        regra,
-                    ),
-                    parametro,
+                    this.obterCamposObrigatorios(parametro, regra),
+                    parametro ?? '',
                 )}'.`,
-
             maiuscula:
                 `O campo '${nomeAmigavel}' deve conter uma letra maiúscula.`,
-
             minuscula:
                 `O campo '${nomeAmigavel}' deve conter uma letra minúscula.`,
-
-            numero:
-                `O campo '${nomeAmigavel}' deve conter um número.`,
-
-            simbolo:
-                `O campo '${nomeAmigavel}' deve conter um símbolo.`,
-
-            inteiro:
-                `O campo '${nomeAmigavel}' deve conter um número inteiro.`,
+            numero: `O campo '${nomeAmigavel}' deve conter um número.`,
+            simbolo: `O campo '${nomeAmigavel}' deve conter um símbolo.`,
+            inteiro: `O campo '${nomeAmigavel}' deve conter um número inteiro.`,
         };
 
-        return mensagens[regra]
-            ?? `O campo '${nomeAmigavel}' é inválido.`;
+        return mensagens[regra] ?? `O campo '${nomeAmigavel}' é inválido.`;
     }
 
     /**
      * Obtém o nome legível de um campo.
      *
-     * @param {Array<HTMLElement>} campos - Campos associados.
-     * @param {string} nomeAlternativo - Nome usado como alternativa.
-     *
-     * @return {string} Nome legível.
-     *
      * @since 1.0.0
-     * @version 2.0.0
      */
-    obterNomeAmigavel(
-        campos,
-        nomeAlternativo,
-    ) {
+    obterNomeAmigavel(campos, nomeAlternativo) {
         const primeiroCampo = campos[0];
 
         if (
@@ -1349,68 +981,55 @@ class ValidadorFormulario {
             return nomeAlternativo;
         }
 
-        const etiqueta = primeiroCampo.labels[0]
-            .cloneNode(true);
+        const etiqueta = primeiroCampo.labels[0].cloneNode(true);
 
-        etiqueta
-            .querySelectorAll(
-                '.text-danger, [aria-hidden="true"]',
-            )
-            .forEach(
-                (elemento) => elemento.remove(),
-            );
+        etiqueta.querySelectorAll('.text-danger, [aria-hidden="true"]')
+            .forEach((elemento) => {
+                elemento.remove();
+            });
 
-        const texto = etiqueta.textContent?.trim();
-
-        return texto !== ''
-            ? texto
-            : nomeAlternativo;
+        return etiqueta.textContent?.trim() || nomeAlternativo;
     }
 
     /**
      * Obtém o nome técnico de um campo.
      *
-     * @param {string|HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement}
-     * campoOuNome - Campo ou nome.
-     *
-     * @return {string} Nome do campo.
-     *
-     * @throws {TypeError} Quando o valor não é válido.
-     *
      * @since 2.0.0
-     * @version 1.0.0
      */
     obterNomeCampo(campoOuNome) {
-        if (
-            typeof campoOuNome === 'string'
-            && campoOuNome.trim() !== ''
-        ) {
-            return campoOuNome;
+        if (typeof campoOuNome === 'string') {
+            return this.normalizarNomeCampo(campoOuNome);
         }
 
         if (
             this.eCampoValidavel(campoOuNome)
-            && campoOuNome.name !== ''
+            && campoOuNome.name.trim() !== ''
         ) {
-            return campoOuNome.name;
+            return campoOuNome.name.trim();
         }
 
-        throw new TypeError(
-            'Não foi possível determinar o nome do campo.',
-        );
+        throw new TypeError('Não foi possível determinar o nome do campo.');
+    }
+
+    /**
+     * Normaliza um nome de campo.
+     *
+     * @since 2.0.0
+     */
+    normalizarNomeCampo(nomeCampo) {
+        if (typeof nomeCampo !== 'string' || nomeCampo.trim() === '') {
+            throw new TypeError(
+                'O nome do campo deve ser uma cadeia de caracteres não vazia.',
+            );
+        }
+
+        return nomeCampo.trim();
     }
 
     /**
      * Obtém o formulário configurado.
      *
-     * @param {string|HTMLFormElement} formularioOuSeletor - Valor recebido.
-     *
-     * @return {HTMLFormElement} Formulário encontrado.
-     *
-     * @throws {TypeError} Quando o formulário não existe.
-     *
      * @since 2.0.0
-     * @version 1.0.0
      */
     obterFormulario(formularioOuSeletor) {
         if (formularioOuSeletor instanceof HTMLFormElement) {
@@ -1426,13 +1045,18 @@ class ValidadorFormulario {
             );
         }
 
-        const formulario = document.querySelector(
-            formularioOuSeletor,
-        );
+        const seletor = formularioOuSeletor.trim();
+        let formulario;
+
+        try {
+            formulario = document.querySelector(seletor);
+        } catch {
+            throw new TypeError(`O seletor CSS "${seletor}" é inválido.`);
+        }
 
         if (!(formulario instanceof HTMLFormElement)) {
             throw new TypeError(
-                `Não foi encontrado um formulário para o seletor "${formularioOuSeletor}".`,
+                `Não foi encontrado um formulário para o seletor "${seletor}".`,
             );
         }
 
@@ -1442,14 +1066,7 @@ class ValidadorFormulario {
     /**
      * Normaliza a configuração do validador.
      *
-     * @param {Object} configuracao - Configuração recebida.
-     *
-     * @return {Readonly<Object>} Configuração normalizada.
-     *
-     * @throws {TypeError} Quando a configuração é inválida.
-     *
      * @since 2.0.0
-     * @version 1.0.0
      */
     normalizarConfiguracao(configuracao) {
         if (
@@ -1462,157 +1079,100 @@ class ValidadorFormulario {
             );
         }
 
-        const configuracaoNormalizada = {
+        const normalizada = {
             regras: {},
             mensagens: {},
             aoSucesso: null,
             validadorPersonalizado: null,
-            eventosTempoReal: [
-                'input',
-                'change',
-                'focusout',
-            ],
+            eventosTempoReal: ['input', 'change', 'focusout'],
             ...configuracao,
         };
 
         if (
-            configuracaoNormalizada.regras === null
-            || typeof configuracaoNormalizada.regras
-                !== 'object'
-            || Array.isArray(
-                configuracaoNormalizada.regras,
-            )
+            normalizada.regras === null
+            || typeof normalizada.regras !== 'object'
+            || Array.isArray(normalizada.regras)
         ) {
-            throw new TypeError(
-                'As regras devem ser apresentadas num objeto.',
-            );
+            throw new TypeError('As regras devem ser apresentadas num objeto.');
         }
 
         const regrasNormalizadas = {};
 
-        Object.entries(
-            configuracaoNormalizada.regras,
-        ).forEach(
-            ([nomeCampo, regras]) => {
-                this.validarListaRegras(
-                    nomeCampo,
-                    regras,
-                );
+        Object.entries(normalizada.regras).forEach(([nomeCampo, regras]) => {
+            const nomeNormalizado = this.normalizarNomeCampo(nomeCampo);
 
-                regrasNormalizadas[nomeCampo] =
-                    Object.freeze([...regras]);
-            },
-        );
+            if (Object.hasOwn(regrasNormalizadas, nomeNormalizado)) {
+                throw new TypeError(
+                    `O campo "${nomeNormalizado}" possui regras duplicadas.`,
+                );
+            }
+
+            this.validarListaRegras(nomeNormalizado, regras);
+            regrasNormalizadas[nomeNormalizado] = Object.freeze([...regras]);
+        });
 
         if (
-            configuracaoNormalizada.mensagens === null
-            || typeof configuracaoNormalizada.mensagens
-                !== 'object'
-            || Array.isArray(
-                configuracaoNormalizada.mensagens,
-            )
+            normalizada.mensagens === null
+            || typeof normalizada.mensagens !== 'object'
+            || Array.isArray(normalizada.mensagens)
         ) {
             throw new TypeError(
                 'As mensagens devem ser apresentadas num objeto.',
             );
         }
 
-        [
-            'aoSucesso',
-            'validadorPersonalizado',
-        ].forEach(
-            (nomeCallback) => {
-                const callback =
-                    configuracaoNormalizada[nomeCallback];
+        const mensagensNormalizadas = {};
 
-                if (
-                    callback !== null
-                    && typeof callback !== 'function'
-                ) {
-                    throw new TypeError(
-                        `A opção "${nomeCallback}" deve ser uma função ou nula.`,
-                    );
-                }
-            },
-        );
+        Object.entries(normalizada.mensagens)
+            .forEach(([nomeCampo, mensagensCampo]) => {
+                const nomeNormalizado = this.normalizarNomeCampo(nomeCampo);
+                this.validarMensagensCampo(nomeNormalizado, mensagensCampo);
+                mensagensNormalizadas[nomeNormalizado] = Object.freeze({
+                    ...mensagensCampo,
+                });
+            });
 
-        if (
-            !Array.isArray(
-                configuracaoNormalizada.eventosTempoReal,
-            )
-        ) {
+        ['aoSucesso', 'validadorPersonalizado'].forEach((nomeCallback) => {
+            const callback = normalizada[nomeCallback];
+
+            if (callback !== null && typeof callback !== 'function') {
+                throw new TypeError(
+                    `A opção "${nomeCallback}" deve ser uma função ou nula.`,
+                );
+            }
+        });
+
+        if (!Array.isArray(normalizada.eventosTempoReal)) {
             throw new TypeError(
                 'Os eventos de validação devem ser apresentados numa lista.',
             );
         }
 
-        const eventosTempoReal = Array.from(
-            new Set(
-                configuracaoNormalizada
-                    .eventosTempoReal
-                    .map((evento) => {
-                        if (
-                            typeof evento !== 'string'
-                            || evento.trim() === ''
-                        ) {
-                            throw new TypeError(
-                                'Cada evento deve ter um nome válido.',
-                            );
-                        }
+        const eventosTempoReal = Array.from(new Set(
+            normalizada.eventosTempoReal.map((evento) => {
+                if (typeof evento !== 'string' || evento.trim() === '') {
+                    throw new TypeError('Cada evento deve ter um nome válido.');
+                }
 
-                        return evento.trim();
-                    }),
-            ),
-        );
+                return evento.trim();
+            }),
+        ));
 
         return Object.freeze({
-            regras: Object.freeze(
-                regrasNormalizadas,
-            ),
-
-            mensagens: Object.freeze({
-                ...configuracaoNormalizada.mensagens,
-            }),
-
-            aoSucesso:
-                configuracaoNormalizada.aoSucesso,
-
-            validadorPersonalizado:
-                configuracaoNormalizada
-                    .validadorPersonalizado,
-
-            eventosTempoReal: Object.freeze(
-                eventosTempoReal,
-            ),
+            regras: Object.freeze(regrasNormalizadas),
+            mensagens: Object.freeze(mensagensNormalizadas),
+            aoSucesso: normalizada.aoSucesso,
+            validadorPersonalizado: normalizada.validadorPersonalizado,
+            eventosTempoReal: Object.freeze(eventosTempoReal),
         });
     }
 
     /**
      * Valida uma lista de regras.
      *
-     * @param {string} nomeCampo - Nome do campo.
-     * @param {mixed} regras - Regras recebidas.
-     *
-     * @return {void}
-     *
-     * @throws {TypeError} Quando a configuração é inválida.
-     *
      * @since 2.0.0
-     * @version 1.0.0
      */
-    validarListaRegras(
-        nomeCampo,
-        regras,
-    ) {
-        if (
-            typeof nomeCampo !== 'string'
-            || nomeCampo.trim() === ''
-        ) {
-            throw new TypeError(
-                'Cada conjunto de regras deve possuir um nome de campo válido.',
-            );
-        }
-
+    validarListaRegras(nomeCampo, regras) {
         if (!Array.isArray(regras)) {
             throw new TypeError(
                 `As regras do campo "${nomeCampo}" devem ser apresentadas numa lista.`,
@@ -1621,8 +1181,8 @@ class ValidadorFormulario {
 
         regras.forEach((regra) => {
             if (
-                typeof regra !== 'string'
-                && typeof regra !== 'function'
+                typeof regra !== 'function'
+                && (typeof regra !== 'string' || regra.trim() === '')
             ) {
                 throw new TypeError(
                     `O campo "${nomeCampo}" contém uma regra inválida.`,
@@ -1632,21 +1192,83 @@ class ValidadorFormulario {
     }
 
     /**
-     * Determina se um elemento pode ser validado.
-     *
-     * @param {mixed} elemento - Elemento recebido.
-     *
-     * @return {boolean} Verdadeiro para campos suportados.
+     * Valida as mensagens de um campo.
      *
      * @since 2.0.0
-     * @version 1.0.0
+     */
+    validarMensagensCampo(nomeCampo, mensagens) {
+        if (
+            mensagens === null
+            || typeof mensagens !== 'object'
+            || Array.isArray(mensagens)
+        ) {
+            throw new TypeError(
+                `As mensagens do campo "${nomeCampo}" devem ser apresentadas num objeto.`,
+            );
+        }
+
+        Object.entries(mensagens).forEach(([nomeRegra, mensagem]) => {
+            if (
+                nomeRegra.trim() === ''
+                || typeof mensagem !== 'string'
+                || mensagem.trim() === ''
+            ) {
+                throw new TypeError(
+                    `O campo "${nomeCampo}" contém uma mensagem de validação inválida.`,
+                );
+            }
+        });
+    }
+
+    /**
+     * Cria o mapa das dependências entre campos configurados.
+     *
+     * @since 2.0.0
+     */
+    criarMapaDependencias(regras) {
+        const dependencias = new Map();
+        const regrasDependentes = new Set([
+            'confirmado',
+            'diferente',
+            'posterior_ou_igual',
+        ]);
+
+        Object.entries(regras).forEach(([nomeCampo, regrasCampo]) => {
+            regrasCampo.forEach((regra) => {
+                if (typeof regra !== 'string') {
+                    return;
+                }
+
+                const { nome, parametro } = this.analisarRegra(regra);
+
+                if (
+                    !regrasDependentes.has(nome)
+                    || typeof parametro !== 'string'
+                    || parametro === ''
+                ) {
+                    return;
+                }
+
+                if (!dependencias.has(parametro)) {
+                    dependencias.set(parametro, new Set());
+                }
+
+                dependencias.get(parametro).add(nomeCampo);
+            });
+        });
+
+        return dependencias;
+    }
+
+    /**
+     * Determina se um elemento pode ser validado.
+     *
+     * @since 2.0.0
      */
     eCampoValidavel(elemento) {
-        return (
-            elemento instanceof HTMLInputElement
+        return elemento instanceof HTMLInputElement
             || elemento instanceof HTMLSelectElement
-            || elemento instanceof HTMLTextAreaElement
-        );
+            || elemento instanceof HTMLTextAreaElement;
     }
 }
 

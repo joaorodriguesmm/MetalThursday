@@ -6,7 +6,6 @@
     App\View\Components\MetalThursday\CartaoVistaCompleta.
 
     @since 1.0.0
-    @version 4.0.0
 --}}
 
 <article
@@ -60,6 +59,7 @@
 
             <div
                 class="d-flex align-items-center gap-2 flex-shrink-0"
+                role="group"
                 aria-label="Ações da MetalThursday"
             >
                 @can('update', $registoMetalThursday)
@@ -156,6 +156,7 @@
                     >
                         <div
                             class="d-flex align-items-center flex-wrap gap-2"
+                            role="group"
                             aria-label="Interações da secção"
                         >
                             <button
@@ -258,16 +259,21 @@
 
                         <div
                             class="d-flex align-items-center gap-3 text-muted small"
+                            role="group"
                             aria-label="Resumo das interações da secção"
                         >
-                            <span
-                                class="apresentacao-audicoes"
+                            <button
+                                class="apresentacao-audicoes border-0 bg-transparent text-muted p-0"
+                                type="button"
                                 data-bs-toggle="tooltip"
                                 data-bs-html="true"
                                 data-bs-title="{!!
                                     $seccaoPreparada['interacoes']['descricaoAudicoes']
                                         ->toHtml()
                                 !!}"
+                                aria-label="Consultar detalhes das audições. Total: {{
+                                    $seccaoPreparada['interacoes']['quantidadeAudicoes']
+                                }}."
                             >
                                 <i
                                     class="bi bi-headphones"
@@ -279,16 +285,22 @@
                                         $seccaoPreparada['interacoes']['quantidadeAudicoes']
                                     }}
                                 </span>
-                            </span>
+                            </button>
 
-                            <span
-                                class="apresentacao-avaliacoes"
+                            <button
+                                class="apresentacao-avaliacoes border-0 bg-transparent text-muted p-0"
+                                type="button"
                                 data-bs-toggle="tooltip"
                                 data-bs-html="true"
                                 data-bs-title="{!!
                                     $seccaoPreparada['interacoes']['descricaoAvaliacoes']
                                         ->toHtml()
                                 !!}"
+                                aria-label="Consultar detalhes das avaliações. Média: {{
+                                    $seccaoPreparada['interacoes']['mediaAvaliacoes']
+                                }}. Total: {{
+                                    $seccaoPreparada['interacoes']['quantidadeAvaliacoes']
+                                }}."
                             >
                                 <i
                                     class="bi bi-star-fill text-warning"
@@ -304,7 +316,7 @@
                                 (<span class="quantidade-avaliacoes">{{
                                     $seccaoPreparada['interacoes']['quantidadeAvaliacoes']
                                 }}</span>)
-                            </span>
+                            </button>
                         </div>
                     </div>
 
@@ -338,6 +350,7 @@
         >
             <div
                 class="d-flex align-items-center flex-wrap gap-2"
+                role="group"
                 aria-label="Interações da MetalThursday"
             >
                 <button
@@ -426,15 +439,20 @@
 
             <div
                 class="d-flex align-items-center gap-3 text-muted small"
+                role="group"
                 aria-label="Resumo das interações da MetalThursday"
             >
-                <span
-                    class="apresentacao-audicoes"
+                <button
+                    class="apresentacao-audicoes border-0 bg-transparent text-muted p-0"
+                    type="button"
                     data-bs-toggle="tooltip"
                     data-bs-html="true"
                     data-bs-title="{!!
                         $interacoesMetalThursday['descricaoAudicoes']->toHtml()
                     !!}"
+                    aria-label="Consultar detalhes das audições. Total: {{
+                        $interacoesMetalThursday['quantidadeAudicoes']
+                    }}."
                 >
                     <i
                         class="bi bi-headphones"
@@ -444,15 +462,21 @@
                     <span class="quantidade-audicoes">
                         {{ $interacoesMetalThursday['quantidadeAudicoes'] }}
                     </span>
-                </span>
+                </button>
 
-                <span
-                    class="apresentacao-avaliacoes"
+                <button
+                    class="apresentacao-avaliacoes border-0 bg-transparent text-muted p-0"
+                    type="button"
                     data-bs-toggle="tooltip"
                     data-bs-html="true"
                     data-bs-title="{!!
                         $interacoesMetalThursday['descricaoAvaliacoes']->toHtml()
                     !!}"
+                    aria-label="Consultar detalhes das avaliações. Média: {{
+                        $interacoesMetalThursday['mediaAvaliacoes']
+                    }}. Total: {{
+                        $interacoesMetalThursday['quantidadeAvaliacoes']
+                    }}."
                 >
                     <i
                         class="bi bi-star-fill text-warning"
@@ -466,7 +490,7 @@
                     (<span class="quantidade-avaliacoes">{{
                         $interacoesMetalThursday['quantidadeAvaliacoes']
                     }}</span>)
-                </span>
+                </button>
             </div>
         </div>
     </footer>

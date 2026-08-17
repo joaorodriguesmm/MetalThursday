@@ -3,7 +3,6 @@
     de uma ligação de redefinição válida.
 
     @since 1.0.0
-    @version 3.1.0
 --}}
 
 <x-layout-convidado>
@@ -27,7 +26,6 @@
         <div
             class="alert alert-danger"
             role="alert"
-            aria-live="assertive"
         >
             {{ $message }}
         </div>
@@ -56,7 +54,7 @@
             id="email"
             type="hidden"
             name="email"
-            value="{{ old('email', $email) }}"
+            value="{{ $email }}"
         >
 
         <div class="grupo-campo-formulario mb-3">
@@ -98,7 +96,6 @@
                     data-descricao-palavra-passe="a nova palavra-passe"
                     aria-label="Mostrar a nova palavra-passe"
                     aria-controls="nova-palavra-passe"
-                    aria-pressed="false"
                 >
                     <i
                         class="bi bi-eye-fill"
@@ -167,7 +164,6 @@
                     data-descricao-palavra-passe="a confirmação da nova palavra-passe"
                     aria-label="Mostrar a confirmação da nova palavra-passe"
                     aria-controls="confirmacao-nova-palavra-passe"
-                    aria-pressed="false"
                 >
                     <i
                         class="bi bi-eye-fill"

@@ -5,7 +5,6 @@
  * atributo `data-alvo-palavra-passe`.
  *
  * @since 1.0.0
- * @version 2.1.0
  */
 class AlternadorPalavraPasse {
     /**
@@ -14,10 +13,10 @@ class AlternadorPalavraPasse {
      * @param {string|Iterable<HTMLElement>} alternadoresOuSeletor Seletor
      *     CSS ou coleção de botões alternadores.
      *
-     * @throws {TypeError} Quando o seletor ou os elementos não são válidos.
+     * @throws {TypeError} Quando o seletor, os alternadores ou os campos alvo
+     *     não são válidos.
      *
      * @since 1.0.0
-     * @version 2.1.0
      */
     constructor(
         alternadoresOuSeletor = '[data-alvo-palavra-passe]',
@@ -28,7 +27,6 @@ class AlternadorPalavraPasse {
          * @type {Array<HTMLButtonElement>}
          *
          * @since 1.0.0
-         * @version 2.0.0
          */
         this.alternadores = this.obterAlternadores(
             alternadoresOuSeletor,
@@ -41,12 +39,11 @@ class AlternadorPalavraPasse {
          *     HTMLButtonElement,
          *     {
          *         campo: HTMLInputElement,
-         *         manipulador: (evento: MouseEvent) => void
+         *         manipulador: () => void
          *     }
          * >}
          *
          * @since 2.0.0
-         * @version 1.0.0
          */
         this.ligacoes = new Map();
 
@@ -55,8 +52,7 @@ class AlternadorPalavraPasse {
          *
          * @type {boolean}
          *
-         * @since 2.1.0
-         * @version 1.0.0
+         * @since 2.0.0
          */
         this.iniciado = false;
 
@@ -69,24 +65,25 @@ class AlternadorPalavraPasse {
      * @returns {void}
      *
      * @since 1.0.0
-     * @version 2.1.0
      */
     iniciar() {
-        if (
-            this.iniciado
-            || this.alternadores.length === 0
-        ) {
+        if (this.iniciado || this.alternadores.length === 0) {
             return;
         }
 
-        this.alternadores.forEach((alternador) => {
-            const campo = this.obterCampoAlvo(
+        /*
+         * Todos os campos são validados antes de alterar o DOM. Assim, uma
+         * configuração inválida não deixa o módulo parcialmente iniciado.
+         */
+        const ligacoesPreparadas = this.alternadores.map(
+            (alternador) => ({
                 alternador,
-            );
+                campo: this.obterCampoAlvo(alternador),
+            }),
+        );
 
-            const manipulador = (evento) => {
-                evento.preventDefault();
-
+        ligacoesPreparadas.forEach(({ alternador, campo }) => {
+            const manipulador = () => {
                 this.alternarVisibilidade(
                     campo,
                     alternador,
@@ -94,19 +91,15 @@ class AlternadorPalavraPasse {
             };
 
             alternador.type = 'button';
-
             alternador.addEventListener(
                 'click',
                 manipulador,
             );
 
-            this.ligacoes.set(
-                alternador,
-                {
-                    campo,
-                    manipulador,
-                },
-            );
+            this.ligacoes.set(alternador, {
+                campo,
+                manipulador,
+            });
 
             this.atualizarEstado(
                 campo,
@@ -126,17 +119,13 @@ class AlternadorPalavraPasse {
      * @returns {void}
      *
      * @since 1.0.0
-     * @version 2.0.0
      */
     alternarVisibilidade(
         campo,
         alternador,
     ) {
-        const inicioSelecao =
-            campo.selectionStart;
-
-        const fimSelecao =
-            campo.selectionEnd;
+        const inicioSelecao = campo.selectionStart;
+        const fimSelecao = campo.selectionEnd;
 
         campo.type = campo.type === 'password'
             ? 'text'
@@ -146,8 +135,6 @@ class AlternadorPalavraPasse {
             campo,
             alternador,
         );
-
-        campo.focus();
 
         if (
             inicioSelecao !== null
@@ -176,45 +163,38 @@ class AlternadorPalavraPasse {
      * @returns {void}
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     atualizarEstado(
         campo,
         alternador,
     ) {
-        const palavraPasseVisivel =
-            campo.type === 'text';
-
-        const descricaoCampo =
-            this.obterDescricaoCampo(
-                campo,
-                alternador,
-            );
+        const palavraPasseVisivel = campo.type === 'text';
+        const descricaoCampo = this.obterDescricaoCampo(
+            campo,
+            alternador,
+        );
 
         alternador.setAttribute(
             'aria-controls',
             campo.id,
         );
 
-        alternador.setAttribute(
-            'aria-pressed',
-            palavraPasseVisivel
-                ? 'true'
-                : 'false',
-        );
+        /*
+         * O rótulo descreve a ação disponível e muda com o estado.
+         * Por esse motivo, o botão não utiliza a semântica aria-pressed.
+         */
+        alternador.removeAttribute('aria-pressed');
 
-        const descricaoAcao =
-            palavraPasseVisivel
-                ? `Ocultar ${descricaoCampo}`
-                : `Mostrar ${descricaoCampo}`;
+        const descricaoAcao = palavraPasseVisivel
+            ? `Ocultar ${descricaoCampo}`
+            : `Mostrar ${descricaoCampo}`;
 
         alternador.setAttribute(
             'aria-label',
             descricaoAcao,
         );
 
-        alternador.title =
-            descricaoAcao;
+        alternador.title = descricaoAcao;
 
         this.atualizarIcone(
             alternador,
@@ -234,15 +214,14 @@ class AlternadorPalavraPasse {
      * @returns {void}
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     atualizarIcone(
         alternador,
         palavraPasseVisivel,
     ) {
         const icone = alternador.querySelector(
-            '[data-icone-palavra-passe], i',
-        );
+            '[data-icone-palavra-passe]',
+        ) ?? alternador.querySelector('i');
 
         if (!(icone instanceof HTMLElement)) {
             return;
@@ -268,7 +247,6 @@ class AlternadorPalavraPasse {
      * @returns {void}
      *
      * @since 2.0.0
-     * @version 1.1.0
      */
     destruir() {
         if (!this.iniciado) {
@@ -276,10 +254,7 @@ class AlternadorPalavraPasse {
         }
 
         this.ligacoes.forEach(
-            (
-                ligacao,
-                alternador,
-            ) => {
+            (ligacao, alternador) => {
                 alternador.removeEventListener(
                     'click',
                     ligacao.manipulador,
@@ -305,19 +280,12 @@ class AlternadorPalavraPasse {
      * @throws {TypeError} Quando os elementos não são botões válidos.
      *
      * @since 2.0.0
-     * @version 1.1.0
      */
-    obterAlternadores(
-        alternadoresOuSeletor,
-    ) {
+    obterAlternadores(alternadoresOuSeletor) {
         let elementos;
 
-        if (
-            typeof alternadoresOuSeletor
-            === 'string'
-        ) {
-            const seletor =
-                alternadoresOuSeletor.trim();
+        if (typeof alternadoresOuSeletor === 'string') {
+            const seletor = alternadoresOuSeletor.trim();
 
             if (seletor === '') {
                 throw new TypeError(
@@ -327,9 +295,7 @@ class AlternadorPalavraPasse {
 
             try {
                 elementos = Array.from(
-                    document.querySelectorAll(
-                        seletor,
-                    ),
+                    document.querySelectorAll(seletor),
                 );
             } catch {
                 throw new TypeError(
@@ -353,21 +319,14 @@ class AlternadorPalavraPasse {
         }
 
         const elementosUnicos = [
-            ...new Set(
-                elementos,
-            ),
+            ...new Set(elementos),
         ];
 
-        const alternadores =
-            elementosUnicos.filter(
-                (elemento) =>
-                    elemento instanceof HTMLButtonElement,
-            );
+        const alternadores = elementosUnicos.filter(
+            (elemento) => elemento instanceof HTMLButtonElement,
+        );
 
-        if (
-            alternadores.length
-            !== elementosUnicos.length
-        ) {
+        if (alternadores.length !== elementosUnicos.length) {
             throw new TypeError(
                 'Todos os alternadores de palavra-passe devem ser botões HTML.',
             );
@@ -386,11 +345,8 @@ class AlternadorPalavraPasse {
      * @throws {TypeError} Quando o atributo ou o campo não são válidos.
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
-    obterCampoAlvo(
-        alternador,
-    ) {
+    obterCampoAlvo(alternador) {
         const identificador = alternador
             .dataset
             .alvoPalavraPasse
@@ -411,9 +367,7 @@ class AlternadorPalavraPasse {
             || ![
                 'password',
                 'text',
-            ].includes(
-                campo.type,
-            )
+            ].includes(campo.type)
         ) {
             throw new TypeError(
                 `O alvo "${identificador}" não é um campo de palavra-passe válido.`,
@@ -436,7 +390,6 @@ class AlternadorPalavraPasse {
      * @returns {string} Descrição do campo.
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     obterDescricaoCampo(
         campo,
@@ -451,35 +404,23 @@ class AlternadorPalavraPasse {
             return descricaoExplicita;
         }
 
-        const etiqueta =
-            campo.labels?.item(0);
+        const etiqueta = campo.labels?.item(0);
 
-        if (
-            etiqueta
-            instanceof HTMLLabelElement
-        ) {
-            const copiaEtiqueta =
-                etiqueta.cloneNode(
-                    true,
-                );
+        if (etiqueta instanceof HTMLLabelElement) {
+            const copiaEtiqueta = etiqueta.cloneNode(true);
 
             copiaEtiqueta
                 .querySelectorAll(
                     '.text-danger, [aria-hidden="true"]',
                 )
-                .forEach(
-                    (elemento) =>
-                        elemento.remove(),
-                );
+                .forEach((elemento) => elemento.remove());
 
             const texto = copiaEtiqueta
                 .textContent
                 ?.trim();
 
             if (texto) {
-                return texto.toLocaleLowerCase(
-                    'pt-PT',
-                );
+                return texto.toLocaleLowerCase('pt-PT');
             }
         }
 

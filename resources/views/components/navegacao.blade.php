@@ -6,7 +6,6 @@
     preparadas pela classe App\View\Components\Navegacao.
 
     @since 1.0.0
-    @version 6.0.0
 --}}
 
 <nav
@@ -176,7 +175,7 @@
                         type="button"
                         data-bs-toggle="dropdown"
                         aria-expanded="false"
-                        aria-label="Abrir menu do utilizador"
+                        aria-label="Menu do utilizador"
                     >
                         <span class="contentor-avatar-navegacao">
                             <x-avatar
@@ -194,34 +193,40 @@
                         </span>
                     </button>
 
-                    <div
+                    <ul
                         class="dropdown-menu dropdown-menu-end bg-dark border-secondary"
                         aria-labelledby="alternador-menu-utilizador"
                     >
-                        <a
-                            class="dropdown-item text-white {{
-                                $paginaPerfilAtiva
-                                    ? 'active'
-                                    : ''
-                            }}"
-                            href="{{ route('perfil.editar') }}"
-                            @if ($paginaPerfilAtiva)
-                                aria-current="page"
-                            @endif
-                        >
-                            Editar perfil
-                        </a>
+                        <li>
+                            <a
+                                class="dropdown-item text-white {{
+                                    $paginaPerfilAtiva
+                                        ? 'active'
+                                        : ''
+                                }}"
+                                href="{{ route('perfil.editar') }}"
+                                @if ($paginaPerfilAtiva)
+                                    aria-current="page"
+                                @endif
+                            >
+                                Editar perfil
+                            </a>
+                        </li>
 
-                        <hr class="dropdown-divider border-secondary">
+                        <li>
+                            <hr class="dropdown-divider border-secondary">
+                        </li>
 
-                        <button
-                            class="dropdown-item text-white"
-                            type="button"
-                            data-terminar-sessao
-                        >
-                            Sair
-                        </button>
-                    </div>
+                        <li>
+                            <button
+                                class="dropdown-item text-white"
+                                type="button"
+                                data-terminar-sessao
+                            >
+                                Sair
+                            </button>
+                        </li>
+                    </ul>
                 </li>
             </ul>
         </div>

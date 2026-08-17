@@ -6,7 +6,6 @@
     App\View\Components\Comentario.
 
     @since 1.0.0
-    @version 4.0.0
 --}}
 
 <article
@@ -147,6 +146,7 @@
 
             <div
                 class="acoes-comentario small mt-2 d-flex align-items-center flex-wrap gap-1"
+                role="group"
                 aria-label="Ações do comentário"
             >
                 <button

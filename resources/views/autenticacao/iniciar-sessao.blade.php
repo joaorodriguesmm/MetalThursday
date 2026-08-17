@@ -2,7 +2,6 @@
     Apresenta o formulário de autenticação de um utilizador.
 
     @since 1.0.0
-    @version 2.2.0
 --}}
 
 <x-layout-convidado>
@@ -112,7 +111,6 @@
                     data-descricao-palavra-passe="a palavra-passe"
                     aria-label="Mostrar a palavra-passe"
                     aria-controls="palavra-passe"
-                    aria-pressed="false"
                 >
                     <i
                         class="bi bi-eye-fill"

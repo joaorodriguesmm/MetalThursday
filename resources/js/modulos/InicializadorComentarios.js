@@ -9,8 +9,7 @@ import ValidadorFormulario from './ValidadorFormulario';
  * servidor apresente o comentário através do componente Blade e aplique as
  * autorizações correspondentes ao utilizador autenticado.
  *
- * @since 3.0.0
- * @version 1.0.0
+ * @since 2.0.0
  */
 class InicializadorComentarios {
     /**
@@ -18,8 +17,7 @@ class InicializadorComentarios {
      *
      * @type {string}
      *
-     * @since 3.0.0
-     * @version 1.0.0
+     * @since 2.0.0
      */
     static SELETOR_FORMULARIOS = [
         'form.formulario-comentario',
@@ -31,21 +29,19 @@ class InicializadorComentarios {
      *
      * @type {number}
      *
-     * @since 3.0.0
-     * @version 1.0.0
+     * @since 2.0.0
      */
-    static COMPRIMENTO_MAXIMO_PREDEFINIDO =
-        2000;
+    static COMPRIMENTO_MAXIMO_PREDEFINIDO = 2000;
 
     /**
-     * Cria o inicializador de comentários.
+     * Cria e inicializa os formulários de comentários encontrados.
      *
      * @param {Document|Element} contentor Contentor utilizado na pesquisa.
      *
      * @throws {TypeError} Quando o contentor não é válido.
+     * @throws {Error} Quando algum formulário não respeita o contrato.
      *
-     * @since 3.0.0
-     * @version 1.0.0
+     * @since 2.0.0
      */
     constructor(contentor = document) {
         if (
@@ -57,36 +53,11 @@ class InicializadorComentarios {
             );
         }
 
-        this.contentor =
-            contentor;
-
-        this.validadores =
-            new Map();
-
-        this.iniciar();
-    }
-
-    /**
-     * Inicializa os formulários encontrados no contentor.
-     *
-     * @returns {void}
-     *
-     * @since 3.0.0
-     * @version 1.0.0
-     */
-    iniciar() {
-        this.contentor.querySelectorAll(
+        contentor.querySelectorAll(
             InicializadorComentarios.SELETOR_FORMULARIOS,
         ).forEach((formulario) => {
-            if (
-                formulario instanceof HTMLFormElement
-                && formulario.dataset
-                    .formularioComentarioInicializado
-                    !== 'true'
-            ) {
-                this.inicializarFormulario(
-                    formulario,
-                );
+            if (formulario instanceof HTMLFormElement) {
+                this.inicializarFormulario(formulario);
             }
         });
     }
@@ -100,15 +71,12 @@ class InicializadorComentarios {
      *
      * @throws {Error} Quando faltam contratos obrigatórios no formulário.
      *
-     * @since 3.0.0
-     * @version 1.0.0
+     * @since 2.0.0
      */
     inicializarFormulario(formulario) {
-        const identificador =
-            formulario.id.trim();
+        const identificador = formulario.id.trim();
 
-        const endereco =
-            formulario.action.trim();
+        const endereco = formulario.action.trim();
 
         const campoConteudo =
             formulario.elements.namedItem(
@@ -126,9 +94,7 @@ class InicializadorComentarios {
         }
 
         const comprimentoMaximo =
-            Number.isInteger(
-                campoConteudo.maxLength,
-            )
+            Number.isInteger(campoConteudo.maxLength)
             && campoConteudo.maxLength > 0
                 ? campoConteudo.maxLength
                 : InicializadorComentarios
@@ -143,69 +109,39 @@ class InicializadorComentarios {
                 },
             );
 
-        const validador =
-            new ValidadorFormulario(
-                formulario,
-                {
-                    regras: {
-                        conteudo: [
-                            'obrigatorio',
-                            `maximo:${comprimentoMaximo}`,
-                        ],
-                    },
+        new ValidadorFormulario(
+            formulario,
+            {
+                regras: {
+                    conteudo: [
+                        'obrigatorio',
+                        `maximo:${comprimentoMaximo}`,
+                    ],
+                },
 
-                    mensagens: {
-                        conteudo: {
-                            obrigatorio:
-                                'Por favor, insere o texto do comentário.',
+                mensagens: {
+                    conteudo: {
+                        obrigatorio:
+                            'Por favor, insere o texto do comentário.',
 
-                            maximo:
-                                `O comentário não pode ter mais de ${comprimentoMaximo} caracteres.`,
-                        },
-                    },
-
-                    aoSucesso: () => {
-                        /*
-                         * A promessa não é devolvida porque o validador exige
-                         * uma função de sucesso síncrona.
-                         */
-                        tratadorAjax.submeter();
+                        maximo:
+                            `O comentário não pode ter mais de ${comprimentoMaximo} caracteres.`,
                     },
                 },
-            );
 
-        formulario.dataset
-            .formularioComentarioInicializado =
-                'true';
+                eventosTempoReal: [
+                    'input',
+                ],
 
-        this.validadores.set(
-            formulario,
-            validador,
-        );
-    }
-
-    /**
-     * Remove os eventos associados aos formulários inicializados.
-     *
-     * @returns {void}
-     *
-     * @since 3.0.0
-     * @version 1.0.0
-     */
-    destruir() {
-        this.validadores.forEach(
-            (
-                validador,
-                formulario,
-            ) => {
-                validador.destruir();
-
-                delete formulario.dataset
-                    .formularioComentarioInicializado;
+                aoSucesso: () => {
+                    /*
+                     * O validador exige uma função síncrona. A submissão AJAX
+                     * gere internamente o respetivo ciclo assíncrono.
+                     */
+                    void tratadorAjax.submeter();
+                },
             },
         );
-
-        this.validadores.clear();
     }
 }
 

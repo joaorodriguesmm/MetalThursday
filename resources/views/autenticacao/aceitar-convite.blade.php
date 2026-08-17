@@ -3,7 +3,6 @@
     registo de um novo utilizador.
 
     @since 1.0.0
-    @version 2.0.0
 --}}
 
 <x-layout-convidado>
@@ -254,7 +253,6 @@
                     data-descricao-palavra-passe="a palavra-passe"
                     aria-label="Mostrar a palavra-passe"
                     aria-controls="palavra-passe"
-                    aria-pressed="false"
                 >
                     <i
                         class="bi bi-eye-fill"
@@ -268,8 +266,10 @@
                 id="ajuda-palavra-passe"
                 class="form-text"
             >
-                Utiliza pelo menos 12 caracteres, incluindo uma letra
-                maiúscula, uma letra minúscula, um número e um símbolo.
+                Utiliza pelo menos
+                {{ $comprimentoMinimoPalavraPasse }}
+                caracteres, incluindo uma letra maiúscula, uma letra
+                minúscula, um número e um símbolo.
             </div>
 
             <div
@@ -321,7 +321,6 @@
                     data-descricao-palavra-passe="a confirmação da palavra-passe"
                     aria-label="Mostrar a confirmação da palavra-passe"
                     aria-controls="confirmacao-palavra-passe"
-                    aria-pressed="false"
                 >
                     <i
                         class="bi bi-eye-fill"
@@ -469,7 +468,7 @@
 
     @push('scripts-pagina')
         @vite(
-            'resources/js/paginas/aceitarConvite.js'
+            'resources/js/paginas/registoConvite.js'
         )
     @endpush
 </x-layout-convidado>

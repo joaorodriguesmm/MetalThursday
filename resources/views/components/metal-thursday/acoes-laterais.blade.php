@@ -7,7 +7,6 @@
     acesso é determinada pela respetiva política de autorização.
 
     @since 1.0.0
-    @version 4.0.0
 --}}
 
 <nav

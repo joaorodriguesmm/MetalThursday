@@ -5,7 +5,6 @@ import ValidadorFormulario
  * Configura os comportamentos da página de recuperação da palavra-passe.
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 
 /**
@@ -13,8 +12,7 @@ import ValidadorFormulario
  *
  * @type {Readonly<Record<string, string>>}
  *
- * @since 2.2.0
- * @version 2.0.0
+ * @since 2.0.0
  */
 const SELETORES = Object.freeze({
     formulario:
@@ -22,30 +20,37 @@ const SELETORES = Object.freeze({
 });
 
 /**
- * Obtém o comprimento máximo declarado no campo de e-mail.
+ * Obtém obrigatoriamente o comprimento máximo declarado no campo de e-mail.
  *
  * @param {HTMLFormElement} formulario Formulário pesquisado.
  *
  * @returns {number} Comprimento máximo positivo.
  *
- * @since 3.0.0
- * @version 1.0.0
+ * @throws {TypeError} Quando o campo ou o limite não são válidos.
+ *
+ * @since 2.0.0
  */
-function obterComprimentoMaximoEmail(formulario) {
+function obterComprimentoMaximoEmail(
+    formulario,
+) {
     const campo =
         formulario.elements.namedItem(
             'email',
         );
 
     if (
-        campo instanceof HTMLInputElement
-        && Number.isInteger(campo.maxLength)
-        && campo.maxLength > 0
+        !(campo instanceof HTMLInputElement)
+        || !Number.isInteger(
+            campo.maxLength,
+        )
+        || campo.maxLength <= 0
     ) {
-        return campo.maxLength;
+        throw new TypeError(
+            'O campo "email" deve possuir um comprimento máximo válido.',
+        );
     }
 
-    return 255;
+    return campo.maxLength;
 }
 
 /**
@@ -54,7 +59,6 @@ function obterComprimentoMaximoEmail(formulario) {
  * @returns {void}
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 function iniciarValidacaoFormulario() {
     const formulario =
@@ -104,7 +108,6 @@ function iniciarValidacaoFormulario() {
  * @returns {void}
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 function iniciarPaginaRecuperacaoPalavraPasse() {
     iniciarValidacaoFormulario();

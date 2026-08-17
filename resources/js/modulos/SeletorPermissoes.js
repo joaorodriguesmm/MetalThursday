@@ -7,11 +7,10 @@
  * restauradas.
  *
  * @since 1.0.0
- * @version 2.1.0
  */
 class SeletorPermissoes {
     /**
-     * Cria o seletor de permissões.
+     * Cria e inicializa o seletor de permissões.
      *
      * @param {string|HTMLInputElement} campoTodasOuSeletor
      *     Campo que representa todas as permissões ou respetivo seletor.
@@ -21,37 +20,65 @@ class SeletorPermissoes {
      * @throws {TypeError} Quando os elementos recebidos não são válidos.
      *
      * @since 1.0.0
-     * @version 2.1.0
      */
     constructor(
         campoTodasOuSeletor,
         itensOuSeletor,
     ) {
-        this.campoTodas = this.obterCampoTodas(
-            campoTodasOuSeletor,
+        this.campoTodas =
+            this.obterCampoTodas(
+                campoTodasOuSeletor,
+            );
+
+        this.itensIndividuais =
+            this.obterItensIndividuais(
+                itensOuSeletor,
+            );
+
+        this.camposIndividuais =
+            this.itensIndividuais.map(
+                (item) =>
+                    this.obterCampoDoItem(
+                        item,
+                    ),
+            );
+
+        /**
+         * Checkboxes individuais seleccionadas antes de activar a permissão
+         * global.
+         *
+         * @type {Set<HTMLInputElement>}
+         *
+         * @since 2.0.0
+         */
+        this.selecoesAnteriores =
+            new Set();
+
+        if (!this.campoTodas.checked) {
+            this.memorizarSelecoesIndividuais();
+        }
+
+        this.campoTodas.addEventListener(
+            'change',
+            () => {
+                this.tratarAlteracao();
+            },
         );
 
-        this.itensIndividuais = this.obterItensIndividuais(
-            itensOuSeletor,
-        );
+        const formulario =
+            this.campoTodas.form;
 
-        this.camposIndividuais = this.itensIndividuais.map(
-            (item) => this.obterCampoDoItem(item),
-        );
-
-        this.selecoesAnteriores = new Set();
-        this.formulario = this.campoTodas.form;
-        this.iniciado = false;
-        this.identificadorReposicao = null;
-
-        this.manipularAlteracao =
-            this.manipularAlteracao.bind(this);
-
-        this.manipularReposicao =
-            this.manipularReposicao.bind(this);
-
-        this.registarEstadoInicial();
-        this.configurarEventos();
+        if (
+            formulario
+            instanceof HTMLFormElement
+        ) {
+            formulario.addEventListener(
+                'reset',
+                () => {
+                    this.tratarReposicao();
+                },
+            );
+        }
 
         this.atualizarEstado({
             restaurarSelecoes: false,
@@ -59,67 +86,13 @@ class SeletorPermissoes {
     }
 
     /**
-     * Configura os eventos necessários.
-     *
-     * @returns {void}
-     *
-     * @since 1.0.0
-     * @version 2.1.0
-     */
-    configurarEventos() {
-        if (this.iniciado) {
-            return;
-        }
-
-        this.campoTodas.addEventListener(
-            'change',
-            this.manipularAlteracao,
-        );
-
-        if (this.formulario instanceof HTMLFormElement) {
-            this.formulario.addEventListener(
-                'reset',
-                this.manipularReposicao,
-            );
-        }
-
-        this.iniciado = true;
-    }
-
-    /**
-     * Regista as seleções apresentadas inicialmente.
-     *
-     * Quando a opção global já está selecionada, não existem escolhas
-     * individuais para preservar.
-     *
-     * @returns {void}
-     *
-     * @since 2.0.0
-     * @version 1.0.0
-     */
-    registarEstadoInicial() {
-        if (this.campoTodas.checked) {
-            return;
-        }
-
-        this.memorizarSelecoesIndividuais();
-    }
-
-    /**
      * Processa a alteração da opção global.
      *
-     * @param {Event} evento Evento de alteração.
-     *
      * @returns {void}
      *
      * @since 1.0.0
-     * @version 2.0.0
      */
-    manipularAlteracao(evento) {
-        if (evento.currentTarget !== this.campoTodas) {
-            return;
-        }
-
+    tratarAlteracao() {
         if (this.campoTodas.checked) {
             this.memorizarSelecoesIndividuais();
 
@@ -138,24 +111,17 @@ class SeletorPermissoes {
     /**
      * Processa a reposição do formulário.
      *
-     * O navegador repõe os valores dos campos depois do evento `reset`.
-     * A atualização é, por isso, adiada para o ciclo seguinte.
+     * O evento `reset` é emitido antes de o navegador terminar a reposição
+     * dos valores dos campos. A sincronização é, por isso, executada numa
+     * tarefa posterior.
      *
      * @returns {void}
      *
      * @since 2.0.0
-     * @version 1.1.0
      */
-    manipularReposicao() {
-        if (this.identificadorReposicao !== null) {
-            window.clearTimeout(
-                this.identificadorReposicao,
-            );
-        }
-
-        this.identificadorReposicao = window.setTimeout(
+    tratarReposicao() {
+        window.setTimeout(
             () => {
-                this.identificadorReposicao = null;
                 this.selecoesAnteriores.clear();
 
                 if (!this.campoTodas.checked) {
@@ -180,7 +146,6 @@ class SeletorPermissoes {
      * @returns {void}
      *
      * @since 1.0.0
-     * @version 2.0.0
      */
     atualizarEstado({
         restaurarSelecoes,
@@ -191,12 +156,12 @@ class SeletorPermissoes {
         this.itensIndividuais.forEach(
             (item, indice) => {
                 const campo =
-                    this.camposIndividuais[indice];
+                    this.camposIndividuais[
+                        indice
+                    ];
 
-                this.atualizarItem(
-                    item,
-                    ocultarIndividuais,
-                );
+                item.hidden =
+                    ocultarIndividuais;
 
                 this.atualizarCampo(
                     campo,
@@ -204,36 +169,6 @@ class SeletorPermissoes {
                     restaurarSelecoes,
                 );
             },
-        );
-    }
-
-    /**
-     * Atualiza a apresentação de um item individual.
-     *
-     * @param {HTMLElement} item Elemento da permissão.
-     * @param {boolean} ocultar Indicação de ocultação.
-     *
-     * @returns {void}
-     *
-     * @since 2.0.0
-     * @version 1.0.0
-     */
-    atualizarItem(
-        item,
-        ocultar,
-    ) {
-        item.hidden = ocultar;
-
-        item.classList.toggle(
-            'd-none',
-            ocultar,
-        );
-
-        item.setAttribute(
-            'aria-hidden',
-            ocultar
-                ? 'true'
-                : 'false',
         );
     }
 
@@ -250,7 +185,6 @@ class SeletorPermissoes {
      * @returns {void}
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     atualizarCampo(
         campo,
@@ -258,39 +192,48 @@ class SeletorPermissoes {
         restaurarSelecao,
     ) {
         if (ocultar) {
-            campo.checked = false;
-            campo.disabled = true;
+            campo.checked =
+                false;
+
+            campo.disabled =
+                true;
 
             return;
         }
 
-        campo.disabled = false;
+        campo.disabled =
+            false;
 
         if (restaurarSelecao) {
-            campo.checked = this.selecoesAnteriores.has(
-                campo.value,
-            );
+            campo.checked =
+                this.selecoesAnteriores.has(
+                    campo,
+                );
         }
     }
 
     /**
-     * Memoriza as permissões individuais selecionadas.
+     * Memoriza as permissões individuais atualmente selecionadas.
+     *
+     * São guardadas referências às próprias checkboxes em vez dos respetivos
+     * valores, evitando depender da unicidade desses valores.
      *
      * @returns {void}
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     memorizarSelecoesIndividuais() {
         this.selecoesAnteriores.clear();
 
-        this.camposIndividuais.forEach((campo) => {
-            if (campo.checked) {
-                this.selecoesAnteriores.add(
-                    campo.value,
-                );
-            }
-        });
+        this.camposIndividuais.forEach(
+            (campo) => {
+                if (campo.checked) {
+                    this.selecoesAnteriores.add(
+                        campo,
+                    );
+                }
+            },
+        );
     }
 
     /**
@@ -304,12 +247,15 @@ class SeletorPermissoes {
      * @throws {TypeError} Quando o seletor ou o campo não são válidos.
      *
      * @since 2.0.0
-     * @version 1.1.0
      */
     obterCampoTodas(campoOuSeletor) {
-        let campo = campoOuSeletor;
+        let campo =
+            campoOuSeletor;
 
-        if (typeof campoOuSeletor === 'string') {
+        if (
+            typeof campoOuSeletor
+            === 'string'
+        ) {
             const seletor =
                 campoOuSeletor.trim();
 
@@ -320,9 +266,10 @@ class SeletorPermissoes {
             }
 
             try {
-                campo = document.querySelector(
-                    seletor,
-                );
+                campo =
+                    document.querySelector(
+                        seletor,
+                    );
             } catch {
                 throw new TypeError(
                     `O seletor CSS "${seletor}" é inválido.`,
@@ -355,12 +302,14 @@ class SeletorPermissoes {
      * @throws {TypeError} Quando o seletor ou os itens não são válidos.
      *
      * @since 2.0.0
-     * @version 1.1.0
      */
     obterItensIndividuais(itensOuSeletor) {
         let elementos;
 
-        if (typeof itensOuSeletor === 'string') {
+        if (
+            typeof itensOuSeletor
+            === 'string'
+        ) {
             const seletor =
                 itensOuSeletor.trim();
 
@@ -388,9 +337,10 @@ class SeletorPermissoes {
                 Symbol.iterator
             ] === 'function'
         ) {
-            elementos = Array.from(
-                itensOuSeletor,
-            );
+            elementos =
+                Array.from(
+                    itensOuSeletor,
+                );
         } else {
             throw new TypeError(
                 'Os itens das permissões devem ser indicados através de um seletor ou coleção.',
@@ -400,7 +350,8 @@ class SeletorPermissoes {
         if (
             elementos.some(
                 (elemento) =>
-                    !(elemento instanceof HTMLElement),
+                    !(elemento
+                        instanceof HTMLElement),
             )
         ) {
             throw new TypeError(
@@ -409,7 +360,9 @@ class SeletorPermissoes {
         }
 
         return Array.from(
-            new Set(elementos),
+            new Set(
+                elementos,
+            ),
         ).filter(
             (elemento) =>
                 !elemento.contains(
@@ -428,15 +381,16 @@ class SeletorPermissoes {
      * @throws {TypeError} Quando o item não possui uma checkbox válida.
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     obterCampoDoItem(item) {
-        const campo = item.querySelector(
-            'input[type="checkbox"]',
-        );
+        const campo =
+            item.querySelector(
+                'input[type="checkbox"]',
+            );
 
         if (
-            !(campo instanceof HTMLInputElement)
+            !(campo
+                instanceof HTMLInputElement)
             || campo === this.campoTodas
         ) {
             throw new TypeError(
@@ -445,42 +399,6 @@ class SeletorPermissoes {
         }
 
         return campo;
-    }
-
-    /**
-     * Remove os eventos configurados pelo módulo.
-     *
-     * @returns {void}
-     *
-     * @since 2.0.0
-     * @version 1.1.0
-     */
-    destruir() {
-        if (!this.iniciado) {
-            return;
-        }
-
-        this.campoTodas.removeEventListener(
-            'change',
-            this.manipularAlteracao,
-        );
-
-        if (this.formulario instanceof HTMLFormElement) {
-            this.formulario.removeEventListener(
-                'reset',
-                this.manipularReposicao,
-            );
-        }
-
-        if (this.identificadorReposicao !== null) {
-            window.clearTimeout(
-                this.identificadorReposicao,
-            );
-
-            this.identificadorReposicao = null;
-        }
-
-        this.iniciado = false;
     }
 }
 

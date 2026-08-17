@@ -1,26 +1,34 @@
-import InicializadorTomSelect
-    from '../modulos/InicializadorTomSelect';
-
 import ValidadorFormulario
     from '../modulos/ValidadorFormulario';
 
 /**
  * Script específico das páginas de gestão de entidades.
  *
- * Inicializa os campos Tom Select e a validação de apoio dos
- * formulários de bandas, géneros e edições.
+ * Inicializa os campos Tom Select quando existem e configura a validação de
+ * apoio dos formulários de bandas, géneros e edições.
  *
  * @since 1.0.0
- * @version 3.0.0
  */
+
+/**
+ * Seletor dos campos enriquecidos pelo Tom Select.
+ *
+ * @type {string}
+ *
+ * @since 2.0.0
+ */
+const SELETOR_TOM_SELECT =
+    '.tom-select-unico, .tom-select-multiplo';
 
 /**
  * Configurações dos formulários geridos pelo script.
  *
- * @type {ReadonlyArray<Object>}
+ * As regras de comprimento do nome são acrescentadas a partir do atributo
+ * `maxlength` declarado no próprio campo HTML.
  *
- * @since 2.1.0
- * @version 2.0.0
+ * @type {ReadonlyArray<object>}
+ *
+ * @since 2.0.0
  */
 const CONFIGURACOES_FORMULARIOS = Object.freeze([
     {
@@ -30,7 +38,6 @@ const CONFIGURACOES_FORMULARIOS = Object.freeze([
         regras: {
             nome: [
                 'obrigatorio',
-                'maximo:255',
             ],
 
             origem_geografica_id: [
@@ -49,7 +56,7 @@ const CONFIGURACOES_FORMULARIOS = Object.freeze([
                     'Por favor, insere o nome da banda.',
 
                 maximo:
-                    'O nome da banda não pode ter mais de 255 caracteres.',
+                    'O nome da banda é demasiado longo.',
             },
 
             origem_geografica_id: {
@@ -74,7 +81,6 @@ const CONFIGURACOES_FORMULARIOS = Object.freeze([
         regras: {
             nome: [
                 'obrigatorio',
-                'maximo:100',
             ],
         },
 
@@ -84,7 +90,7 @@ const CONFIGURACOES_FORMULARIOS = Object.freeze([
                     'Por favor, insere o nome do género.',
 
                 maximo:
-                    'O nome do género não pode ter mais de 100 caracteres.',
+                    'O nome do género é demasiado longo.',
             },
         },
     },
@@ -96,7 +102,6 @@ const CONFIGURACOES_FORMULARIOS = Object.freeze([
         regras: {
             nome: [
                 'obrigatorio',
-                'maximo:255',
             ],
 
             data_inicio: [
@@ -116,7 +121,7 @@ const CONFIGURACOES_FORMULARIOS = Object.freeze([
                     'Por favor, insere o nome da edição.',
 
                 maximo:
-                    'O nome da edição não pode ter mais de 255 caracteres.',
+                    'O nome da edição é demasiado longo.',
             },
 
             data_inicio: {
@@ -139,12 +144,71 @@ const CONFIGURACOES_FORMULARIOS = Object.freeze([
 ]);
 
 /**
+ * Obtém o comprimento máximo declarado no campo do nome.
+ *
+ * @param {HTMLFormElement} formulario Formulário pesquisado.
+ *
+ * @returns {number} Comprimento máximo positivo.
+ *
+ * @throws {TypeError} Quando o formulário não possui o contrato esperado.
+ *
+ * @since 2.0.0
+ */
+function obterComprimentoMaximoNome(formulario) {
+    const campo =
+        formulario.elements.namedItem(
+            'nome',
+        );
+
+    if (
+        !(campo instanceof HTMLInputElement)
+        || !Number.isInteger(
+            campo.maxLength,
+        )
+        || campo.maxLength <= 0
+    ) {
+        throw new TypeError(
+            `O formulário "${formulario.id}" deve possuir um campo de nome com comprimento máximo válido.`,
+        );
+    }
+
+    return campo.maxLength;
+}
+
+/**
+ * Prepara as regras de um formulário a partir do respetivo HTML.
+ *
+ * @param {HTMLFormElement} formulario Formulário gerido.
+ * @param {Record<string, Array<string|Function>>} regrasBase
+ *     Regras específicas da entidade.
+ *
+ * @returns {Record<string, Array<string|Function>>} Regras finais.
+ *
+ * @since 2.0.0
+ */
+function criarRegrasFormulario(
+    formulario,
+    regrasBase,
+) {
+    return {
+        ...regrasBase,
+
+        nome: [
+            ...(regrasBase.nome ?? []),
+
+            `maximo:${obterComprimentoMaximoNome(
+                formulario,
+            )}`,
+        ],
+    };
+}
+
+/**
  * Inicia os validadores dos formulários disponíveis.
  *
- * @return {void}
+ * @returns {void}
  *
  * @since 1.0.0
- * @version 2.3.0
  */
 function iniciarValidadoresEntidades() {
     CONFIGURACOES_FORMULARIOS.forEach(
@@ -165,7 +229,12 @@ function iniciarValidadoresEntidades() {
             new ValidadorFormulario(
                 formulario,
                 {
-                    regras,
+                    regras:
+                        criarRegrasFormulario(
+                            formulario,
+                            regras,
+                        ),
+
                     mensagens,
                 },
             );
@@ -174,15 +243,44 @@ function iniciarValidadoresEntidades() {
 }
 
 /**
+ * Inicializa o Tom Select apenas quando a página possui campos compatíveis.
+ *
+ * As páginas de edições utilizam este mesmo entrypoint, mas não possuem
+ * campos Tom Select. O carregamento condicional evita transferir essa
+ * dependência nessas páginas.
+ *
+ * @returns {Promise<void>}
+ *
+ * @since 2.0.0
+ */
+async function iniciarTomSelectSeNecessario() {
+    if (
+        document.querySelector(
+            SELETOR_TOM_SELECT,
+        ) === null
+    ) {
+        return;
+    }
+
+    const {
+        default:
+            InicializadorTomSelect,
+    } = await import(
+        '../modulos/InicializadorTomSelect'
+    );
+
+    new InicializadorTomSelect();
+}
+
+/**
  * Inicia os comportamentos das páginas de gestão de entidades.
  *
- * @return {void}
+ * @returns {Promise<void>}
  *
  * @since 1.0.0
- * @version 2.3.0
  */
-function iniciarPaginaEntidades() {
-    new InicializadorTomSelect();
+async function iniciarPaginaEntidades() {
+    await iniciarTomSelectSeNecessario();
 
     iniciarValidadoresEntidades();
 }
@@ -190,11 +288,13 @@ function iniciarPaginaEntidades() {
 if (document.readyState === 'loading') {
     document.addEventListener(
         'DOMContentLoaded',
-        iniciarPaginaEntidades,
+        () => {
+            void iniciarPaginaEntidades();
+        },
         {
             once: true,
         },
     );
 } else {
-    iniciarPaginaEntidades();
+    void iniciarPaginaEntidades();
 }

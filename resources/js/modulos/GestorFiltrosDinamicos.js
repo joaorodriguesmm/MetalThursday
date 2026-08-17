@@ -1,14 +1,11 @@
-import TomSelect from 'tom-select';
-
 /**
  * Gere a criação e a remoção dinâmica de filtros de pesquisa.
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 class GestorFiltrosDinamicos {
     /**
-     * Cria um gestor de filtros dinâmicos.
+     * Cria e inicia um gestor de filtros dinâmicos.
      *
      * Cada filtro disponível deve possuir:
      *
@@ -27,25 +24,26 @@ class GestorFiltrosDinamicos {
      * @param {Record<string, object>} opcoes.filtrosDisponiveis
      *     Configuração dos filtros disponíveis.
      *
-     * @throws {TypeError} Quando as opções são inválidas.
+     * @throws {TypeError} Quando as opções ou os elementos são inválidos.
      *
      * @since 1.0.0
-     * @version 2.0.0
      */
     constructor({
         seletorListaFiltros,
         seletorContentorFiltros,
         dadosFiltros = {},
         filtrosDisponiveis = {},
-    }) {
-        this.validarSeletor(
+    } = {}) {
+        this.listaAdicionarFiltro = this.obterElemento(
             seletorListaFiltros,
-            'O seletor da lista de filtros é obrigatório.',
+            HTMLSelectElement,
+            'a lista de filtros',
         );
 
-        this.validarSeletor(
+        this.areaFiltrosAtivos = this.obterElemento(
             seletorContentorFiltros,
-            'O seletor do contentor de filtros é obrigatório.',
+            HTMLElement,
+            'o contentor de filtros',
         );
 
         this.validarObjeto(
@@ -53,81 +51,59 @@ class GestorFiltrosDinamicos {
             'Os dados dos filtros devem ser um objeto.',
         );
 
-        this.validarObjeto(
-            filtrosDisponiveis,
-            'A configuração dos filtros deve ser um objeto.',
-        );
-
-        this.listaAdicionarFiltro = this.obterElemento(
-            seletorListaFiltros,
-        );
-
-        this.areaFiltrosAtivos = this.obterElemento(
-            seletorContentorFiltros,
-        );
-
         this.dadosFiltros = dadosFiltros;
-        this.filtrosDisponiveis = filtrosDisponiveis;
+
+        this.filtrosDisponiveis =
+            this.normalizarFiltrosDisponiveis(
+                filtrosDisponiveis,
+            );
+
+        /**
+         * Componentes atualmente apresentados, indexados pelo nome do campo.
+         *
+         * @type {Map<string, HTMLDivElement>}
+         *
+         * @since 2.0.0
+         */
+        this.componentesAtivos = new Map();
+
+        /**
+         * Instâncias Tom Select associadas aos filtros ativos.
+         *
+         * @type {Map<string, object>}
+         *
+         * @since 2.0.0
+         */
         this.instanciasTomSelect = new Map();
-        this.iniciado = false;
 
-        this.aoAlterarListaFiltros = (evento) => {
-            this.tratarAdicaoFiltro(evento);
-        };
-
-        this.aoClicarAreaFiltros = (evento) => {
-            this.tratarRemocaoFiltro(evento);
-        };
-
-        if (this.estaAtivo()) {
-            this.iniciar();
-        }
-    }
-
-    /**
-     * Verifica se o gestor encontrou os elementos necessários.
-     *
-     * @returns {boolean}
-     *
-     * @since 2.0.0
-     * @version 1.0.0
-     */
-    estaAtivo() {
-        return this.listaAdicionarFiltro instanceof HTMLSelectElement
-            && this.areaFiltrosAtivos instanceof HTMLElement;
-    }
-
-    /**
-     * Inicia o gestor de filtros.
-     *
-     * @since 1.0.0
-     * @version 2.0.0
-     */
-    iniciar() {
-        if (!this.estaAtivo() || this.iniciado) {
-            return;
-        }
+        /**
+         * Promessa partilhada do carregamento assíncrono do Tom Select.
+         *
+         * @type {Promise<Function>|null}
+         *
+         * @since 2.0.0
+         */
+        this.promessaTomSelect = null;
 
         this.inicializarAPartirDoUrl();
 
         this.listaAdicionarFiltro.addEventListener(
             'change',
-            this.aoAlterarListaFiltros,
+            (evento) => this.tratarAdicaoFiltro(evento),
         );
 
         this.areaFiltrosAtivos.addEventListener(
             'click',
-            this.aoClicarAreaFiltros,
+            (evento) => this.tratarRemocaoFiltro(evento),
         );
-
-        this.iniciado = true;
     }
 
     /**
      * Cria os filtros presentes nos parâmetros do endereço atual.
      *
+     * @returns {void}
+     *
      * @since 1.0.0
-     * @version 2.0.0
      */
     inicializarAPartirDoUrl() {
         const parametrosUrl = new URLSearchParams(
@@ -136,22 +112,33 @@ class GestorFiltrosDinamicos {
 
         Object.entries(this.filtrosDisponiveis).forEach(
             ([chaveFiltro, configuracao]) => {
-                if (
-                    !this.eConfiguracaoValida(configuracao)
-                ) {
-                    return;
-                }
-
                 const nomeParametro =
                     `filtro_${configuracao.parametro}`;
 
-                if (!parametrosUrl.has(nomeParametro)) {
+                const valores = parametrosUrl.getAll(
+                    nomeParametro,
+                );
+
+                if (valores.length === 0) {
+                    return;
+                }
+
+                const valorAtual =
+                    valores[valores.length - 1];
+
+                if (
+                    valorAtual === ''
+                    || !this.eValorFiltroValido(
+                        configuracao,
+                        valorAtual,
+                    )
+                ) {
                     return;
                 }
 
                 this.renderizar(
                     chaveFiltro,
-                    parametrosUrl.get(nomeParametro) ?? '',
+                    valorAtual,
                 );
             },
         );
@@ -162,8 +149,9 @@ class GestorFiltrosDinamicos {
      *
      * @param {Event} evento Evento de alteração.
      *
+     * @returns {void}
+     *
      * @since 1.0.0
-     * @version 2.0.0
      */
     tratarAdicaoFiltro(evento) {
         const lista = evento.currentTarget;
@@ -179,6 +167,7 @@ class GestorFiltrosDinamicos {
         }
 
         this.renderizar(chaveFiltro);
+
         lista.value = '';
     }
 
@@ -187,8 +176,9 @@ class GestorFiltrosDinamicos {
      *
      * @param {MouseEvent} evento Evento de clique.
      *
+     * @returns {void}
+     *
      * @since 1.0.0
-     * @version 2.0.0
      */
     tratarRemocaoFiltro(evento) {
         if (!(evento.target instanceof Element)) {
@@ -204,7 +194,7 @@ class GestorFiltrosDinamicos {
         }
 
         const nomeFiltro =
-            botaoRemover.dataset.removerFiltro;
+            botaoRemover.dataset.removerFiltro?.trim();
 
         if (!nomeFiltro) {
             return;
@@ -222,56 +212,52 @@ class GestorFiltrosDinamicos {
      * @returns {boolean} Indica se o filtro foi criado.
      *
      * @since 1.0.0
-     * @version 2.0.0
      */
     renderizar(
         chaveFiltro,
         valorAtual = '',
     ) {
-        if (!this.estaAtivo()) {
+        if (typeof chaveFiltro !== 'string') {
             return false;
         }
 
         const configuracao =
             this.filtrosDisponiveis[chaveFiltro];
 
-        if (!this.eConfiguracaoValida(configuracao)) {
+        if (!configuracao) {
             return false;
         }
 
         const nomeFiltro =
             `filtro_${configuracao.parametro}`;
 
-        if (this.filtroEstaAtivo(nomeFiltro)) {
+        if (this.componentesAtivos.has(nomeFiltro)) {
             return false;
         }
 
         const identificadorCampo =
             this.criarIdentificadorCampo(nomeFiltro);
 
-        const campo =
-            this.criarCampoFiltro(
-                configuracao,
-                nomeFiltro,
-                identificadorCampo,
-                String(valorAtual),
-            );
+        const campo = this.criarCampoFiltro(
+            configuracao,
+            nomeFiltro,
+            identificadorCampo,
+            String(valorAtual),
+        );
 
-        if (campo === null) {
-            return false;
-        }
+        const componente = this.criarComponenteFiltro(
+            configuracao.rotulo,
+            nomeFiltro,
+            identificadorCampo,
+            campo,
+        );
 
-        const componente =
-            this.criarComponenteFiltro(
-                configuracao.rotulo,
-                nomeFiltro,
-                identificadorCampo,
-                campo,
-            );
-
-        this.areaFiltrosAtivos.append(
+        this.componentesAtivos.set(
+            nomeFiltro,
             componente,
         );
+
+        this.areaFiltrosAtivos.append(componente);
 
         if (
             configuracao.tipo === 'selecao'
@@ -291,47 +277,34 @@ class GestorFiltrosDinamicos {
      *
      * @param {string} nomeFiltro Nome HTML do filtro.
      *
+     * @returns {boolean} Indica se o filtro foi removido.
+     *
      * @since 1.0.0
-     * @version 2.0.0
      */
     removerFiltro(nomeFiltro) {
+        const componente =
+            this.componentesAtivos.get(nomeFiltro);
+
+        if (!componente) {
+            return false;
+        }
+
         const instanciaTomSelect =
             this.instanciasTomSelect.get(nomeFiltro);
 
         if (instanciaTomSelect) {
             instanciaTomSelect.destroy();
-            this.instanciasTomSelect.delete(nomeFiltro);
+
+            this.instanciasTomSelect.delete(
+                nomeFiltro,
+            );
         }
 
-        const componente = Array.from(
-            this.areaFiltrosAtivos.children,
-        ).find(
-            (elemento) =>
-                elemento instanceof HTMLElement
-                && elemento.dataset.nomeFiltro === nomeFiltro,
-        );
+        componente.remove();
 
-        componente?.remove();
-    }
+        this.componentesAtivos.delete(nomeFiltro);
 
-    /**
-     * Verifica se um filtro já está apresentado.
-     *
-     * @param {string} nomeFiltro Nome HTML do filtro.
-     *
-     * @returns {boolean}
-     *
-     * @since 2.0.0
-     * @version 1.0.0
-     */
-    filtroEstaAtivo(nomeFiltro) {
-        return Array.from(
-            this.areaFiltrosAtivos.children,
-        ).some(
-            (elemento) =>
-                elemento instanceof HTMLElement
-                && elemento.dataset.nomeFiltro === nomeFiltro,
-        );
+        return true;
     }
 
     /**
@@ -342,14 +315,11 @@ class GestorFiltrosDinamicos {
      * @param {string} identificadorCampo Identificador HTML do campo.
      * @param {string} valorAtual Valor atual do filtro.
      *
-     * @returns {
-     *     HTMLInputElement
-     *     |HTMLSelectElement
-     *     |null
-     * }
+     * @returns {HTMLInputElement|HTMLSelectElement} Campo criado.
+     *
+     * @throws {Error} Quando é recebido um tipo de filtro desconhecido.
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     criarCampoFiltro(
         configuracao,
@@ -381,7 +351,9 @@ class GestorFiltrosDinamicos {
                 );
 
             default:
-                return null;
+                throw new Error(
+                    `O tipo de filtro "${configuracao.tipo}" não é suportado.`,
+                );
         }
     }
 
@@ -393,10 +365,9 @@ class GestorFiltrosDinamicos {
      * @param {string} identificadorCampo Identificador HTML do campo.
      * @param {string} valorAtual Valor atual do filtro.
      *
-     * @returns {HTMLSelectElement}
+     * @returns {HTMLSelectElement} Campo criado.
      *
      * @since 2.0.0
-     * @version 2.0.0
      */
     criarCampoSelecao(
         configuracao,
@@ -404,8 +375,7 @@ class GestorFiltrosDinamicos {
         identificadorCampo,
         valorAtual,
     ) {
-        const selecao =
-            document.createElement('select');
+        const selecao = document.createElement('select');
 
         selecao.id = identificadorCampo;
         selecao.name = nomeFiltro;
@@ -421,43 +391,26 @@ class GestorFiltrosDinamicos {
 
         selecao.append(opcaoInicial);
 
-        const opcoes =
-            this.obterOpcoesFiltro(configuracao);
+        this.obterOpcoesFiltro(configuracao)
+            .forEach((opcao) => {
+                if (!this.eOpcaoFiltroValida(opcao)) {
+                    return;
+                }
 
-        opcoes.forEach((opcao) => {
-            if (
-                !this.eObjeto(opcao)
-                || !Object.hasOwn(
-                    opcao,
-                    'identificador',
-                )
-                || !Object.hasOwn(opcao, 'nome')
-                || !Number.isInteger(
-                    opcao.identificador,
-                )
-                || opcao.identificador < 1
-                || typeof opcao.nome !== 'string'
-                || opcao.nome.trim() === ''
-            ) {
-                return;
-            }
+                const elementoOpcao =
+                    document.createElement('option');
 
-            const elementoOpcao =
-                document.createElement('option');
+                elementoOpcao.value =
+                    String(opcao.identificador);
 
-            elementoOpcao.value =
-                String(
-                    opcao.identificador,
-                );
+                elementoOpcao.textContent =
+                    opcao.nome.trim();
 
-            elementoOpcao.textContent =
-                String(opcao.nome);
+                elementoOpcao.selected =
+                    elementoOpcao.value === valorAtual;
 
-            elementoOpcao.selected =
-                elementoOpcao.value === valorAtual;
-
-            selecao.append(elementoOpcao);
-        });
+                selecao.append(elementoOpcao);
+            });
 
         return selecao;
     }
@@ -469,18 +422,16 @@ class GestorFiltrosDinamicos {
      * @param {string} identificadorCampo Identificador HTML do campo.
      * @param {string} valorAtual Valor atual do filtro.
      *
-     * @returns {HTMLInputElement}
+     * @returns {HTMLInputElement} Campo criado.
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     criarCampoData(
         nomeFiltro,
         identificadorCampo,
         valorAtual,
     ) {
-        const campo =
-            document.createElement('input');
+        const campo = document.createElement('input');
 
         campo.id = identificadorCampo;
         campo.type = 'date';
@@ -499,18 +450,16 @@ class GestorFiltrosDinamicos {
      * @param {string} identificadorCampo Identificador HTML do campo.
      * @param {string} valorAtual Valor atual do filtro.
      *
-     * @returns {HTMLSelectElement}
+     * @returns {HTMLSelectElement} Campo criado.
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     criarCampoSimNao(
         nomeFiltro,
         identificadorCampo,
         valorAtual,
     ) {
-        const selecao =
-            document.createElement('select');
+        const selecao = document.createElement('select');
 
         selecao.id = identificadorCampo;
         selecao.name = nomeFiltro;
@@ -532,13 +481,11 @@ class GestorFiltrosDinamicos {
                 rotulo: 'Não',
             },
         ].forEach(({ valor, rotulo }) => {
-            const opcao =
-                document.createElement('option');
+            const opcao = document.createElement('option');
 
             opcao.value = valor;
             opcao.textContent = rotulo;
-            opcao.selected =
-                valor === valorSelecionado;
+            opcao.selected = valor === valorSelecionado;
 
             selecao.append(opcao);
         });
@@ -554,10 +501,9 @@ class GestorFiltrosDinamicos {
      * @param {string} identificadorCampo Identificador HTML do campo.
      * @param {HTMLElement} campo Campo do filtro.
      *
-     * @returns {HTMLDivElement}
+     * @returns {HTMLDivElement} Componente criado.
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     criarComponenteFiltro(
         rotulo,
@@ -565,44 +511,28 @@ class GestorFiltrosDinamicos {
         identificadorCampo,
         campo,
     ) {
-        const coluna =
-            document.createElement('div');
+        const coluna = document.createElement('div');
 
-        coluna.className =
-            'col-md-4 mb-3';
+        coluna.className = 'col-md-4 mb-3';
 
-        coluna.dataset.nomeFiltro =
-            nomeFiltro;
+        const cartao = document.createElement('div');
 
-        const cartao =
-            document.createElement('div');
+        cartao.className = 'card bg-secondary h-100';
 
-        cartao.className =
-            'card bg-secondary h-100';
+        const corpo = document.createElement('div');
 
-        const corpo =
-            document.createElement('div');
+        corpo.className = 'card-body p-2';
 
-        corpo.className =
-            'card-body p-2';
-
-        const cabecalho =
-            document.createElement('div');
+        const cabecalho = document.createElement('div');
 
         cabecalho.className =
             'd-flex justify-content-between align-items-center mb-2';
 
-        const etiqueta =
-            document.createElement('label');
+        const etiqueta = document.createElement('label');
 
-        etiqueta.className =
-            'small text-white';
-
-        etiqueta.htmlFor =
-            identificadorCampo;
-
-        etiqueta.textContent =
-            rotulo;
+        etiqueta.className = 'small text-white';
+        etiqueta.htmlFor = identificadorCampo;
+        etiqueta.textContent = rotulo;
 
         const botaoRemover =
             document.createElement('button');
@@ -640,21 +570,14 @@ class GestorFiltrosDinamicos {
      *
      * @param {object} configuracao Configuração do filtro.
      *
-     * @returns {Array<object>}
+     * @returns {Array<object>} Opções disponíveis.
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     obterOpcoesFiltro(configuracao) {
-        if (
-            typeof configuracao.chaveDados !== 'string'
-            || configuracao.chaveDados.trim() === ''
-        ) {
-            return [];
-        }
-
-        const opcoes =
-            this.dadosFiltros[configuracao.chaveDados];
+        const opcoes = this.dadosFiltros[
+            configuracao.chaveDados
+        ];
 
         return Array.isArray(opcoes)
             ? opcoes
@@ -662,31 +585,48 @@ class GestorFiltrosDinamicos {
     }
 
     /**
-     * Inicializa o Tom Select num campo.
+     * Inicializa o Tom Select num campo de seleção.
+     *
+     * O módulo é carregado apenas quando existe efetivamente um filtro de
+     * seleção. Se o carregamento falhar, o campo nativo permanece funcional.
      *
      * @param {string} nomeFiltro Nome HTML do filtro.
      * @param {HTMLSelectElement} campo Campo de seleção.
      *
+     * @returns {Promise<void>}
+     *
      * @since 2.0.0
-     * @version 1.0.0
      */
-    inicializarTomSelect(
+    async inicializarTomSelect(
         nomeFiltro,
         campo,
     ) {
-        const instanciaExistente =
-            this.instanciasTomSelect.get(nomeFiltro);
+        let TomSelect;
 
-        instanciaExistente?.destroy();
+        try {
+            TomSelect = await this.carregarTomSelect();
+        } catch {
+            return;
+        }
 
-        const instancia =
-            new TomSelect(
-                campo,
-                {
-                    allowEmptyOption: true,
-                    create: false,
-                },
-            );
+        const componente =
+            this.componentesAtivos.get(nomeFiltro);
+
+        if (
+            !componente
+            || !campo.isConnected
+            || !componente.contains(campo)
+        ) {
+            return;
+        }
+
+        const instancia = new TomSelect(
+            campo,
+            {
+                allowEmptyOption: true,
+                create: false,
+            },
+        );
 
         this.instanciasTomSelect.set(
             nomeFiltro,
@@ -695,46 +635,225 @@ class GestorFiltrosDinamicos {
     }
 
     /**
+     * Carrega a versão base do Tom Select.
+     *
+     * @returns {Promise<Function>} Construtor do Tom Select.
+     *
+     * @since 2.0.0
+     */
+    carregarTomSelect() {
+        if (this.promessaTomSelect === null) {
+            this.promessaTomSelect = import(
+                'tom-select/base'
+            )
+                .then((modulo) => modulo.default)
+                .catch((erro) => {
+                    this.promessaTomSelect = null;
+
+                    throw erro;
+                });
+        }
+
+        return this.promessaTomSelect;
+    }
+
+    /**
+     * Verifica se um valor é válido para um filtro configurado.
+     *
+     * @param {object} configuracao Configuração do filtro.
+     * @param {string} valor Valor recebido.
+     *
+     * @returns {boolean} Verdadeiro quando o valor é válido.
+     *
+     * @since 2.0.0
+     */
+    eValorFiltroValido(
+        configuracao,
+        valor,
+    ) {
+        switch (configuracao.tipo) {
+            case 'selecao':
+                return this.obterOpcoesFiltro(
+                    configuracao,
+                ).some(
+                    (opcao) =>
+                        this.eOpcaoFiltroValida(opcao)
+                        && String(opcao.identificador)
+                            === valor,
+                );
+
+            case 'data':
+                return this.eDataValida(valor);
+
+            case 'sim_nao':
+                return ['sim', 'nao'].includes(valor);
+
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Verifica se uma opção de um filtro de seleção é válida.
+     *
+     * @param {unknown} opcao Opção recebida.
+     *
+     * @returns {boolean} Verdadeiro quando a opção é válida.
+     *
+     * @since 2.0.0
+     */
+    eOpcaoFiltroValida(opcao) {
+        return this.eObjeto(opcao)
+            && Number.isInteger(opcao.identificador)
+            && opcao.identificador > 0
+            && typeof opcao.nome === 'string'
+            && opcao.nome.trim() !== '';
+    }
+
+    /**
+     * Verifica se um valor respeita o formato de um campo HTML de data.
+     *
+     * @param {string} valor Valor recebido.
+     *
+     * @returns {boolean} Verdadeiro quando a data é válida.
+     *
+     * @since 2.0.0
+     */
+    eDataValida(valor) {
+        const campo = document.createElement('input');
+
+        campo.type = 'date';
+        campo.value = valor;
+
+        return campo.value === valor;
+    }
+
+    /**
      * Cria um identificador HTML seguro.
      *
      * @param {string} nomeFiltro Nome HTML do filtro.
      *
-     * @returns {string}
+     * @returns {string} Identificador normalizado.
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     criarIdentificadorCampo(nomeFiltro) {
-        return nomeFiltro
-            .replace(
-                /[^a-zA-Z0-9_-]/g,
-                '-',
-            );
+        return nomeFiltro.replace(
+            /[^a-zA-Z0-9_-]/g,
+            '-',
+        );
     }
 
     /**
-     * Verifica se uma configuração de filtro é válida.
+     * Valida e normaliza a configuração dos filtros disponíveis.
      *
-     * @param {unknown} configuracao Configuração a verificar.
+     * @param {unknown} filtrosDisponiveis Configuração recebida.
      *
-     * @returns {boolean}
+     * @returns {Readonly<Record<string, object>>}
+     *     Configuração normalizada.
+     *
+     * @throws {TypeError} Quando a configuração é inválida.
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
-    eConfiguracaoValida(configuracao) {
-        if (!this.eObjeto(configuracao)) {
-            return false;
-        }
+    normalizarFiltrosDisponiveis(
+        filtrosDisponiveis,
+    ) {
+        this.validarObjeto(
+            filtrosDisponiveis,
+            'A configuração dos filtros deve ser um objeto.',
+        );
 
-        return typeof configuracao.parametro === 'string'
-            && configuracao.parametro.trim() !== ''
-            && typeof configuracao.tipo === 'string'
-            && ['selecao', 'data', 'sim_nao'].includes(
-                configuracao.tipo,
-            )
-            && typeof configuracao.rotulo === 'string'
-            && configuracao.rotulo.trim() !== '';
+        const filtrosNormalizados = {};
+        const parametros = new Set();
+
+        Object.entries(filtrosDisponiveis).forEach(
+            ([chaveFiltro, configuracao]) => {
+                if (
+                    chaveFiltro.trim() === ''
+                    || !this.eObjeto(configuracao)
+                    || typeof configuracao.parametro
+                        !== 'string'
+                    || typeof configuracao.tipo
+                        !== 'string'
+                    || typeof configuracao.rotulo
+                        !== 'string'
+                ) {
+                    throw new TypeError(
+                        `A configuração do filtro "${chaveFiltro}" é inválida.`,
+                    );
+                }
+
+                const parametro =
+                    configuracao.parametro.trim();
+
+                const tipo =
+                    configuracao.tipo.trim();
+
+                const rotulo =
+                    configuracao.rotulo.trim();
+
+                if (
+                    parametro === ''
+                    || rotulo === ''
+                    || ![
+                        'selecao',
+                        'data',
+                        'sim_nao',
+                    ].includes(tipo)
+                ) {
+                    throw new TypeError(
+                        `A configuração do filtro "${chaveFiltro}" é inválida.`,
+                    );
+                }
+
+                if (parametros.has(parametro)) {
+                    throw new TypeError(
+                        `O parâmetro de filtro "${parametro}" está configurado mais do que uma vez.`,
+                    );
+                }
+
+                parametros.add(parametro);
+
+                let chaveDados = null;
+
+                if (tipo === 'selecao') {
+                    if (
+                        typeof configuracao.chaveDados
+                            !== 'string'
+                        || configuracao.chaveDados.trim()
+                            === ''
+                    ) {
+                        throw new TypeError(
+                            `O filtro de seleção "${chaveFiltro}" não possui uma chave de dados válida.`,
+                        );
+                    }
+
+                    chaveDados =
+                        configuracao.chaveDados.trim();
+
+                    if (
+                        !Array.isArray(
+                            this.dadosFiltros[chaveDados],
+                        )
+                    ) {
+                        throw new TypeError(
+                            `Não existem dados válidos para o filtro "${chaveFiltro}".`,
+                        );
+                    }
+                }
+
+                filtrosNormalizados[chaveFiltro] =
+                    Object.freeze({
+                        parametro,
+                        tipo,
+                        rotulo,
+                        chaveDados,
+                    });
+            },
+        );
+
+        return Object.freeze(filtrosNormalizados);
     }
 
     /**
@@ -742,10 +861,9 @@ class GestorFiltrosDinamicos {
      *
      * @param {unknown} valor Valor a verificar.
      *
-     * @returns {boolean}
+     * @returns {boolean} Verdadeiro quando o valor é um objeto simples.
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     eObjeto(valor) {
         return typeof valor === 'object'
@@ -754,15 +872,16 @@ class GestorFiltrosDinamicos {
     }
 
     /**
-     * Valida uma opção que deve ser um objeto.
+     * Valida um valor que deve ser um objeto.
      *
      * @param {unknown} valor Valor a validar.
      * @param {string} mensagem Mensagem de erro.
      *
+     * @returns {void}
+     *
      * @throws {TypeError} Quando o valor é inválido.
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     validarObjeto(
         valor,
@@ -774,79 +893,53 @@ class GestorFiltrosDinamicos {
     }
 
     /**
-     * Valida um seletor CSS obrigatório.
+     * Obtém e valida um elemento através de um seletor CSS.
      *
-     * @param {unknown} seletor Seletor a validar.
-     * @param {string} mensagem Mensagem de erro.
+     * @param {unknown} seletor Seletor CSS.
+     * @param {Function} tipoElemento Tipo de elemento esperado.
+     * @param {string} descricaoElemento Descrição do elemento esperado.
      *
-     * @throws {TypeError} Quando o seletor é inválido.
+     * @returns {Element} Elemento encontrado.
+     *
+     * @throws {TypeError} Quando o seletor ou o elemento são inválidos.
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
-    validarSeletor(
+    obterElemento(
         seletor,
-        mensagem,
+        tipoElemento,
+        descricaoElemento,
     ) {
         if (
             typeof seletor !== 'string'
             || seletor.trim() === ''
         ) {
-            throw new TypeError(mensagem);
+            throw new TypeError(
+                `O seletor para ${descricaoElemento} é obrigatório.`,
+            );
         }
-    }
 
-    /**
-     * Obtém um elemento através de um seletor CSS.
-     *
-     * @param {string} seletor Seletor CSS.
-     *
-     * @returns {Element|null}
-     *
-     * @throws {TypeError} Quando o seletor CSS é inválido.
-     *
-     * @since 2.0.0
-     * @version 1.0.0
-     */
-    obterElemento(seletor) {
+        const seletorNormalizado = seletor.trim();
+
+        let elemento;
+
         try {
-            return document.querySelector(
-                seletor,
+            elemento = document.querySelector(
+                seletorNormalizado,
             );
         } catch {
             throw new TypeError(
-                `O seletor CSS "${seletor}" é inválido.`,
-            );
-        }
-    }
-
-    /**
-     * Destrói o gestor e as instâncias associadas.
-     *
-     * @since 2.0.0
-     * @version 1.0.0
-     */
-    destruir() {
-        if (this.iniciado) {
-            this.listaAdicionarFiltro?.removeEventListener(
-                'change',
-                this.aoAlterarListaFiltros,
-            );
-
-            this.areaFiltrosAtivos?.removeEventListener(
-                'click',
-                this.aoClicarAreaFiltros,
+                `O seletor CSS "${seletorNormalizado}" é inválido.`,
             );
         }
 
-        this.instanciasTomSelect.forEach(
-            (instancia) => {
-                instancia.destroy();
-            },
-        );
+        if (!(elemento instanceof tipoElemento)) {
+            throw new TypeError(
+                `Não foi possível encontrar ${descricaoElemento} através de "${seletorNormalizado}".`,
+            );
+        }
 
-        this.instanciasTomSelect.clear();
-        this.iniciado = false;
+        return elemento;
     }
 }
 

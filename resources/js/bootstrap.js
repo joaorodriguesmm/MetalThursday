@@ -1,5 +1,4 @@
-import axios
-    from 'axios';
+import axios from 'axios';
 
 /**
  * Configura globalmente a instância partilhada do Axios.
@@ -9,27 +8,7 @@ import axios
  * sem expor o Axios através do objeto Window.
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 
-/**
- * Configura os cabeçalhos e a proteção contra pedidos entre origens.
- *
- * @returns {void}
- *
- * @since 1.0.0
- * @version 3.0.0
- */
-function configurarClienteHttp() {
-    axios.defaults.headers.common[
-        'X-Requested-With'
-    ] = 'XMLHttpRequest';
-
-    axios.defaults.headers.common.Accept =
-        'application/json';
-
-    axios.defaults.withXSRFToken =
-        true;
-}
-
-configurarClienteHttp();
+axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+axios.defaults.headers.common.Accept = 'application/json';

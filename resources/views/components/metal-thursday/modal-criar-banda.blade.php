@@ -10,7 +10,6 @@
     identificados com o atributo data-erro-campo.
 
     @since 1.0.0
-    @version 4.0.0
 --}}
 
 @can(
@@ -81,7 +80,6 @@
                                 name="nome"
                                 placeholder="Nome da banda"
                                 maxlength="{{ $comprimentoMaximoNome }}"
-                                autocomplete="organization"
                                 aria-describedby="erro-nome-nova-banda"
                                 required
                             >

@@ -20,18 +20,17 @@ import ValidadorFormulario
  * Configura os comportamentos da página de registo por convite.
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 
 /**
  * Tamanho máximo permitido para a fotografia, em bytes.
  *
- * O valor corresponde aos 10 240 KiB aceites pelo servidor.
+ * Corresponde ao limite de 10 MiB aplicado pelo servidor e comunicado na
+ * interface.
  *
  * @type {number}
  *
  * @since 2.0.0
- * @version 2.0.0
  */
 const TAMANHO_MAXIMO_FOTOGRAFIA =
     10 * (1024 ** 2);
@@ -42,7 +41,6 @@ const TAMANHO_MAXIMO_FOTOGRAFIA =
  * @type {Readonly<Record<string, string>>}
  *
  * @since 2.0.0
- * @version 2.0.0
  */
 const SELETORES = Object.freeze({
     formulario:
@@ -74,93 +72,108 @@ const SELETORES = Object.freeze({
 });
 
 /**
- * Obtém um campo de texto através do respetivo nome.
+ * Obtém obrigatoriamente um campo de entrada através do respetivo nome e tipo.
  *
  * @param {HTMLFormElement} formulario Formulário pesquisado.
  * @param {string} nomeCampo Nome HTML do campo.
+ * @param {string} tipoCampo Tipo esperado do campo.
  *
- * @returns {HTMLInputElement|null} Campo encontrado ou nulo.
+ * @returns {HTMLInputElement} Campo encontrado.
  *
- * @since 3.0.0
- * @version 1.0.0
+ * @throws {TypeError} Quando o campo esperado não existe ou tem outro tipo.
+ *
+ * @since 2.0.0
  */
-function obterCampo(
+function obterCampoEntrada(
     formulario,
     nomeCampo,
+    tipoCampo,
 ) {
     const campo =
         formulario.elements.namedItem(
             nomeCampo,
         );
 
-    return campo instanceof HTMLInputElement
-        ? campo
-        : null;
+    if (
+        !(campo instanceof HTMLInputElement)
+        || campo.type !== tipoCampo
+    ) {
+        throw new TypeError(
+            `O formulário "${formulario.id}" deve possuir o campo "${nomeCampo}" do tipo "${tipoCampo}".`,
+        );
+    }
+
+    return campo;
 }
 
 /**
- * Obtém o comprimento mínimo declarado num campo.
+ * Obtém obrigatoriamente o comprimento mínimo declarado num campo.
  *
- * @param {HTMLInputElement|null} campo Campo recebido.
- * @param {number} valorPredefinido Valor utilizado quando não existe limite.
+ * @param {HTMLInputElement} campo Campo pesquisado.
  *
  * @returns {number} Comprimento mínimo positivo.
  *
- * @since 3.0.0
- * @version 1.0.0
+ * @throws {TypeError} Quando o limite não é válido.
+ *
+ * @since 2.0.0
  */
 function obterComprimentoMinimo(
     campo,
-    valorPredefinido,
 ) {
     if (
-        campo instanceof HTMLInputElement
-        && Number.isInteger(campo.minLength)
-        && campo.minLength > 0
+        !Number.isInteger(
+            campo.minLength,
+        )
+        || campo.minLength <= 0
     ) {
-        return campo.minLength;
+        throw new TypeError(
+            `O campo "${campo.name}" deve possuir um comprimento mínimo válido.`,
+        );
     }
 
-    return valorPredefinido;
+    return campo.minLength;
 }
 
 /**
- * Obtém o comprimento máximo declarado num campo.
+ * Obtém obrigatoriamente o comprimento máximo declarado num campo.
  *
- * @param {HTMLInputElement|null} campo Campo recebido.
- * @param {number} valorPredefinido Valor utilizado quando não existe limite.
+ * @param {HTMLInputElement} campo Campo pesquisado.
  *
  * @returns {number} Comprimento máximo positivo.
  *
- * @since 3.0.0
- * @version 1.0.0
+ * @throws {TypeError} Quando o limite não é válido.
+ *
+ * @since 2.0.0
  */
 function obterComprimentoMaximo(
     campo,
-    valorPredefinido,
 ) {
     if (
-        campo instanceof HTMLInputElement
-        && Number.isInteger(campo.maxLength)
-        && campo.maxLength > 0
+        !Number.isInteger(
+            campo.maxLength,
+        )
+        || campo.maxLength <= 0
     ) {
-        return campo.maxLength;
+        throw new TypeError(
+            `O campo "${campo.name}" deve possuir um comprimento máximo válido.`,
+        );
     }
 
-    return valorPredefinido;
+    return campo.maxLength;
 }
 
 /**
- * Obtém os tipos MIME declarados no campo da fotografia.
+ * Obtém os tipos declarados no atributo `accept` do campo da fotografia.
+ *
+ * A validação estrutural dos MIME é efetuada pelo ValidadorFicheiro.
  *
  * @param {HTMLInputElement} campoFotografia Campo da fotografia.
  *
- * @returns {Array<string>} Tipos MIME permitidos.
+ * @returns {Array<string>} Tipos declarados.
  *
- * @throws {TypeError} Quando o campo não declara tipos MIME válidos.
+ * @throws {TypeError} Quando o campo não declara tipos permitidos.
  *
- * @since 3.0.0
- * @version 1.0.0
+ * @since 2.0.0
  */
 function obterTiposFotografiaPermitidos(
     campoFotografia,
@@ -174,7 +187,7 @@ function obterTiposFotografiaPermitidos(
             )
             .filter(
                 (tipo) =>
-                    tipo.includes('/'),
+                    tipo !== '',
             );
 
     if (tipos.length === 0) {
@@ -184,7 +197,9 @@ function obterTiposFotografiaPermitidos(
     }
 
     return Array.from(
-        new Set(tipos),
+        new Set(
+            tipos,
+        ),
     );
 }
 
@@ -195,8 +210,7 @@ function obterTiposFotografiaPermitidos(
  *
  * @throws {TypeError} Quando uma permissão não pertence a um contentor.
  *
- * @since 3.0.0
- * @version 1.0.0
+ * @since 2.0.0
  */
 function obterItensPermissoesIndividuais() {
     return Array.from(
@@ -231,7 +245,6 @@ function obterItensPermissoesIndividuais() {
  * @returns {void}
  *
  * @since 2.0.0
- * @version 3.0.0
  */
 function iniciarFotografiaPerfil() {
     const gestorFotografia =
@@ -249,7 +262,9 @@ function iniciarFotografiaPerfil() {
         gestorFotografia.obterCampoFicheiro();
 
     if (!(campoFotografia instanceof HTMLInputElement)) {
-        return;
+        throw new TypeError(
+            'Não foi encontrado um campo válido para a fotografia de perfil.',
+        );
     }
 
     new ValidadorFicheiro(
@@ -288,10 +303,13 @@ function iniciarFotografiaPerfil() {
 /**
  * Inicia a validação do formulário de registo.
  *
+ * O código do convite é validado apenas pelo servidor. É um valor oculto que
+ * o utilizador não pode corrigir e, por isso, não deve bloquear a submissão
+ * através da validação de apoio do navegador.
+ *
  * @returns {void}
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 function iniciarValidacaoFormulario() {
     const formulario =
@@ -304,73 +322,67 @@ function iniciarValidacaoFormulario() {
     }
 
     const campoNome =
-        obterCampo(
+        obterCampoEntrada(
             formulario,
             'nome',
+            'text',
         );
 
     const campoEmail =
-        obterCampo(
+        obterCampoEntrada(
             formulario,
+            'email',
             'email',
         );
 
     const campoPalavraPasse =
-        obterCampo(
+        obterCampoEntrada(
             formulario,
             'palavra_passe',
+            'password',
         );
 
     const campoConfirmacao =
-        obterCampo(
+        obterCampoEntrada(
             formulario,
             'confirmacao_palavra_passe',
+            'password',
         );
 
     const comprimentoMinimoNome =
         obterComprimentoMinimo(
             campoNome,
-            3,
         );
 
     const comprimentoMaximoNome =
         obterComprimentoMaximo(
             campoNome,
-            255,
         );
 
     const comprimentoMaximoEmail =
         obterComprimentoMaximo(
             campoEmail,
-            255,
         );
 
     const comprimentoMinimoPalavraPasse =
         obterComprimentoMinimo(
             campoPalavraPasse,
-            12,
         );
 
     const comprimentoMaximoPalavraPasse =
         obterComprimentoMaximo(
             campoPalavraPasse,
-            4096,
         );
 
     const comprimentoMaximoConfirmacao =
         obterComprimentoMaximo(
             campoConfirmacao,
-            comprimentoMaximoPalavraPasse,
         );
 
     new ValidadorFormulario(
         formulario,
         {
             regras: {
-                codigo_convite: [
-                    'obrigatorio',
-                ],
-
                 nome: [
                     'obrigatorio',
                     `minimo:${comprimentoMinimoNome}`,
@@ -401,11 +413,6 @@ function iniciarValidacaoFormulario() {
             },
 
             mensagens: {
-                codigo_convite: {
-                    obrigatorio:
-                        'O código do convite não foi recebido. Recarrega a página e tenta novamente.',
-                },
-
                 nome: {
                     obrigatorio:
                         'Por favor, insere o teu nome.',
@@ -472,7 +479,6 @@ function iniciarValidacaoFormulario() {
  * @returns {void}
  *
  * @since 1.0.0
- * @version 2.0.0
  */
 function iniciarAlternadoresPalavraPasse() {
     const alternadores =
@@ -495,7 +501,6 @@ function iniciarAlternadoresPalavraPasse() {
  * @returns {void}
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 function iniciarPermissoesEmail() {
     const campoTodasPermissoes =
@@ -503,12 +508,7 @@ function iniciarPermissoesEmail() {
             SELETORES.permissaoTodas,
         );
 
-    if (
-        !(
-            campoTodasPermissoes
-            instanceof HTMLInputElement
-        )
-    ) {
+    if (!(campoTodasPermissoes instanceof HTMLInputElement)) {
         return;
     }
 
@@ -531,7 +531,6 @@ function iniciarPermissoesEmail() {
  * @returns {void}
  *
  * @since 1.0.0
- * @version 2.0.0
  */
 function iniciarTooltips() {
     new InicializadorTooltips(
@@ -545,7 +544,6 @@ function iniciarTooltips() {
  * @returns {void}
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 function iniciarPaginaRegistoConvite() {
     iniciarFotografiaPerfil();

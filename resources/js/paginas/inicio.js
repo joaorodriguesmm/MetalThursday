@@ -1,29 +1,56 @@
-import AlternadorVistas from '../modulos/AlternadorVistas';
-import GestorFiltrosDinamicos from '../modulos/GestorFiltrosDinamicos';
-import GestorModalAvaliacao from '../modulos/GestorModalAvaliacao';
-import InicializadorComentarios from '../modulos/InicializadorComentarios';
-import InicializadorTooltips from '../modulos/InicializadorTooltips';
+import AlternadorVistas
+    from '../modulos/AlternadorVistas';
+
+import GestorFiltrosDinamicos
+    from '../modulos/GestorFiltrosDinamicos';
+
+import InicializadorTooltips
+    from '../modulos/InicializadorTooltips';
 
 /**
  * Inicializa os comportamentos da página principal de MetalThursdays.
  *
- * Gere os filtros, a ordenação, a alternância de vistas, as avaliações,
- * os tooltips e a publicação de comentários.
+ * Gere os filtros, a ordenação, a alternância de vistas e, quando disponíveis
+ * na página, as avaliações e a publicação de comentários.
  *
  * @since 1.0.0
- * @version 3.1.0
  */
 
 /**
- * Identificador do bloco JSON com a configuração da listagem.
+ * Seletores utilizados na página.
  *
- * @type {string}
+ * @type {Readonly<Record<string, string>>}
  *
- * @since 3.0.0
- * @version 1.0.0
+ * @since 2.0.0
  */
-const IDENTIFICADOR_CONFIGURACAO_LISTAGEM =
-    'configuracao-listagem-metal-thursday';
+const SELETORES = Object.freeze({
+    configuracaoListagem:
+        '#configuracao-listagem-metal-thursday',
+
+    formularioFiltros:
+        '#formulario-filtros-ordenacao',
+
+    submissaoAutomatica:
+        '.submissao-automatica',
+
+    seletorAdicionarFiltro:
+        '#seletor-adicionar-filtro',
+
+    contentorFiltros:
+        '#area-filtros-ativos',
+
+    botaoAlternarVista:
+        '#botao-alternar-vista',
+
+    campoTipoVista:
+        '#campo-tipo-vista',
+
+    acionadorAvaliacao:
+        '[data-endereco-avaliacao][data-bs-target="#modal-avaliacao"]',
+
+    formularioComentario:
+        '.formulario-comentario',
+});
 
 /**
  * Determina se um valor é um objeto não nulo.
@@ -32,8 +59,7 @@ const IDENTIFICADOR_CONFIGURACAO_LISTAGEM =
  *
  * @returns {boolean} Verdadeiro quando o valor é um objeto.
  *
- * @since 3.0.0
- * @version 1.0.0
+ * @since 2.0.0
  */
 function eObjeto(valor) {
     return typeof valor === 'object'
@@ -54,16 +80,15 @@ function eObjeto(valor) {
  * }} Configuração validada.
  *
  * @throws {Error} Quando o bloco de configuração não existe ou contém JSON
- * inválido.
+ *     inválido.
  * @throws {TypeError} Quando a configuração não respeita o contrato esperado.
  *
- * @since 3.0.0
- * @version 1.0.0
+ * @since 2.0.0
  */
 function obterConfiguracaoListagem() {
     const elemento =
-        document.getElementById(
-            IDENTIFICADOR_CONFIGURACAO_LISTAGEM,
+        document.querySelector(
+            SELETORES.configuracaoListagem,
         );
 
     if (!(elemento instanceof HTMLScriptElement)) {
@@ -85,9 +110,10 @@ function obterConfiguracaoListagem() {
     let configuracao;
 
     try {
-        configuracao = JSON.parse(
-            conteudo,
-        );
+        configuracao =
+            JSON.parse(
+                conteudo,
+            );
     } catch (erro) {
         throw new Error(
             'A configuração da listagem de MetalThursdays contém JSON inválido.',
@@ -119,40 +145,33 @@ function obterConfiguracaoListagem() {
 }
 
 /**
- * Configura a submissão automática dos campos de filtro e ordenação.
+ * Configura a submissão automática dos campos de paginação e ordenação.
  *
  * @returns {void}
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 function configurarSubmissaoAutomatica() {
-    const formulario = document.getElementById(
-        'formulario-filtros-ordenacao',
-    );
+    const formulario =
+        document.querySelector(
+            SELETORES.formularioFiltros,
+        );
 
     if (!(formulario instanceof HTMLFormElement)) {
         return;
     }
 
     formulario.querySelectorAll(
-        '.submissao-automatica',
+        SELETORES.submissaoAutomatica,
     ).forEach((campo) => {
         if (
             !(
                 campo instanceof HTMLInputElement
                 || campo instanceof HTMLSelectElement
             )
-            || campo.dataset
-                .submissaoAutomaticaInicializada
-                === 'true'
         ) {
             return;
         }
-
-        campo.dataset
-            .submissaoAutomaticaInicializada =
-                'true';
 
         campo.addEventListener(
             'change',
@@ -164,26 +183,82 @@ function configurarSubmissaoAutomatica() {
 }
 
 /**
+ * Inicializa os componentes de interação apenas quando são utilizados pela
+ * vista apresentada.
+ *
+ * A vista simplificada não contém controlos de avaliação nem formulários de
+ * comentários, pelo que evita transferir estes módulos sem necessidade.
+ *
+ * @returns {Promise<void>}
+ *
+ * @since 2.0.0
+ */
+async function iniciarInteracoesDisponiveis() {
+    const tarefas =
+        [];
+
+    if (
+        document.querySelector(
+            SELETORES.acionadorAvaliacao,
+        ) !== null
+    ) {
+        tarefas.push(
+            import(
+                '../modulos/GestorModalAvaliacao'
+            ).then(
+                ({
+                    default:
+                        GestorModalAvaliacao,
+                }) => {
+                    new GestorModalAvaliacao();
+                },
+            ),
+        );
+    }
+
+    if (
+        document.querySelector(
+            SELETORES.formularioComentario,
+        ) !== null
+    ) {
+        tarefas.push(
+            import(
+                '../modulos/InicializadorComentarios'
+            ).then(
+                ({
+                    default:
+                        InicializadorComentarios,
+                }) => {
+                    new InicializadorComentarios();
+                },
+            ),
+        );
+    }
+
+    await Promise.all(
+        tarefas,
+    );
+}
+
+/**
  * Inicializa os componentes da página principal.
  *
  * @returns {void}
  *
  * @since 1.0.0
- * @version 3.1.0
  */
 function iniciarPaginaInicio() {
     const configuracao =
         obterConfiguracaoListagem();
 
     new InicializadorTooltips();
-    new GestorModalAvaliacao();
 
     new GestorFiltrosDinamicos({
         seletorListaFiltros:
-            '#seletor-adicionar-filtro',
+            SELETORES.seletorAdicionarFiltro,
 
         seletorContentorFiltros:
-            '#area-filtros-ativos',
+            SELETORES.contentorFiltros,
 
         dadosFiltros:
             configuracao.dadosFiltros,
@@ -196,19 +271,19 @@ function iniciarPaginaInicio() {
 
     new AlternadorVistas({
         seletorBotao:
-            '#botao-alternar-vista',
+            SELETORES.botaoAlternarVista,
 
         seletorCampoVista:
-            '#campo-tipo-vista',
+            SELETORES.campoTipoVista,
 
         seletorFormulario:
-            '#formulario-filtros-ordenacao',
+            SELETORES.formularioFiltros,
 
         vistas:
             configuracao.vistas,
     });
 
-    new InicializadorComentarios();
+    void iniciarInteracoesDisponiveis();
 }
 
 if (document.readyState === 'loading') {

@@ -1,4 +1,18 @@
-import TomSelect from 'tom-select';
+import TomSelect from 'tom-select/base';
+import TomSelectClearButton
+    from 'tom-select/plugins/clear_button/plugin.js';
+import TomSelectRemoveButton
+    from 'tom-select/plugins/remove_button/plugin.js';
+
+TomSelect.define(
+    'clear_button',
+    TomSelectClearButton,
+);
+
+TomSelect.define(
+    'remove_button',
+    TomSelectRemoveButton,
+);
 
 /**
  * Gere as instâncias de Tom Select da aplicação.
@@ -7,7 +21,6 @@ import TomSelect from 'tom-select';
  * à API disponibilizada pela biblioteca Tom Select.
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 class InicializadorTomSelect {
     /**
@@ -19,7 +32,6 @@ class InicializadorTomSelect {
      * @throws {TypeError} Quando o seletor é inválido.
      *
      * @since 1.0.0
-     * @version 3.0.0
      */
     constructor(
         seletor = 'select.tom-select-unico, select.tom-select-multiplo',
@@ -33,17 +45,41 @@ class InicializadorTomSelect {
             );
         }
 
+        const seletorNormalizado =
+            seletor.trim();
+
         try {
-            document.querySelectorAll(seletor);
+            document.querySelectorAll(
+                seletorNormalizado,
+            );
         } catch {
             throw new TypeError(
-                `O seletor CSS "${seletor}" é inválido.`,
+                `O seletor CSS "${seletorNormalizado}" é inválido.`,
             );
         }
 
-        this.seletor = seletor;
-        this.instancias = new Set();
-        this.instanciasPorId = new Map();
+        /**
+         * Seletor dos campos geridos.
+         *
+         * @type {string}
+         *
+         * @since 2.0.0
+         */
+        this.seletor =
+            seletorNormalizado;
+
+        /**
+         * Instâncias conhecidas pelo inicializador.
+         *
+         * Cada instância remove-se automaticamente deste registo quando
+         * recebe o evento `destroy`.
+         *
+         * @type {Set<TomSelect>}
+         *
+         * @since 2.0.0
+         */
+        this.instancias =
+            new Set();
 
         this.iniciarTodos();
     }
@@ -54,12 +90,15 @@ class InicializadorTomSelect {
      * @param {Document|Element} raiz
      *     Elemento a partir do qual os campos serão procurados.
      *
-     * @return {TomSelect[]} Instâncias encontradas ou criadas.
+     * @returns {Array<TomSelect>} Instâncias encontradas ou criadas.
+     *
+     * @throws {TypeError} Quando a raiz de pesquisa é inválida.
      *
      * @since 1.0.0
-     * @version 2.0.0
      */
-    iniciarTodos(raiz = document) {
+    iniciarTodos(
+        raiz = document,
+    ) {
         if (
             !(raiz instanceof Document)
             && !(raiz instanceof Element)
@@ -70,15 +109,20 @@ class InicializadorTomSelect {
         }
 
         return Array.from(
-            raiz.querySelectorAll(this.seletor),
+            raiz.querySelectorAll(
+                this.seletor,
+            ),
         )
             .filter(
                 (elemento) =>
-                    elemento instanceof HTMLSelectElement,
+                    elemento
+                    instanceof HTMLSelectElement,
             )
             .map(
                 (elemento) =>
-                    this.iniciar(elemento),
+                    this.iniciar(
+                        elemento,
+                    ),
             )
             .filter(
                 (instancia) =>
@@ -89,18 +133,20 @@ class InicializadorTomSelect {
     /**
      * Inicializa uma instância Tom Select num elemento.
      *
-     * Quando o elemento já possui uma instância, essa instância é registada
-     * e devolvida sem ser recriada.
+     * Quando o elemento já possui uma instância, esta é reutilizada e
+     * registada sem ser recriada.
      *
      * @param {HTMLSelectElement} elemento Campo a inicializar.
      *
-     * @return {TomSelect|null} Instância disponível para o campo.
+     * @returns {TomSelect|null} Instância disponível para o campo.
      *
      * @since 1.0.0
-     * @version 2.0.0
      */
     iniciar(elemento) {
-        if (!(elemento instanceof HTMLSelectElement)) {
+        if (
+            !(elemento
+                instanceof HTMLSelectElement)
+        ) {
             return null;
         }
 
@@ -109,7 +155,6 @@ class InicializadorTomSelect {
 
         if (instanciaExistente) {
             this.registarInstancia(
-                elemento,
                 instanciaExistente,
             );
 
@@ -119,11 +164,12 @@ class InicializadorTomSelect {
         const instancia =
             new TomSelect(
                 elemento,
-                this.criarConfiguracao(elemento),
+                this.criarConfiguracao(
+                    elemento,
+                ),
             );
 
         this.registarInstancia(
-            elemento,
             instancia,
         );
 
@@ -133,23 +179,39 @@ class InicializadorTomSelect {
     /**
      * Cria a configuração de uma instância Tom Select.
      *
-     * @param {HTMLSelectElement} elemento Campo a configurar.
+     * Os campos múltiplos permitem remover opções individualmente e limpar
+     * toda a seleção. Os campos simples disponibilizam apenas a limpeza da
+     * seleção.
      *
-     * @return {object} Configuração da instância.
+     * @param {HTMLSelectElement} elemento Campo configurado.
+     *
+     * @returns {object} Configuração da instância.
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     criarConfiguracao(elemento) {
+        const plugins =
+            elemento.multiple
+                ? {
+                    remove_button: {
+                        title:
+                            'Remover esta opção',
+                    },
+
+                    clear_button: {
+                        title:
+                            'Limpar seleção',
+                    },
+                }
+                : {
+                    clear_button: {
+                        title:
+                            'Limpar seleção',
+                    },
+                };
+
         return {
-            plugins: elemento.multiple
-                ? [
-                    'remove_button',
-                    'clear_button',
-                ]
-                : [
-                    'clear_button',
-                ],
+            plugins,
 
             render: {
                 no_results: (
@@ -157,7 +219,9 @@ class InicializadorTomSelect {
                     escapar,
                 ) => [
                     '<div class="no-results">',
-                    `Nenhum resultado para "${escapar(dados.input)}".`,
+                    `Nenhum resultado para "${escapar(
+                        dados.input,
+                    )}".`,
                     '</div>',
                 ].join(''),
             },
@@ -165,41 +229,51 @@ class InicializadorTomSelect {
     }
 
     /**
-     * Regista uma instância para reutilização posterior.
+     * Regista uma instância e acompanha a respetiva destruição.
      *
-     * @param {HTMLSelectElement} elemento Campo associado.
-     * @param {TomSelect} instancia Instância a registar.
+     * O evento `destroy` permite que instâncias destruídas por outros
+     * componentes sejam igualmente removidas deste registo.
      *
-     * @return {void}
+     * @param {TomSelect} instancia Instância registada.
+     *
+     * @returns {void}
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
-    registarInstancia(
-        elemento,
-        instancia,
-    ) {
+    registarInstancia(instancia) {
+        if (
+            this.instancias.has(
+                instancia,
+            )
+        ) {
+            return;
+        }
+
         this.instancias.add(
             instancia,
         );
 
-        if (elemento.id !== '') {
-            this.instanciasPorId.set(
-                elemento.id,
-                instancia,
-            );
-        }
+        instancia.on(
+            'destroy',
+            () => {
+                this.instancias.delete(
+                    instancia,
+                );
+            },
+        );
     }
 
     /**
      * Obtém uma instância Tom Select através do identificador do campo.
      *
+     * A pesquisa é feita sempre no DOM atual, evitando manter um segundo
+     * registo por identificador que possa ficar desatualizado.
+     *
      * @param {string} identificador Identificador HTML do campo.
      *
-     * @return {TomSelect|null} Instância encontrada.
+     * @returns {TomSelect|null} Instância encontrada ou criada.
      *
      * @since 1.0.0
-     * @version 3.0.0
      */
     obterInstancia(identificador) {
         if (
@@ -209,24 +283,15 @@ class InicializadorTomSelect {
             return null;
         }
 
-        const identificadorNormalizado =
-            identificador.trim();
-
-        const instanciaRegistada =
-            this.instanciasPorId.get(
-                identificadorNormalizado,
-            );
-
-        if (instanciaRegistada) {
-            return instanciaRegistada;
-        }
-
         const elemento =
             document.getElementById(
-                identificadorNormalizado,
+                identificador.trim(),
             );
 
-        if (!(elemento instanceof HTMLSelectElement)) {
+        if (
+            !(elemento
+                instanceof HTMLSelectElement)
+        ) {
             return null;
         }
 
@@ -241,20 +306,34 @@ class InicializadorTomSelect {
      * @param {string|HTMLSelectElement} referencia
      *     Identificador ou elemento associado à instância.
      *
-     * @return {boolean} Indica se foi destruída uma instância.
+     * @returns {boolean} Indica se foi destruída uma instância.
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     destruirInstancia(referencia) {
-        const elemento =
-            typeof referencia === 'string'
-                ? document.getElementById(
-                    referencia,
-                )
-                : referencia;
+        let elemento;
 
-        if (!(elemento instanceof HTMLSelectElement)) {
+        if (typeof referencia === 'string') {
+            const identificador =
+                referencia.trim();
+
+            if (identificador === '') {
+                return false;
+            }
+
+            elemento =
+                document.getElementById(
+                    identificador,
+                );
+        } else {
+            elemento =
+                referencia;
+        }
+
+        if (
+            !(elemento
+                instanceof HTMLSelectElement)
+        ) {
             return false;
         }
 
@@ -267,15 +346,14 @@ class InicializadorTomSelect {
 
         instancia.destroy();
 
+        /*
+         * O evento `destroy` remove normalmente a instância do registo.
+         * A eliminação explícita mantém o método robusto caso a instância
+         * recebida não emita o evento esperado.
+         */
         this.instancias.delete(
             instancia,
         );
-
-        if (elemento.id !== '') {
-            this.instanciasPorId.delete(
-                elemento.id,
-            );
-        }
 
         return true;
     }
@@ -283,25 +361,26 @@ class InicializadorTomSelect {
     /**
      * Destrói todas as instâncias registadas.
      *
-     * @return {void}
+     * É utilizada uma cópia do conjunto porque cada `destroy()` remove a
+     * própria instância do registo.
+     *
+     * @returns {void}
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     destruirTodas() {
-        this.instancias.forEach(
-            (instancia) => {
-                if (
-                    typeof instancia.destroy
-                    === 'function'
-                ) {
-                    instancia.destroy();
-                }
-            },
-        );
+        [
+            ...this.instancias,
+        ].forEach((instancia) => {
+            if (
+                typeof instancia.destroy
+                === 'function'
+            ) {
+                instancia.destroy();
+            }
+        });
 
         this.instancias.clear();
-        this.instanciasPorId.clear();
     }
 }
 

@@ -5,7 +5,6 @@
     decorativo é efetuada pela classe App\View\Components\Avatar.
 
     @since 1.0.0
-    @version 4.0.0
 --}}
 
 @if ($temFotografia)

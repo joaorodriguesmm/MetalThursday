@@ -6,7 +6,6 @@ import Swal from 'sweetalert2';
  * Gere a submissão assíncrona de formulários.
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 class TratadorFormularioAjax {
     /**
@@ -20,7 +19,6 @@ class TratadorFormularioAjax {
      * @throws {TypeError} Quando algum argumento é inválido.
      *
      * @since 1.0.0
-     * @version 2.0.0
      */
     constructor(
         idFormulario,
@@ -54,27 +52,34 @@ class TratadorFormularioAjax {
             );
         }
 
-        this.formulario = document.getElementById(
-            idFormulario,
-        );
+        const identificadorFormulario =
+            idFormulario.trim();
 
-        this.url = url.trim();
-        this.aoSucesso = aoSucesso;
-        this.emSubmissao = false;
+        this.formulario =
+            document.getElementById(
+                identificadorFormulario,
+            );
 
-        this.botaoSubmissao =
+        this.url =
+            url.trim();
+
+        this.aoSucesso =
+            aoSucesso;
+
+        this.emSubmissao =
+            false;
+
+        const botaoSubmissao =
             this.formulario?.querySelector(
                 'button[type="submit"]',
             )
             ?? null;
 
-        this.conteudoOriginalBotao =
-            this.botaoSubmissao?.innerHTML
-            ?? '';
-
-        this.botaoOriginalmenteDesativado =
-            this.botaoSubmissao?.disabled
-            ?? false;
+        this.botaoSubmissao =
+            botaoSubmissao
+            instanceof HTMLButtonElement
+                ? botaoSubmissao
+                : null;
     }
 
     /**
@@ -85,7 +90,6 @@ class TratadorFormularioAjax {
      * @returns {Promise<void>}
      *
      * @since 1.0.0
-     * @version 2.0.0
      */
     async submeter(
         evento = null,
@@ -93,80 +97,144 @@ class TratadorFormularioAjax {
         evento?.preventDefault();
 
         if (
-            !(this.formulario instanceof HTMLFormElement)
+            !(this.formulario
+                instanceof HTMLFormElement)
             || this.emSubmissao
         ) {
             return;
         }
 
-        this.emSubmissao = true;
+        this.emSubmissao =
+            true;
+
+        const estadoBotao =
+            this.obterEstadoBotaoSubmissao();
 
         this.limparErros();
-        this.definirEstadoCarregamento(
-            true,
-        );
+        this.apresentarEstadoCarregamento();
 
         try {
-            const resposta =
-                await axios.post(
-                    this.url,
-                    new FormData(
-                        this.formulario,
-                    ),
-                    {
-                        headers: {
-                            Accept:
-                                'application/json',
+            let resposta;
 
-                            'X-Requested-With':
-                                'XMLHttpRequest',
-                        },
-                    },
+            try {
+                resposta =
+                    await axios.post(
+                        this.url,
+                        new FormData(
+                            this.formulario,
+                        ),
+                    );
+            } catch (erro) {
+                this.tratarErroSubmissao(
+                    erro,
                 );
 
-            document.dispatchEvent(
-                new CustomEvent(
-                    'formulario-ajax:sucesso',
-                    {
-                        detail: {
-                            idFormulario:
-                                this.formulario.id,
-
-                            dadosResposta:
-                                resposta.data,
-                        },
-                    },
-                ),
-            );
-
-            if (this.aoSucesso !== null) {
-                await this.aoSucesso(
-                    resposta.data,
-                );
+                return;
             }
 
-            this.mostrarMensagemSucesso();
-            this.finalizarSubmissao();
-        } catch (erro) {
-            this.tratarErroSubmissao(
-                erro,
-            );
-        } finally {
-            this.definirEstadoCarregamento(
-                false,
+            this.emitirEventoSucesso(
+                resposta.data,
             );
 
-            this.emSubmissao = false;
+            const acaoSucessoConcluida =
+                await this.executarAcaoSucesso(
+                    resposta.data,
+                );
+
+            if (acaoSucessoConcluida) {
+                this.mostrarMensagemSucesso();
+            } else {
+                this.mostrarAvisoAtualizacaoInterface();
+            }
+
+            this.finalizarSubmissao();
+        } finally {
+            this.reporEstadoBotaoSubmissao(
+                estadoBotao,
+            );
+
+            this.emSubmissao =
+                false;
         }
     }
 
     /**
-     * Trata um erro ocorrido durante a submissão.
+     * Emite o evento global de submissão AJAX bem-sucedida.
+     *
+     * O evento representa o sucesso da operação no servidor e é emitido antes
+     * do pós-processamento específico configurado pelo consumidor.
+     *
+     * @param {unknown} dadosResposta Dados devolvidos pelo servidor.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    emitirEventoSucesso(
+        dadosResposta,
+    ) {
+        if (
+            !(this.formulario
+                instanceof HTMLFormElement)
+        ) {
+            return;
+        }
+
+        document.dispatchEvent(
+            new CustomEvent(
+                'formulario-ajax:sucesso',
+                {
+                    detail: {
+                        idFormulario:
+                            this.formulario.id,
+
+                        dadosResposta,
+                    },
+                },
+            ),
+        );
+    }
+
+    /**
+     * Executa a ação configurada após o sucesso da operação no servidor.
+     *
+     * Uma falha nesta fase não transforma a operação persistida numa falha
+     * HTTP. O chamador recebe essa distinção para evitar uma nova submissão
+     * potencialmente duplicada.
+     *
+     * @param {unknown} dadosResposta Dados devolvidos pelo servidor.
+     *
+     * @returns {Promise<boolean>}
+     *     Verdadeiro quando o pós-processamento foi concluído.
+     *
+     * @since 2.0.0
+     */
+    async executarAcaoSucesso(
+        dadosResposta,
+    ) {
+        if (this.aoSucesso === null) {
+            return true;
+        }
+
+        try {
+            await this.aoSucesso(
+                dadosResposta,
+            );
+
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Trata um erro ocorrido durante o pedido de submissão.
      *
      * @param {unknown} erro Erro capturado.
      *
+     * @returns {void}
+     *
      * @since 2.0.0
-     * @version 1.0.0
      */
     tratarErroSubmissao(
         erro,
@@ -187,35 +255,98 @@ class TratadorFormularioAjax {
             return;
         }
 
-        const mensagem =
-            this.formulario?.dataset.mensagemErro
-            ?? 'Ocorreu um erro inesperado. Tenta novamente.';
+        const mensagemConfigurada =
+            this.formulario
+                ?.dataset
+                .mensagemErro
+                ?.trim()
+            ?? '';
 
-        Swal.fire({
+        void Swal.fire({
             icon: 'error',
             title: 'Erro',
-            text: mensagem,
+
+            text:
+                mensagemConfigurada !== ''
+                    ? mensagemConfigurada
+                    : 'Ocorreu um erro inesperado. Tenta novamente.',
         });
     }
 
     /**
-     * Verifica se um valor contém erros de validação.
+     * Verifica se um valor contém erros de validação utilizáveis.
      *
      * @param {unknown} erros Valor a verificar.
      *
-     * @returns {boolean}
+     * @returns {boolean} Verdadeiro quando existem mensagens válidas.
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     eObjetoErrosValidacao(
         erros,
     ) {
-        return typeof erros === 'object'
-            && erros !== null
-            && !Array.isArray(
+        if (
+            typeof erros !== 'object'
+            || erros === null
+            || Array.isArray(
+                erros,
+            )
+        ) {
+            return false;
+        }
+
+        const entradas =
+            Object.entries(
                 erros,
             );
+
+        return entradas.length > 0
+            && entradas.every(
+                ([, mensagens]) =>
+                    this.obterMensagemValidacao(
+                        mensagens,
+                    ) !== null,
+            );
+    }
+
+    /**
+     * Obtém a primeira mensagem válida de uma entrada de validação.
+     *
+     * @param {unknown} mensagens Mensagem ou lista de mensagens.
+     *
+     * @returns {string|null} Mensagem normalizada ou nulo.
+     *
+     * @since 2.0.0
+     */
+    obterMensagemValidacao(
+        mensagens,
+    ) {
+        const candidatas =
+            Array.isArray(
+                mensagens,
+            )
+                ? mensagens
+                : [
+                    mensagens,
+                ];
+
+        for (const candidata of candidatas) {
+            if (
+                typeof candidata
+                !== 'string'
+            ) {
+                continue;
+            }
+
+            const mensagem =
+                candidata.trim();
+
+            if (mensagem !== '') {
+                return mensagem;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -224,14 +355,16 @@ class TratadorFormularioAjax {
      * @param {Record<string, string|string[]>} erros
      *     Erros devolvidos pelo servidor.
      *
+     * @returns {void}
+     *
      * @since 1.0.0
-     * @version 2.0.0
      */
     tratarErrosValidacao(
         erros,
     ) {
         if (
-            !(this.formulario instanceof HTMLFormElement)
+            !(this.formulario
+                instanceof HTMLFormElement)
         ) {
             return;
         }
@@ -246,39 +379,31 @@ class TratadorFormularioAjax {
             erros,
         ).forEach(
             ([chave, mensagens]) => {
+                const mensagem =
+                    this.obterMensagemValidacao(
+                        mensagens,
+                    );
+
+                if (mensagem === null) {
+                    return;
+                }
+
                 const campos =
                     this.obterCamposPorChave(
                         chave,
                     );
 
-                const mensagem =
-                    Array.isArray(
-                        mensagens,
-                    )
-                        ? mensagens[0]
-                        : mensagens;
-
                 if (campos.length === 0) {
-                    if (
-                        primeiraMensagemSemCampo === null
-                        && typeof mensagem === 'string'
-                    ) {
-                        primeiraMensagemSemCampo =
-                            mensagem;
-                    }
+                    primeiraMensagemSemCampo ??=
+                        mensagem;
 
                     return;
                 }
 
                 campos.forEach(
                     (campo) => {
-                        campo.classList.add(
-                            'is-invalid',
-                        );
-
-                        campo.setAttribute(
-                            'aria-invalid',
-                            'true',
+                        this.definirCampoInvalido(
+                            campo,
                         );
                     },
                 );
@@ -289,8 +414,8 @@ class TratadorFormularioAjax {
                     );
 
                 if (
-                    elementoFeedback !== null
-                    && typeof mensagem === 'string'
+                    elementoFeedback
+                    instanceof HTMLElement
                 ) {
                     elementoFeedback.textContent =
                         mensagem;
@@ -298,33 +423,173 @@ class TratadorFormularioAjax {
                     elementoFeedback.classList.add(
                         'd-block',
                     );
+
+                    elementoFeedback.removeAttribute(
+                        'hidden',
+                    );
+
+                    elementoFeedback.style
+                        .removeProperty(
+                            'display',
+                        );
                 }
 
                 primeiroCampoInvalido ??=
                     campos.find(
                         (campo) =>
-                            !campo.disabled
-                            && !(
-                                campo instanceof HTMLInputElement
-                                && campo.type === 'hidden'
+                            this.eCampoFocavel(
+                                campo,
                             ),
                     )
                     ?? null;
             },
         );
 
-        primeiroCampoInvalido?.focus();
+        if (primeiroCampoInvalido !== null) {
+            this.focarCampo(
+                primeiroCampoInvalido,
+            );
+
+            return;
+        }
 
         if (
-            primeiroCampoInvalido === null
-            && primeiraMensagemSemCampo !== null
+            primeiraMensagemSemCampo
+            !== null
         ) {
-            Swal.fire({
+            void Swal.fire({
                 icon: 'error',
                 title: 'Dados inválidos',
-                text: primeiraMensagemSemCampo,
+                text:
+                    primeiraMensagemSemCampo,
             });
         }
+    }
+
+    /**
+     * Aplica o estado inválido a um campo e ao respetivo componente visual.
+     *
+     * Quando um `<select>` é gerido pelo Tom Select, a classe visual deve ser
+     * aplicada também ao wrapper apresentado ao utilizador.
+     *
+     * @param {
+     *     HTMLInputElement
+     *     |HTMLSelectElement
+     *     |HTMLTextAreaElement
+     * } campo Campo inválido.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    definirCampoInvalido(
+        campo,
+    ) {
+        campo.classList.add(
+            'is-invalid',
+        );
+
+        campo.setAttribute(
+            'aria-invalid',
+            'true',
+        );
+
+        if (
+            !(campo
+                instanceof HTMLSelectElement)
+        ) {
+            return;
+        }
+
+        const wrapper =
+            campo.tomselect
+                ?.wrapper;
+
+        if (
+            wrapper
+            instanceof HTMLElement
+        ) {
+            wrapper.classList.add(
+                'is-invalid',
+            );
+        }
+    }
+
+    /**
+     * Determina se um campo pode receber foco de forma útil.
+     *
+     * @param {
+     *     HTMLInputElement
+     *     |HTMLSelectElement
+     *     |HTMLTextAreaElement
+     * } campo Campo recebido.
+     *
+     * @returns {boolean} Verdadeiro quando o campo pode receber foco.
+     *
+     * @since 2.0.0
+     */
+    eCampoFocavel(
+        campo,
+    ) {
+        if (
+            campo.disabled
+            || (
+                campo
+                instanceof HTMLInputElement
+                && campo.type === 'hidden'
+            )
+            || campo.closest(
+                '[hidden]',
+            ) !== null
+        ) {
+            return false;
+        }
+
+        if (
+            campo
+            instanceof HTMLSelectElement
+            && campo.tomselect
+            && typeof campo.tomselect.focus
+                === 'function'
+        ) {
+            return true;
+        }
+
+        return true;
+    }
+
+    /**
+     * Coloca o foco num campo inválido.
+     *
+     * Os campos Tom Select utilizam a API do componente para que o foco seja
+     * colocado no controlo visual em vez do `<select>` original.
+     *
+     * @param {
+     *     HTMLInputElement
+     *     |HTMLSelectElement
+     *     |HTMLTextAreaElement
+     * } campo Campo a focar.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    focarCampo(
+        campo,
+    ) {
+        if (
+            campo
+            instanceof HTMLSelectElement
+            && campo.tomselect
+            && typeof campo.tomselect.focus
+                === 'function'
+        ) {
+            campo.tomselect.focus();
+
+            return;
+        }
+
+        campo.focus();
     }
 
     /**
@@ -341,13 +606,13 @@ class TratadorFormularioAjax {
      * >}
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     obterCamposPorChave(
         chave,
     ) {
         if (
-            !(this.formulario instanceof HTMLFormElement)
+            !(this.formulario
+                instanceof HTMLFormElement)
         ) {
             return [];
         }
@@ -379,10 +644,9 @@ class TratadorFormularioAjax {
      *
      * @param {string} nome Nome HTML do campo.
      *
-     * @returns {string}
+     * @returns {string} Nome normalizado.
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     normalizarNomeCampo(
         nome,
@@ -401,20 +665,90 @@ class TratadorFormularioAjax {
     /**
      * Obtém o elemento destinado à mensagem de validação.
      *
+     * Dá prioridade aos contratos explícitos do campo antes de recorrer ao
+     * primeiro feedback existente no respetivo grupo.
+     *
      * @param {
      *     HTMLInputElement
      *     |HTMLSelectElement
      *     |HTMLTextAreaElement
      * } campo Campo inválido.
      *
-     * @returns {HTMLElement|null}
+     * @returns {HTMLElement|null} Elemento de feedback encontrado.
      *
      * @since 2.0.0
-     * @version 2.0.0
      */
     obterElementoFeedback(
         campo,
     ) {
+        if (
+            !(this.formulario
+                instanceof HTMLFormElement)
+        ) {
+            return null;
+        }
+
+        const identificadoresDescritos =
+            (
+                campo.getAttribute(
+                    'aria-describedby',
+                )
+                ?? ''
+            )
+                .split(
+                    /\s+/u,
+                )
+                .filter(
+                    (identificador) =>
+                        identificador !== '',
+                );
+
+        for (
+            const identificador
+            of identificadoresDescritos
+        ) {
+            const elemento =
+                document.getElementById(
+                    identificador,
+                );
+
+            if (
+                elemento
+                    instanceof HTMLElement
+                && this.formulario.contains(
+                    elemento,
+                )
+                && elemento.classList.contains(
+                    'invalid-feedback',
+                )
+            ) {
+                return elemento;
+            }
+        }
+
+        const identificadorCampo =
+            campo.id.trim();
+
+        if (identificadorCampo !== '') {
+            const elemento =
+                document.getElementById(
+                    `erro-${identificadorCampo}`,
+                );
+
+            if (
+                elemento
+                    instanceof HTMLElement
+                && this.formulario.contains(
+                    elemento,
+                )
+                && elemento.classList.contains(
+                    'invalid-feedback',
+                )
+            ) {
+                return elemento;
+            }
+        }
+
         const grupo =
             campo.closest(
                 [
@@ -425,24 +759,41 @@ class TratadorFormularioAjax {
                 ),
             );
 
-        return grupo?.querySelector(
-            '.invalid-feedback',
-        )
-            ?? campo.parentElement?.querySelector(
+        const feedbackGrupo =
+            grupo?.querySelector(
                 '.invalid-feedback',
-            )
-            ?? null;
+            );
+
+        if (
+            feedbackGrupo
+            instanceof HTMLElement
+        ) {
+            return feedbackGrupo;
+        }
+
+        const feedbackAdjacente =
+            campo.parentElement
+                ?.querySelector(
+                    '.invalid-feedback',
+                );
+
+        return feedbackAdjacente
+            instanceof HTMLElement
+                ? feedbackAdjacente
+                : null;
     }
 
     /**
      * Limpa os erros de validação do formulário.
      *
+     * @returns {void}
+     *
      * @since 1.0.0
-     * @version 2.0.0
      */
     limparErros() {
         if (
-            !(this.formulario instanceof HTMLFormElement)
+            !(this.formulario
+                instanceof HTMLFormElement)
         ) {
             return;
         }
@@ -479,6 +830,11 @@ class TratadorFormularioAjax {
                     elemento.style.removeProperty(
                         'display',
                     );
+
+                    elemento.setAttribute(
+                        'hidden',
+                        '',
+                    );
                 },
             );
     }
@@ -486,19 +842,28 @@ class TratadorFormularioAjax {
     /**
      * Apresenta a mensagem de sucesso do formulário.
      *
+     * @returns {void}
+     *
      * @since 2.0.0
-     * @version 1.0.0
      */
     mostrarMensagemSucesso() {
-        const mensagem =
-            this.formulario?.dataset.mensagemSucesso
-            ?? 'Ação concluída com sucesso.';
+        const mensagemConfigurada =
+            this.formulario
+                ?.dataset
+                .mensagemSucesso
+                ?.trim()
+            ?? '';
 
-        Swal.fire({
+        void Swal.fire({
             toast: true,
             position: 'top-end',
             icon: 'success',
-            title: mensagem,
+
+            title:
+                mensagemConfigurada !== ''
+                    ? mensagemConfigurada
+                    : 'Ação concluída com sucesso.',
+
             showConfirmButton: false,
             timer: 3000,
             timerProgressBar: true,
@@ -506,14 +871,32 @@ class TratadorFormularioAjax {
     }
 
     /**
-     * Repõe o formulário e fecha a janela modal, quando aplicável.
+     * Informa que a operação foi concluída, mas a interface não conseguiu
+     * executar o respetivo pós-processamento.
+     *
+     * @returns {void}
      *
      * @since 2.0.0
-     * @version 1.0.0
+     */
+    mostrarAvisoAtualizacaoInterface() {
+        void Swal.fire({
+            icon: 'warning',
+            title: 'Operação concluída',
+            text: 'A operação foi concluída, mas não foi possível atualizar a interface. Recarrega a página para veres os dados mais recentes.',
+        });
+    }
+
+    /**
+     * Repõe o formulário e fecha a janela modal, quando aplicável.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
      */
     finalizarSubmissao() {
         if (
-            !(this.formulario instanceof HTMLFormElement)
+            !(this.formulario
+                instanceof HTMLFormElement)
         ) {
             return;
         }
@@ -527,7 +910,8 @@ class TratadorFormularioAjax {
             );
 
         if (
-            elementoModal instanceof HTMLElement
+            elementoModal
+            instanceof HTMLElement
         ) {
             Modal
                 .getOrCreateInstance(
@@ -538,54 +922,128 @@ class TratadorFormularioAjax {
     }
 
     /**
-     * Define o estado de carregamento do botão de submissão.
+     * Obtém o estado atual do botão de submissão.
      *
-     * @param {boolean} emCarregamento Estado de carregamento.
+     * Os nós originais são preservados para serem recolocados sem recriar o
+     * conteúdo HTML nem perder eventuais listeners associados aos descendentes.
+     *
+     * @returns {{
+     *     desativado: boolean,
+     *     ariaBusy: string|null,
+     *     conteudo: Array<Node>
+     * }|null} Estado atual ou nulo quando não existe botão.
+     *
+     * @since 2.0.0
+     */
+    obterEstadoBotaoSubmissao() {
+        if (
+            !(this.botaoSubmissao
+                instanceof HTMLButtonElement)
+        ) {
+            return null;
+        }
+
+        return {
+            desativado:
+                this.botaoSubmissao.disabled,
+
+            ariaBusy:
+                this.botaoSubmissao.getAttribute(
+                    'aria-busy',
+                ),
+
+            conteudo:
+                Array.from(
+                    this.botaoSubmissao.childNodes,
+                ),
+        };
+    }
+
+    /**
+     * Apresenta o estado de carregamento no botão de submissão.
+     *
+     * @returns {void}
      *
      * @since 1.0.0
-     * @version 2.0.0
      */
-    definirEstadoCarregamento(
-        emCarregamento,
-    ) {
+    apresentarEstadoCarregamento() {
         if (
-            !(this.botaoSubmissao instanceof HTMLButtonElement)
+            !(this.botaoSubmissao
+                instanceof HTMLButtonElement)
         ) {
             return;
         }
 
-        if (emCarregamento) {
-            this.botaoSubmissao.disabled =
-                true;
+        this.botaoSubmissao.disabled =
+            true;
 
-            this.botaoSubmissao.setAttribute(
-                'aria-busy',
-                'true',
+        this.botaoSubmissao.setAttribute(
+            'aria-busy',
+            'true',
+        );
+
+        const indicador =
+            document.createElement(
+                'span',
             );
 
-            this.botaoSubmissao.innerHTML = [
-                '<span',
-                'class="spinner-border spinner-border-sm"',
-                'role="status"',
-                'aria-hidden="true"',
-                '></span>',
-                '<span>A processar...</span>',
-            ].join(
-                ' ',
-            );
+        indicador.className =
+            'spinner-border spinner-border-sm me-2';
 
+        indicador.setAttribute(
+            'aria-hidden',
+            'true',
+        );
+
+        this.botaoSubmissao.replaceChildren(
+            indicador,
+            document.createTextNode(
+                'A processar...',
+            ),
+        );
+    }
+
+    /**
+     * Repõe o estado do botão existente antes da submissão.
+     *
+     * @param {{
+     *     desativado: boolean,
+     *     ariaBusy: string|null,
+     *     conteudo: Array<Node>
+     * }|null} estado Estado anteriormente guardado.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    reporEstadoBotaoSubmissao(
+        estado,
+    ) {
+        if (
+            !(this.botaoSubmissao
+                instanceof HTMLButtonElement)
+            || estado === null
+        ) {
             return;
         }
 
         this.botaoSubmissao.disabled =
-            this.botaoOriginalmenteDesativado;
+            estado.desativado;
 
-        this.botaoSubmissao.removeAttribute(
-            'aria-busy',
+        if (estado.ariaBusy === null) {
+            this.botaoSubmissao.removeAttribute(
+                'aria-busy',
+            );
+        } else {
+            this.botaoSubmissao.setAttribute(
+                'aria-busy',
+                estado.ariaBusy,
+            );
+        }
+
+        this.botaoSubmissao.replaceChildren(
+            ...estado.conteudo,
         );
-
-        this.botaoSubmissao.innerHTML =
-            this.conteudoOriginalBotao;
     }
 }
 

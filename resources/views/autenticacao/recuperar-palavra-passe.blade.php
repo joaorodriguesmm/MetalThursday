@@ -3,7 +3,6 @@
     da palavra-passe.
 
     @since 1.0.0
-    @version 2.1.0
 --}}
 
 <x-layout-convidado>

@@ -6,7 +6,6 @@
  * imagem apresentada e os respetivos recursos temporários.
  *
  * @since 1.0.0
- * @version 3.1.0
  */
 class GestorFotografiaPerfil {
     /**
@@ -18,19 +17,15 @@ class GestorFotografiaPerfil {
      *     Seletor CSS da imagem de pré-visualização.
      * @param {string} seletorIniciais
      *     Seletor CSS das iniciais do utilizador.
-     * @param {string|null} seletorBotaoLimpar
-     *     Seletor opcional do botão que limpa apenas a nova seleção.
      *
      * @throws {TypeError} Quando algum seletor CSS é inválido.
      *
      * @since 1.0.0
-     * @version 3.1.0
      */
     constructor(
         seletorCampoFicheiro,
         seletorPrevisualizacao,
         seletorIniciais,
-        seletorBotaoLimpar = null,
     ) {
         this.campoFicheiro = this.obterElemento(
             seletorCampoFicheiro,
@@ -44,12 +39,6 @@ class GestorFotografiaPerfil {
             seletorIniciais,
         );
 
-        this.botaoLimpar = seletorBotaoLimpar === null
-            ? null
-            : this.obterElemento(
-                seletorBotaoLimpar,
-            );
-
         this.elementoAvatarIniciais =
             this.elementoIniciais instanceof HTMLElement
                 ? this.elementoIniciais.closest(
@@ -57,27 +46,29 @@ class GestorFotografiaPerfil {
                 )
                 : null;
 
-        this.origemFotografiaInicial =
-            null;
+        /**
+         * Origem da fotografia apresentada no carregamento inicial.
+         *
+         * @type {string|null}
+         *
+         * @since 2.0.0
+         */
+        this.origemFotografiaInicial = null;
 
-        this.urlPrevisualizacaoTemporaria =
-            null;
-
-        this.iniciado =
-            false;
-
-        this.aoClicarBotaoLimpar = (evento) => {
-            this.manipularCliqueBotaoLimpar(
-                evento,
-            );
-        };
+        /**
+         * URL de objeto utilizado pela pré-visualização temporária.
+         *
+         * @type {string|null}
+         *
+         * @since 2.0.0
+         */
+        this.urlPrevisualizacaoTemporaria = null;
 
         if (!this.estaDisponivel()) {
             return;
         }
 
         this.registarEstadoInicial();
-        this.iniciar();
         this.restaurarPrevisualizacao();
     }
 
@@ -87,7 +78,6 @@ class GestorFotografiaPerfil {
      * @returns {boolean} Verdadeiro quando o gestor pode funcionar.
      *
      * @since 2.0.0
-     * @version 3.0.0
      */
     estaDisponivel() {
         return this.campoFicheiro instanceof HTMLInputElement
@@ -100,42 +90,15 @@ class GestorFotografiaPerfil {
     }
 
     /**
-     * Configura o botão opcional de limpeza.
-     *
-     * O campo de ficheiro não é observado diretamente para impedir que a
-     * pré-visualização seja atualizada antes da validação do ficheiro.
-     *
-     * @returns {void}
-     *
-     * @since 2.1.0
-     * @version 2.0.0
-     */
-    iniciar() {
-        if (!this.estaDisponivel() || this.iniciado) {
-            return;
-        }
-
-        if (this.botaoLimpar instanceof HTMLElement) {
-            this.botaoLimpar.addEventListener(
-                'click',
-                this.aoClicarBotaoLimpar,
-            );
-        }
-
-        this.iniciado =
-            true;
-    }
-
-    /**
      * Obtém o campo de ficheiro gerido.
      *
      * @returns {HTMLInputElement|null} Campo de ficheiro ou nulo.
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     obterCampoFicheiro() {
         return this.campoFicheiro instanceof HTMLInputElement
+            && this.campoFicheiro.type === 'file'
             ? this.campoFicheiro
             : null;
     }
@@ -151,15 +114,12 @@ class GestorFotografiaPerfil {
      * @returns {boolean} Indica se a pré-visualização foi atualizada.
      *
      * @since 1.0.0
-     * @version 3.0.0
      */
     previsualizarImagem(ficheiro) {
         if (
             !this.estaDisponivel()
             || !(ficheiro instanceof File)
-            || !ficheiro.type.startsWith(
-                'image/',
-            )
+            || !ficheiro.type.startsWith('image/')
         ) {
             this.restaurarPrevisualizacao();
 
@@ -169,20 +129,12 @@ class GestorFotografiaPerfil {
         this.revogarUrlTemporario();
 
         this.urlPrevisualizacaoTemporaria =
-            URL.createObjectURL(
-                ficheiro,
-            );
+            URL.createObjectURL(ficheiro);
 
         this.elementoPrevisualizacao.src =
             this.urlPrevisualizacaoTemporaria;
 
-        this.alternarApresentacao(
-            true,
-        );
-
-        this.atualizarBotaoLimpar(
-            true,
-        );
+        this.alternarApresentacao(true);
 
         return true;
     }
@@ -196,7 +148,6 @@ class GestorFotografiaPerfil {
      * @returns {void}
      *
      * @since 1.0.0
-     * @version 2.0.0
      */
     restaurarPrevisualizacao() {
         if (!this.estaDisponivel()) {
@@ -209,22 +160,16 @@ class GestorFotografiaPerfil {
             this.elementoPrevisualizacao.src =
                 this.origemFotografiaInicial;
 
-            this.alternarApresentacao(
-                true,
-            );
-        } else {
-            this.elementoPrevisualizacao.removeAttribute(
-                'src',
-            );
+            this.alternarApresentacao(true);
 
-            this.alternarApresentacao(
-                false,
-            );
+            return;
         }
 
-        this.atualizarBotaoLimpar(
-            false,
+        this.elementoPrevisualizacao.removeAttribute(
+            'src',
         );
+
+        this.alternarApresentacao(false);
     }
 
     /**
@@ -236,24 +181,18 @@ class GestorFotografiaPerfil {
      * @returns {void}
      *
      * @since 2.0.0
-     * @version 2.0.0
      */
     registarEstadoInicial() {
         if (
-            !(
-                this.elementoPrevisualizacao
-                instanceof HTMLImageElement
-            )
+            !(this.elementoPrevisualizacao
+                instanceof HTMLImageElement)
         ) {
             return;
         }
 
-        const origem =
-            this.elementoPrevisualizacao
-                .getAttribute(
-                    'src',
-                )
-                ?.trim();
+        const origem = this.elementoPrevisualizacao
+            .getAttribute('src')
+            ?.trim();
 
         const fotografiaVisivel =
             typeof origem === 'string'
@@ -261,51 +200,12 @@ class GestorFotografiaPerfil {
             && !this.elementoPrevisualizacao.hidden
             && !this.elementoPrevisualizacao
                 .classList
-                .contains(
-                    'd-none',
-                );
+                .contains('d-none');
 
         this.origemFotografiaInicial =
             fotografiaVisivel
                 ? origem
                 : null;
-    }
-
-    /**
-     * Limpa a nova seleção e restaura o estado inicial.
-     *
-     * @param {Event} evento Evento de clique.
-     *
-     * @returns {void}
-     *
-     * @since 1.0.0
-     * @version 2.0.0
-     */
-    manipularCliqueBotaoLimpar(evento) {
-        evento.preventDefault();
-
-        if (
-            this.campoFicheiro
-            instanceof HTMLInputElement
-        ) {
-            this.campoFicheiro.value =
-                '';
-
-            this.campoFicheiro.setCustomValidity(
-                '',
-            );
-
-            this.campoFicheiro.dispatchEvent(
-                new Event(
-                    'change',
-                    {
-                        bubbles: true,
-                    },
-                ),
-            );
-        }
-
-        this.restaurarPrevisualizacao();
     }
 
     /**
@@ -316,90 +216,54 @@ class GestorFotografiaPerfil {
      * @returns {void}
      *
      * @since 2.0.0
-     * @version 2.0.0
      */
     alternarApresentacao(mostrarFotografia) {
-        if (
-            !(
-                this.elementoPrevisualizacao
-                instanceof HTMLImageElement
-            )
-            || !(
-                this.elementoAvatarIniciais
-                instanceof HTMLElement
-            )
-        ) {
+        if (!this.estaDisponivel()) {
             return;
         }
 
-        this.elementoPrevisualizacao.hidden =
-            !mostrarFotografia;
-
-        this.elementoPrevisualizacao.classList.toggle(
-            'd-none',
-            !mostrarFotografia,
-        );
-
-        this.elementoPrevisualizacao.setAttribute(
-            'aria-hidden',
-            mostrarFotografia
-                ? 'false'
-                : 'true',
-        );
-
-        this.elementoAvatarIniciais.hidden =
-            mostrarFotografia;
-
-        this.elementoAvatarIniciais.classList.toggle(
-            'd-none',
+        this.atualizarVisibilidade(
+            this.elementoPrevisualizacao,
             mostrarFotografia,
         );
 
-        this.elementoAvatarIniciais.setAttribute(
-            'aria-hidden',
-            mostrarFotografia
-                ? 'true'
-                : 'false',
+        this.atualizarVisibilidade(
+            this.elementoAvatarIniciais,
+            !mostrarFotografia,
         );
     }
 
     /**
-     * Atualiza a visibilidade do botão de limpeza.
+     * Atualiza a apresentação visual e acessível de um elemento.
      *
+     * @param {HTMLElement} elemento Elemento atualizado.
      * @param {boolean} mostrar Indicação de apresentação.
      *
      * @returns {void}
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
-    atualizarBotaoLimpar(mostrar) {
-        if (!(this.botaoLimpar instanceof HTMLElement)) {
-            return;
-        }
+    atualizarVisibilidade(
+        elemento,
+        mostrar,
+    ) {
+        elemento.hidden = !mostrar;
 
-        this.botaoLimpar.hidden =
-            !mostrar;
-
-        this.botaoLimpar.classList.toggle(
+        elemento.classList.toggle(
             'd-none',
             !mostrar,
         );
 
-        this.botaoLimpar.setAttribute(
-            'aria-hidden',
-            mostrar
-                ? 'false'
-                : 'true',
-        );
+        if (mostrar) {
+            elemento.removeAttribute('aria-hidden');
 
-        if (
-            this.botaoLimpar
-            instanceof HTMLButtonElement
-        ) {
-            this.botaoLimpar.disabled =
-                !mostrar;
+            return;
         }
+
+        elemento.setAttribute(
+            'aria-hidden',
+            'true',
+        );
     }
 
     /**
@@ -408,13 +272,9 @@ class GestorFotografiaPerfil {
      * @returns {void}
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     revogarUrlTemporario() {
-        if (
-            this.urlPrevisualizacaoTemporaria
-            === null
-        ) {
+        if (this.urlPrevisualizacaoTemporaria === null) {
             return;
         }
 
@@ -422,12 +282,14 @@ class GestorFotografiaPerfil {
             this.urlPrevisualizacaoTemporaria,
         );
 
-        this.urlPrevisualizacaoTemporaria =
-            null;
+        this.urlPrevisualizacaoTemporaria = null;
     }
 
     /**
      * Obtém um elemento através de um seletor CSS.
+     *
+     * A ausência do elemento é permitida para que o consumidor possa
+     * consultar `estaDisponivel()`.
      *
      * @param {unknown} seletor Seletor CSS.
      *
@@ -435,8 +297,7 @@ class GestorFotografiaPerfil {
      *
      * @throws {TypeError} Quando o seletor é inválido.
      *
-     * @since 2.1.0
-     * @version 1.0.0
+     * @since 2.0.0
      */
     obterElemento(seletor) {
         if (
@@ -448,8 +309,7 @@ class GestorFotografiaPerfil {
             );
         }
 
-        const seletorNormalizado =
-            seletor.trim();
+        const seletorNormalizado = seletor.trim();
 
         try {
             return document.querySelector(
@@ -460,31 +320,6 @@ class GestorFotografiaPerfil {
                 `O seletor CSS "${seletorNormalizado}" é inválido.`,
             );
         }
-    }
-
-    /**
-     * Liberta recursos e remove os eventos configurados.
-     *
-     * @returns {void}
-     *
-     * @since 2.0.0
-     * @version 2.0.0
-     */
-    destruir() {
-        if (
-            this.iniciado
-            && this.botaoLimpar instanceof HTMLElement
-        ) {
-            this.botaoLimpar.removeEventListener(
-                'click',
-                this.aoClicarBotaoLimpar,
-            );
-        }
-
-        this.revogarUrlTemporario();
-
-        this.iniciado =
-            false;
     }
 }
 

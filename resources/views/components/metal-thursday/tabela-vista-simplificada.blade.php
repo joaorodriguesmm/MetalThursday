@@ -6,7 +6,6 @@
     App\View\Components\MetalThursday\TabelaVistaSimplificada.
 
     @since 1.0.0
-    @version 4.0.0
 --}}
 
 <div
@@ -143,16 +142,17 @@
                         </td>
 
                         <td class="text-center">
-                            <span
-                                class="apresentacao-avaliacoes"
+                            <button
+                                class="apresentacao-avaliacoes border-0 bg-transparent text-white p-0"
+                                type="button"
                                 data-bs-toggle="tooltip"
                                 data-bs-html="true"
                                 data-bs-title="{!!
                                     $linha['avaliacao']['descricao']->toHtml()
                                 !!}"
-                                aria-label="{{
+                                aria-label="Consultar detalhes das avaliações. {{
                                     $linha['avaliacao']['descricaoAcessivel']
-                                }}"
+                                }}."
                             >
                                 <i
                                     class="bi bi-star-fill text-warning"
@@ -166,20 +166,21 @@
                                 <span class="text-white-50">
                                     ({{ $linha['avaliacao']['quantidade'] }})
                                 </span>
-                            </span>
+                            </button>
                         </td>
 
                         <td class="text-center">
-                            <span
-                                class="apresentacao-audicoes"
+                            <button
+                                class="apresentacao-audicoes border-0 bg-transparent text-white p-0"
+                                type="button"
                                 data-bs-toggle="tooltip"
                                 data-bs-html="true"
                                 data-bs-title="{!!
                                     $linha['audicoes']['descricao']->toHtml()
                                 !!}"
-                                aria-label="{{
+                                aria-label="Consultar detalhes das audições. {{
                                     $linha['audicoes']['descricaoAcessivel']
-                                }}"
+                                }}."
                             >
                                 <i
                                     class="bi bi-headphones"
@@ -189,7 +190,7 @@
                                 <span class="quantidade-audicoes">
                                     {{ $linha['audicoes']['quantidade'] }}
                                 </span>
-                            </span>
+                            </button>
                         </td>
                     </tr>
                 @empty

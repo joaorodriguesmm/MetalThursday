@@ -1,9 +1,20 @@
-import AlternadorPalavraPasse from '../modulos/AlternadorPalavraPasse';
-import GestorFotografiaPerfil from '../modulos/GestorFotografiaPerfil';
-import InicializadorTooltips from '../modulos/InicializadorTooltips';
-import SeletorPermissoes from '../modulos/SeletorPermissoes';
-import ValidadorFicheiro from '../modulos/ValidadorFicheiro';
-import ValidadorFormulario from '../modulos/ValidadorFormulario';
+import AlternadorPalavraPasse
+    from '../modulos/AlternadorPalavraPasse';
+
+import GestorFotografiaPerfil
+    from '../modulos/GestorFotografiaPerfil';
+
+import InicializadorTooltips
+    from '../modulos/InicializadorTooltips';
+
+import SeletorPermissoes
+    from '../modulos/SeletorPermissoes';
+
+import ValidadorFicheiro
+    from '../modulos/ValidadorFicheiro';
+
+import ValidadorFormulario
+    from '../modulos/ValidadorFormulario';
 
 /**
  * Configura os comportamentos da página de edição do perfil.
@@ -12,7 +23,6 @@ import ValidadorFormulario from '../modulos/ValidadorFormulario';
  * A validação definitiva permanece no servidor.
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 
 /**
@@ -21,7 +31,6 @@ import ValidadorFormulario from '../modulos/ValidadorFormulario';
  * @type {Readonly<Record<string, string>>}
  *
  * @since 2.0.0
- * @version 2.0.0
  */
 const SELETORES = Object.freeze({
     formularioPerfil:
@@ -61,12 +70,12 @@ const SELETORES = Object.freeze({
 /**
  * Tamanho máximo permitido para a fotografia, em bytes.
  *
- * O valor corresponde aos 10 240 KiB aceites por AtualizarPerfilRequest.
+ * Corresponde ao limite de 10 MiB aplicado pelo servidor e comunicado na
+ * interface.
  *
  * @type {number}
  *
  * @since 2.0.0
- * @version 2.0.0
  */
 const TAMANHO_MAXIMO_FOTOGRAFIA =
     10 * (1024 ** 2);
@@ -74,31 +83,29 @@ const TAMANHO_MAXIMO_FOTOGRAFIA =
 /**
  * Comprimento mínimo da nova palavra-passe.
  *
+ * Este valor permanece local enquanto o formulário não declarar o limite
+ * através do atributo `minlength`.
+ *
  * @type {number}
  *
- * @since 3.0.0
- * @version 1.0.0
+ * @since 2.0.0
  */
 const COMPRIMENTO_MINIMO_PALAVRA_PASSE =
     12;
 
 /**
- * Obtém um campo do formulário através do respetivo nome.
+ * Obtém obrigatoriamente um campo de entrada através do respetivo nome.
  *
  * @param {HTMLFormElement} formulario Formulário pesquisado.
  * @param {string} nome Nome HTML do campo.
  *
- * @returns {
- *     HTMLInputElement
- *     |HTMLSelectElement
- *     |HTMLTextAreaElement
- *     |null
- * } Campo encontrado ou nulo.
+ * @returns {HTMLInputElement} Campo encontrado.
  *
- * @since 3.0.0
- * @version 1.0.0
+ * @throws {TypeError} Quando o campo esperado não existe.
+ *
+ * @since 2.0.0
  */
-function obterCampoFormulario(
+function obterCampoEntradaFormulario(
     formulario,
     nome,
 ) {
@@ -107,65 +114,61 @@ function obterCampoFormulario(
             nome,
         );
 
-    return campo instanceof HTMLInputElement
-        || campo instanceof HTMLSelectElement
-        || campo instanceof HTMLTextAreaElement
-        ? campo
-        : null;
+    if (!(campo instanceof HTMLInputElement)) {
+        throw new TypeError(
+            `O formulário "${formulario.id}" deve possuir o campo "${nome}".`,
+        );
+    }
+
+    return campo;
 }
 
 /**
- * Obtém o comprimento máximo declarado num campo textual.
+ * Obtém obrigatoriamente o comprimento máximo declarado num campo.
  *
- * @param {Element|null} campo Campo recebido.
- * @param {number} valorPredefinido Valor utilizado quando não existe limite.
+ * @param {HTMLInputElement} campo Campo pesquisado.
  *
  * @returns {number} Comprimento máximo positivo.
  *
- * @since 3.0.0
- * @version 1.0.0
+ * @throws {TypeError} Quando o campo não declara um limite válido.
+ *
+ * @since 2.0.0
  */
 function obterComprimentoMaximo(
     campo,
-    valorPredefinido,
 ) {
     if (
-        (
-            campo instanceof HTMLInputElement
-            || campo instanceof HTMLTextAreaElement
+        !Number.isInteger(
+            campo.maxLength,
         )
-        && Number.isInteger(campo.maxLength)
-        && campo.maxLength > 0
+        || campo.maxLength <= 0
     ) {
-        return campo.maxLength;
+        throw new TypeError(
+            `O campo "${campo.name}" deve possuir um comprimento máximo válido.`,
+        );
     }
 
-    return valorPredefinido;
+    return campo.maxLength;
 }
 
 /**
- * Obtém o comprimento máximo opcional declarado num campo textual.
+ * Obtém o comprimento máximo opcional declarado num campo.
  *
- * @param {Element|null} campo Campo recebido.
+ * @param {HTMLInputElement} campo Campo pesquisado.
  *
  * @returns {number|null} Comprimento máximo ou nulo.
  *
- * @since 3.0.0
- * @version 1.0.0
+ * @since 2.0.0
  */
-function obterComprimentoMaximoOpcional(campo) {
-    if (
-        (
-            campo instanceof HTMLInputElement
-            || campo instanceof HTMLTextAreaElement
-        )
-        && Number.isInteger(campo.maxLength)
-        && campo.maxLength > 0
-    ) {
-        return campo.maxLength;
-    }
-
-    return null;
+function obterComprimentoMaximoOpcional(
+    campo,
+) {
+    return Number.isInteger(
+        campo.maxLength,
+    )
+    && campo.maxLength > 0
+        ? campo.maxLength
+        : null;
 }
 
 /**
@@ -176,15 +179,16 @@ function obterComprimentoMaximoOpcional(campo) {
  *
  * @returns {Array<string|Function>} Regras finais.
  *
- * @since 3.0.0
- * @version 1.0.0
+ * @since 2.0.0
  */
 function acrescentarRegraMaximo(
     regras,
     comprimentoMaximo,
 ) {
     return comprimentoMaximo === null
-        ? [...regras]
+        ? [
+            ...regras,
+        ]
         : [
             ...regras,
             `maximo:${comprimentoMaximo}`,
@@ -192,16 +196,17 @@ function acrescentarRegraMaximo(
 }
 
 /**
- * Obtém os tipos MIME declarados no atributo `accept` do campo.
+ * Obtém os tipos declarados no atributo `accept` do campo da fotografia.
+ *
+ * A validação estrutural dos MIME é efetuada pelo ValidadorFicheiro.
  *
  * @param {HTMLInputElement} campoFotografia Campo da fotografia.
  *
- * @returns {Array<string>} Tipos MIME permitidos.
+ * @returns {Array<string>} Tipos declarados.
  *
- * @throws {TypeError} Quando o campo não declara tipos MIME válidos.
+ * @throws {TypeError} Quando o campo não declara tipos permitidos.
  *
- * @since 3.0.0
- * @version 1.0.0
+ * @since 2.0.0
  */
 function obterTiposFotografiaPermitidos(
     campoFotografia,
@@ -215,7 +220,7 @@ function obterTiposFotografiaPermitidos(
             )
             .filter(
                 (tipo) =>
-                    tipo.includes('/'),
+                    tipo !== '',
             );
 
     if (tipos.length === 0) {
@@ -225,7 +230,9 @@ function obterTiposFotografiaPermitidos(
     }
 
     return Array.from(
-        new Set(tipos),
+        new Set(
+            tipos,
+        ),
     );
 }
 
@@ -235,7 +242,6 @@ function obterTiposFotografiaPermitidos(
  * @returns {void}
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 function iniciarFotografiaPerfil() {
     const gestorFotografia =
@@ -253,7 +259,9 @@ function iniciarFotografiaPerfil() {
         gestorFotografia.obterCampoFicheiro();
 
     if (!(campoFotografia instanceof HTMLInputElement)) {
-        return;
+        throw new TypeError(
+            'Não foi encontrado um campo válido para a fotografia do perfil.',
+        );
     }
 
     new ValidadorFicheiro(
@@ -304,33 +312,37 @@ function iniciarFotografiaPerfil() {
  * @returns {void}
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 function iniciarValidacaoPerfil() {
-    const formulario = document.querySelector(
-        SELETORES.formularioPerfil,
-    );
+    const formulario =
+        document.querySelector(
+            SELETORES.formularioPerfil,
+        );
 
     if (!(formulario instanceof HTMLFormElement)) {
         return;
     }
 
+    const campoNome =
+        obterCampoEntradaFormulario(
+            formulario,
+            'nome',
+        );
+
+    const campoEmail =
+        obterCampoEntradaFormulario(
+            formulario,
+            'email',
+        );
+
     const comprimentoMaximoNome =
         obterComprimentoMaximo(
-            obterCampoFormulario(
-                formulario,
-                'nome',
-            ),
-            255,
+            campoNome,
         );
 
     const comprimentoMaximoEmail =
         obterComprimentoMaximo(
-            obterCampoFormulario(
-                formulario,
-                'email',
-            ),
-            255,
+            campoEmail,
         );
 
     new ValidadorFormulario(
@@ -383,20 +395,21 @@ function iniciarValidacaoPerfil() {
  * @returns {void}
  *
  * @since 1.0.0
- * @version 2.0.0
  */
 function iniciarPermissoesEmail() {
-    const campoTodas = document.querySelector(
-        SELETORES.permissaoTodas,
-    );
+    const campoTodas =
+        document.querySelector(
+            SELETORES.permissaoTodas,
+        );
 
     if (!(campoTodas instanceof HTMLInputElement)) {
         return;
     }
 
-    const itensPermissoes = document.querySelectorAll(
-        SELETORES.itemPermissaoEmail,
-    );
+    const itensPermissoes =
+        document.querySelectorAll(
+            SELETORES.itemPermissaoEmail,
+        );
 
     if (itensPermissoes.length === 0) {
         return;
@@ -414,31 +427,31 @@ function iniciarPermissoesEmail() {
  * @returns {void}
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 function iniciarValidacaoPalavraPasse() {
-    const formulario = document.querySelector(
-        SELETORES.formularioPalavraPasse,
-    );
+    const formulario =
+        document.querySelector(
+            SELETORES.formularioPalavraPasse,
+        );
 
     if (!(formulario instanceof HTMLFormElement)) {
         return;
     }
 
     const campoPalavraPasseAtual =
-        obterCampoFormulario(
+        obterCampoEntradaFormulario(
             formulario,
             'palavra_passe_atual',
         );
 
     const campoNovaPalavraPasse =
-        obterCampoFormulario(
+        obterCampoEntradaFormulario(
             formulario,
             'nova_palavra_passe',
         );
 
     const campoConfirmacao =
-        obterCampoFormulario(
+        obterCampoEntradaFormulario(
             formulario,
             'confirmacao_nova_palavra_passe',
         );
@@ -459,8 +472,7 @@ function iniciarValidacaoPalavraPasse() {
         );
 
     const minimoNovaPalavraPasse =
-        campoNovaPalavraPasse instanceof HTMLInputElement
-        && Number.isInteger(
+        Number.isInteger(
             campoNovaPalavraPasse.minLength,
         )
         && campoNovaPalavraPasse.minLength > 0
@@ -559,12 +571,12 @@ function iniciarValidacaoPalavraPasse() {
  * @returns {void}
  *
  * @since 1.0.0
- * @version 2.0.0
  */
 function iniciarAlternadoresPalavraPasse() {
-    const alternadores = document.querySelectorAll(
-        SELETORES.alternadorPalavraPasse,
-    );
+    const alternadores =
+        document.querySelectorAll(
+            SELETORES.alternadorPalavraPasse,
+        );
 
     if (alternadores.length === 0) {
         return;
@@ -581,7 +593,6 @@ function iniciarAlternadoresPalavraPasse() {
  * @returns {void}
  *
  * @since 1.0.0
- * @version 2.0.0
  */
 function iniciarTooltips() {
     new InicializadorTooltips(
@@ -595,7 +606,6 @@ function iniciarTooltips() {
  * @returns {void}
  *
  * @since 2.0.0
- * @version 2.0.0
  */
 function iniciarPaginaPerfil() {
     iniciarFotografiaPerfil();

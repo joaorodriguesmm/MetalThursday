@@ -8,7 +8,6 @@ import ValidadorFormulario
  * Configura os comportamentos da página de redefinição da palavra-passe.
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 
 /**
@@ -16,8 +15,7 @@ import ValidadorFormulario
  *
  * @type {Readonly<Record<string, string>>}
  *
- * @since 2.1.0
- * @version 2.0.0
+ * @since 2.0.0
  */
 const SELETORES = Object.freeze({
     formulario:
@@ -28,17 +26,18 @@ const SELETORES = Object.freeze({
 });
 
 /**
- * Obtém um campo textual através do respetivo nome.
+ * Obtém obrigatoriamente um campo de palavra-passe através do respetivo nome.
  *
  * @param {HTMLFormElement} formulario Formulário pesquisado.
  * @param {string} nomeCampo Nome HTML do campo.
  *
- * @returns {HTMLInputElement|null} Campo encontrado ou nulo.
+ * @returns {HTMLInputElement} Campo encontrado.
  *
- * @since 3.0.0
- * @version 1.0.0
+ * @throws {TypeError} Quando o campo esperado não existe.
+ *
+ * @since 2.0.0
  */
-function obterCampo(
+function obterCampoPalavraPasse(
     formulario,
     nomeCampo,
 ) {
@@ -47,61 +46,72 @@ function obterCampo(
             nomeCampo,
         );
 
-    return campo instanceof HTMLInputElement
-        ? campo
-        : null;
+    if (
+        !(campo instanceof HTMLInputElement)
+        || campo.type !== 'password'
+    ) {
+        throw new TypeError(
+            `O formulário "${formulario.id}" deve possuir o campo de palavra-passe "${nomeCampo}".`,
+        );
+    }
+
+    return campo;
 }
 
 /**
- * Obtém o comprimento mínimo declarado num campo.
+ * Obtém obrigatoriamente o comprimento mínimo declarado num campo.
  *
- * @param {HTMLInputElement|null} campo Campo recebido.
- * @param {number} valorPredefinido Valor utilizado quando não existe limite.
+ * @param {HTMLInputElement} campo Campo pesquisado.
  *
  * @returns {number} Comprimento mínimo positivo.
  *
- * @since 3.0.0
- * @version 1.0.0
+ * @throws {TypeError} Quando o limite não é válido.
+ *
+ * @since 2.0.0
  */
 function obterComprimentoMinimo(
     campo,
-    valorPredefinido,
 ) {
     if (
-        campo instanceof HTMLInputElement
-        && Number.isInteger(campo.minLength)
-        && campo.minLength > 0
+        !Number.isInteger(
+            campo.minLength,
+        )
+        || campo.minLength <= 0
     ) {
-        return campo.minLength;
+        throw new TypeError(
+            `O campo "${campo.name}" deve possuir um comprimento mínimo válido.`,
+        );
     }
 
-    return valorPredefinido;
+    return campo.minLength;
 }
 
 /**
- * Obtém o comprimento máximo declarado num campo.
+ * Obtém obrigatoriamente o comprimento máximo declarado num campo.
  *
- * @param {HTMLInputElement|null} campo Campo recebido.
- * @param {number} valorPredefinido Valor utilizado quando não existe limite.
+ * @param {HTMLInputElement} campo Campo pesquisado.
  *
  * @returns {number} Comprimento máximo positivo.
  *
- * @since 3.0.0
- * @version 1.0.0
+ * @throws {TypeError} Quando o limite não é válido.
+ *
+ * @since 2.0.0
  */
 function obterComprimentoMaximo(
     campo,
-    valorPredefinido,
 ) {
     if (
-        campo instanceof HTMLInputElement
-        && Number.isInteger(campo.maxLength)
-        && campo.maxLength > 0
+        !Number.isInteger(
+            campo.maxLength,
+        )
+        || campo.maxLength <= 0
     ) {
-        return campo.maxLength;
+        throw new TypeError(
+            `O campo "${campo.name}" deve possuir um comprimento máximo válido.`,
+        );
     }
 
-    return valorPredefinido;
+    return campo.maxLength;
 }
 
 /**
@@ -110,7 +120,6 @@ function obterComprimentoMaximo(
  * @returns {void}
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 function iniciarValidacaoFormulario() {
     const formulario =
@@ -123,13 +132,13 @@ function iniciarValidacaoFormulario() {
     }
 
     const campoPalavraPasse =
-        obterCampo(
+        obterCampoPalavraPasse(
             formulario,
             'palavra_passe',
         );
 
     const campoConfirmacao =
-        obterCampo(
+        obterCampoPalavraPasse(
             formulario,
             'confirmacao_palavra_passe',
         );
@@ -137,19 +146,16 @@ function iniciarValidacaoFormulario() {
     const comprimentoMinimoPalavraPasse =
         obterComprimentoMinimo(
             campoPalavraPasse,
-            12,
         );
 
     const comprimentoMaximoPalavraPasse =
         obterComprimentoMaximo(
             campoPalavraPasse,
-            4096,
         );
 
     const comprimentoMaximoConfirmacao =
         obterComprimentoMaximo(
             campoConfirmacao,
-            comprimentoMaximoPalavraPasse,
         );
 
     new ValidadorFormulario(
@@ -218,7 +224,6 @@ function iniciarValidacaoFormulario() {
  * @returns {void}
  *
  * @since 1.0.0
- * @version 2.0.0
  */
 function iniciarAlternadoresPalavraPasse() {
     const alternadores =
@@ -241,7 +246,6 @@ function iniciarAlternadoresPalavraPasse() {
  * @returns {void}
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 function iniciarPaginaRedefinicaoPalavraPasse() {
     iniciarValidacaoFormulario();

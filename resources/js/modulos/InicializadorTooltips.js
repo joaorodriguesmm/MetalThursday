@@ -1,220 +1,101 @@
 import { Tooltip } from 'bootstrap';
 
 /**
- * Gere os tooltips fornecidos pelo Bootstrap.
+ * Inicializa os tooltips fornecidos pelo Bootstrap.
  *
- * O inicializador reutiliza instâncias existentes, impedindo a associação de
- * vários tooltips ao mesmo elemento.
+ * Instâncias já associadas aos elementos são reutilizadas através da API do
+ * próprio Bootstrap, evitando registos paralelos e duplicação de instâncias.
  *
  * @since 1.0.0
- * @version 2.1.0
  */
 class InicializadorTooltips {
     /**
-     * Cria o inicializador de tooltips.
+     * Cria o inicializador e prepara os elementos recebidos.
      *
      * @param {string|HTMLElement|Iterable<HTMLElement>} elementosOuSeletor
      *     Seletor, elemento ou coleção de elementos.
      * @param {Record<string, unknown>} opcoes
      *     Opções transmitidas ao Bootstrap.
      *
-     * @throws {TypeError} Quando os elementos ou as opções não são válidos.
+     * @throws {TypeError} Quando os elementos ou as opções são inválidos.
      *
      * @since 1.0.0
-     * @version 2.1.0
      */
     constructor(
         elementosOuSeletor = '[data-bs-toggle="tooltip"]',
         opcoes = {},
     ) {
-        this.elementosOuSeletor = elementosOuSeletor;
-        this.opcoes = this.normalizarOpcoes(opcoes);
-        this.instancias = new Map();
+        /**
+         * Opções utilizadas na criação de novas instâncias.
+         *
+         * @type {Readonly<Record<string, unknown>>}
+         *
+         * @since 2.0.0
+         */
+        this.opcoes =
+            this.normalizarOpcoes(
+                opcoes,
+            );
 
-        this.iniciar();
+        this.inicializar(
+            elementosOuSeletor,
+        );
     }
 
     /**
-     * Inicializa os tooltips disponíveis.
+     * Inicializa os tooltips indicados.
      *
-     * Elementos já inicializados são reutilizados.
+     * Elementos que já possuem uma instância Bootstrap reutilizam-na sem
+     * criar uma segunda instância.
      *
-     * @returns {number} Número total de instâncias geridas.
+     * @param {string|HTMLElement|Iterable<HTMLElement>} elementosOuSeletor
+     *     Seletor, elemento ou coleção de elementos.
+     *
+     * @returns {number} Número de elementos processados.
      *
      * @since 1.0.0
-     * @version 2.1.0
      */
-    iniciar() {
-        this.removerInstanciasDesligadas();
+    inicializar(elementosOuSeletor) {
+        const elementos =
+            this.obterElementos(
+                elementosOuSeletor,
+            );
 
-        const elementos = this.obterElementos(
-            this.elementosOuSeletor,
-        );
-
-        elementos.forEach((elemento) => {
-            this.inicializarElemento(elemento);
-        });
-
-        return this.instancias.size;
-    }
-
-    /**
-     * Procura novamente os elementos e inicializa os que foram adicionados.
-     *
-     * Este método pode ser utilizado depois de introduzir conteúdo dinâmico
-     * na página.
-     *
-     * @returns {number} Número total de instâncias geridas.
-     *
-     * @since 2.0.0
-     * @version 1.0.0
-     */
-    atualizar() {
-        return this.iniciar();
-    }
-
-    /**
-     * Obtém a instância associada a um elemento.
-     *
-     * @param {HTMLElement} elemento Elemento procurado.
-     *
-     * @returns {Tooltip|null} Instância encontrada ou nulo.
-     *
-     * @since 2.0.0
-     * @version 1.0.0
-     */
-    obterInstancia(elemento) {
-        if (!(elemento instanceof HTMLElement)) {
-            return null;
-        }
-
-        return this.instancias.get(elemento)?.instancia
-            ?? Tooltip.getInstance(elemento)
-            ?? null;
-    }
-
-    /**
-     * Destrói as instâncias criadas por este inicializador.
-     *
-     * Instâncias que já existiam antes da inicialização são apenas removidas
-     * do registo interno e permanecem ativas.
-     *
-     * @returns {void}
-     *
-     * @since 2.0.0
-     * @version 1.1.0
-     */
-    destruir() {
-        this.instancias.forEach(
-            (
-                registo,
-                elemento,
-            ) => {
-                if (
-                    registo.criadaPeloInicializador
-                    && Tooltip.getInstance(elemento)
-                    === registo.instancia
-                ) {
-                    registo.instancia.dispose();
-                }
+        elementos.forEach(
+            (elemento) => {
+                this.inicializarElemento(
+                    elemento,
+                );
             },
         );
 
-        this.instancias.clear();
+        return elementos.length;
     }
 
     /**
-     * Inicializa o tooltip de um elemento.
+     * Inicializa ou reutiliza o tooltip de um elemento.
      *
      * @param {HTMLElement} elemento Elemento configurado.
      *
-     * @returns {Tooltip} Instância criada ou reutilizada.
+     * @returns {Tooltip} Instância disponível.
      *
      * @throws {TypeError} Quando o elemento não é válido.
      *
      * @since 2.0.0
-     * @version 1.1.0
      */
     inicializarElemento(elemento) {
-        if (!(elemento instanceof HTMLElement)) {
+        if (
+            !(elemento
+                instanceof HTMLElement)
+        ) {
             throw new TypeError(
                 'O elemento do tooltip deve ser um elemento HTML válido.',
             );
         }
 
-        const registoAtual =
-            this.instancias.get(elemento);
-
-        const instanciaAtual =
-            Tooltip.getInstance(elemento);
-
-        if (
-            registoAtual
-            && instanciaAtual === registoAtual.instancia
-        ) {
-            return registoAtual.instancia;
-        }
-
-        if (registoAtual) {
-            this.instancias.delete(elemento);
-        }
-
-        if (instanciaAtual) {
-            this.instancias.set(
-                elemento,
-                {
-                    instancia: instanciaAtual,
-                    criadaPeloInicializador: false,
-                },
-            );
-
-            return instanciaAtual;
-        }
-
-        const instancia = new Tooltip(
+        return Tooltip.getOrCreateInstance(
             elemento,
             this.opcoes,
-        );
-
-        this.instancias.set(
-            elemento,
-            {
-                instancia,
-                criadaPeloInicializador: true,
-            },
-        );
-
-        return instancia;
-    }
-
-    /**
-     * Remove os registos cujos elementos já não pertencem ao documento.
-     *
-     * @returns {void}
-     *
-     * @since 2.0.0
-     * @version 1.1.0
-     */
-    removerInstanciasDesligadas() {
-        this.instancias.forEach(
-            (
-                registo,
-                elemento,
-            ) => {
-                if (elemento.isConnected) {
-                    return;
-                }
-
-                if (
-                    registo.criadaPeloInicializador
-                    && Tooltip.getInstance(elemento)
-                    === registo.instancia
-                ) {
-                    registo.instancia.dispose();
-                }
-
-                this.instancias.delete(elemento);
-            },
         );
     }
 
@@ -231,12 +112,14 @@ class InicializadorTooltips {
      * @throws {TypeError} Quando a origem ou algum elemento não são válidos.
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     obterElementos(elementosOuSeletor) {
         let elementos;
 
-        if (typeof elementosOuSeletor === 'string') {
+        if (
+            typeof elementosOuSeletor
+            === 'string'
+        ) {
             const seletor =
                 elementosOuSeletor.trim();
 
@@ -283,10 +166,8 @@ class InicializadorTooltips {
         if (
             elementos.some(
                 (elemento) =>
-                    !(
-                        elemento
-                        instanceof HTMLElement
-                    ),
+                    !(elemento
+                        instanceof HTMLElement),
             )
         ) {
             throw new TypeError(
@@ -295,7 +176,9 @@ class InicializadorTooltips {
         }
 
         return Array.from(
-            new Set(elementos),
+            new Set(
+                elementos,
+            ),
         );
     }
 
@@ -309,7 +192,6 @@ class InicializadorTooltips {
      * @throws {TypeError} Quando as opções não formam um objeto.
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
     normalizarOpcoes(opcoes) {
         if (

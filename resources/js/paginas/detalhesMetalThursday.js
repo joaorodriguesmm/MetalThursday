@@ -11,7 +11,6 @@ import InicializadorTooltips
  * Configura os comportamentos da página de detalhes de uma MetalThursday.
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 
 /**
@@ -20,7 +19,6 @@ import InicializadorTooltips
  * @returns {void}
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 function iniciarPaginaDetalhesMetalThursday() {
     new InicializadorTooltips();

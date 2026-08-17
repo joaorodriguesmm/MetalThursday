@@ -5,7 +5,6 @@
  * pelas diferentes páginas.
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 
 @use "sass:color";
@@ -15,8 +14,24 @@
  */
 $vermelho-destaque: #6d3f40;
 $fundo-escuro: #282424;
-$cinzento-borda: #444;
+$cinzento-secundario: #444;
+$cinzento-borda: #767676;
 $branco: #fff;
+
+/**
+ * Cores de texto e de estado com contraste reforçado sobre os fundos escuros.
+ */
+$vermelho-texto:
+    color.adjust(
+        $vermelho-destaque,
+        $lightness: 30%,
+    );
+
+$vermelho-texto-hover:
+    color.adjust(
+        $vermelho-destaque,
+        $lightness: 38%,
+    );
 
 /**
  * Cores derivadas reutilizadas pelos diferentes componentes.
@@ -57,6 +72,12 @@ $cinzento-borda-claro:
         $lightness: 10%,
     );
 
+$cinzento-texto-suave:
+    color.adjust(
+        $cinzento-borda,
+        $lightness: 15%,
+    );
+
 /**
  * Configuração visual do Bootstrap.
  */
@@ -65,7 +86,7 @@ $cinzento-borda-claro:
         $vermelho-destaque,
 
     $secondary:
-        $cinzento-borda,
+        $cinzento-secundario,
 
     $body-bg:
         $fundo-escuro,
@@ -74,16 +95,10 @@ $cinzento-borda-claro:
         $branco,
 
     $link-color:
-        color.adjust(
-            $vermelho-destaque,
-            $lightness: 10%,
-        ),
+        $vermelho-texto,
 
     $link-hover-color:
-        color.adjust(
-            $vermelho-destaque,
-            $lightness: 25%,
-        ),
+        $vermelho-texto-hover,
 
     $border-color:
         $cinzento-borda,
@@ -98,19 +113,118 @@ $cinzento-borda-claro:
         $branco,
 
     $input-placeholder-color:
-        color.adjust(
-            $cinzento-borda,
-            $lightness: 15%,
-        ),
+        $cinzento-texto-suave,
+
+    $input-group-addon-bg:
+        $fundo-campo,
+
+    $input-group-addon-border-color:
+        $cinzento-borda,
+
+    $form-check-input-bg:
+        $fundo-campo,
 
     $form-check-input-border:
+        1px solid
         $cinzento-borda,
+
+    $form-check-input-focus-border:
+        $vermelho-texto,
+
+    $form-check-input-focus-box-shadow:
+        0 0 0 0.25rem
+        color.change(
+            $vermelho-texto,
+            $alpha: 0.35,
+        ),
+
+    $form-check-input-checked-color:
+        $branco,
+
+    $form-check-input-checked-bg-color:
+        $vermelho-destaque,
+
+    $form-check-input-checked-border-color:
+        $vermelho-destaque,
 
     $card-bg:
         $fundo-campo,
 
     $card-border-color:
         $cinzento-borda,
+
+    $dropdown-link-hover-color:
+        $branco,
+
+    $dropdown-link-hover-bg:
+        $vermelho-destaque,
+
+    $tooltip-color:
+        $branco,
+
+    $tooltip-bg:
+        $fundo-escuro,
+
+    $tooltip-opacity:
+        1,
+
+    $navbar-nav-link-padding-x:
+        0.75rem,
+
+    $pagination-color:
+        $vermelho-texto,
+
+    $pagination-bg:
+        $fundo-paginacao,
+
+    $pagination-border-color:
+        $cinzento-borda,
+
+    $pagination-hover-color:
+        $branco,
+
+    $pagination-hover-bg:
+        $vermelho-destaque,
+
+    $pagination-hover-border-color:
+        $vermelho-destaque,
+
+    $pagination-focus-color:
+        $branco,
+
+    $pagination-focus-bg:
+        color.adjust(
+            $vermelho-destaque,
+            $lightness: 5%,
+        ),
+
+    $pagination-focus-box-shadow:
+        0 0 0 0.25rem
+        color.change(
+            $vermelho-destaque,
+            $alpha: 0.5,
+        ),
+
+    $pagination-active-color:
+        $branco,
+
+    $pagination-active-bg:
+        $vermelho-destaque,
+
+    $pagination-active-border-color:
+        $vermelho-destaque,
+
+    $pagination-disabled-color:
+        #6c757d,
+
+    $pagination-disabled-bg:
+        $fundo-campo,
+
+    $pagination-disabled-border-color:
+        $cinzento-borda,
+
+    $enable-validation-icons:
+        false,
 );
 
 /**
@@ -149,7 +263,7 @@ h6,
 .h4,
 .h5,
 .h6 {
-    color: $vermelho-destaque;
+    color: $vermelho-texto;
     font-family:
         "Metal Mania",
         cursive;
@@ -203,7 +317,7 @@ h6,
     font-weight: bold;
     line-height: 1;
     user-select: none;
-    background-color: $cinzento-borda;
+    background-color: $cinzento-secundario;
 }
 
 /**
@@ -236,7 +350,7 @@ h6,
     font-weight: bold;
     line-height: 1;
     user-select: none;
-    background-color: $cinzento-borda;
+    background-color: $cinzento-secundario;
 }
 
 .previsualizacao-avatar,
@@ -247,73 +361,18 @@ h6,
 
 /**
  * Validação dos formulários.
+ *
+ * O Bootstrap deixa de gerar ícones de validação através da configuração Sass.
+ * O Tom Select inclui os seus próprios ícones no tema Bootstrap e necessita
+ * apenas desta correção no estado inválido de seleção única.
  */
-.form-control.is-invalid,
-.was-validated select:valid
-    + .ts-wrapper
-    .ts-control,
-.ts-wrapper.is-valid.single,
-.was-validated .valid.single,
-.was-validated :valid
-    + .ts-wrapper.single,
-.ts-wrapper.is-invalid.single,
-.was-validated .invalid.single,
-.was-validated :invalid
-    + .ts-wrapper.single,
-.was-validated .form-control:invalid {
+.ts-wrapper.is-invalid.single {
     background-image: none !important;
-}
-
-.was-validated .form-control:valid {
-    background-image: none !important;
-    border-color: $cinzento-borda !important;
-    box-shadow: none !important;
-}
-
-.was-validated
-    .input-group:has(.form-control:valid)
-    .input-group-text,
-.was-validated
-    .input-group:has(.form-control:valid)
-    .form-control {
-    border-color: $cinzento-borda !important;
-}
-
-.ts-wrapper.is-valid,
-.was-validated .valid,
-.was-validated :valid + .ts-wrapper {
-    border-color: $cinzento-borda !important;
-    box-shadow: none !important;
-}
-
-.was-validated
-    .form-check-input:valid {
-    border-color: $cinzento-borda !important;
-}
-
-.was-validated
-    .form-check-input:valid
-    ~ .form-check-label {
-    color: inherit !important;
-}
-
-.was-validated
-    .form-check-input:valid:checked {
-    background-color:
-        $vermelho-destaque !important;
-
-    border-color:
-        $vermelho-destaque !important;
 }
 
 /**
  * Grupos de campos.
  */
-.input-group-text {
-    background-color: $fundo-campo;
-    border-color: $cinzento-borda;
-}
-
 .input-group:has(.form-control.is-invalid)
     .input-group-text,
 .input-group:has(.form-control.is-invalid)
@@ -391,81 +450,30 @@ h6,
 .campo-ficheiro:focus-visible
     + .etiqueta-campo-ficheiro {
     border-color:
-        color.adjust(
-            $vermelho-destaque,
-            $lightness: 20%,
-        );
+        $vermelho-texto;
 
     box-shadow:
         0 0 0 0.25rem
         color.change(
-            $vermelho-destaque,
-            $alpha: 0.25,
+            $vermelho-texto,
+            $alpha: 0.35,
         );
 }
 
 /**
  * Botões.
  */
-.botao-alternar-palavra-passe {
+[data-alvo-palavra-passe] {
     cursor: pointer;
-}
-
-.btn-primary {
-    color: $branco !important;
-}
-
-/**
- * Caixas de seleção.
- */
-.form-check-input {
-    background-color: $fundo-campo;
-    border:
-        1px solid
-        $cinzento-borda;
-
-    &:checked {
-        background-color:
-            $vermelho-destaque;
-
-        border-color:
-            $vermelho-destaque;
-
-        background-image:
-            url(
-                "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m6 10 3 3 6-6'/%3e%3c/svg%3e"
-            );
-    }
-
-    &:focus {
-        border-color:
-            color.adjust(
-                $vermelho-destaque,
-                $lightness: 20%,
-            );
-
-        box-shadow:
-            0 0 0 0.25rem
-            color.change(
-                $vermelho-destaque,
-                $alpha: 0.25,
-            );
-    }
 }
 
 /**
  * Tooltips.
  */
 .tooltip-personalizado {
-    color: $vermelho-destaque;
+    color: $vermelho-texto;
     font-size: 0.9em;
     cursor: help;
-}
-
-.tooltip-inner {
-    color: $branco;
-    background-color: $fundo-escuro;
-    opacity: 1 !important;
 }
 
 .tooltip.bs-tooltip-auto
@@ -484,7 +492,7 @@ h6,
 /**
  * Ligações.
  */
-a {
+a:not(.btn) {
     transition:
         color
         0.2s
@@ -498,8 +506,12 @@ a {
 /**
  * Barra de navegação.
  */
-.dropdown-toggle::after {
+#alternador-menu-utilizador::after {
     display: none;
+}
+
+.navbar-nav {
+    --bs-nav-link-padding-x: 0.75rem;
 }
 
 /**
@@ -539,20 +551,6 @@ a {
             25%,
             25%
         );
-}
-
-.navbar-nav
-    .nav-item
-    .nav-link.p-0 {
-    padding: 0 !important;
-}
-
-.navbar-nav
-    .nav-item
-    .nav-link {
-    padding:
-        0.5rem
-        0.75rem;
 }
 
 /**
@@ -613,19 +611,6 @@ a {
     line-height: 1;
 }
 
-.dropdown-item:hover,
-.dropdown-item:focus {
-    background-color:
-        $vermelho-destaque !important;
-}
-
-@media (max-width: 767.98px) {
-    .navbar-nav .nav-item {
-        margin-right: 0 !important;
-        margin-left: 0 !important;
-    }
-}
-
 /**
  * Tom Select.
  */
@@ -654,18 +639,18 @@ a {
  * SweetAlert2.
  */
 .swal2-popup {
-    color: $branco !important;
+    color: $branco;
     background-color:
-        $fundo-elevado !important;
+        $fundo-elevado;
 }
 
 .swal2-title {
-    color: $branco !important;
+    color: $branco;
 }
 
 .swal2-confirm {
     background-color:
-        $vermelho-destaque !important;
+        $vermelho-destaque;
 }
 
 /**
@@ -681,76 +666,6 @@ a {
     right: 1rem;
     bottom: 1rem;
     z-index: 10;
-}
-
-/**
- * Campos numéricos.
- */
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-    margin: 0;
-    appearance: none;
-}
-
-input[type="number"] {
-    appearance: textfield;
-}
-
-/**
- * Paginação.
- */
-.pagination {
-    --bs-pagination-color:
-        #{$vermelho-destaque};
-
-    --bs-pagination-bg:
-        #{$fundo-paginacao};
-
-    --bs-pagination-border-color:
-        #{$cinzento-borda};
-
-    --bs-pagination-hover-color:
-        #{$branco};
-
-    --bs-pagination-hover-bg:
-        #{$vermelho-destaque};
-
-    --bs-pagination-hover-border-color:
-        #{$vermelho-destaque};
-
-    --bs-pagination-focus-color:
-        #{$branco};
-
-    --bs-pagination-focus-bg:
-        #{color.adjust(
-            $vermelho-destaque,
-            $lightness: 5%,
-        )};
-
-    --bs-pagination-focus-box-shadow:
-        0 0 0 0.25rem
-        #{color.change(
-            $vermelho-destaque,
-            $alpha: 0.5,
-        )};
-
-    --bs-pagination-active-color:
-        #{$branco};
-
-    --bs-pagination-active-bg:
-        #{$vermelho-destaque};
-
-    --bs-pagination-active-border-color:
-        #{$vermelho-destaque};
-
-    --bs-pagination-disabled-color:
-        #6c757d;
-
-    --bs-pagination-disabled-bg:
-        #{$fundo-campo};
-
-    --bs-pagination-disabled-border-color:
-        #{$cinzento-borda};
 }
 
 /**
@@ -790,7 +705,7 @@ input[type="number"] {
             ease-in-out;
 
         &.estrela-preenchida {
-            color: $vermelho-destaque;
+            color: $vermelho-texto;
         }
 
         &:focus-visible {
@@ -798,8 +713,8 @@ input[type="number"] {
             box-shadow:
                 0 0 0 0.2rem
                 color.change(
-                    $vermelho-destaque,
-                    $alpha: 0.4,
+                    $vermelho-texto,
+                    $alpha: 0.5,
                 );
         }
     }

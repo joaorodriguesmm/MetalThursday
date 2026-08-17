@@ -7,718 +7,846 @@ import TestadorIncorporacao from './TestadorIncorporacao';
 import ValidadorFormulario from './ValidadorFormulario';
 
 /**
-* Inicializa os comportamentos partilhados pelos formulários de criação e
-* edição de MetalThursdays.
-*
-* @since 3.0.0
-* @version 1.0.0
-*/
+ * Inicializa os comportamentos partilhados pelos formulários de criação e
+ * edição de MetalThursdays.
+ *
+ * @since 2.0.0
+ */
 
 /**
-* Endereços obrigatórios da configuração preparada pelo servidor.
-*
-* @type {ReadonlyArray<string>}
-    *
-    * @since 3.0.0
-    * @version 1.0.0
-    */
-    const CHAVES_ENDERECOS = Object.freeze([
+ * Endereços obrigatórios da configuração preparada pelo servidor.
+ *
+ * @type {ReadonlyArray<string>}
+ *
+ * @since 2.0.0
+ */
+const CHAVES_ENDERECOS = Object.freeze([
     'guardarEdicao',
     'guardarBanda',
     'guardarGenero',
     'obterUtilizadorHaMaisTempoSemNomeacao',
-    ]);
+]);
 
-    /**
-    * Tipos de incorporação permitidos nas secções.
-    *
-    * @type {ReadonlyArray<string>}
-        *
-        * @since 3.0.0
-        * @version 1.0.0
-        */
-        const TIPOS_INCORPORACAO = Object.freeze([
-        'ligacao',
-        'video_youtube',
-        'lista_reproducao_youtube',
-        ]);
+/**
+ * Tipos de incorporação permitidos nas secções.
+ *
+ * @type {ReadonlyArray<string>}
+ *
+ * @since 2.0.0
+ */
+const TIPOS_INCORPORACAO = Object.freeze([
+    'ligacao',
+    'video_youtube',
+    'lista_reproducao_youtube',
+]);
 
-        /**
-        * Determina se um valor é um objeto não nulo.
-        *
-        * @param {unknown} valor Valor recebido.
-        *
-        * @returns {boolean} Verdadeiro quando o valor é um objeto.
-        *
-        * @since 3.0.0
-        * @version 1.0.0
-        */
-        function eObjeto(valor) {
-        return typeof valor === 'object'
+/**
+ * Determina se um valor é um objeto não nulo.
+ *
+ * @param {unknown} valor Valor recebido.
+ *
+ * @returns {boolean} Verdadeiro quando o valor é um objeto simples.
+ *
+ * @since 2.0.0
+ */
+function eObjeto(valor) {
+    return typeof valor === 'object'
         && valor !== null
         && !Array.isArray(valor);
-        }
+}
 
-        /**
-        * Obtém e valida a configuração global do formulário.
-        *
-        * @returns {{
- *     enderecos: Record<string, string>,
- *     fornecedoresIncorporacao: Array<object>
- * }} Configuração validada.
-        *
-        * @throws {TypeError} Quando a configuração é inválida.
-        *
-        * @since 3.0.0
-        * @version 1.0.0
-        */
-        function obterConfiguracaoFormulario() {
-        const configuracao =
-        window.configuracaoFormularioMetalThursday;
+/**
+ * Normaliza um endereço da configuração do formulário.
+ *
+ * Apenas são aceites endereços HTTP ou HTTPS da origem atual.
+ *
+ * @param {unknown} endereco Endereço recebido.
+ * @param {string} chave Chave utilizada na mensagem de erro.
+ *
+ * @returns {string} Endereço normalizado.
+ *
+ * @throws {TypeError} Quando o endereço é inválido.
+ *
+ * @since 2.0.0
+ */
+function normalizarEndereco(endereco, chave) {
+    if (
+        typeof endereco !== 'string'
+        || endereco.trim() === ''
+    ) {
+        throw new TypeError(
+            `O endereço "${chave}" do formulário de MetalThursday é inválido.`,
+        );
+    }
+
+    try {
+        const url = new URL(
+            endereco.trim(),
+            window.location.origin,
+        );
 
         if (
+            !['http:', 'https:'].includes(url.protocol)
+            || url.origin !== window.location.origin
+        ) {
+            throw new TypeError();
+        }
+
+        return url.href;
+    } catch {
+        throw new TypeError(
+            `O endereço "${chave}" do formulário de MetalThursday é inválido.`,
+        );
+    }
+}
+
+/**
+ * Obtém e valida a configuração global do formulário.
+ *
+ * @returns {{
+ *     enderecos: Readonly<Record<string, string>>,
+ *     fornecedoresIncorporacao: Array<object>
+ * }} Configuração validada.
+ *
+ * @throws {TypeError} Quando a configuração é inválida.
+ *
+ * @since 2.0.0
+ */
+function obterConfiguracaoFormulario() {
+    const configuracao =
+        window.configuracaoFormularioMetalThursday;
+
+    if (
         !eObjeto(configuracao)
         || !eObjeto(configuracao.enderecos)
         || !Array.isArray(
-        configuracao.fornecedoresIncorporacao,
+            configuracao.fornecedoresIncorporacao,
         )
-        ) {
+    ) {
         throw new TypeError(
-        'A configuração do formulário de MetalThursday é inválida.',
+            'A configuração do formulário de MetalThursday é inválida.',
         );
-        }
+    }
 
-        CHAVES_ENDERECOS.forEach((chave) => {
-        const endereco =
-        configuracao.enderecos[chave];
+    const enderecos = Object.fromEntries(
+        CHAVES_ENDERECOS.map((chave) => [
+            chave,
+            normalizarEndereco(
+                configuracao.enderecos[chave],
+                chave,
+            ),
+        ]),
+    );
 
-        if (
-        typeof endereco !== 'string'
-        || endereco.trim() === ''
-        ) {
-        throw new TypeError(
-        `O endereço "${chave}" do formulário de MetalThursday é inválido.`,
-        );
-        }
-        });
+    return {
+        enderecos: Object.freeze(enderecos),
 
-        return {
-        enderecos: configuracao.enderecos,
-        fornecedoresIncorporacao:
-        configuracao.fornecedoresIncorporacao,
-        };
-        }
+        fornecedoresIncorporacao: [
+            ...configuracao.fornecedoresIncorporacao,
+        ],
+    };
+}
 
-        /**
-        * Obtém um formulário obrigatório através do identificador HTML.
-        *
-        * @param {string} identificador Identificador do formulário.
-        *
-        * @returns {HTMLFormElement} Formulário encontrado.
-        *
-        * @throws {TypeError} Quando o identificador ou o formulário são inválidos.
-        *
-        * @since 3.0.0
-        * @version 1.0.0
-        */
-        function obterFormulario(identificador) {
-        if (
+/**
+ * Obtém um formulário obrigatório através do identificador HTML.
+ *
+ * @param {string} identificador Identificador do formulário.
+ *
+ * @returns {HTMLFormElement} Formulário encontrado.
+ *
+ * @throws {TypeError} Quando o identificador ou o formulário são inválidos.
+ *
+ * @since 2.0.0
+ */
+function obterFormulario(identificador) {
+    if (
         typeof identificador !== 'string'
         || identificador.trim() === ''
-        ) {
+    ) {
         throw new TypeError(
-        'O identificador do formulário de MetalThursday é obrigatório.',
+            'O identificador do formulário de MetalThursday é obrigatório.',
         );
-        }
+    }
 
-        const formulario =
-        document.getElementById(
-        identificador.trim(),
-        );
+    const identificadorNormalizado =
+        identificador.trim();
 
-        if (!(formulario instanceof HTMLFormElement)) {
+    const formulario = document.getElementById(
+        identificadorNormalizado,
+    );
+
+    if (!(formulario instanceof HTMLFormElement)) {
         throw new TypeError(
-        `Não foi encontrado o formulário "${identificador}".`,
+            `Não foi encontrado o formulário "${identificadorNormalizado}".`,
         );
-        }
+    }
 
-        return formulario;
-        }
+    return formulario;
+}
 
-        /**
-        * Obtém o limite máximo definido num campo textual.
-        *
-        * @param {string} identificador Identificador HTML do campo.
-        * @param {number} valorPredefinido Valor utilizado quando o campo não existe.
-        *
-        * @returns {number} Limite máximo positivo.
-        *
-        * @since 3.0.0
-        * @version 1.0.0
-        */
-        function obterComprimentoMaximo(
+/**
+ * Obtém obrigatoriamente um elemento através do identificador HTML.
+ *
+ * @param {string} identificador Identificador do elemento.
+ * @param {Function} tipoElemento Tipo esperado.
+ * @param {string} descricao Descrição utilizada na mensagem de erro.
+ *
+ * @returns {Element} Elemento encontrado.
+ *
+ * @throws {TypeError} Quando o elemento não existe ou possui tipo inválido.
+ *
+ * @since 2.0.0
+ */
+function obterElementoObrigatorio(
+    identificador,
+    tipoElemento,
+    descricao,
+) {
+    const elemento = document.getElementById(
         identificador,
-        valorPredefinido,
-        ) {
-        const campo =
+    );
+
+    if (!(elemento instanceof tipoElemento)) {
+        throw new TypeError(
+            `Não foi encontrado ${descricao} válido.`,
+        );
+    }
+
+    return elemento;
+}
+
+/**
+ * Obtém o limite máximo definido num campo textual.
+ *
+ * @param {string} identificador Identificador HTML do campo.
+ * @param {number} valorPredefinido Valor utilizado quando o campo não existe.
+ *
+ * @returns {number} Limite máximo positivo.
+ *
+ * @since 2.0.0
+ */
+function obterComprimentoMaximo(
+    identificador,
+    valorPredefinido,
+) {
+    return obterComprimentoMaximoCampo(
         document.getElementById(
-        identificador,
-        );
-
-        if (
-        (
-        campo instanceof HTMLInputElement
-        || campo instanceof HTMLTextAreaElement
-        )
-        && Number.isInteger(campo.maxLength)
-        && campo.maxLength > 0
-        ) {
-        return campo.maxLength;
-        }
-
-        return valorPredefinido;
-        }
-
-        /**
-        * Obtém o limite máximo de um campo textual já encontrado.
-        *
-        * @param {Element|null} campo Campo recebido.
-        * @param {number} valorPredefinido Valor utilizado quando não existe limite.
-        *
-        * @returns {number} Limite máximo positivo.
-        *
-        * @since 3.0.0
-        * @version 1.0.0
-        */
-        function obterComprimentoMaximoCampo(
-        campo,
-        valorPredefinido,
-        ) {
-        if (
-        (
-        campo instanceof HTMLInputElement
-        || campo instanceof HTMLTextAreaElement
-        )
-        && Number.isInteger(campo.maxLength)
-        && campo.maxLength > 0
-        ) {
-        return campo.maxLength;
-        }
-
-        return valorPredefinido;
-        }
-
-        /**
-        * Valida se todos os valores de uma seleção são identificadores positivos.
-        *
-        * @param {object} contexto Contexto fornecido pelo validador.
-        * @param {unknown} contexto.valor Valor do campo.
-        *
-        * @returns {true|string} Verdadeiro ou mensagem de erro.
-        *
-        * @since 3.0.0
-        * @version 1.0.0
-        */
-        function validarListaIdentificadores({
-        valor,
-        }) {
-        if (
-        Array.isArray(valor)
-        && valor.every(
-        (identificador) => (
-        typeof identificador === 'string'
-        && /^[1-9]\d*$/.test(
-        identificador,
-        )
+            identificador,
         ),
+        valorPredefinido,
+    );
+}
+
+/**
+ * Obtém o limite máximo de um campo textual já encontrado.
+ *
+ * @param {Element|null} campo Campo recebido.
+ * @param {number} valorPredefinido Valor utilizado quando não existe limite.
+ *
+ * @returns {number} Limite máximo positivo.
+ *
+ * @since 2.0.0
+ */
+function obterComprimentoMaximoCampo(
+    campo,
+    valorPredefinido,
+) {
+    if (
+        (
+            campo instanceof HTMLInputElement
+            || campo instanceof HTMLTextAreaElement
         )
-        ) {
+        && Number.isInteger(campo.maxLength)
+        && campo.maxLength > 0
+    ) {
+        return campo.maxLength;
+    }
+
+    return valorPredefinido;
+}
+
+/**
+ * Valida se todos os valores de uma seleção são identificadores positivos.
+ *
+ * @param {object} contexto Contexto fornecido pelo validador.
+ * @param {unknown} contexto.valor Valor do campo.
+ *
+ * @returns {true|string} Verdadeiro ou mensagem de erro.
+ *
+ * @since 2.0.0
+ */
+function validarListaIdentificadores({
+    valor,
+}) {
+    if (
+        Array.isArray(valor)
+        && valor.length > 0
+        && valor.every(
+            (identificador) => (
+                typeof identificador === 'string'
+                && /^[1-9]\d*$/u.test(
+                    identificador,
+                )
+            ),
+        )
+    ) {
         return true;
-        }
+    }
 
-        return 'A seleção contém um identificador inválido.';
-        }
+    return 'A seleção contém um identificador inválido.';
+}
 
-        /**
-        * Cria uma regra que valida o intervalo numérico definido num campo.
-        *
-        * @param {HTMLInputElement} campo Campo numérico.
-        * @param {string} mensagem Mensagem apresentada quando o valor está fora do
-        * intervalo.
-        *
-        * @returns {Function} Regra de validação.
-        *
-        * @since 3.0.0
-        * @version 1.0.0
-        */
-        function criarRegraIntervaloNumerico(
-        campo,
-        mensagem,
-        ) {
-        const minimo =
-        campo.min === ''
+/**
+ * Cria uma regra que valida o intervalo numérico definido num campo.
+ *
+ * @param {HTMLInputElement} campo Campo numérico.
+ * @param {string} mensagem Mensagem apresentada quando o valor está fora do
+ *     intervalo.
+ *
+ * @returns {Function} Regra de validação.
+ *
+ * @since 2.0.0
+ */
+function criarRegraIntervaloNumerico(
+    campo,
+    mensagem,
+) {
+    const minimoRecebido = campo.min === ''
         ? null
         : Number(campo.min);
 
-        const maximo =
-        campo.max === ''
+    const maximoRecebido = campo.max === ''
         ? null
         : Number(campo.max);
 
-        return ({ valor }) => {
-        const numero =
-        typeof valor === 'string'
-        ? Number(valor)
-        : Number.NaN;
+    const minimo = Number.isFinite(
+        minimoRecebido,
+    )
+        ? minimoRecebido
+        : null;
+
+    const maximo = Number.isFinite(
+        maximoRecebido,
+    )
+        ? maximoRecebido
+        : null;
+
+    return ({ valor }) => {
+        const numero = typeof valor === 'string'
+            ? Number(valor)
+            : Number.NaN;
 
         if (!Number.isInteger(numero)) {
-        return true;
+            return true;
         }
 
         if (
-        (minimo !== null && numero < minimo)
-            || (maximo !==null && numero> maximo)
-            ) {
+            (minimo !== null && numero < minimo)
+            || (maximo !== null && numero > maximo)
+        ) {
             return mensagem;
-            }
+        }
 
-            return true;
-            };
-            }
+        return true;
+    };
+}
 
-            /**
-            * Apresenta ou remove o erro geral das secções.
-            *
-            * @param {HTMLElement|null} elemento Elemento de feedback.
-            * @param {string} mensagem Mensagem a apresentar.
-            *
-            * @returns {void}
-            *
-            * @since 2.0.0
-            * @version 2.0.0
-            */
-            function atualizarErroSeccoes(
-            elemento,
-            mensagem,
-            ) {
-            if (!(elemento instanceof HTMLElement)) {
-            return;
-            }
+/**
+ * Apresenta ou remove o erro geral das secções.
+ *
+ * @param {HTMLElement} elemento Elemento de feedback.
+ * @param {string} mensagem Mensagem apresentada.
+ *
+ * @returns {void}
+ *
+ * @since 2.0.0
+ */
+function atualizarErroSeccoes(
+    elemento,
+    mensagem,
+) {
+    const possuiErro = mensagem !== '';
 
-            const possuiErro =
-            mensagem !== '';
+    elemento.textContent = mensagem;
 
-            elemento.textContent =
-            mensagem;
+    elemento.classList.toggle(
+        'd-block',
+        possuiErro,
+    );
 
-            elemento.classList.toggle(
-            'd-block',
-            possuiErro,
-            );
+    elemento.hidden = !possuiErro;
+}
 
-            if (possuiErro) {
-            elemento.removeAttribute(
-            'hidden',
-            );
+/**
+ * Valida um campo pertencente a uma secção.
+ *
+ * @param {ValidadorFormulario} validador Validador principal.
+ * @param {Element|null} campo Campo validado.
+ * @param {Array<string|Function>} regras Regras aplicáveis.
+ * @param {Record<string, string>} mensagens Mensagens das regras.
+ *
+ * @returns {boolean} Verdadeiro quando o campo existe e é válido.
+ *
+ * @since 2.0.0
+ */
+function validarCampoSeccao(
+    validador,
+    campo,
+    regras,
+    mensagens,
+) {
+    if (
+        !(campo instanceof HTMLInputElement)
+        && !(campo instanceof HTMLSelectElement)
+        && !(campo instanceof HTMLTextAreaElement)
+    ) {
+        return false;
+    }
 
-            return;
-            }
+    return validador.validarCampoComRegras(
+        campo,
+        regras,
+        mensagens,
+    );
+}
 
-            elemento.setAttribute(
-            'hidden',
-            '',
-            );
-            }
+/**
+ * Determina se o tipo selecionado exige os campos de detalhe.
+ *
+ * @param {HTMLSelectElement} selecaoTipo Seleção do tipo de secção.
+ *
+ * @returns {boolean} Verdadeiro quando os detalhes são obrigatórios.
+ *
+ * @since 2.0.0
+ */
+function seccaoExigeDetalhes(
+    selecaoTipo,
+) {
+    return selecaoTipo.selectedOptions
+        .item(0)
+        ?.dataset
+        .exigeDetalhes === 'true';
+}
 
-            /**
-            * Valida um campo pertencente a uma secção.
-            *
-            * @param {ValidadorFormulario} validador Validador principal.
-            * @param {Element|null} campo Campo a validar.
-            * @param {Array<string|Function>} regras Regras aplicáveis.
-                * @param {Object<string, string>} mensagens Mensagens das regras.
-                    *
-                    * @returns {boolean} Verdadeiro quando o campo existe e é válido.
-                    *
-                    * @since 2.0.0
-                    * @version 2.0.0
-                    */
-                    function validarCampoSeccao(
-                    validador,
-                    campo,
-                    regras,
-                    mensagens,
-                    ) {
-                    if (
-                    !(campo instanceof HTMLInputElement)
-                    && !(campo instanceof HTMLSelectElement)
-                    && !(campo instanceof HTMLTextAreaElement)
-                    ) {
-                    return false;
-                    }
+/**
+ * Valida uma secção do formulário.
+ *
+ * @param {ValidadorFormulario} validador Validador principal.
+ * @param {HTMLElement} seccao Secção validada.
+ *
+ * @returns {boolean} Verdadeiro quando a secção é válida.
+ *
+ * @since 2.0.0
+ */
+function validarSeccao(
+    validador,
+    seccao,
+) {
+    const selecaoTipo = seccao.querySelector(
+        '.seletor-tipo-seccao',
+    );
 
-                    return validador.validarCampoComRegras(
-                    campo,
-                    regras,
-                    mensagens,
-                    );
-                    }
+    const descricao = seccao.querySelector(
+        '[name$="[descricao]"]',
+    );
 
-                    /**
-                    * Valida todas as secções do formulário.
-                    *
-                    * @param {ValidadorFormulario} validador Validador principal.
-                    *
-                    * @returns {boolean} Verdadeiro quando todas as secções são válidas.
-                    *
-                    * @since 2.0.0
-                    * @version 3.0.0
-                    */
-                    function validarSeccoes(validador) {
-                    const contentorSeccoes =
-                    document.getElementById(
-                    'contentor-seccoes',
-                    );
+    const tipoValido = validarCampoSeccao(
+        validador,
+        selecaoTipo,
+        [
+            'obrigatorio',
+            'inteiro',
+        ],
+        {
+            obrigatorio:
+                'Por favor, seleciona o tipo de secção.',
 
-                    const elementoFeedback =
-                    document.getElementById(
-                    'erro-seccoes',
-                    );
+            inteiro:
+                'O tipo de secção selecionado não é válido.',
+        },
+    );
 
-                    if (!(contentorSeccoes instanceof HTMLElement)) {
-                    atualizarErroSeccoes(
-                    elementoFeedback,
-                    'Não foi possível validar as secções.',
-                    );
+    const descricaoValida = validarCampoSeccao(
+        validador,
+        descricao,
+        [
+            'obrigatorio',
+            `maximo:${obterComprimentoMaximoCampo(
+                descricao,
+                65535,
+            )}`,
+        ],
+        {
+            obrigatorio:
+                'Por favor, insere a descrição.',
 
-                    return false;
-                    }
+            maximo:
+                'A descrição excede o comprimento máximo permitido.',
+        },
+    );
 
-                    const seccoes = Array.from(
-                    contentorSeccoes.querySelectorAll(
-                    '.item-seccao',
-                    ),
-                    ).filter(
-                    (seccao) =>
-                    seccao instanceof HTMLElement,
-                    );
+    let seccaoValida = tipoValido
+        && descricaoValida;
 
-                    if (seccoes.length === 0) {
-                    atualizarErroSeccoes(
-                    elementoFeedback,
-                    'É necessário adicionar, pelo menos, uma secção.',
-                    );
+    if (
+        !(selecaoTipo instanceof HTMLSelectElement)
+        || !seccaoExigeDetalhes(
+            selecaoTipo,
+        )
+    ) {
+        return seccaoValida;
+    }
 
-                    return false;
-                    }
+    const banda = seccao.querySelector(
+        '[name$="[banda_id]"]',
+    );
 
-                    atualizarErroSeccoes(
-                    elementoFeedback,
-                    '',
-                    );
+    const titulo = seccao.querySelector(
+        '[name$="[titulo]"]',
+    );
 
-                    let todasSeccoesValidas =
-                    true;
+    const ligacao = seccao.querySelector(
+        '[name$="[ligacao]"]',
+    );
 
-                    seccoes.forEach((seccao) => {
-                    const selecaoTipo =
-                    seccao.querySelector(
-                    '.seletor-tipo-seccao',
-                    );
+    const tipoIncorporacao = seccao.querySelector(
+        '[name$="[tipo_incorporacao]"]',
+    );
 
-                    const descricao =
-                    seccao.querySelector(
-                    '[name$="[descricao]"]',
-                    );
+    const ano = seccao.querySelector(
+        '[name$="[ano]"]',
+    );
 
-                    const tipoValido =
-                    validarCampoSeccao(
-                    validador,
-                    selecaoTipo,
-                    [
-                    'obrigatorio',
-                    'inteiro',
-                    ],
-                    {
-                    obrigatorio:
-                    'Por favor, seleciona o tipo de secção.',
-
-                    inteiro:
-                    'O tipo de secção selecionado não é válido.',
-                    },
-                    );
-
-                    const descricaoValida =
-                    validarCampoSeccao(
-                    validador,
-                    descricao,
-                    [
-                    'obrigatorio',
-                    `maximo:${obterComprimentoMaximoCampo(
-                    descricao,
-                    65535,
-                    )}`,
-                    ],
-                    {
-                    obrigatorio:
-                    'Por favor, insere a descrição.',
-
-                    maximo:
-                    'A descrição excede o comprimento máximo permitido.',
-                    },
-                    );
-
-                    if (!tipoValido || !descricaoValida) {
-                    todasSeccoesValidas =
-                    false;
-                    }
-
-                    if (!(selecaoTipo instanceof HTMLSelectElement)) {
-                    todasSeccoesValidas =
-                    false;
-
-                    return;
-                    }
-
-                    const opcaoSelecionada =
-                    selecaoTipo.options[
-                    selecaoTipo.selectedIndex
-                    ]
-                    ?? null;
-
-                    const exigeDetalhes =
-                    opcaoSelecionada
-                    ?.dataset
-                    .exigeDetalhes
-                    === 'true';
-
-                    if (!exigeDetalhes) {
-                    return;
-                    }
-
-                    const banda =
-                    seccao.querySelector(
-                    '[name$="[banda_id]"]',
-                    );
-
-                    const titulo =
-                    seccao.querySelector(
-                    '[name$="[titulo]"]',
-                    );
-
-                    const ligacao =
-                    seccao.querySelector(
-                    '[name$="[ligacao]"]',
-                    );
-
-                    const tipoIncorporacao =
-                    seccao.querySelector(
-                    '[name$="[tipo_incorporacao]"]',
-                    );
-
-                    const ano =
-                    seccao.querySelector(
-                    '[name$="[ano]"]',
-                    );
-
-                    const validacoes = [
-                    validarCampoSeccao(
-                    validador,
-                    banda,
-                    [
-                    'obrigatorio',
-                    'inteiro',
-                    ],
-                    {
-                    obrigatorio:
+    const validacoes = [
+        validarCampoSeccao(
+            validador,
+            banda,
+            [
+                'obrigatorio',
+                'inteiro',
+            ],
+            {
+                obrigatorio:
                     'Por favor, seleciona a banda.',
 
-                    inteiro:
+                inteiro:
                     'A banda selecionada não é válida.',
-                    },
-                    ),
+            },
+        ),
 
-                    validarCampoSeccao(
-                    validador,
-                    titulo,
-                    [
-                    'obrigatorio',
-                    `maximo:${obterComprimentoMaximoCampo(
+        validarCampoSeccao(
+            validador,
+            titulo,
+            [
+                'obrigatorio',
+                `maximo:${obterComprimentoMaximoCampo(
                     titulo,
                     255,
-                    )}`,
-                    ],
-                    {
-                    obrigatorio:
+                )}`,
+            ],
+            {
+                obrigatorio:
                     'Por favor, insere o título.',
 
-                    maximo:
+                maximo:
                     'O título excede o comprimento máximo permitido.',
-                    },
-                    ),
+            },
+        ),
 
-                    validarCampoSeccao(
-                    validador,
-                    ligacao,
-                    [
-                    'obrigatorio',
-                    `maximo:${obterComprimentoMaximoCampo(
+        validarCampoSeccao(
+            validador,
+            ligacao,
+            [
+                'obrigatorio',
+                `maximo:${obterComprimentoMaximoCampo(
                     ligacao,
                     2048,
-                    )}`,
-                    ],
-                    {
-                    obrigatorio:
+                )}`,
+            ],
+            {
+                obrigatorio:
                     'Por favor, insere a ligação.',
 
-                    maximo:
+                maximo:
                     'A ligação excede o comprimento máximo permitido.',
-                    },
-                    ),
+            },
+        ),
 
-                    validarCampoSeccao(
-                    validador,
-                    tipoIncorporacao,
-                    [
-                    'obrigatorio',
-                    ({ valor }) => (
+        validarCampoSeccao(
+            validador,
+            tipoIncorporacao,
+            [
+                'obrigatorio',
+
+                ({ valor }) => (
                     typeof valor === 'string'
-                    && TIPOS_INCORPORACAO.includes(valor)
-                    ? true
-                    : 'O tipo de incorporação selecionado não é válido.'
-                    ),
-                    ],
-                    {
-                    obrigatorio:
+                    && TIPOS_INCORPORACAO.includes(
+                        valor,
+                    )
+                        ? true
+                        : 'O tipo de incorporação selecionado não é válido.'
+                ),
+            ],
+            {
+                obrigatorio:
                     'Por favor, seleciona o tipo de incorporação.',
-                    },
-                    ),
+            },
+        ),
 
-                    validarCampoSeccao(
-                    validador,
-                    ano,
-                    ano instanceof HTMLInputElement
-                    ? [
+        validarCampoSeccao(
+            validador,
+            ano,
+            ano instanceof HTMLInputElement
+                ? [
                     'obrigatorio',
                     'inteiro',
+
                     criarRegraIntervaloNumerico(
-                    ano,
-                    'O ano indicado não pertence ao intervalo permitido.',
+                        ano,
+                        'O ano indicado não pertence ao intervalo permitido.',
                     ),
-                    ]
-                    : [
+                ]
+                : [
                     'obrigatorio',
                     'inteiro',
-                    ],
-                    {
-                    obrigatorio:
+                ],
+            {
+                obrigatorio:
                     'Por favor, insere o ano.',
 
-                    inteiro:
+                inteiro:
                     'O ano deve ser um número inteiro.',
-                    },
-                    ),
-                    ];
+            },
+        ),
+    ];
 
-                    if (
-                    validacoes.some(
-                    (resultado) => !resultado,
-                    )
-                    ) {
-                    todasSeccoesValidas =
-                    false;
-                    }
-                    });
+    if (
+        validacoes.some(
+            (resultado) => !resultado,
+        )
+    ) {
+        seccaoValida = false;
+    }
 
-                    return todasSeccoesValidas;
-                    }
+    return seccaoValida;
+}
 
-                    /**
-                    * Adiciona ou atualiza uma opção numa instância Tom Select.
-                    *
-                    * @param {object|null} instancia Instância Tom Select.
-                    * @param {unknown} identificador Identificador da opção.
-                    * @param {unknown} nome Texto apresentado.
-                    * @param {boolean} selecionar Indica se a opção deve ficar selecionada.
-                    *
-                    * @returns {boolean} Indica se a opção foi adicionada ou atualizada.
-                    *
-                    * @since 2.0.0
-                    * @version 2.0.0
-                    */
-                    function adicionarOpcaoTomSelect(
-                    instancia,
-                    identificador,
-                    nome,
-                    selecionar = false,
-                    ) {
-                    if (
-                    !instancia
-                    || typeof instancia.addOption !== 'function'
-                    || !Number.isInteger(identificador)
-                    || identificador < 1
-                        || typeof nome !=='string'
-                        || nome.trim()===''
-                        ) {
-                        return false;
-                        }
-
-                        const valor=String(identificador);
-
-                        const opcao={
-                        value: valor,
-                        text: nome.trim(),
-                        };
-
-                        if (
-                        eObjeto(instancia.options)
-                        && Object.hasOwn(
-                        instancia.options,
-                        valor,
-                        )
-                        && typeof instancia.updateOption==='function'
-                        ) {
-                        instancia.updateOption(
-                        valor,
-                        opcao,
-                        );
-                        } else {
-                        instancia.addOption(
-                        opcao,
-                        );
-                        }
-
-                        if (
-                        typeof instancia.refreshOptions==='function'
-                        ) {
-                        instancia.refreshOptions(
-                        false,
-                        );
-                        }
-
-                        if (
-                        selecionar
-                        && typeof instancia.setValue==='function'
-                        ) {
-                        instancia.setValue(
-                        valor,
-                        );
-                        }
-
-                        return true;
-                        }
-
-                        /**
-                        * Obtém uma entidade criada a partir de uma resposta AJAX.
-                        *
-                        * @param {unknown} dadosResposta Resposta recebida.
-                        * @param {string} chave Chave da entidade.
-                        * @param {string} chaveNome Chave do texto apresentado.
-                        *
-                        * @returns {{identificador: number, nome: string}|null} Opção criada.
+/**
+ * Valida todas as secções do formulário.
  *
- * @since 3.0.0
- * @version 1.0.0
+ * @param {ValidadorFormulario} validador Validador principal.
+ * @param {HTMLElement} contentorSeccoes Contentor das secções.
+ * @param {HTMLElement} elementoFeedback Elemento do erro geral.
+ *
+ * @returns {boolean} Verdadeiro quando todas as secções são válidas.
+ *
+ * @since 2.0.0
+ */
+function validarSeccoes(
+    validador,
+    contentorSeccoes,
+    elementoFeedback,
+) {
+    const seccoes = Array.from(
+        contentorSeccoes.querySelectorAll(
+            '.item-seccao',
+        ),
+    ).filter(
+        (seccao) =>
+            seccao instanceof HTMLElement,
+    );
+
+    if (seccoes.length === 0) {
+        atualizarErroSeccoes(
+            elementoFeedback,
+            'É necessário adicionar, pelo menos, uma secção.',
+        );
+
+        return false;
+    }
+
+    atualizarErroSeccoes(
+        elementoFeedback,
+        '',
+    );
+
+    let todasSeccoesValidas = true;
+
+    seccoes.forEach((seccao) => {
+        if (
+            !validarSeccao(
+                validador,
+                seccao,
+            )
+        ) {
+            todasSeccoesValidas = false;
+        }
+    });
+
+    return todasSeccoesValidas;
+}
+
+/**
+ * Revalida uma secção depois de a validação personalizada ter sido ativada.
+ *
+ * @param {HTMLFormElement} formulario Formulário principal.
+ * @param {ValidadorFormulario} validador Validador principal.
+ *
+ * @returns {void}
+ *
+ * @since 2.0.0
+ */
+function configurarValidacaoTempoRealSeccoes(
+    formulario,
+    validador,
+) {
+    let validacaoAtiva = false;
+
+    const revalidarSeccao = (evento) => {
+        if (
+            !validacaoAtiva
+            || !(evento.target instanceof Element)
+        ) {
+            return;
+        }
+
+        const seccao = evento.target.closest(
+            '.item-seccao',
+        );
+
+        if (
+            !(seccao instanceof HTMLElement)
+            || !formulario.contains(
+                seccao,
+            )
+        ) {
+            return;
+        }
+
+        validarSeccao(
+            validador,
+            seccao,
+        );
+    };
+
+    formulario.addEventListener(
+        'submit',
+        () => {
+            validacaoAtiva = true;
+        },
+    );
+
+    formulario.addEventListener(
+        'reset',
+        () => {
+            validacaoAtiva = false;
+        },
+    );
+
+    formulario.addEventListener(
+        'input',
+        revalidarSeccao,
+    );
+
+    formulario.addEventListener(
+        'change',
+        revalidarSeccao,
+    );
+}
+
+/**
+ * Adiciona ou atualiza uma opção numa instância Tom Select.
+ *
+ * @param {object|null} instancia Instância Tom Select.
+ * @param {unknown} identificador Identificador da opção.
+ * @param {unknown} nome Texto apresentado.
+ * @param {boolean} selecionar Indica se a opção deve ficar selecionada.
+ *
+ * @returns {boolean} Indica se a opção foi adicionada ou atualizada.
+ *
+ * @since 2.0.0
+ */
+function adicionarOpcaoTomSelect(
+    instancia,
+    identificador,
+    nome,
+    selecionar = false,
+) {
+    if (
+        !instancia
+        || typeof instancia.addOption !== 'function'
+        || !Number.isInteger(
+            identificador,
+        )
+        || identificador < 1
+        || typeof nome !== 'string'
+        || nome.trim() === ''
+    ) {
+        return false;
+    }
+
+    const valor = String(
+        identificador,
+    );
+
+    const opcao = {
+        value: valor,
+        text: nome.trim(),
+    };
+
+    if (
+        eObjeto(
+            instancia.options,
+        )
+        && Object.hasOwn(
+            instancia.options,
+            valor,
+        )
+        && typeof instancia.updateOption
+            === 'function'
+    ) {
+        instancia.updateOption(
+            valor,
+            opcao,
+        );
+    } else {
+        instancia.addOption(
+            opcao,
+        );
+    }
+
+    if (
+        typeof instancia.refreshOptions
+            === 'function'
+    ) {
+        instancia.refreshOptions(
+            false,
+        );
+    }
+
+    if (
+        selecionar
+        && typeof instancia.setValue
+            === 'function'
+    ) {
+        instancia.setValue(
+            valor,
+        );
+    }
+
+    return true;
+}
+
+/**
+ * Obtém uma entidade criada a partir de uma resposta AJAX.
+ *
+ * @param {unknown} dadosResposta Resposta recebida.
+ * @param {string} chave Chave da entidade.
+ * @param {string} chaveNome Chave do texto apresentado.
+ *
+ * @returns {{identificador: number, nome: string}|null} Opção criada.
+ *
+ * @since 2.0.0
  */
 function obterOpcaoResposta(
     dadosResposta,
@@ -729,21 +857,19 @@ function obterOpcaoResposta(
         return null;
     }
 
-    const entidade =
-        dadosResposta[chave];
+    const entidade = dadosResposta[chave];
 
     if (!eObjeto(entidade)) {
         return null;
     }
 
-    const identificador =
-        entidade.id;
-
-    const nome =
-        entidade[chaveNome];
+    const identificador = entidade.id;
+    const nome = entidade[chaveNome];
 
     if (
-        !Number.isInteger(identificador)
+        !Number.isInteger(
+            identificador,
+        )
         || identificador < 1
         || typeof nome !== 'string'
         || nome.trim() === ''
@@ -758,50 +884,91 @@ function obterOpcaoResposta(
 }
 
 /**
- * Inicializa os componentes pertencentes a uma secção.
+ * Inicializa o testador de incorporação de uma secção.
  *
- * @param {HTMLElement} seccao Secção a inicializar.
- * @param {InicializadorTomSelect} inicializadorTomSelect Inicializador dos
- * campos Tom Select.
+ * @param {HTMLElement} seccao Secção inicializada.
+ * @param {Array<object>} fornecedoresIncorporacao Definições recebidas.
+ *
+ * @returns {void}
+ *
+ * @since 2.0.0
+ */
+function inicializarTestadorIncorporacao(
+    seccao,
+    fornecedoresIncorporacao,
+) {
+    new TestadorIncorporacao(
+        seccao,
+        fornecedoresIncorporacao,
+    );
+}
+
+/**
+ * Inicializa os tooltips pertencentes a uma secção criada dinamicamente.
+ *
+ * @param {HTMLElement} seccao Secção criada.
  * @param {InicializadorTooltips} inicializadorTooltips Inicializador dos
- * tooltips.
+ *     tooltips.
+ *
+ * @returns {void}
+ *
+ * @since 2.0.0
+ */
+function inicializarTooltipsSeccao(
+    seccao,
+    inicializadorTooltips,
+) {
+    seccao.querySelectorAll(
+        '[data-bs-toggle="tooltip"]',
+    ).forEach((elemento) => {
+        if (elemento instanceof HTMLElement) {
+            inicializadorTooltips.inicializarElemento(
+                elemento,
+            );
+        }
+    });
+}
+
+/**
+ * Inicializa os componentes de uma secção criada dinamicamente.
+ *
+ * @param {HTMLElement} seccao Secção criada.
+ * @param {InicializadorTomSelect} inicializadorTomSelect Inicializador dos
+ *     campos Tom Select.
+ * @param {InicializadorTooltips} inicializadorTooltips Inicializador dos
+ *     tooltips.
  * @param {Array<object>} fornecedoresIncorporacao Definições das
- * incorporações.
+ *     incorporações.
  * @param {Map<number, string>} bandasCriadas Bandas criadas na página.
  *
  * @returns {void}
  *
  * @since 2.0.0
- * @version 3.0.0
  */
-function inicializarComponentesSeccao(
+function inicializarNovaSeccao(
     seccao,
     inicializadorTomSelect,
     inicializadorTooltips,
     fornecedoresIncorporacao,
     bandasCriadas,
 ) {
-    if (
-        !(seccao instanceof HTMLElement)
-        || seccao.dataset
-            .componentesFormularioInicializados
-            === 'true'
-    ) {
-        return;
-    }
-
     inicializadorTomSelect.iniciarTodos(
         seccao,
     );
 
-    const selecaoBanda =
-        seccao.querySelector(
-            '.tom-select-bandas',
-        );
+    const selecaoBanda = seccao.querySelector(
+        '.tom-select-bandas',
+    );
 
-    if (selecaoBanda instanceof HTMLSelectElement) {
+    if (
+        selecaoBanda
+        instanceof HTMLSelectElement
+    ) {
         bandasCriadas.forEach(
-            (nome, identificador) => {
+            (
+                nome,
+                identificador,
+            ) => {
                 adicionarOpcaoTomSelect(
                     selecaoBanda.tomselect
                     ?? null,
@@ -812,54 +979,48 @@ function inicializarComponentesSeccao(
         );
     }
 
-    new TestadorIncorporacao(
+    inicializarTestadorIncorporacao(
         seccao,
         fornecedoresIncorporacao,
     );
 
-    inicializadorTooltips.atualizar();
-
-    seccao.dataset
-        .componentesFormularioInicializados =
-            'true';
+    inicializarTooltipsSeccao(
+        seccao,
+        inicializadorTooltips,
+    );
 }
 
 /**
  * Cria as configurações dos formulários apresentados em modais.
  *
  * @param {InicializadorTomSelect} inicializadorTomSelect Inicializador dos
- * campos Tom Select.
- * @param {Record<string, string>} enderecos Endereços preparados pelo
- * servidor.
+ *     campos Tom Select.
+ * @param {Readonly<Record<string, string>>} enderecos Endereços validados.
  * @param {Map<number, string>} bandasCriadas Bandas criadas na página.
  *
  * @returns {Array<object>} Configurações dos formulários.
  *
  * @since 2.0.0
- * @version 3.0.0
  */
 function criarConfiguracoesModais(
     inicializadorTomSelect,
     enderecos,
     bandasCriadas,
 ) {
-    const maximoNomeEdicao =
-        obterComprimentoMaximo(
-            'nome-nova-edicao',
-            255,
-        );
+    const maximoNomeEdicao = obterComprimentoMaximo(
+        'nome-nova-edicao',
+        255,
+    );
 
-    const maximoNomeBanda =
-        obterComprimentoMaximo(
-            'nome-nova-banda',
-            255,
-        );
+    const maximoNomeBanda = obterComprimentoMaximo(
+        'nome-nova-banda',
+        255,
+    );
 
-    const maximoNomeGenero =
-        obterComprimentoMaximo(
-            'nome-novo-genero',
-            100,
-        );
+    const maximoNomeGenero = obterComprimentoMaximo(
+        'nome-novo-genero',
+        100,
+    );
 
     return [
         {
@@ -912,13 +1073,14 @@ function criarConfiguracoesModais(
                 },
             },
 
-            aoSucesso: (dadosResposta) => {
-                const opcao =
-                    obterOpcaoResposta(
-                        dadosResposta,
-                        'edicao',
-                        'texto_apresentacao',
-                    );
+            aoSucesso: (
+                dadosResposta,
+            ) => {
+                const opcao = obterOpcaoResposta(
+                    dadosResposta,
+                    'edicao',
+                    'texto_apresentacao',
+                );
 
                 if (opcao === null) {
                     return;
@@ -982,13 +1144,14 @@ function criarConfiguracoesModais(
                 },
             },
 
-            aoSucesso: (dadosResposta) => {
-                const opcao =
-                    obterOpcaoResposta(
-                        dadosResposta,
-                        'banda',
-                        'nome',
-                    );
+            aoSucesso: (
+                dadosResposta,
+            ) => {
+                const opcao = obterOpcaoResposta(
+                    dadosResposta,
+                    'banda',
+                    'nome',
+                );
 
                 if (opcao === null) {
                     return;
@@ -1003,19 +1166,21 @@ function criarConfiguracoesModais(
                     .querySelectorAll(
                         '.tom-select-bandas',
                     )
-                    .forEach((selecao) => {
-                        if (
-                            selecao
-                            instanceof HTMLSelectElement
-                        ) {
-                            adicionarOpcaoTomSelect(
-                                selecao.tomselect
-                                ?? null,
-                                opcao.identificador,
-                                opcao.nome,
-                            );
-                        }
-                    });
+                    .forEach(
+                        (selecao) => {
+                            if (
+                                selecao
+                                instanceof HTMLSelectElement
+                            ) {
+                                adicionarOpcaoTomSelect(
+                                    selecao.tomselect
+                                    ?? null,
+                                    opcao.identificador,
+                                    opcao.nome,
+                                );
+                            }
+                        },
+                    );
             },
         },
         {
@@ -1042,13 +1207,14 @@ function criarConfiguracoesModais(
                 },
             },
 
-            aoSucesso: (dadosResposta) => {
-                const opcao =
-                    obterOpcaoResposta(
-                        dadosResposta,
-                        'genero',
-                        'nome',
-                    );
+            aoSucesso: (
+                dadosResposta,
+            ) => {
+                const opcao = obterOpcaoResposta(
+                    dadosResposta,
+                    'genero',
+                    'nome',
+                );
 
                 if (opcao === null) {
                     return;
@@ -1057,16 +1223,20 @@ function criarConfiguracoesModais(
                 [
                     'generos-nova-banda',
                     'generos-pai-novo-genero',
-                ].forEach((identificadorCampo) => {
-                    adicionarOpcaoTomSelect(
-                        inicializadorTomSelect
-                            .obterInstancia(
-                                identificadorCampo,
-                            ),
-                        opcao.identificador,
-                        opcao.nome,
-                    );
-                });
+                ].forEach(
+                    (
+                        identificadorCampo,
+                    ) => {
+                        adicionarOpcaoTomSelect(
+                            inicializadorTomSelect
+                                .obterInstancia(
+                                    identificadorCampo,
+                                ),
+                            opcao.identificador,
+                            opcao.nome,
+                        );
+                    },
+                );
             },
         },
     ];
@@ -1076,69 +1246,86 @@ function criarConfiguracoesModais(
  * Inicializa um formulário de criação ou edição de MetalThursday.
  *
  * @param {string} identificadorFormulario Identificador HTML do formulário
- * principal.
+ *     principal.
  *
  * @returns {void}
  *
- * @since 3.0.0
- * @version 1.0.0
+ * @since 2.0.0
  */
 function inicializarFormularioMetalThursday(
     identificadorFormulario,
 ) {
-    const formulario =
-        obterFormulario(
-            identificadorFormulario,
-        );
+    const formulario = obterFormulario(
+        identificadorFormulario,
+    );
 
-    const configuracao =
-        obterConfiguracaoFormulario();
+    const configuracao = obterConfiguracaoFormulario();
 
-    const bandasCriadas =
-        new Map();
+    const contentorSeccoes = obterElementoObrigatorio(
+        'contentor-seccoes',
+        HTMLElement,
+        'o contentor das secções',
+    );
 
+    const elementoErroSeccoes = obterElementoObrigatorio(
+        'erro-seccoes',
+        HTMLElement,
+        'o elemento de erro das secções',
+    );
+
+    const bandasCriadas = new Map();
+
+    /*
+     * Ambos os inicializadores fazem um único passe global no respetivo
+     * construtor. As secções já existentes não devem voltar a ser pesquisadas
+     * individualmente por estes componentes.
+     */
     const inicializadorTomSelect =
         new InicializadorTomSelect();
 
     const inicializadorTooltips =
         new InicializadorTooltips();
 
-    const contentorSeccoes =
-        document.getElementById(
-            'contentor-seccoes',
-        );
-
-    if (contentorSeccoes instanceof HTMLElement) {
-        contentorSeccoes
-            .querySelectorAll(
-                '.item-seccao',
-            )
-            .forEach((seccao) => {
-                if (seccao instanceof HTMLElement) {
-                    inicializarComponentesSeccao(
+    /*
+     * O testador de incorporação é específico de cada secção e, por isso,
+     * continua a necessitar de uma instância por item.
+     */
+    contentorSeccoes
+        .querySelectorAll(
+            '.item-seccao',
+        )
+        .forEach(
+            (seccao) => {
+                if (
+                    seccao
+                    instanceof HTMLElement
+                ) {
+                    inicializarTestadorIncorporacao(
                         seccao,
-                        inicializadorTomSelect,
-                        inicializadorTooltips,
                         configuracao
                             .fornecedoresIncorporacao,
-                        bandasCriadas,
                     );
                 }
-            });
-    }
+            },
+        );
 
     new GestorSeccoes(
         '#contentor-seccoes',
         '#botao-adicionar-seccao',
         '#modelo-item-seccao',
         (novaSeccao) => {
-            inicializarComponentesSeccao(
+            inicializarNovaSeccao(
                 novaSeccao,
                 inicializadorTomSelect,
                 inicializadorTooltips,
                 configuracao
                     .fornecedoresIncorporacao,
                 bandasCriadas,
+            );
+
+            atualizarErroSeccoes(
+                elementoErroSeccoes,
+                '',
             );
         },
     );
@@ -1162,86 +1349,93 @@ function inicializarFormularioMetalThursday(
                 .obterUtilizadorHaMaisTempoSemNomeacao,
     });
 
-    const maximoNomeMetalThursday =
-        obterComprimentoMaximo(
-            'nome-metal-thursday',
-            255,
+    const maximoNomeMetalThursday = obterComprimentoMaximo(
+        'nome-metal-thursday',
+        255,
+    );
+
+    const validadorFormulario =
+        new ValidadorFormulario(
+            formulario,
+            {
+                regras: {
+                    edicao_id: [
+                        'obrigatorio',
+                        'inteiro',
+                    ],
+
+                    data: [
+                        'obrigatorio',
+                        'data',
+                    ],
+
+                    nome: [
+                        `maximo:${maximoNomeMetalThursday}`,
+                    ],
+
+                    autor_id: [
+                        'obrigatorio',
+                        'inteiro',
+                    ],
+
+                    proximo_nomeado_id: [
+                        'obrigatorio',
+                        'inteiro',
+                    ],
+                },
+
+                mensagens: {
+                    edicao_id: {
+                        obrigatorio:
+                            'Por favor, seleciona a edição.',
+
+                        inteiro:
+                            'A edição selecionada não é válida.',
+                    },
+
+                    data: {
+                        obrigatorio:
+                            'Por favor, seleciona a data.',
+
+                        data:
+                            'A data deve ser válida.',
+                    },
+
+                    nome: {
+                        maximo:
+                            `O nome não pode ter mais de ${maximoNomeMetalThursday} caracteres.`,
+                    },
+
+                    autor_id: {
+                        obrigatorio:
+                            'Por favor, seleciona o autor.',
+
+                        inteiro:
+                            'O autor selecionado não é válido.',
+                    },
+
+                    proximo_nomeado_id: {
+                        obrigatorio:
+                            'Por favor, seleciona o próximo nomeado.',
+
+                        inteiro:
+                            'O próximo nomeado selecionado não é válido.',
+                    },
+                },
+
+                validadorPersonalizado: (
+                    validador,
+                ) => validarSeccoes(
+                    validador,
+                    contentorSeccoes,
+                    elementoErroSeccoes,
+                ),
+            },
         );
 
-    new ValidadorFormulario(
+    configurarValidacaoTempoRealSeccoes(
         formulario,
-        {
-            regras: {
-                edicao_id: [
-                    'obrigatorio',
-                    'inteiro',
-                ],
-
-                data: [
-                    'obrigatorio',
-                    'data',
-                ],
-
-                nome: [
-                    `maximo:${maximoNomeMetalThursday}`,
-                ],
-
-                autor_id: [
-                    'obrigatorio',
-                    'inteiro',
-                ],
-
-                proximo_nomeado_id: [
-                    'obrigatorio',
-                    'inteiro',
-                ],
-            },
-
-            mensagens: {
-                edicao_id: {
-                    obrigatorio:
-                        'Por favor, seleciona a edição.',
-
-                    inteiro:
-                        'A edição selecionada não é válida.',
-                },
-
-                data: {
-                    obrigatorio:
-                        'Por favor, seleciona a data.',
-
-                    data:
-                        'A data deve ser válida.',
-                },
-
-                nome: {
-                    maximo:
-                        `O nome não pode ter mais de ${maximoNomeMetalThursday} caracteres.`,
-                },
-
-                autor_id: {
-                    obrigatorio:
-                        'Por favor, seleciona o autor.',
-
-                    inteiro:
-                        'O autor selecionado não é válido.',
-                },
-
-                proximo_nomeado_id: {
-                    obrigatorio:
-                        'Por favor, seleciona o próximo nomeado.',
-
-                    inteiro:
-                        'O próximo nomeado selecionado não é válido.',
-                },
-            },
-
-            validadorPersonalizado: (
-                validador,
-            ) => validarSeccoes(
-                validador,
-            ),
-        },
+        validadorFormulario,
     );
 
     new GestorFormulariosModais(

@@ -8,7 +8,6 @@ import ValidadorFormulario
  * Configura os comportamentos da página de início de sessão.
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 
 /**
@@ -17,7 +16,6 @@ import ValidadorFormulario
  * @type {Readonly<Record<string, string>>}
  *
  * @since 2.0.0
- * @version 2.0.0
  */
 const SELETORES = Object.freeze({
     formulario:
@@ -28,21 +26,20 @@ const SELETORES = Object.freeze({
 });
 
 /**
- * Obtém o comprimento máximo declarado num campo.
+ * Obtém obrigatoriamente o comprimento máximo declarado num campo.
  *
  * @param {HTMLFormElement} formulario Formulário pesquisado.
  * @param {string} nomeCampo Nome HTML do campo.
- * @param {number} valorPredefinido Valor utilizado quando não existe limite.
  *
  * @returns {number} Comprimento máximo positivo.
  *
- * @since 3.0.0
- * @version 1.0.0
+ * @throws {TypeError} Quando o campo ou o limite não são válidos.
+ *
+ * @since 2.0.0
  */
 function obterComprimentoMaximo(
     formulario,
     nomeCampo,
-    valorPredefinido,
 ) {
     const campo =
         formulario.elements.namedItem(
@@ -50,14 +47,18 @@ function obterComprimentoMaximo(
         );
 
     if (
-        campo instanceof HTMLInputElement
-        && Number.isInteger(campo.maxLength)
-        && campo.maxLength > 0
+        !(campo instanceof HTMLInputElement)
+        || !Number.isInteger(
+            campo.maxLength,
+        )
+        || campo.maxLength <= 0
     ) {
-        return campo.maxLength;
+        throw new TypeError(
+            `O campo "${nomeCampo}" deve possuir um comprimento máximo válido.`,
+        );
     }
 
-    return valorPredefinido;
+    return campo.maxLength;
 }
 
 /**
@@ -66,7 +67,6 @@ function obterComprimentoMaximo(
  * @returns {void}
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 function iniciarValidacaoFormulario() {
     const formulario =
@@ -82,14 +82,12 @@ function iniciarValidacaoFormulario() {
         obterComprimentoMaximo(
             formulario,
             'email',
-            255,
         );
 
     const comprimentoMaximoPalavraPasse =
         obterComprimentoMaximo(
             formulario,
             'palavra_passe',
-            4096,
         );
 
     new ValidadorFormulario(
@@ -138,7 +136,6 @@ function iniciarValidacaoFormulario() {
  * @returns {void}
  *
  * @since 1.0.0
- * @version 2.0.0
  */
 function iniciarAlternadorPalavraPasse() {
     const alternadores =
@@ -161,7 +158,6 @@ function iniciarAlternadorPalavraPasse() {
  * @returns {void}
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 function iniciarPaginaInicioSessao() {
     iniciarValidacaoFormulario();

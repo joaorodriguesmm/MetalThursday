@@ -1,12 +1,10 @@
 import axios from 'axios';
 import { Tooltip } from 'bootstrap';
-import Swal from 'sweetalert2';
 
 /**
  * Gere as interações assíncronas e os controlos dos comentários.
  *
  * @since 1.0.0
- * @version 4.0.0
  */
 class GestorInteracoes {
     /**
@@ -14,8 +12,7 @@ class GestorInteracoes {
      *
      * @type {ReadonlyArray<string>}
      *
-     * @since 4.0.0
-     * @version 1.0.0
+     * @since 2.0.0
      */
     static TIPOS_LOCAIS = Object.freeze([
         'alternar-resposta-comentario',
@@ -29,8 +26,7 @@ class GestorInteracoes {
      *
      * @type {ReadonlyArray<string>}
      *
-     * @since 4.0.0
-     * @version 1.0.0
+     * @since 2.0.0
      */
     static TIPOS_REMOTOS = Object.freeze([
         'alternar-gosto',
@@ -39,112 +35,103 @@ class GestorInteracoes {
     ]);
 
     /**
-     * Cria o gestor.
+     * Cria e inicia o gestor.
      *
      * @param {string} seletorContentor Seletor do contentor principal.
      *
-     * @throws {TypeError} Quando o seletor não é válido.
+     * @throws {TypeError} Quando o seletor ou o contentor não são válidos.
      *
      * @since 1.0.0
-     * @version 3.0.0
      */
     constructor(seletorContentor = 'body') {
         this.contentor = this.obterContentor(
             seletorContentor,
         );
 
-        this.elementosEmProcessamento =
-            new WeakSet();
+        /**
+         * Elementos que possuem uma operação assíncrona em curso.
+         *
+         * @type {WeakSet<HTMLElement>}
+         *
+         * @since 2.0.0
+         */
+        this.elementosEmProcessamento = new WeakSet();
 
-        this.iniciado =
-            false;
+        /**
+         * Identificadores dos pedidos de tooltips de gostos ainda ativos.
+         *
+         * @type {WeakMap<HTMLElement, symbol>}
+         *
+         * @since 2.0.0
+         */
+        this.pedidosTooltipGostos = new WeakMap();
 
-        this.aoClicar = (evento) => {
-            this.tratarClique(
-                evento,
-            );
-        };
-
-        this.aoSubmeter = (evento) => {
-            this.tratarSubmissao(
-                evento,
-            );
-        };
-
-        this.aoSobrepor = (evento) => {
-            this.tratarSobreposicao(
-                evento,
-            );
-        };
-
-        if (this.contentor instanceof HTMLElement) {
-            this.iniciar();
-        }
-    }
-
-    /**
-     * Inicia os eventos delegados.
-     *
-     * @returns {void}
-     *
-     * @since 1.0.0
-     * @version 3.0.0
-     */
-    iniciar() {
-        if (
-            !(this.contentor instanceof HTMLElement)
-            || this.iniciado
-        ) {
-            return;
-        }
+        /**
+         * Promessa partilhada do carregamento assíncrono do SweetAlert2.
+         *
+         * @type {Promise<Function>|null}
+         *
+         * @since 2.0.0
+         */
+        this.promessaSweetAlert = null;
 
         this.contentor.addEventListener(
             'click',
-            this.aoClicar,
+            (evento) => this.tratarClique(evento),
         );
 
         this.contentor.addEventListener(
             'submit',
-            this.aoSubmeter,
+            (evento) => this.tratarSubmissao(evento),
         );
 
         this.contentor.addEventListener(
             'mouseover',
-            this.aoSobrepor,
+            (evento) => this.tratarAtivacaoTooltipGostos(evento),
         );
 
-        this.iniciado =
-            true;
+        this.contentor.addEventListener(
+            'focusin',
+            (evento) => this.tratarAtivacaoTooltipGostos(evento),
+        );
     }
 
     /**
-     * Trata os cliques nos botões de interação.
+     * Trata os cliques nos botões de interação suportados.
      *
      * @param {MouseEvent} evento Evento de clique.
      *
      * @returns {void}
      *
      * @since 2.0.0
-     * @version 3.0.0
      */
     tratarClique(evento) {
         if (!(evento.target instanceof Element)) {
             return;
         }
 
-        const botao =
-            evento.target.closest(
-                'button[data-tipo-interacao]',
-            );
+        const botao = evento.target.closest(
+            'button[data-tipo-interacao]',
+        );
 
         if (!(botao instanceof HTMLButtonElement)) {
             return;
         }
 
+        const tipo = botao.dataset.tipoInteracao?.trim() ?? '';
+
+        if (
+            !GestorInteracoes.TIPOS_LOCAIS.includes(tipo)
+            && !GestorInteracoes.TIPOS_REMOTOS.includes(tipo)
+        ) {
+            return;
+        }
+
         evento.preventDefault();
 
-        this.tratarInteracao(
+        void this.tratarInteracao(
             botao,
+            tipo,
         );
     }
 
@@ -156,11 +143,9 @@ class GestorInteracoes {
      * @returns {void}
      *
      * @since 2.0.0
-     * @version 3.0.0
      */
     tratarSubmissao(evento) {
-        const formulario =
-            evento.target;
+        const formulario = evento.target;
 
         if (
             !(formulario instanceof HTMLFormElement)
@@ -173,94 +158,94 @@ class GestorInteracoes {
 
         evento.preventDefault();
 
-        this.submeterEdicaoComentario(
-            formulario,
-        );
+        void this.submeterEdicaoComentario(formulario);
     }
 
     /**
-     * Inicia o carregamento do tooltip de gostos.
+     * Inicia o carregamento do tooltip de gostos através do rato ou teclado.
      *
-     * @param {MouseEvent} evento Evento de sobreposição.
+     * @param {Event} evento Evento recebido.
      *
      * @returns {void}
      *
      * @since 2.0.0
-     * @version 3.0.0
      */
-    tratarSobreposicao(evento) {
+    tratarAtivacaoTooltipGostos(evento) {
         if (!(evento.target instanceof Element)) {
             return;
         }
 
-        const elemento =
-            evento.target.closest(
-                '[data-endereco-utilizadores-gosto]'
-                + '[data-bs-toggle="tooltip"]',
-            );
+        const elemento = evento.target.closest(
+            '[data-endereco-utilizadores-gosto]'
+            + '[data-bs-toggle="tooltip"]',
+        );
 
         if (
             !(elemento instanceof HTMLElement)
-            || [
-                'a-carregar',
-                'carregado',
-            ].includes(
-                elemento.dataset
-                    .estadoTooltipGostos,
+            || ['a-carregar', 'carregado'].includes(
+                elemento.dataset.estadoTooltipGostos,
             )
         ) {
             return;
         }
 
-        this.carregarTooltipGostos(
-            elemento,
-        );
+        void this.carregarTooltipGostos(elemento);
     }
 
     /**
      * Carrega os utilizadores que gostaram de um comentário.
+     *
+     * Apenas a resposta do pedido ainda associado ao elemento pode alterar o
+     * tooltip, evitando que respostas antigas substituam informação recente.
      *
      * @param {HTMLElement} elemento Elemento associado ao tooltip.
      *
      * @returns {Promise<void>}
      *
      * @since 1.0.0
-     * @version 4.0.0
      */
     async carregarTooltipGostos(elemento) {
-        const endereco =
-            this.normalizarEndereco(
-                elemento.dataset
-                    .enderecoUtilizadoresGosto,
-            );
+        const endereco = this.normalizarEndereco(
+            elemento.dataset.enderecoUtilizadoresGosto,
+        );
 
         if (endereco === null) {
             return;
         }
 
-        elemento.dataset.estadoTooltipGostos =
-            'a-carregar';
+        const identificadorPedido = Symbol();
+
+        this.pedidosTooltipGostos.set(
+            elemento,
+            identificadorPedido,
+        );
+
+        elemento.dataset.estadoTooltipGostos = 'a-carregar';
 
         try {
-            const resposta =
-                await axios.get(
-                    endereco,
-                    {
-                        headers:
-                            this.obterCabecalhosJson(),
-                    },
-                );
+            const resposta = await axios.get(endereco);
 
-            const conteudo =
-                resposta.data
-                    ?.conteudo_indicador_html;
+            if (
+                this.pedidosTooltipGostos.get(elemento)
+                !== identificadorPedido
+            ) {
+                return;
+            }
+
+            this.pedidosTooltipGostos.delete(elemento);
+
+            if (!elemento.isConnected) {
+                return;
+            }
+
+            const conteudo = resposta.data
+                ?.conteudo_indicador_html;
 
             if (
                 typeof conteudo !== 'string'
                 || conteudo.trim() === ''
             ) {
-                delete elemento.dataset
-                    .estadoTooltipGostos;
+                delete elemento.dataset.estadoTooltipGostos;
 
                 return;
             }
@@ -270,35 +255,38 @@ class GestorInteracoes {
                 conteudo,
             );
 
-            elemento.dataset.estadoTooltipGostos =
-                'carregado';
+            elemento.dataset.estadoTooltipGostos = 'carregado';
         } catch {
-            delete elemento.dataset
-                .estadoTooltipGostos;
+            if (
+                this.pedidosTooltipGostos.get(elemento)
+                !== identificadorPedido
+            ) {
+                return;
+            }
+
+            this.pedidosTooltipGostos.delete(elemento);
+
+            if (elemento.isConnected) {
+                delete elemento.dataset.estadoTooltipGostos;
+            }
         }
     }
 
     /**
-     * Trata uma interação.
+     * Trata uma interação local ou remota.
      *
      * @param {HTMLButtonElement} botao Botão acionado.
+     * @param {string} tipo Tipo de interação validado.
      *
      * @returns {Promise<void>}
      *
      * @since 1.0.0
-     * @version 4.0.0
      */
-    async tratarInteracao(botao) {
-        const tipo =
-            botao.dataset.tipoInteracao
-                ?.trim()
-            ?? '';
-
-        if (
-            GestorInteracoes.TIPOS_LOCAIS.includes(
-                tipo,
-            )
-        ) {
+    async tratarInteracao(
+        botao,
+        tipo,
+    ) {
+        if (GestorInteracoes.TIPOS_LOCAIS.includes(tipo)) {
             this.atualizarInterface(
                 botao,
                 tipo,
@@ -308,23 +296,18 @@ class GestorInteracoes {
         }
 
         if (
-            !GestorInteracoes.TIPOS_REMOTOS.includes(
-                tipo,
-            )
-            || this.elementosEmProcessamento.has(
-                botao,
-            )
+            !GestorInteracoes.TIPOS_REMOTOS.includes(tipo)
+            || this.elementosEmProcessamento.has(botao)
         ) {
             return;
         }
 
-        const endereco =
-            this.normalizarEndereco(
-                botao.dataset.endereco,
-            );
+        const endereco = this.normalizarEndereco(
+            botao.dataset.endereco,
+        );
 
         if (endereco === null) {
-            this.mostrarErroPedido(
+            void this.mostrarErroPedido(
                 null,
                 botao.dataset.mensagemErro,
             );
@@ -332,54 +315,34 @@ class GestorInteracoes {
             return;
         }
 
-        if (
-            tipo === 'eliminar'
-            && !(await this.confirmarEliminacao(
-                botao,
-            ))
-        ) {
-            return;
-        }
+        const estadoOriginal = {
+            desativado: botao.disabled,
+            ariaBusy: botao.getAttribute('aria-busy'),
+        };
 
-        const estavaDesativado =
-            botao.disabled;
+        this.elementosEmProcessamento.add(botao);
 
-        this.elementosEmProcessamento.add(
-            botao,
-        );
-
-        this.definirElementoDesativado(
-            botao,
-            true,
-        );
+        let pedidoIniciado = false;
+        let elementoEliminado = false;
 
         try {
-            const resposta =
+            if (
                 tipo === 'eliminar'
-                    ? await axios.delete(
-                        endereco,
-                        {
-                            headers:
-                                this.obterCabecalhosJson(),
-                        },
-                    )
-                    : await axios.post(
-                        endereco,
-                        {},
-                        {
-                            headers:
-                                this.obterCabecalhosJson(),
-                        },
-                    );
+                && !(await this.confirmarEliminacao(botao))
+            ) {
+                return;
+            }
 
-            const dados =
-                typeof resposta.data === 'object'
-                && resposta.data !== null
-                && !Array.isArray(
-                    resposta.data,
-                )
-                    ? resposta.data
-                    : {};
+            this.definirBotaoOcupado(botao);
+            pedidoIniciado = true;
+
+            const resposta = tipo === 'eliminar'
+                ? await axios.delete(endereco)
+                : await axios.post(endereco, {});
+
+            const dados = this.eObjeto(resposta.data)
+                ? resposta.data
+                : {};
 
             this.atualizarInterface(
                 botao,
@@ -387,39 +350,38 @@ class GestorInteracoes {
                 dados,
             );
 
+            elementoEliminado = tipo === 'eliminar'
+                && !botao.isConnected;
+
             const mensagemResposta =
                 typeof dados.mensagem === 'string'
                     ? dados.mensagem.trim()
                     : '';
 
             const mensagemConfigurada =
-                botao.dataset.mensagemSucesso
-                    ?.trim()
+                botao.dataset.mensagemSucesso?.trim()
                 ?? '';
 
             const mensagem =
-                mensagemResposta
-                || mensagemConfigurada;
+                mensagemResposta || mensagemConfigurada;
 
             if (mensagem !== '') {
-                this.mostrarMensagemSucesso(
-                    mensagem,
-                );
+                void this.mostrarMensagemSucesso(mensagem);
             }
         } catch (erro) {
-            this.mostrarErroPedido(
+            void this.mostrarErroPedido(
                 erro,
                 botao.dataset.mensagemErro,
             );
         } finally {
-            this.elementosEmProcessamento.delete(
-                botao,
-            );
+            this.elementosEmProcessamento.delete(botao);
 
-            this.definirElementoDesativado(
-                botao,
-                estavaDesativado,
-            );
+            if (pedidoIniciado && !elementoEliminado) {
+                this.restaurarEstadoBotao(
+                    botao,
+                    estadoOriginal,
+                );
+            }
         }
     }
 
@@ -432,39 +394,29 @@ class GestorInteracoes {
      *     Verdadeiro quando a ação foi confirmada.
      *
      * @since 2.0.0
-     * @version 3.0.0
      */
     async confirmarEliminacao(botao) {
-        const mensagem =
-            botao.dataset.mensagemConfirmacao
-                ?.trim()
+        const mensagem = botao.dataset.mensagemConfirmacao
+            ?.trim()
             || 'Tens a certeza de que pretendes eliminar?';
 
-        const resultado =
-            await Swal.fire({
-                title:
-                    mensagem,
+        try {
+            const Swal = await this.carregarSweetAlert();
 
-                text:
-                    'Esta ação não pode ser revertida.',
-
-                icon:
-                    'warning',
-
-                showCancelButton:
-                    true,
-
-                confirmButtonText:
-                    'Sim, eliminar',
-
-                cancelButtonText:
-                    'Cancelar',
-
-                focusCancel:
-                    true,
+            const resultado = await Swal.fire({
+                title: 'Confirmar eliminação',
+                text: mensagem,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sim, eliminar',
+                cancelButtonText: 'Cancelar',
+                focusCancel: true,
             });
 
-        return resultado.isConfirmed;
+            return resultado.isConfirmed === true;
+        } catch {
+            return window.confirm(mensagem);
+        }
     }
 
     /**
@@ -474,37 +426,28 @@ class GestorInteracoes {
      *
      * @returns {Promise<void>}
      *
-     * @since 1.1.0
-     * @version 4.0.0
+     * @since 1.0.0
      */
     async submeterEdicaoComentario(formulario) {
-        if (
-            this.elementosEmProcessamento.has(
-                formulario,
-            )
-        ) {
+        if (this.elementosEmProcessamento.has(formulario)) {
             return;
         }
 
-        const botaoSubmeter =
-            formulario.querySelector(
-                'button[type="submit"]',
-            );
+        const botaoSubmeter = formulario.querySelector(
+            'button[type="submit"]',
+        );
 
-        const campoConteudo =
-            formulario.querySelector(
-                '[data-campo-conteudo-comentario]',
-            );
+        const campoConteudo = formulario.querySelector(
+            '[data-campo-conteudo-comentario]',
+        );
 
-        const elementoErro =
-            formulario.querySelector(
-                '.invalid-feedback',
-            );
+        const elementoErro = formulario.querySelector(
+            '.invalid-feedback',
+        );
 
-        const endereco =
-            this.normalizarEndereco(
-                formulario.dataset.endereco,
-            );
+        const endereco = this.normalizarEndereco(
+            formulario.dataset.endereco,
+        );
 
         if (
             !(botaoSubmeter instanceof HTMLButtonElement)
@@ -516,9 +459,7 @@ class GestorInteracoes {
         }
 
         const mensagemValidacao =
-            this.validarConteudoComentario(
-                campoConteudo,
-            );
+            this.validarConteudoComentario(campoConteudo);
 
         if (mensagemValidacao !== null) {
             this.apresentarErroCampo(
@@ -532,23 +473,36 @@ class GestorInteracoes {
             return;
         }
 
-        const conteudoOriginalBotao =
-            botaoSubmeter.innerHTML;
-
-        const botaoEstavaDesativado =
-            botaoSubmeter.disabled;
-
-        this.elementosEmProcessamento.add(
-            formulario,
+        const devolverFocoAposSucesso = formulario.contains(
+            document.activeElement,
         );
+
+        const conteudoOriginalBotao = botaoSubmeter.innerHTML;
+        const campoEraSoDeLeitura = campoConteudo.readOnly;
+        const ariaBusyOriginal = formulario.getAttribute('aria-busy');
+        const estadosBotoes = new Map();
+
+        formulario.querySelectorAll('button').forEach((botao) => {
+            if (!(botao instanceof HTMLButtonElement)) {
+                return;
+            }
+
+            estadosBotoes.set(
+                botao,
+                botao.disabled,
+            );
+
+            botao.disabled = true;
+        });
+
+        this.elementosEmProcessamento.add(formulario);
 
         formulario.setAttribute(
             'aria-busy',
             'true',
         );
 
-        botaoSubmeter.disabled =
-            true;
+        campoConteudo.readOnly = true;
 
         botaoSubmeter.innerHTML = [
             '<span class="spinner-border spinner-border-sm"',
@@ -562,55 +516,38 @@ class GestorInteracoes {
         );
 
         try {
-            const resposta =
-                await axios.patch(
-                    endereco,
-                    {
-                        conteudo:
-                            campoConteudo.value,
-                    },
-                    {
-                        headers:
-                            this.obterCabecalhosJson(),
-                    },
-                );
+            const resposta = await axios.patch(
+                endereco,
+                {
+                    conteudo: campoConteudo.value,
+                },
+            );
 
-            const conteudoAtualizado =
-                resposta.data
-                    ?.comentario
-                    ?.conteudo;
+            const conteudoAtualizado = resposta.data
+                ?.comentario
+                ?.conteudo;
 
-            const comentario =
-                formulario.closest(
-                    '.comentario',
-                );
+            const comentario = formulario.closest(
+                '.comentario',
+            );
 
-            const apresentacao =
-                comentario?.querySelector(
-                    '[data-conteudo-comentario] p',
-                );
+            const apresentacao = comentario?.querySelector(
+                '[data-conteudo-comentario] p',
+            );
 
-            const contentorFormulario =
-                formulario.closest(
-                    '.contentor-edicao-comentario',
-                );
+            const contentorFormulario = formulario.closest(
+                '.contentor-edicao-comentario',
+            );
 
-            const contentorConteudo =
-                comentario?.querySelector(
-                    '[data-conteudo-comentario]',
-                );
+            const contentorConteudo = comentario?.querySelector(
+                '[data-conteudo-comentario]',
+            );
 
             if (
                 typeof conteudoAtualizado !== 'string'
                 || !(apresentacao instanceof HTMLElement)
-                || !(
-                    contentorFormulario
-                    instanceof HTMLElement
-                )
-                || !(
-                    contentorConteudo
-                    instanceof HTMLElement
-                )
+                || !(contentorFormulario instanceof HTMLElement)
+                || !(contentorConteudo instanceof HTMLElement)
             ) {
                 throw new Error(
                     'A resposta da edição do comentário é inválida.',
@@ -622,57 +559,50 @@ class GestorInteracoes {
                 conteudoAtualizado,
             );
 
-            campoConteudo.value =
-                conteudoAtualizado;
+            campoConteudo.value = conteudoAtualizado;
+            campoConteudo.dataset.valorOriginal = conteudoAtualizado;
 
-            campoConteudo.dataset.valorOriginal =
-                conteudoAtualizado;
-
-            contentorFormulario.hidden =
-                true;
-
-            contentorFormulario.setAttribute(
-                'aria-hidden',
-                'true',
+            this.definirVisibilidade(
+                contentorFormulario,
+                false,
             );
 
-            contentorConteudo.hidden =
-                false;
+            contentorConteudo.hidden = false;
 
             this.atualizarControladores(
                 contentorFormulario.id,
                 false,
             );
 
-            const mensagem =
-                resposta.data?.mensagem;
+            if (devolverFocoAposSucesso) {
+                this.focarControlador(
+                    contentorFormulario.id,
+                );
+            }
+
+            const mensagem = resposta.data?.mensagem;
 
             if (
                 typeof mensagem === 'string'
                 && mensagem.trim() !== ''
             ) {
-                this.mostrarMensagemSucesso(
+                void this.mostrarMensagemSucesso(
                     mensagem,
                 );
             }
         } catch (erro) {
             const mensagemValidacaoServidor =
-                axios.isAxiosError(
-                    erro,
-                )
+                axios.isAxiosError(erro)
                 && erro.response?.status === 422
-                    ? erro.response
-                        .data
+                    ? erro.response.data
                         ?.errors
                         ?.conteudo
                         ?.[0]
                     : null;
 
             if (
-                typeof mensagemValidacaoServidor
-                    === 'string'
-                && mensagemValidacaoServidor.trim()
-                    !== ''
+                typeof mensagemValidacaoServidor === 'string'
+                && mensagemValidacaoServidor.trim() !== ''
             ) {
                 this.apresentarErroCampo(
                     campoConteudo,
@@ -682,24 +612,28 @@ class GestorInteracoes {
 
                 campoConteudo.focus();
             } else {
-                this.mostrarErroPedido(
-                    erro,
-                );
+                void this.mostrarErroPedido(erro);
             }
         } finally {
-            botaoSubmeter.disabled =
-                botaoEstavaDesativado;
-
-            botaoSubmeter.innerHTML =
-                conteudoOriginalBotao;
-
-            formulario.removeAttribute(
-                'aria-busy',
+            estadosBotoes.forEach(
+                (desativado, botao) => {
+                    botao.disabled = desativado;
+                },
             );
 
-            this.elementosEmProcessamento.delete(
-                formulario,
-            );
+            botaoSubmeter.innerHTML = conteudoOriginalBotao;
+            campoConteudo.readOnly = campoEraSoDeLeitura;
+
+            if (ariaBusyOriginal === null) {
+                formulario.removeAttribute('aria-busy');
+            } else {
+                formulario.setAttribute(
+                    'aria-busy',
+                    ariaBusyOriginal,
+                );
+            }
+
+            this.elementosEmProcessamento.delete(formulario);
         }
     }
 
@@ -710,8 +644,7 @@ class GestorInteracoes {
      *
      * @returns {string|null} Mensagem de erro ou nulo.
      *
-     * @since 4.0.0
-     * @version 1.0.0
+     * @since 2.0.0
      */
     validarConteudoComentario(campo) {
         if (campo.value.trim() === '') {
@@ -719,12 +652,9 @@ class GestorInteracoes {
         }
 
         if (
-            Number.isInteger(
-                campo.maxLength,
-            )
+            Number.isInteger(campo.maxLength)
             && campo.maxLength > 0
-            && campo.value.length
-                > campo.maxLength
+            && campo.value.length > campo.maxLength
         ) {
             return `O comentário não pode ter mais de ${campo.maxLength} caracteres.`;
         }
@@ -742,7 +672,6 @@ class GestorInteracoes {
      * @returns {void}
      *
      * @since 1.0.0
-     * @version 4.0.0
      */
     atualizarInterface(
         botao,
@@ -755,7 +684,6 @@ class GestorInteracoes {
                     botao,
                     dados,
                 );
-
                 break;
 
             case 'alternar-audicao':
@@ -763,14 +691,10 @@ class GestorInteracoes {
                     botao,
                     dados,
                 );
-
                 break;
 
             case 'eliminar':
-                this.removerElemento(
-                    botao,
-                );
-
+                this.removerElemento(botao);
                 break;
 
             case 'alternar-resposta-comentario':
@@ -778,7 +702,6 @@ class GestorInteracoes {
                     botao,
                     true,
                 );
-
                 break;
 
             case 'cancelar-resposta-comentario':
@@ -786,21 +709,14 @@ class GestorInteracoes {
                     botao,
                     false,
                 );
-
                 break;
 
             case 'iniciar-edicao-comentario':
-                this.iniciarEdicaoComentario(
-                    botao,
-                );
-
+                this.iniciarEdicaoComentario(botao);
                 break;
 
             case 'cancelar-edicao-comentario':
-                this.cancelarEdicaoComentario(
-                    botao,
-                );
-
+                this.cancelarEdicaoComentario(botao);
                 break;
 
             default:
@@ -817,33 +733,29 @@ class GestorInteracoes {
      * @returns {void}
      *
      * @since 2.0.0
-     * @version 3.0.0
      */
     atualizarGosto(
         botao,
         dados,
     ) {
-        const adicionado =
-            dados.adicionado === true;
+        if (typeof dados.adicionado !== 'boolean') {
+            return;
+        }
 
-        const numeroGostos =
-            Number.parseInt(
-                String(
-                    dados.numero_gostos
-                    ?? '',
-                ),
-                10,
-            );
+        const adicionado = dados.adicionado;
 
-        const icone =
-            botao.querySelector(
-                '[data-icone-gosto]',
-            );
+        const numeroGostos = Number.parseInt(
+            String(dados.numero_gostos ?? ''),
+            10,
+        );
 
-        const quantidade =
-            botao.querySelector(
-                '[data-quantidade-gostos]',
-            );
+        const icone = botao.querySelector(
+            '[data-icone-gosto]',
+        );
+
+        const quantidade = botao.querySelector(
+            '[data-quantidade-gostos]',
+        );
 
         if (icone instanceof HTMLElement) {
             icone.classList.toggle(
@@ -864,48 +776,34 @@ class GestorInteracoes {
 
         if (
             quantidade instanceof HTMLElement
-            && Number.isInteger(
-                numeroGostos,
-            )
+            && Number.isInteger(numeroGostos)
             && numeroGostos >= 0
         ) {
-            quantidade.textContent =
-                String(
-                    numeroGostos,
-                );
+            quantidade.textContent = String(numeroGostos);
         }
 
         botao.setAttribute(
             'aria-pressed',
-            String(
-                adicionado,
-            ),
+            String(adicionado),
         );
 
         if (
-            Number.isInteger(
-                numeroGostos,
-            )
+            Number.isInteger(numeroGostos)
             && numeroGostos >= 0
         ) {
-            const acao =
-                adicionado
-                    ? 'Remover gosto'
-                    : 'Adicionar gosto';
-
-            const unidade =
-                numeroGostos === 1
-                    ? 'gosto'
-                    : 'gostos';
+            const unidade = numeroGostos === 1
+                ? 'gosto'
+                : 'gostos';
 
             botao.setAttribute(
                 'aria-label',
-                `${acao}. ${numeroGostos} ${unidade}.`,
+                `Gosto. ${numeroGostos} ${unidade}.`,
             );
         }
 
-        const conteudo =
-            dados.conteudo_indicador_html;
+        this.pedidosTooltipGostos.delete(botao);
+
+        const conteudo = dados.conteudo_indicador_html;
 
         if (
             typeof conteudo === 'string'
@@ -916,14 +814,12 @@ class GestorInteracoes {
                 conteudo,
             );
 
-            botao.dataset.estadoTooltipGostos =
-                'carregado';
+            botao.dataset.estadoTooltipGostos = 'carregado';
 
             return;
         }
 
-        delete botao.dataset
-            .estadoTooltipGostos;
+        delete botao.dataset.estadoTooltipGostos;
     }
 
     /**
@@ -935,26 +831,16 @@ class GestorInteracoes {
      * @returns {void}
      *
      * @since 2.0.0
-     * @version 3.0.0
      */
     atualizarAudicao(
         botao,
         dados,
     ) {
-        const marcadoComoOuvido =
-            dados.marcado_como_ouvido === true;
+        if (typeof dados.marcado_como_ouvido !== 'boolean') {
+            return;
+        }
 
-        const numeroAudicoes =
-            Number.parseInt(
-                String(
-                    dados.numero_audicoes
-                    ?? '',
-                ),
-                10,
-            );
-
-        const tipoAudivel =
-            botao.dataset.tipoAudivel;
+        const tipoAudivel = botao.dataset.tipoAudivel;
 
         if (
             tipoAudivel !== 'seccao-metal-thursday'
@@ -963,73 +849,71 @@ class GestorInteracoes {
             return;
         }
 
-        const texto =
+        const marcadoComoOuvido = dados.marcado_como_ouvido;
+
+        const numeroAudicoes = Number.parseInt(
+            String(dados.numero_audicoes ?? ''),
+            10,
+        );
+
+        const texto = tipoAudivel === 'seccao-metal-thursday'
+            ? marcadoComoOuvido
+                ? 'Ouvido'
+                : 'Marcar como ouvido'
+            : marcadoComoOuvido
+                ? 'Ouvida'
+                : 'Marcar MetalThursday como ouvida';
+
+        const descricaoAcao =
             tipoAudivel === 'seccao-metal-thursday'
                 ? marcadoComoOuvido
-                    ? 'Ouvido'
+                    ? 'Marcar como não ouvido'
                     : 'Marcar como ouvido'
                 : marcadoComoOuvido
-                    ? 'Ouvida'
+                    ? 'Marcar MetalThursday como não ouvida'
                     : 'Marcar MetalThursday como ouvida';
 
-        const textoBotao =
-            botao.querySelector(
-                '[data-texto-interacao]',
-            );
+        const textoBotao = botao.querySelector(
+            '[data-texto-interacao]',
+        );
 
         if (textoBotao instanceof HTMLElement) {
-            textoBotao.textContent =
-                texto;
+            textoBotao.textContent = texto;
         }
 
-        botao.setAttribute(
-            'aria-pressed',
-            String(
-                marcadoComoOuvido,
-            ),
-        );
+        botao.removeAttribute('aria-pressed');
 
         botao.setAttribute(
             'aria-label',
-            texto,
+            descricaoAcao,
         );
 
-        const contentorInteracoes =
-            botao.closest(
-                '[data-contentor-interacoes]',
-            );
+        const contentorInteracoes = botao.closest(
+            '[data-contentor-interacoes]',
+        );
 
         const apresentacaoAudicoes =
             contentorInteracoes?.querySelector(
                 '.apresentacao-audicoes',
             );
 
-        if (
-            !(apresentacaoAudicoes instanceof HTMLElement)
-        ) {
+        if (!(apresentacaoAudicoes instanceof HTMLElement)) {
             return;
         }
 
-        const quantidade =
-            apresentacaoAudicoes.querySelector(
-                '.quantidade-audicoes',
-            );
+        const quantidade = apresentacaoAudicoes.querySelector(
+            '.quantidade-audicoes',
+        );
 
         if (
             quantidade instanceof HTMLElement
-            && Number.isInteger(
-                numeroAudicoes,
-            )
+            && Number.isInteger(numeroAudicoes)
             && numeroAudicoes >= 0
         ) {
-            quantidade.textContent =
-                String(
-                    numeroAudicoes,
-                );
+            quantidade.textContent = String(numeroAudicoes);
         }
 
-        const conteudo =
-            dados.conteudo_indicador_html;
+        const conteudo = dados.conteudo_indicador_html;
 
         if (
             typeof conteudo === 'string'
@@ -1050,31 +934,21 @@ class GestorInteracoes {
      * @returns {void}
      *
      * @since 2.0.0
-     * @version 3.0.0
      */
     removerElemento(botao) {
-        const seletor =
-            botao.dataset
-                .seletorElementoRemovivel
-                ?.trim();
+        const seletor = botao.dataset
+            .seletorElementoRemovivel
+            ?.trim();
 
-        if (
-            !seletor
-            || !(this.contentor instanceof HTMLElement)
-        ) {
+        if (!seletor) {
             return;
         }
 
         let elemento;
 
         try {
-            elemento =
-                botao.closest(
-                    seletor,
-                )
-                ?? this.contentor.querySelector(
-                    seletor,
-                );
+            elemento = botao.closest(seletor)
+                ?? this.contentor.querySelector(seletor);
         } catch {
             return;
         }
@@ -1083,8 +957,7 @@ class GestorInteracoes {
             return;
         }
 
-        const contentorPai =
-            elemento.parentElement;
+        const contentorPai = elemento.parentElement;
 
         [
             elemento,
@@ -1092,33 +965,17 @@ class GestorInteracoes {
                 '[data-bs-toggle="tooltip"]',
             ),
         ].forEach((elementoTooltip) => {
-            if (
-                elementoTooltip
-                instanceof HTMLElement
-            ) {
-                Tooltip
-                    .getInstance(
-                        elementoTooltip,
-                    )
-                    ?.dispose();
+            if (elementoTooltip instanceof HTMLElement) {
+                Tooltip.getInstance(
+                    elementoTooltip,
+                )?.dispose();
             }
         });
 
-        elemento.style.transition =
-            'opacity 0.3s ease-out';
+        elemento.remove();
 
-        elemento.style.opacity =
-            '0';
-
-        window.setTimeout(
-            () => {
-                elemento.remove();
-
-                this.atualizarContentorDepoisEliminacao(
-                    contentorPai,
-                );
-            },
-            300,
+        this.atualizarContentorDepoisEliminacao(
+            contentorPai,
         );
     }
 
@@ -1129,8 +986,7 @@ class GestorInteracoes {
      *
      * @returns {void}
      *
-     * @since 4.0.0
-     * @version 1.0.0
+     * @since 2.0.0
      */
     atualizarContentorDepoisEliminacao(contentor) {
         if (!(contentor instanceof HTMLElement)) {
@@ -1145,8 +1001,7 @@ class GestorInteracoes {
                 ':scope > .comentario',
             )
         ) {
-            contentor.hidden =
-                true;
+            contentor.hidden = true;
 
             return;
         }
@@ -1162,10 +1017,7 @@ class GestorInteracoes {
                 '.sem-comentarios',
             )
         ) {
-            const mensagem =
-                document.createElement(
-                    'p',
-                );
+            const mensagem = document.createElement('p');
 
             mensagem.className =
                 'sem-comentarios small text-muted text-center';
@@ -1173,9 +1025,7 @@ class GestorInteracoes {
             mensagem.textContent =
                 'Ainda não existem comentários. Sê a primeira pessoa a comentar!';
 
-            contentor.append(
-                mensagem,
-            );
+            contentor.append(mensagem);
         }
     }
 
@@ -1189,34 +1039,30 @@ class GestorInteracoes {
      * @returns {void}
      *
      * @since 2.0.0
-     * @version 3.0.0
      */
     alternarFormularioResposta(
         botao,
         alternar,
     ) {
-        const contentor =
-            this.obterElementoControlado(
-                botao,
-            );
+        const contentor = this.obterElementoControlado(
+            botao,
+        );
 
         if (!(contentor instanceof HTMLElement)) {
             return;
         }
 
-        const mostrar =
-            alternar
-                ? contentor.hidden
-                : false;
+        const focoEstavaNoContentor = contentor.contains(
+            document.activeElement,
+        );
 
-        contentor.hidden =
-            !mostrar;
+        const mostrar = alternar
+            ? contentor.hidden
+            : false;
 
-        contentor.setAttribute(
-            'aria-hidden',
-            String(
-                !mostrar,
-            ),
+        this.definirVisibilidade(
+            contentor,
+            mostrar,
         );
 
         this.atualizarControladores(
@@ -1232,20 +1078,17 @@ class GestorInteracoes {
             return;
         }
 
-        const formulario =
-            contentor.querySelector(
-                'form',
-            );
+        const formulario = contentor.querySelector(
+            'form',
+        );
 
-        const campo =
-            formulario?.querySelector(
-                'textarea',
-            );
+        const campo = formulario?.querySelector(
+            'textarea',
+        );
 
-        const elementoErro =
-            formulario?.querySelector(
-                '.invalid-feedback',
-            );
+        const elementoErro = formulario?.querySelector(
+            '.invalid-feedback',
+        );
 
         if (formulario instanceof HTMLFormElement) {
             formulario.reset();
@@ -1260,6 +1103,10 @@ class GestorInteracoes {
                 elementoErro,
             );
         }
+
+        if (focoEstavaNoContentor) {
+            this.focarControlador(contentor.id);
+        }
     }
 
     /**
@@ -1270,52 +1117,44 @@ class GestorInteracoes {
      * @returns {void}
      *
      * @since 2.0.0
-     * @version 3.0.0
      */
     iniciarEdicaoComentario(botao) {
         const contentorFormulario =
-            this.obterElementoControlado(
-                botao,
-            );
+            this.obterElementoControlado(botao);
 
-        const comentario =
-            botao.closest(
-                '.comentario',
-            );
+        const comentario = botao.closest(
+            '.comentario',
+        );
 
-        const conteudo =
-            comentario?.querySelector(
-                '[data-conteudo-comentario]',
-            );
+        const conteudo = comentario?.querySelector(
+            '[data-conteudo-comentario]',
+        );
 
-        const campo =
-            contentorFormulario?.querySelector(
-                '[data-campo-conteudo-comentario]',
-            );
+        const campo = contentorFormulario?.querySelector(
+            '[data-campo-conteudo-comentario]',
+        );
 
         if (
-            !(
-                contentorFormulario
-                instanceof HTMLElement
-            )
+            !(contentorFormulario instanceof HTMLElement)
             || !(conteudo instanceof HTMLElement)
             || !(campo instanceof HTMLTextAreaElement)
         ) {
             return;
         }
 
-        campo.dataset.valorOriginal =
-            campo.value;
+        if (!contentorFormulario.hidden) {
+            campo.focus();
 
-        conteudo.hidden =
-            true;
+            return;
+        }
 
-        contentorFormulario.hidden =
-            false;
+        campo.dataset.valorOriginal = campo.value;
 
-        contentorFormulario.setAttribute(
-            'aria-hidden',
-            'false',
+        conteudo.hidden = true;
+
+        this.definirVisibilidade(
+            contentorFormulario,
+            true,
         );
 
         this.atualizarControladores(
@@ -1339,28 +1178,22 @@ class GestorInteracoes {
      * @returns {void}
      *
      * @since 2.0.0
-     * @version 3.0.0
      */
     cancelarEdicaoComentario(botao) {
         const contentorFormulario =
-            this.obterElementoControlado(
-                botao,
-            );
+            this.obterElementoControlado(botao);
 
-        const comentario =
-            botao.closest(
-                '.comentario',
-            );
+        const comentario = botao.closest(
+            '.comentario',
+        );
 
-        const conteudo =
-            comentario?.querySelector(
-                '[data-conteudo-comentario]',
-            );
+        const conteudo = comentario?.querySelector(
+            '[data-conteudo-comentario]',
+        );
 
-        const campo =
-            contentorFormulario?.querySelector(
-                '[data-campo-conteudo-comentario]',
-            );
+        const campo = contentorFormulario?.querySelector(
+            '[data-campo-conteudo-comentario]',
+        );
 
         const elementoErro =
             contentorFormulario?.querySelector(
@@ -1368,22 +1201,22 @@ class GestorInteracoes {
             );
 
         if (
-            !(
-                contentorFormulario
-                instanceof HTMLElement
-            )
+            !(contentorFormulario instanceof HTMLElement)
             || !(conteudo instanceof HTMLElement)
             || !(campo instanceof HTMLTextAreaElement)
         ) {
             return;
         }
 
+        const focoEstavaNoContentor =
+            contentorFormulario.contains(
+                document.activeElement,
+            );
+
         if (
-            typeof campo.dataset.valorOriginal
-            === 'string'
+            typeof campo.dataset.valorOriginal === 'string'
         ) {
-            campo.value =
-                campo.dataset.valorOriginal;
+            campo.value = campo.dataset.valorOriginal;
         }
 
         if (elementoErro instanceof HTMLElement) {
@@ -1393,21 +1226,23 @@ class GestorInteracoes {
             );
         }
 
-        contentorFormulario.hidden =
-            true;
-
-        contentorFormulario.setAttribute(
-            'aria-hidden',
-            'true',
+        this.definirVisibilidade(
+            contentorFormulario,
+            false,
         );
 
-        conteudo.hidden =
-            false;
+        conteudo.hidden = false;
 
         this.atualizarControladores(
             contentorFormulario.id,
             false,
         );
+
+        if (focoEstavaNoContentor) {
+            this.focarControlador(
+                contentorFormulario.id,
+            );
+        }
     }
 
     /**
@@ -1418,37 +1253,76 @@ class GestorInteracoes {
      *
      * @returns {void}
      *
-     * @since 4.0.0
-     * @version 1.0.0
+     * @since 2.0.0
      */
     atualizarControladores(
         identificador,
         expandido,
     ) {
+        this.obterControladores(
+            identificador,
+        ).forEach((botao) => {
+            if (!botao.hasAttribute('aria-expanded')) {
+                return;
+            }
+
+            botao.setAttribute(
+                'aria-expanded',
+                String(expandido),
+            );
+        });
+    }
+
+    /**
+     * Obtém os botões que controlam um contentor.
+     *
+     * @param {string} identificador Identificador do contentor.
+     *
+     * @returns {Array<HTMLButtonElement>} Botões encontrados.
+     *
+     * @since 2.0.0
+     */
+    obterControladores(identificador) {
         if (
-            identificador === ''
-            || !(this.contentor instanceof HTMLElement)
+            typeof identificador !== 'string'
+            || identificador === ''
         ) {
-            return;
+            return [];
         }
 
-        this.contentor.querySelectorAll(
-            'button[data-tipo-interacao][aria-controls]',
-        ).forEach((botao) => {
-            if (
+        return Array.from(
+            this.contentor.querySelectorAll(
+                'button[data-tipo-interacao][aria-controls]',
+            ),
+        ).filter(
+            (botao) =>
                 botao instanceof HTMLButtonElement
                 && botao.getAttribute(
                     'aria-controls',
-                ) === identificador
-            ) {
-                botao.setAttribute(
-                    'aria-expanded',
-                    String(
-                        expandido,
-                    ),
-                );
-            }
-        });
+                ) === identificador,
+        );
+    }
+
+    /**
+     * Devolve o foco ao primeiro controlador visível de um contentor.
+     *
+     * @param {string} identificador Identificador do contentor.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    focarControlador(identificador) {
+        const controlador = this.obterControladores(
+            identificador,
+        ).find(
+            (botao) =>
+                !botao.disabled
+                && !botao.hidden
+                && botao.closest('[hidden]') === null,
+        );
+
+        controlador?.focus();
     }
 
     /**
@@ -1458,27 +1332,52 @@ class GestorInteracoes {
      *
      * @returns {HTMLElement|null} Elemento encontrado ou nulo.
      *
-     * @since 3.0.0
-     * @version 1.0.0
+     * @since 2.0.0
      */
     obterElementoControlado(botao) {
-        const identificador =
-            botao.getAttribute(
-                'aria-controls',
-            )?.trim();
+        const identificador = botao.getAttribute(
+            'aria-controls',
+        )?.trim();
 
         if (!identificador) {
             return null;
         }
 
-        const elemento =
-            document.getElementById(
-                identificador,
-            );
+        const elemento = document.getElementById(
+            identificador,
+        );
 
         return elemento instanceof HTMLElement
             ? elemento
             : null;
+    }
+
+    /**
+     * Atualiza a visibilidade e o estado acessível de um elemento.
+     *
+     * @param {HTMLElement} elemento Elemento atualizado.
+     * @param {boolean} mostrar Indicação de apresentação.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    definirVisibilidade(
+        elemento,
+        mostrar,
+    ) {
+        elemento.hidden = !mostrar;
+
+        if (mostrar) {
+            elemento.removeAttribute('aria-hidden');
+
+            return;
+        }
+
+        elemento.setAttribute(
+            'aria-hidden',
+            'true',
+        );
     }
 
     /**
@@ -1490,37 +1389,25 @@ class GestorInteracoes {
      *
      * @returns {void}
      *
-     * @since 4.0.0
-     * @version 1.0.0
+     * @since 2.0.0
      */
     apresentarErroCampo(
         campo,
         elementoErro,
         mensagem,
     ) {
-        campo.classList.add(
-            'is-invalid',
-        );
+        campo.classList.add('is-invalid');
 
         campo.setAttribute(
             'aria-invalid',
             'true',
         );
 
-        campo.setCustomValidity(
-            mensagem,
-        );
+        campo.setCustomValidity(mensagem);
 
-        elementoErro.textContent =
-            mensagem;
-
-        elementoErro.classList.add(
-            'd-block',
-        );
-
-        elementoErro.removeAttribute(
-            'hidden',
-        );
+        elementoErro.textContent = mensagem;
+        elementoErro.classList.add('d-block');
+        elementoErro.removeAttribute('hidden');
     }
 
     /**
@@ -1531,31 +1418,18 @@ class GestorInteracoes {
      *
      * @returns {void}
      *
-     * @since 3.0.0
-     * @version 2.0.0
+     * @since 2.0.0
      */
     limparErroCampo(
         campo,
         elementoErro,
     ) {
-        campo.classList.remove(
-            'is-invalid',
-        );
+        campo.classList.remove('is-invalid');
+        campo.removeAttribute('aria-invalid');
+        campo.setCustomValidity('');
 
-        campo.removeAttribute(
-            'aria-invalid',
-        );
-
-        campo.setCustomValidity(
-            '',
-        );
-
-        elementoErro.textContent =
-            '';
-
-        elementoErro.classList.remove(
-            'd-block',
-        );
+        elementoErro.textContent = '';
+        elementoErro.classList.remove('d-block');
 
         elementoErro.setAttribute(
             'hidden',
@@ -1571,8 +1445,7 @@ class GestorInteracoes {
      *
      * @returns {void}
      *
-     * @since 3.0.0
-     * @version 1.0.0
+     * @since 2.0.0
      */
     apresentarTextoComQuebras(
         elemento,
@@ -1580,32 +1453,23 @@ class GestorInteracoes {
     ) {
         elemento.replaceChildren();
 
-        texto.split(
-            /\r?\n/u,
-        ).forEach(
-            (
-                linha,
-                indice,
-            ) => {
+        texto.split(/\r?\n/u).forEach(
+            (linha, indice) => {
                 if (indice > 0) {
                     elemento.append(
-                        document.createElement(
-                            'br',
-                        ),
+                        document.createElement('br'),
                     );
                 }
 
                 elemento.append(
-                    document.createTextNode(
-                        linha,
-                    ),
+                    document.createTextNode(linha),
                 );
             },
         );
     }
 
     /**
-     * Atualiza um tooltip do Bootstrap.
+     * Atualiza um tooltip do Bootstrap sem destruir a instância existente.
      *
      * @param {HTMLElement} elemento Elemento associado.
      * @param {string} conteudo Conteúdo do tooltip.
@@ -1613,7 +1477,6 @@ class GestorInteracoes {
      * @returns {void}
      *
      * @since 1.0.0
-     * @version 3.0.0
      */
     atualizarTooltip(
         elemento,
@@ -1624,19 +1487,13 @@ class GestorInteracoes {
             conteudo,
         );
 
-        Tooltip
-            .getInstance(
-                elemento,
-            )
-            ?.dispose();
-
-        new Tooltip(
+        const instancia = Tooltip.getOrCreateInstance(
             elemento,
-            {
-                html: true,
-                title: conteudo,
-            },
         );
+
+        instancia.setContent({
+            '.tooltip-inner': conteudo,
+        });
     }
 
     /**
@@ -1646,8 +1503,7 @@ class GestorInteracoes {
      *
      * @returns {string|null} Endereço validado ou nulo.
      *
-     * @since 4.0.0
-     * @version 1.0.0
+     * @since 2.0.0
      */
     normalizarEndereco(endereco) {
         if (
@@ -1658,21 +1514,17 @@ class GestorInteracoes {
         }
 
         try {
-            const url =
-                new URL(
-                    endereco,
-                    window.location.origin,
-                );
+            const url = new URL(
+                endereco,
+                window.location.origin,
+            );
 
             if (
                 ![
                     'http:',
                     'https:',
-                ].includes(
-                    url.protocol,
-                )
-                || url.origin
-                    !== window.location.origin
+                ].includes(url.protocol)
+                || url.origin !== window.location.origin
             ) {
                 return null;
             }
@@ -1686,43 +1538,40 @@ class GestorInteracoes {
     /**
      * Apresenta uma mensagem de sucesso.
      *
-     * @param {string} mensagem Mensagem apresentada.
+     * @param {unknown} mensagem Mensagem apresentada.
      *
-     * @returns {void}
+     * @returns {Promise<void>}
      *
      * @since 2.0.0
-     * @version 2.0.0
      */
-    mostrarMensagemSucesso(mensagem) {
-        const texto =
-            mensagem.trim();
+    async mostrarMensagemSucesso(mensagem) {
+        if (typeof mensagem !== 'string') {
+            return;
+        }
+
+        const texto = mensagem.trim();
 
         if (texto === '') {
             return;
         }
 
-        Swal.fire({
-            toast:
-                true,
+        try {
+            const Swal = await this.carregarSweetAlert();
 
-            position:
-                'top-end',
-
-            icon:
-                'success',
-
-            title:
-                texto,
-
-            showConfirmButton:
-                false,
-
-            timer:
-                3000,
-
-            timerProgressBar:
-                true,
-        });
+            void Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                text: texto,
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+            });
+        } catch {
+            /*
+             * A ação já terminou com sucesso; a notificação é complementar.
+             */
+        }
     }
 
     /**
@@ -1731,23 +1580,19 @@ class GestorInteracoes {
      * @param {unknown} erro Erro capturado.
      * @param {unknown} mensagemPredefinida Mensagem configurada.
      *
-     * @returns {void}
+     * @returns {Promise<void>}
      *
      * @since 2.0.0
-     * @version 3.0.0
      */
-    mostrarErroPedido(
+    async mostrarErroPedido(
         erro,
         mensagemPredefinida = undefined,
     ) {
         const mensagemResposta =
-            axios.isAxiosError(
-                erro,
-            )
+            axios.isAxiosError(erro)
             && typeof erro.response
                 ?.data
-                ?.mensagem
-                === 'string'
+                ?.mensagem === 'string'
                 ? erro.response.data
                     .mensagem
                     .trim()
@@ -1758,75 +1603,116 @@ class GestorInteracoes {
                 ? mensagemPredefinida.trim()
                 : '';
 
-        Swal.fire({
-            icon:
-                'error',
+        const mensagem = mensagemResposta
+            || mensagemConfigurada
+            || 'Ocorreu um erro ao processar a ação.';
 
-            title:
-                'Erro',
+        try {
+            const Swal = await this.carregarSweetAlert();
 
-            text:
-                mensagemResposta
-                || mensagemConfigurada
-                || 'Ocorreu um erro ao processar a ação.',
-        });
+            void Swal.fire({
+                icon: 'error',
+                title: 'Erro',
+                text: mensagem,
+            });
+        } catch {
+            window.alert(mensagem);
+        }
     }
 
     /**
-     * Ativa ou desativa um botão.
+     * Carrega o SweetAlert2 apenas quando uma interação necessita dele.
+     *
+     * @returns {Promise<Function>} API do SweetAlert2.
+     *
+     * @since 2.0.0
+     */
+    carregarSweetAlert() {
+        if (this.promessaSweetAlert === null) {
+            this.promessaSweetAlert = import('sweetalert2')
+                .then((modulo) => modulo.default)
+                .catch((erro) => {
+                    this.promessaSweetAlert = null;
+
+                    throw erro;
+                });
+        }
+
+        return this.promessaSweetAlert;
+    }
+
+    /**
+     * Marca um botão como ocupado durante um pedido remoto.
      *
      * @param {HTMLButtonElement} botao Botão atualizado.
-     * @param {boolean} desativado Estado pretendido.
      *
      * @returns {void}
      *
      * @since 2.0.0
-     * @version 2.0.0
      */
-    definirElementoDesativado(
-        botao,
-        desativado,
-    ) {
-        botao.disabled =
-            desativado;
+    definirBotaoOcupado(botao) {
+        botao.disabled = true;
 
         botao.setAttribute(
             'aria-busy',
-            String(
-                desativado,
-            ),
+            'true',
         );
     }
 
     /**
-     * Devolve os cabeçalhos utilizados nos pedidos JSON.
+     * Restaura o estado de um botão depois de um pedido remoto.
      *
-     * @returns {Record<string, string>} Cabeçalhos HTTP.
+     * @param {HTMLButtonElement} botao Botão atualizado.
+     * @param {{desativado: boolean, ariaBusy: string|null}} estado Estado
+     *     anterior.
+     *
+     * @returns {void}
      *
      * @since 2.0.0
-     * @version 1.0.0
      */
-    obterCabecalhosJson() {
-        return {
-            Accept:
-                'application/json',
+    restaurarEstadoBotao(
+        botao,
+        estado,
+    ) {
+        botao.disabled = estado.desativado;
 
-            'X-Requested-With':
-                'XMLHttpRequest',
-        };
+        if (estado.ariaBusy === null) {
+            botao.removeAttribute('aria-busy');
+
+            return;
+        }
+
+        botao.setAttribute(
+            'aria-busy',
+            estado.ariaBusy,
+        );
     }
 
     /**
-     * Obtém o contentor principal.
+     * Verifica se um valor é um objeto não nulo.
+     *
+     * @param {unknown} valor Valor recebido.
+     *
+     * @returns {boolean} Verdadeiro quando o valor é um objeto simples.
+     *
+     * @since 2.0.0
+     */
+    eObjeto(valor) {
+        return typeof valor === 'object'
+            && valor !== null
+            && !Array.isArray(valor);
+    }
+
+    /**
+     * Obtém obrigatoriamente o contentor principal.
      *
      * @param {unknown} seletor Seletor CSS.
      *
-     * @returns {HTMLElement|null} Contentor encontrado ou nulo.
+     * @returns {HTMLElement} Contentor encontrado.
      *
-     * @throws {TypeError} Quando o seletor não é válido.
+     * @throws {TypeError} Quando o seletor ou o contentor não são válidos.
      *
-     * @since 4.0.0
-     * @version 1.0.0
+     * @since 2.0.0
      */
     obterContentor(seletor) {
         if (
@@ -1838,58 +1724,27 @@ class GestorInteracoes {
             );
         }
 
-        const seletorNormalizado =
-            seletor.trim();
+        const seletorNormalizado = seletor.trim();
+
+        let elemento;
 
         try {
-            const elemento =
-                document.querySelector(
-                    seletorNormalizado,
-                );
-
-            return elemento instanceof HTMLElement
-                ? elemento
-                : null;
+            elemento = document.querySelector(
+                seletorNormalizado,
+            );
         } catch {
             throw new TypeError(
                 `O seletor CSS "${seletorNormalizado}" é inválido.`,
             );
         }
-    }
 
-    /**
-     * Remove os eventos associados ao gestor.
-     *
-     * @returns {void}
-     *
-     * @since 2.0.0
-     * @version 2.0.0
-     */
-    destruir() {
-        if (
-            !(this.contentor instanceof HTMLElement)
-            || !this.iniciado
-        ) {
-            return;
+        if (!(elemento instanceof HTMLElement)) {
+            throw new TypeError(
+                `Não foi encontrado um contentor de interações válido através de "${seletorNormalizado}".`,
+            );
         }
 
-        this.contentor.removeEventListener(
-            'click',
-            this.aoClicar,
-        );
-
-        this.contentor.removeEventListener(
-            'submit',
-            this.aoSubmeter,
-        );
-
-        this.contentor.removeEventListener(
-            'mouseover',
-            this.aoSobrepor,
-        );
-
-        this.iniciado =
-            false;
+        return elemento;
     }
 }
 

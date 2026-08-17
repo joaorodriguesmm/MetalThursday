@@ -5,17 +5,13 @@
  * que devem estar disponíveis em todas as páginas.
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 
 import './bootstrap';
 import 'bootstrap';
 
-import GestorInteracoes
-    from './modulos/GestorInteracoes';
-
-import LimpadorFormulariosModais
-    from './modulos/LimpadorFormulariosModais';
+import GestorInteracoes from './modulos/GestorInteracoes';
+import LimpadorFormulariosModais from './modulos/LimpadorFormulariosModais';
 
 /**
  * Seletores utilizados pelos comportamentos globais.
@@ -23,14 +19,10 @@ import LimpadorFormulariosModais
  * @type {Readonly<Record<string, string>>}
  *
  * @since 2.0.0
- * @version 2.0.0
  */
 const SELETORES = Object.freeze({
-    ligacaoTerminarSessao:
-        '[data-terminar-sessao]',
-
-    formularioTerminarSessao:
-        '#formulario-terminar-sessao',
+    ligacaoTerminarSessao: '[data-terminar-sessao]',
+    formularioTerminarSessao: '#formulario-terminar-sessao',
 });
 
 /**
@@ -39,27 +31,10 @@ const SELETORES = Object.freeze({
  * @returns {void}
  *
  * @since 1.0.0
- * @version 2.0.0
  */
 function iniciarModulosGlobais() {
     new GestorInteracoes();
     new LimpadorFormulariosModais();
-}
-
-/**
- * Submete o formulário responsável por terminar a sessão.
- *
- * @param {HTMLFormElement} formulario Formulário de término da sessão.
- *
- * @returns {void}
- *
- * @since 2.0.0
- * @version 2.0.0
- */
-function submeterFormularioTerminarSessao(
-    formulario,
-) {
-    formulario.requestSubmit();
 }
 
 /**
@@ -68,44 +43,35 @@ function submeterFormularioTerminarSessao(
  * @returns {void}
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 function iniciarTerminoSessao() {
-    const formulario =
-        document.querySelector(
-            SELETORES.formularioTerminarSessao,
-        );
+    const formulario = document.querySelector(
+        SELETORES.formularioTerminarSessao,
+    );
 
     if (!(formulario instanceof HTMLFormElement)) {
         return;
     }
 
-    document.addEventListener(
-        'click',
-        (evento) => {
-            const elementoClicado =
-                evento.target;
+    document.addEventListener('click', (evento) => {
+        const elementoClicado = evento.target;
 
-            if (!(elementoClicado instanceof Element)) {
-                return;
-            }
+        if (!(elementoClicado instanceof Element)) {
+            return;
+        }
 
-            const acionador =
-                elementoClicado.closest(
-                    SELETORES.ligacaoTerminarSessao,
-                );
+        const acionador = elementoClicado.closest(
+            SELETORES.ligacaoTerminarSessao,
+        );
 
-            if (!(acionador instanceof HTMLElement)) {
-                return;
-            }
+        if (!(acionador instanceof HTMLElement)) {
+            return;
+        }
 
-            evento.preventDefault();
+        evento.preventDefault();
 
-            submeterFormularioTerminarSessao(
-                formulario,
-            );
-        },
-    );
+        formulario.requestSubmit();
+    });
 }
 
 /**
@@ -114,7 +80,6 @@ function iniciarTerminoSessao() {
  * @returns {void}
  *
  * @since 1.0.0
- * @version 3.0.0
  */
 function iniciarAplicacao() {
     iniciarModulosGlobais();

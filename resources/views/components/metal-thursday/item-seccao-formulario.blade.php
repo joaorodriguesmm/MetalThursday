@@ -6,7 +6,6 @@
     App\View\Components\MetalThursday\ItemSeccaoFormulario.
 
     @since 1.0.0
-    @version 4.0.0
 --}}
 
 <section
@@ -50,16 +49,20 @@
                         *
                     </span>
                 </strong>
-
-                <span
-                    class="bi bi-info-circle"
-                    role="img"
-                    tabindex="0"
-                    data-bs-toggle="tooltip"
-                    data-bs-title="Indica se a secção contém apenas texto, um álbum ou uma música."
-                    aria-label="Indica se a secção contém apenas texto, um álbum ou uma música."
-                ></span>
             </label>
+
+            <button
+                class="btn border-0 bg-transparent text-muted p-0 align-baseline"
+                type="button"
+                data-bs-toggle="tooltip"
+                data-bs-title="Indica se a secção contém apenas texto, um álbum ou uma música."
+                aria-label="Ajuda sobre o tipo de secção"
+            >
+                <i
+                    class="bi bi-info-circle"
+                    aria-hidden="true"
+                ></i>
+            </button>
 
             <select
                 id="{{ $identificadores['tipoSeccao'] }}"
@@ -127,16 +130,20 @@
                         *
                     </span>
                 </strong>
-
-                <span
-                    class="bi bi-info-circle"
-                    role="img"
-                    tabindex="0"
-                    data-bs-toggle="tooltip"
-                    data-bs-title="Banda associada ao álbum ou à música."
-                    aria-label="Banda associada ao álbum ou à música."
-                ></span>
             </label>
+
+            <button
+                class="btn border-0 bg-transparent text-muted p-0 align-baseline"
+                type="button"
+                data-bs-toggle="tooltip"
+                data-bs-title="Banda associada ao álbum ou à música."
+                aria-label="Ajuda sobre a banda"
+            >
+                <i
+                    class="bi bi-info-circle"
+                    aria-hidden="true"
+                ></i>
+            </button>
 
             <div class="input-group has-validation">
                 <select
@@ -220,16 +227,20 @@
                         *
                     </span>
                 </strong>
-
-                <span
-                    class="bi bi-info-circle"
-                    role="img"
-                    tabindex="0"
-                    data-bs-toggle="tooltip"
-                    data-bs-title="Título do álbum ou da música."
-                    aria-label="Título do álbum ou da música."
-                ></span>
             </label>
+
+            <button
+                class="btn border-0 bg-transparent text-muted p-0 align-baseline"
+                type="button"
+                data-bs-toggle="tooltip"
+                data-bs-title="Título do álbum ou da música."
+                aria-label="Ajuda sobre o título"
+            >
+                <i
+                    class="bi bi-info-circle"
+                    aria-hidden="true"
+                ></i>
+            </button>
 
             <input
                 id="{{ $identificadores['titulo'] }}"
@@ -281,16 +292,20 @@
                         *
                     </span>
                 </strong>
-
-                <span
-                    class="bi bi-info-circle"
-                    role="img"
-                    tabindex="0"
-                    data-bs-toggle="tooltip"
-                    data-bs-title="Ligação para ouvir o álbum ou a música."
-                    aria-label="Ligação para ouvir o álbum ou a música."
-                ></span>
             </label>
+
+            <button
+                class="btn border-0 bg-transparent text-muted p-0 align-baseline"
+                type="button"
+                data-bs-toggle="tooltip"
+                data-bs-title="Ligação para ouvir o álbum ou a música."
+                aria-label="Ajuda sobre a ligação"
+            >
+                <i
+                    class="bi bi-info-circle"
+                    aria-hidden="true"
+                ></i>
+            </button>
 
             <div class="input-group has-validation">
                 <input
@@ -476,16 +491,20 @@
                         *
                     </span>
                 </strong>
-
-                <span
-                    class="bi bi-info-circle"
-                    role="img"
-                    tabindex="0"
-                    data-bs-toggle="tooltip"
-                    data-bs-title="Ano de lançamento do álbum ou da música."
-                    aria-label="Ano de lançamento do álbum ou da música."
-                ></span>
             </label>
+
+            <button
+                class="btn border-0 bg-transparent text-muted p-0 align-baseline"
+                type="button"
+                data-bs-toggle="tooltip"
+                data-bs-title="Ano de lançamento do álbum ou da música."
+                aria-label="Ajuda sobre o ano"
+            >
+                <i
+                    class="bi bi-info-circle"
+                    aria-hidden="true"
+                ></i>
+            </button>
 
             <input
                 id="{{ $identificadores['ano'] }}"
@@ -534,16 +553,20 @@
                     *
                 </span>
             </strong>
-
-            <span
-                class="bi bi-info-circle"
-                role="img"
-                tabindex="0"
-                data-bs-toggle="tooltip"
-                data-bs-title="Descrição da secção."
-                aria-label="Descrição da secção."
-            ></span>
         </label>
+
+        <button
+            class="btn border-0 bg-transparent text-muted p-0 align-baseline"
+            type="button"
+            data-bs-toggle="tooltip"
+            data-bs-title="Descrição da secção."
+            aria-label="Ajuda sobre a descrição"
+        >
+            <i
+                class="bi bi-info-circle"
+                aria-hidden="true"
+            ></i>
+        </button>
 
         <textarea
             id="{{ $identificadores['descricao'] }}"

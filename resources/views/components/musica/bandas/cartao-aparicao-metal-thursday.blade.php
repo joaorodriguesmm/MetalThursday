@@ -4,18 +4,21 @@
     Todos os valores são preparados pela classe
     App\View\Components\Musica\Bandas\CartaoAparicaoMetalThursday.
 
-    @since 3.0.0
-    @version 2.0.0
+    @since 2.0.0
 --}}
 
 <article
     id="aparicao-banda-{{ $dados['identificador'] }}"
     {{
-        $attributes->class([
-            'card',
-            'shadow-sm',
-            'mb-3',
-        ])
+        $attributes
+            ->except([
+                'id',
+            ])
+            ->class([
+                'card',
+                'shadow-sm',
+                'mb-3',
+            ])
     }}
 >
     <div class="card-body">
