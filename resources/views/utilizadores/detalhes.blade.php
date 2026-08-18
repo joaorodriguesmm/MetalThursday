@@ -353,7 +353,7 @@
                     @else
                         <div class="table-responsive">
                             <table
-                                class="table table-striped table-hover align-middle mb-0"
+                                class="table table-dark table-striped table-hover align-middle mb-0"
                             >
                                 <caption class="visually-hidden">
                                     Histórico das alterações do acesso
@@ -452,7 +452,7 @@
                     @else
                         <div class="table-responsive">
                             <table
-                                class="table table-striped table-hover align-middle mb-0"
+                                class="table table-dark table-striped table-hover align-middle mb-0"
                             >
                                 <caption class="visually-hidden">
                                     Histórico das alterações do papel

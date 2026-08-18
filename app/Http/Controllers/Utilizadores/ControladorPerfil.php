@@ -50,7 +50,7 @@ final class ControladorPerfil extends Controller
      * @since 2.0.0
      */
     private const IDENTIFICADOR_PERMISSAO_TODAS =
-        'todas';
+        'todas_notificacoes';
 
     /**
      * Mensagem apresentada depois de atualizar os dados gerais do perfil.

@@ -32,6 +32,7 @@
             id="formulario-permissoes-email"
             method="POST"
             action="{{ route('perfil.permissoes-email.atualizar') }}"
+            autocomplete="off"
             novalidate
         >
             @csrf

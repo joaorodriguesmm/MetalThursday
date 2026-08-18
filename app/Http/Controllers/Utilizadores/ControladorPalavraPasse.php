@@ -88,9 +88,10 @@ final class ControladorPalavraPasse extends Controller
      * a confirmar o estado persistido dentro da operação de atualização,
      * protegendo o fluxo contra alterações concorrentes.
      *
-     * A sessão atual permanece autenticada. A rotação da credencial
-     * persistente realizada pelo serviço invalida autenticações futuras
-     * baseadas no token anterior.
+     * A sessão atual permanece autenticada. Depois da persistência, o guard é
+     * sincronizado com a instância atualizada para que o middleware de
+     * autenticação da sessão conserve o novo hash nesta sessão. As restantes
+     * sessões continuam associadas ao hash anterior e deixam de ser válidas.
      *
      * @param  AtualizarPalavraPasseRequest  $pedido  Pedido validado.
      * @return RedirectResponse Redirecionamento para o perfil.
@@ -113,13 +114,14 @@ final class ControladorPalavraPasse extends Controller
             $pedido->obterNovaPalavraPasse();
 
         try {
-            $this
-                ->servicoPalavraPasse
-                ->atualizar(
-                    $utilizador,
-                    $palavraPasseAtual,
-                    $novaPalavraPasse,
-                );
+            $utilizadorAtualizado =
+                $this
+                    ->servicoPalavraPasse
+                    ->atualizar(
+                        $utilizador,
+                        $palavraPasseAtual,
+                        $novaPalavraPasse,
+                    );
         } catch (PalavraPasseAtualIncorreta) {
             return to_route(
                 'perfil.editar',
@@ -139,6 +141,12 @@ final class ControladorPalavraPasse extends Controller
                 self::SACO_ERROS,
             );
         }
+
+        Auth::guard(
+            'sessao',
+        )->setUser(
+            $utilizadorAtualizado,
+        );
 
         return to_route(
             'perfil.editar',

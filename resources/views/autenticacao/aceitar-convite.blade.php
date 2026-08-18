@@ -34,6 +34,7 @@
         method="POST"
         action="{{ route('convites.registar') }}"
         enctype="multipart/form-data"
+        autocomplete="off"
         novalidate
     >
         @csrf
@@ -45,32 +46,36 @@
             value="{{ $codigoConvite }}"
         >
 
-        <div class="d-flex align-items-center mb-4">
-            <div class="contentor-avatar-registo me-3">
-                <div
-                    id="avatar-iniciais-registo"
-                    class="circulo-avatar-registo"
-                    role="img"
-                    aria-label="Avatar com as iniciais {{ $iniciaisConvidado }}"
-                >
-                    <span
-                        id="iniciais-avatar-registo"
-                        aria-hidden="true"
+        <div
+            class="d-flex flex-column flex-md-row align-items-md-center gap-4 mb-4"
+        >
+            <div class="flex-shrink-0">
+                <div class="contentor-avatar-registo">
+                    <div
+                        id="avatar-iniciais-registo"
+                        class="circulo-avatar-registo"
+                        role="img"
+                        aria-label="Avatar com as iniciais {{ $iniciaisConvidado }}"
                     >
-                        {{ $iniciaisConvidado }}
-                    </span>
-                </div>
+                        <span
+                            id="iniciais-avatar-registo"
+                            aria-hidden="true"
+                        >
+                            {{ $iniciaisConvidado }}
+                        </span>
+                    </div>
 
-                <img
-                    id="previsualizacao-fotografia-perfil"
-                    class="previsualizacao-fotografia-perfil"
-                    alt="Pré-visualização da fotografia de perfil selecionada"
-                    hidden
-                >
+                    <img
+                        id="previsualizacao-fotografia-perfil"
+                        class="previsualizacao-fotografia-perfil"
+                        alt="Pré-visualização da fotografia de perfil selecionada"
+                        hidden
+                    >
+                </div>
             </div>
 
-            <div class="flex-grow-1">
-                <div class="grupo-campo-formulario">
+            <div class="flex-grow-1 w-100">
+                <div class="grupo-campo-formulario mb-3">
                     <div class="form-floating">
                         <input
                             id="nome"
@@ -112,48 +117,55 @@
                         @enderror
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <div class="grupo-campo-formulario mb-3">
-            <label
-                class="form-label"
-                for="fotografia-perfil"
-            >
-                Fotografia de perfil
+                <div class="grupo-campo-formulario">
+                    <label
+                        class="form-label small text-muted"
+                        for="fotografia-perfil"
+                    >
+                        Fotografia
 
-                <span class="fw-normal text-muted">
-                    (opcional)
-                </span>
-            </label>
+                        <span class="fw-normal">
+                            (opcional, máximo de 10 MiB)
+                        </span>
+                    </label>
 
-            <input
-                id="fotografia-perfil"
-                class="form-control @error('fotografia') is-invalid @enderror"
-                type="file"
-                name="fotografia"
-                accept="image/jpeg,image/png,image/webp"
-                aria-describedby="ajuda-fotografia-perfil erro-fotografia"
-                @error('fotografia')
-                    aria-invalid="true"
-                @enderror
-            >
+                    <div class="contentor-campo-ficheiro">
+                        <input
+                            id="fotografia-perfil"
+                            class="campo-ficheiro @error('fotografia') is-invalid @enderror"
+                            type="file"
+                            name="fotografia"
+                            accept="image/jpeg,image/png,image/webp"
+                            aria-describedby="texto-fotografia-registo erro-fotografia"
+                            @error('fotografia')
+                                aria-invalid="true"
+                            @enderror
+                        >
 
-            <div
-                id="ajuda-fotografia-perfil"
-                class="form-text"
-            >
-                São aceites ficheiros JPEG, PNG ou WebP até 10 MiB.
-            </div>
+                        <label
+                            class="etiqueta-campo-ficheiro"
+                            for="fotografia-perfil"
+                        >
+                            <span id="texto-fotografia-registo">
+                                Selecionar fotografia
+                            </span>
+                        </label>
+                    </div>
 
-            <div
-                id="erro-fotografia"
-                class="invalid-feedback @error('fotografia') d-block @enderror"
-                aria-live="polite"
-            >
-                @error('fotografia')
-                    {{ $message }}
-                @enderror
+                    <div
+                        id="erro-fotografia"
+                        class="invalid-feedback @error('fotografia') d-block @enderror"
+                        aria-live="polite"
+                        @unless ($errors->has('fotografia'))
+                            hidden
+                        @endunless
+                    >
+                        @error('fotografia')
+                            {{ $message }}
+                        @enderror
+                    </div>
+                </div>
             </div>
         </div>
 

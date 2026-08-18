@@ -122,7 +122,7 @@ final class ControladorPerfilTest extends TestCase
         $permissaoTodas =
             $this->criarPermissaoEmail(
                 nome: 'Todas',
-                identificador: 'todas',
+                identificador: 'todas_notificacoes',
                 ordem: 1,
             );
 
@@ -180,7 +180,7 @@ final class ControladorPerfilTest extends TestCase
 
                         'nome' => 'Todas',
 
-                        'descricao' => 'Permissão de teste: todas.',
+                        'descricao' => 'Permissão de teste: todas_notificacoes.',
 
                         'ePermissaoTodas' => true,
 

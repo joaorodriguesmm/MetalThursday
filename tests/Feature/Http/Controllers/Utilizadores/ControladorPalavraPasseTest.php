@@ -162,6 +162,19 @@ final class ControladorPalavraPasseTest extends TestCase
                 $hashAtualizado,
             ),
         );
+
+        $respostaSeguinte =
+            $this->get(
+                route(
+                    'perfil.editar',
+                ),
+            );
+
+        $respostaSeguinte->assertOk();
+
+        $this->assertAuthenticated(
+            'sessao',
+        );
     }
 
     /**

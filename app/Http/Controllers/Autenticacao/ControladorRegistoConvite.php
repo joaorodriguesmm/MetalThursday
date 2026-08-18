@@ -44,7 +44,7 @@ final class ControladorRegistoConvite extends Controller
      * @since 2.0.0
      */
     private const IDENTIFICADOR_PERMISSAO_TODAS =
-        'todas';
+        'todas_notificacoes';
 
     /**
      * Mensagem apresentada para qualquer convite indisponível.

@@ -58,6 +58,9 @@ const SELETORES = Object.freeze({
     erroFotografia:
         '#erro-fotografia',
 
+    textoFotografia:
+        '#texto-fotografia-registo',
+
     permissaoTodas:
         '[data-permissao-email-todas]',
 
@@ -280,6 +283,15 @@ function iniciarFotografiaPerfil() {
 
             seletorMensagemErro:
                 SELETORES.erroFotografia,
+
+            seletorTextoFicheiro:
+                SELETORES.textoFotografia,
+
+            textoPadrao:
+                'Selecionar fotografia',
+
+            textoSelecionado:
+                'Alterar fotografia',
 
             aoFicheiroValido: (ficheiro) => {
                 gestorFotografia.previsualizarImagem(
