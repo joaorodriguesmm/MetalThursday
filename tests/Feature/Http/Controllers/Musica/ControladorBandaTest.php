@@ -34,6 +34,95 @@ final class ControladorBandaTest extends TestCase
     }
 
     /**
+     * Confirma que a listagem possui os dados necessários para avaliar as
+     * permissões dependentes do criador.
+     *
+     * O criador deve visualizar as ações de edição e eliminação. Outro
+     * utilizador deve conseguir consultar a mesma listagem sem essas ações.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function listagem_respeita_as_permissoes_dependentes_do_criador(): void
+    {
+        $criador = $this->criarUtilizador();
+
+        $outroUtilizador = $this->criarUtilizador();
+
+        $origemGeografica = $this->criarOrigemGeografica(
+            'Portugal',
+            'PT',
+        );
+
+        $banda = $this->criarBanda(
+            $criador,
+            $origemGeografica,
+            'Moonspell',
+        );
+
+        $enderecoEdicao = route(
+            'bandas.editar',
+            $banda,
+        );
+
+        $enderecoEliminacao = route(
+            'bandas.eliminar',
+            $banda,
+        );
+
+        $atributoEnderecoEliminacao = sprintf(
+            'data-endereco="%s"',
+            $enderecoEliminacao,
+        );
+
+        $this
+            ->actingAs(
+                $criador,
+                'sessao',
+            )
+            ->get(
+                route(
+                    'bandas.indice',
+                ),
+            )
+            ->assertOk()
+            ->assertSee(
+                'Moonspell',
+            )
+            ->assertSee(
+                $enderecoEdicao,
+                false,
+            )
+            ->assertSee(
+                $atributoEnderecoEliminacao,
+                false,
+            );
+
+        $this
+            ->actingAs(
+                $outroUtilizador,
+                'sessao',
+            )
+            ->get(
+                route(
+                    'bandas.indice',
+                ),
+            )
+            ->assertOk()
+            ->assertSee(
+                'Moonspell',
+            )
+            ->assertDontSee(
+                $enderecoEdicao,
+                false,
+            )
+            ->assertDontSee(
+                $atributoEnderecoEliminacao,
+                false,
+            );
+    }
+
+    /**
      * Confirma que a criação JSON associa explicitamente a origem e os
      * géneros, respeitando o contrato de atribuição em massa do modelo.
      *

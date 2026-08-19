@@ -32,6 +32,93 @@ final class ControladorGeneroTest extends TestCase
     }
 
     /**
+     * Confirma que a listagem possui os dados necessários para avaliar as
+     * permissões dependentes do criador.
+     *
+     * O criador deve visualizar as ações de edição e eliminação. Outro
+     * utilizador deve conseguir consultar a mesma listagem sem essas ações.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function listagem_respeita_as_permissoes_dependentes_do_criador(): void
+    {
+        $criador = $this->criarUtilizador();
+
+        $outroUtilizador = $this->criarUtilizador();
+
+        $this->actingAs(
+            $criador,
+            'sessao',
+        );
+
+        $genero = $this->criarGenero(
+            'Heavy Metal',
+        );
+
+        $enderecoEdicao = route(
+            'generos.editar',
+            $genero,
+        );
+
+        $enderecoEliminacao = route(
+            'generos.eliminar',
+            $genero,
+        );
+
+        $atributoEnderecoEliminacao = sprintf(
+            'data-endereco="%s"',
+            $enderecoEliminacao,
+        );
+
+        $this
+            ->actingAs(
+                $criador,
+                'sessao',
+            )
+            ->get(
+                route(
+                    'generos.indice',
+                ),
+            )
+            ->assertOk()
+            ->assertSee(
+                'Heavy Metal',
+            )
+            ->assertSee(
+                $enderecoEdicao,
+                false,
+            )
+            ->assertSee(
+                $atributoEnderecoEliminacao,
+                false,
+            );
+
+        $this
+            ->actingAs(
+                $outroUtilizador,
+                'sessao',
+            )
+            ->get(
+                route(
+                    'generos.indice',
+                ),
+            )
+            ->assertOk()
+            ->assertSee(
+                'Heavy Metal',
+            )
+            ->assertDontSee(
+                $enderecoEdicao,
+                false,
+            )
+            ->assertDontSee(
+                $atributoEnderecoEliminacao,
+                false,
+            );
+    }
+
+    /**
      * Confirma que o formulário envia o campo dos géneros pais mesmo quando
      * nenhuma opção é selecionada.
      *

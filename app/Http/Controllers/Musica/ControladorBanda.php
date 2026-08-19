@@ -95,6 +95,7 @@ final class ControladorBanda extends Controller
                     'id',
                     'nome',
                     'origem_geografica_id',
+                    'criado_por_id',
                 ])
                 ->with([
                     'origemGeografica:id,nome',

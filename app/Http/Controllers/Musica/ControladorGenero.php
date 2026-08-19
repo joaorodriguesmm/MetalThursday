@@ -93,6 +93,7 @@ final class ControladorGenero extends Controller
                 ->select([
                     'id',
                     'nome',
+                    'criado_por_id',
                 ])
                 ->with([
                     'generosPais:id,nome',
