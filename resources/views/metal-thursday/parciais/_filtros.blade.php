@@ -44,7 +44,6 @@
                     <select
                         id="seletor-adicionar-filtro"
                         class="form-select bg-secondary text-white border-secondary"
-                        aria-describedby="ajuda-adicionar-filtro"
                     >
                         <option value="">
                             Seleciona um filtro
@@ -60,13 +59,6 @@
                             </optgroup>
                         @endforeach
                     </select>
-
-                    <div
-                        id="ajuda-adicionar-filtro"
-                        class="form-text"
-                    >
-                        O filtro selecionado será adicionado abaixo.
-                    </div>
                 </div>
 
                 <div class="col-12 col-md-3">
@@ -147,8 +139,6 @@
                     </select>
                 </div>
             </div>
-
-            <hr class="my-4 border-secondary">
 
             <div
                 id="area-filtros-ativos"

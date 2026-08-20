@@ -513,7 +513,7 @@ class GestorFiltrosDinamicos {
     ) {
         const coluna = document.createElement('div');
 
-        coluna.className = 'col-md-4 mb-3';
+        coluna.className = 'col-12 col-md-6 col-xl-4';
 
         const cartao = document.createElement('div');
 
@@ -623,8 +623,25 @@ class GestorFiltrosDinamicos {
         const instancia = new TomSelect(
             campo,
             {
+                plugins: [
+                    'dropdown_input',
+                ],
+
                 allowEmptyOption: true,
                 create: false,
+
+                render: {
+                    no_results: (
+                        dados,
+                        escapar,
+                    ) => [
+                        '<div class="no-results">',
+                        `Nenhum resultado para "${escapar(
+                            dados.input,
+                        )}".`,
+                        '</div>',
+                    ].join(''),
+                },
             },
         );
 
@@ -643,10 +660,29 @@ class GestorFiltrosDinamicos {
      */
     carregarTomSelect() {
         if (this.promessaTomSelect === null) {
-            this.promessaTomSelect = import(
-                'tom-select/base'
-            )
-                .then((modulo) => modulo.default)
+            this.promessaTomSelect = Promise.all([
+                import(
+                    'tom-select/base'
+                ),
+
+                import(
+                    'tom-select/plugins/dropdown_input/plugin.js'
+                ),
+            ])
+                .then(([
+                    moduloTomSelect,
+                    moduloDropdownInput,
+                ]) => {
+                    const TomSelect =
+                        moduloTomSelect.default;
+
+                    TomSelect.define(
+                        'dropdown_input',
+                        moduloDropdownInput.default,
+                    );
+
+                    return TomSelect;
+                })
                 .catch((erro) => {
                     this.promessaTomSelect = null;
 

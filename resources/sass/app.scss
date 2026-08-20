@@ -463,6 +463,19 @@ h6,
 }
 
 /**
+ * Pesquisa apresentada dentro das listas Tom Select.
+ */
+.ts-dropdown.plugin-dropdown_input
+    .dropdown-input {
+    color: $branco;
+    caret-color: $branco;
+
+    &::placeholder {
+        color: $cinzento-texto-suave;
+    }
+}
+
+/**
  * Campo personalizado de seleção da fotografia do perfil.
  */
 .contentor-campo-ficheiro {
@@ -796,5 +809,21 @@ a:not(.btn) {
                     $alpha: 0.5,
                 );
         }
+    }
+}
+
+/**
+ * Área dos filtros dinâmicos da listagem de MetalThursdays.
+ *
+ * Evita reservar espaço vertical enquanto não existem filtros ativos e cria
+ * separação apenas quando algum filtro é apresentado.
+ */
+#area-filtros-ativos {
+    &:empty {
+        display: none;
+    }
+
+    &:not(:empty) {
+        margin-top: 1rem;
     }
 }
