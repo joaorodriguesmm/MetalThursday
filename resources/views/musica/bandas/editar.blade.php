@@ -28,6 +28,10 @@
         </div>
     </div>
 
+    @include(
+        'musica.generos._modal-criar'
+    )
+
     @push('scripts-pagina')
         @vite(
             'resources/js/paginas/entidades.js'

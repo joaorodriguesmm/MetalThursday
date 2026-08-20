@@ -384,6 +384,70 @@ h6,
 }
 
 /**
+ * Grupos compostos por Tom Select e uma ação lateral.
+ *
+ * O Tom Select introduz um wrapper entre o campo original e o botão. As
+ * regras normais do input group do Bootstrap deixam, por isso, de conseguir
+ * aplicar corretamente os raios e a sobreposição das bordas.
+ */
+.input-group:has(> .ts-wrapper) {
+    > .ts-wrapper {
+        flex:
+            1
+            1
+            auto;
+
+        width: 1%;
+        min-width: 0;
+        border-top-left-radius:
+            var(--bs-border-radius) !important;
+
+        border-top-right-radius:
+            0 !important;
+
+        border-bottom-right-radius:
+            0 !important;
+
+        border-bottom-left-radius:
+            var(--bs-border-radius) !important;
+
+        > .ts-control {
+            border-top-left-radius:
+                var(--bs-border-radius) !important;
+
+            border-top-right-radius:
+                0 !important;
+
+            border-bottom-right-radius:
+                0 !important;
+
+            border-bottom-left-radius:
+                var(--bs-border-radius) !important;
+        }
+    }
+
+    > .btn {
+        margin-left:
+            calc(
+                -1
+                * var(--bs-border-width)
+            );
+
+        border-top-left-radius:
+            0 !important;
+
+        border-top-right-radius:
+            var(--bs-border-radius) !important;
+
+        border-bottom-right-radius:
+            var(--bs-border-radius) !important;
+
+        border-bottom-left-radius:
+            0 !important;
+    }
+}
+
+/**
  * Campo personalizado de seleção da fotografia do perfil.
  */
 .contentor-campo-ficheiro {

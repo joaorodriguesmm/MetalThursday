@@ -140,7 +140,7 @@
     />
 
     @include(
-        'metal-thursday.parciais._modal-criar-genero'
+        'musica.generos._modal-criar'
     )
 
     @push('scripts-pagina')

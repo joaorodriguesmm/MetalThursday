@@ -161,6 +161,10 @@ class InicializadorTomSelect {
             return instanciaExistente;
         }
 
+        this.normalizarOpcoesOrdenadas(
+            elemento,
+        );
+
         const instancia =
             new TomSelect(
                 elemento,
@@ -174,6 +178,38 @@ class InicializadorTomSelect {
         );
 
         return instancia;
+    }
+
+    /**
+     * Normaliza o texto das opções cuja apresentação é ordenada
+     * alfabeticamente.
+     *
+     * A indentação dos templates Blade introduz espaços e quebras de linha no
+     * conteúdo textual dos elementos `<option>`. Estes caracteres interferem
+     * com a ordenação do Tom Select quando são acrescentadas opções
+     * dinamicamente.
+     *
+     * @param {HTMLSelectElement} elemento Campo configurado.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    normalizarOpcoesOrdenadas(elemento) {
+        if (
+            !elemento.hasAttribute(
+                'data-ordenar-alfabeticamente',
+            )
+        ) {
+            return;
+        }
+
+        Array.from(
+            elemento.options,
+        ).forEach((opcao) => {
+            opcao.textContent =
+                opcao.textContent.trim();
+        });
     }
 
     /**
@@ -210,8 +246,27 @@ class InicializadorTomSelect {
                     },
                 };
 
+        const ordenarAlfabeticamente =
+            elemento.hasAttribute(
+                'data-ordenar-alfabeticamente',
+            );
+
         return {
             plugins,
+
+            ...(
+                ordenarAlfabeticamente
+                    ? {
+                        sortField: {
+                            field:
+                                'text',
+
+                            direction:
+                                'asc',
+                        },
+                    }
+                    : {}
+            ),
 
             render: {
                 no_results: (

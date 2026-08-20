@@ -166,6 +166,7 @@
                                     name="generos[]"
                                     placeholder="Seleciona um ou mais géneros"
                                     aria-describedby="erro-generos-nova-banda"
+                                    data-ordenar-alfabeticamente
                                     multiple
                                     required
                                 >

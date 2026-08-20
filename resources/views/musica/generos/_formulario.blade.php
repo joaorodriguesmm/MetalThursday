@@ -14,6 +14,7 @@
     id="formulario-genero"
     method="POST"
     action="{{ $enderecoFormulario }}"
+    autocomplete="off"
     novalidate
 >
     @csrf
@@ -95,6 +96,8 @@
             name="generos_pai[]"
             placeholder="Seleciona um ou mais géneros pais"
             aria-describedby="ajuda-generos-pai erro-generos-pai"
+            autocomplete="off"
+            data-ordenar-alfabeticamente
             multiple
             @if (
                 $errors->has('generos_pai')

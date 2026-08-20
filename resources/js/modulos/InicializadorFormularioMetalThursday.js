@@ -1,3 +1,8 @@
+import { Modal } from 'bootstrap';
+import {
+    adicionarOpcaoTomSelect,
+    obterOpcaoResposta,
+} from './OpcoesTomSelect';
 import GestorFormulariosModais from './GestorFormulariosModais';
 import GestorSeccoes from './GestorSeccoes';
 import InicializadorTomSelect from './InicializadorTomSelect';
@@ -755,135 +760,6 @@ function configurarValidacaoTempoRealSeccoes(
 }
 
 /**
- * Adiciona ou atualiza uma opção numa instância Tom Select.
- *
- * @param {object|null} instancia Instância Tom Select.
- * @param {unknown} identificador Identificador da opção.
- * @param {unknown} nome Texto apresentado.
- * @param {boolean} selecionar Indica se a opção deve ficar selecionada.
- *
- * @returns {boolean} Indica se a opção foi adicionada ou atualizada.
- *
- * @since 2.0.0
- */
-function adicionarOpcaoTomSelect(
-    instancia,
-    identificador,
-    nome,
-    selecionar = false,
-) {
-    if (
-        !instancia
-        || typeof instancia.addOption !== 'function'
-        || !Number.isInteger(
-            identificador,
-        )
-        || identificador < 1
-        || typeof nome !== 'string'
-        || nome.trim() === ''
-    ) {
-        return false;
-    }
-
-    const valor = String(
-        identificador,
-    );
-
-    const opcao = {
-        value: valor,
-        text: nome.trim(),
-    };
-
-    if (
-        eObjeto(
-            instancia.options,
-        )
-        && Object.hasOwn(
-            instancia.options,
-            valor,
-        )
-        && typeof instancia.updateOption
-            === 'function'
-    ) {
-        instancia.updateOption(
-            valor,
-            opcao,
-        );
-    } else {
-        instancia.addOption(
-            opcao,
-        );
-    }
-
-    if (
-        typeof instancia.refreshOptions
-            === 'function'
-    ) {
-        instancia.refreshOptions(
-            false,
-        );
-    }
-
-    if (
-        selecionar
-        && typeof instancia.setValue
-            === 'function'
-    ) {
-        instancia.setValue(
-            valor,
-        );
-    }
-
-    return true;
-}
-
-/**
- * Obtém uma entidade criada a partir de uma resposta AJAX.
- *
- * @param {unknown} dadosResposta Resposta recebida.
- * @param {string} chave Chave da entidade.
- * @param {string} chaveNome Chave do texto apresentado.
- *
- * @returns {{identificador: number, nome: string}|null} Opção criada.
- *
- * @since 2.0.0
- */
-function obterOpcaoResposta(
-    dadosResposta,
-    chave,
-    chaveNome,
-) {
-    if (!eObjeto(dadosResposta)) {
-        return null;
-    }
-
-    const entidade = dadosResposta[chave];
-
-    if (!eObjeto(entidade)) {
-        return null;
-    }
-
-    const identificador = entidade.id;
-    const nome = entidade[chaveNome];
-
-    if (
-        !Number.isInteger(
-            identificador,
-        )
-        || identificador < 1
-        || typeof nome !== 'string'
-        || nome.trim() === ''
-    ) {
-        return null;
-    }
-
-    return {
-        identificador,
-        nome: nome.trim(),
-    };
-}
-
-/**
  * Inicializa o testador de incorporação de uma secção.
  *
  * @param {HTMLElement} seccao Secção inicializada.
@@ -1243,6 +1119,77 @@ function criarConfiguracoesModais(
 }
 
 /**
+ * Mantém o formulário da banda ao criar um género a partir do respetivo
+ * modal e regressa à banda quando o modal do género é fechado.
+ *
+ * @returns {void}
+ *
+ * @since 2.0.0
+ */
+function configurarRetornoCriacaoGeneroParaBanda() {
+    const modalBanda =
+        document.getElementById(
+            'modal-criar-banda',
+        );
+
+    const modalGenero =
+        document.getElementById(
+            'modal-criar-genero',
+        );
+
+    if (
+        !(modalBanda instanceof HTMLElement)
+        || !(modalGenero instanceof HTMLElement)
+    ) {
+        return;
+    }
+
+    let regressarAoModalBanda =
+        false;
+
+    modalGenero.addEventListener(
+        'show.bs.modal',
+        (evento) => {
+            const acionador =
+                evento.relatedTarget;
+
+            regressarAoModalBanda =
+                acionador instanceof Element
+                && acionador.closest(
+                    '#modal-criar-banda',
+                ) === modalBanda;
+
+            if (!regressarAoModalBanda) {
+                return;
+            }
+
+            modalBanda.setAttribute(
+                'data-preservar-formularios-ao-fechar',
+                '',
+            );
+        },
+    );
+
+    modalGenero.addEventListener(
+        'hidden.bs.modal',
+        () => {
+            if (!regressarAoModalBanda) {
+                return;
+            }
+
+            regressarAoModalBanda =
+                false;
+
+            Modal
+                .getOrCreateInstance(
+                    modalBanda,
+                )
+                .show();
+        },
+    );
+}
+
+/**
  * Inicializa um formulário de criação ou edição de MetalThursday.
  *
  * @param {string} identificadorFormulario Identificador HTML do formulário
@@ -1437,6 +1384,8 @@ function inicializarFormularioMetalThursday(
         formulario,
         validadorFormulario,
     );
+
+    configurarRetornoCriacaoGeneroParaBanda();
 
     new GestorFormulariosModais(
         criarConfiguracoesModais(

@@ -1,11 +1,18 @@
+import GestorFormulariosModais
+    from '../modulos/GestorFormulariosModais';
+import {
+    adicionarOpcaoTomSelect,
+    obterOpcaoResposta,
+} from '../modulos/OpcoesTomSelect';
 import ValidadorFormulario
     from '../modulos/ValidadorFormulario';
 
 /**
  * Script específico das páginas de gestão de entidades.
  *
- * Inicializa os campos Tom Select quando existem e configura a validação de
- * apoio dos formulários de bandas, géneros e edições.
+ * Inicializa os campos Tom Select quando existem, configura a validação de
+ * apoio dos formulários de bandas, géneros e edições e permite criar géneros
+ * sem abandonar o formulário de bandas.
  *
  * @since 1.0.0
  */
@@ -19,6 +26,24 @@ import ValidadorFormulario
  */
 const SELETOR_TOM_SELECT =
     '.tom-select-unico, .tom-select-multiplo';
+
+/**
+ * Identificadores utilizados pela criação rápida de géneros.
+ *
+ * @type {Readonly<Record<string, string>>}
+ *
+ * @since 2.0.0
+ */
+const IDENTIFICADORES_CRIACAO_GENERO = Object.freeze({
+    formulario:
+        'formulario-criar-genero',
+
+    generosBanda:
+        'generos-banda',
+
+    generosPais:
+        'generos-pai-novo-genero',
+});
 
 /**
  * Configurações dos formulários geridos pelo script.
@@ -249,7 +274,7 @@ function iniciarValidadoresEntidades() {
  * campos Tom Select. O carregamento condicional evita transferir essa
  * dependência nessas páginas.
  *
- * @returns {Promise<void>}
+ * @returns {Promise<object|null>} Inicializador criado ou nulo.
  *
  * @since 2.0.0
  */
@@ -259,7 +284,7 @@ async function iniciarTomSelectSeNecessario() {
             SELETOR_TOM_SELECT,
         ) === null
     ) {
-        return;
+        return null;
     }
 
     const {
@@ -269,7 +294,131 @@ async function iniciarTomSelectSeNecessario() {
         '../modulos/InicializadorTomSelect'
     );
 
-    new InicializadorTomSelect();
+    return new InicializadorTomSelect();
+}
+
+/**
+ * Inicia a criação rápida de géneros no formulário de bandas.
+ *
+ * Após a criação, o novo género é acrescentado e selecionado no campo da
+ * banda. É também acrescentado à lista de possíveis géneros pais para uma
+ * eventual criação seguinte sem recarregar a página.
+ *
+ * @param {object|null} inicializadorTomSelect Inicializador Tom Select.
+ *
+ * @returns {void}
+ *
+ * @since 2.0.0
+ */
+function iniciarCriacaoRapidaGenero(
+    inicializadorTomSelect,
+) {
+    const formulario =
+        document.getElementById(
+            IDENTIFICADORES_CRIACAO_GENERO
+                .formulario,
+        );
+
+    if (
+        !(formulario
+            instanceof HTMLFormElement)
+        || inicializadorTomSelect === null
+        || typeof inicializadorTomSelect
+            .obterInstancia !== 'function'
+    ) {
+        return;
+    }
+
+    const endereco =
+        formulario.action.trim();
+
+    if (endereco === '') {
+        throw new TypeError(
+            'O formulário de criação do género não possui um endereço válido.',
+        );
+    }
+
+    new GestorFormulariosModais([
+        {
+            idFormulario:
+                formulario.id,
+
+            url:
+                endereco,
+
+            regrasValidacao:
+                criarRegrasFormulario(
+                    formulario,
+                    {
+                        nome: [
+                            'obrigatorio',
+                        ],
+                    },
+                ),
+
+            mensagensValidacao: {
+                nome: {
+                    obrigatorio:
+                        'Por favor, insere o nome do género.',
+
+                    maximo:
+                        'O nome do género é demasiado longo.',
+                },
+            },
+
+            aoSucesso: (
+                dadosResposta,
+            ) => {
+                const genero =
+                    obterOpcaoResposta(
+                        dadosResposta,
+                        'genero',
+                        'nome',
+                    );
+
+                if (genero === null) {
+                    throw new TypeError(
+                        'A resposta da criação do género é inválida.',
+                    );
+                }
+
+                const selecaoGenerosBanda =
+                    inicializadorTomSelect
+                        .obterInstancia(
+                            IDENTIFICADORES_CRIACAO_GENERO
+                                .generosBanda,
+                        );
+
+                if (
+                    !adicionarOpcaoTomSelect(
+                        selecaoGenerosBanda,
+                        genero.identificador,
+                        genero.nome,
+                        true,
+                    )
+                ) {
+                    throw new TypeError(
+                        'Não foi possível atualizar a seleção de géneros da banda.',
+                    );
+                }
+
+                const selecaoGenerosPais =
+                    inicializadorTomSelect
+                        .obterInstancia(
+                            IDENTIFICADORES_CRIACAO_GENERO
+                                .generosPais,
+                        );
+
+                if (selecaoGenerosPais !== null) {
+                    adicionarOpcaoTomSelect(
+                        selecaoGenerosPais,
+                        genero.identificador,
+                        genero.nome,
+                    );
+                }
+            },
+        },
+    ]);
 }
 
 /**
@@ -280,9 +429,14 @@ async function iniciarTomSelectSeNecessario() {
  * @since 1.0.0
  */
 async function iniciarPaginaEntidades() {
-    await iniciarTomSelectSeNecessario();
+    const inicializadorTomSelect =
+        await iniciarTomSelectSeNecessario();
 
     iniciarValidadoresEntidades();
+
+    iniciarCriacaoRapidaGenero(
+        inicializadorTomSelect,
+    );
 }
 
 if (document.readyState === 'loading') {

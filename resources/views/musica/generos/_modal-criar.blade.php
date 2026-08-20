@@ -1,9 +1,9 @@
 {{--
-    Apresenta o formulário modal para criação de um género musical sem
-    abandonar o formulário principal da MetalThursday.
+    Apresenta o formulário modal reutilizável para criação de um género
+    musical sem abandonar o formulário principal.
 
     O formulário é enviado assincronamente. Os erros de validação são
-    associados aos respetivos campos pelo gestor global de formulários AJAX.
+    associados aos respetivos campos pelo gestor de formulários AJAX.
 
     O campo oculto dos géneros pais garante que é enviada uma lista vazia
     quando não é selecionada qualquer relação hierárquica.
@@ -28,8 +28,11 @@
                     id="formulario-criar-genero"
                     method="POST"
                     action="{{ route('generos.guardar') }}"
+                    autocomplete="off"
                     data-ajax-form
                     data-formulario-criar-genero
+                    data-mensagem-sucesso="Género criado com sucesso."
+                    data-mensagem-erro="Não foi possível criar o género."
                     novalidate
                 >
                     @csrf
@@ -116,6 +119,8 @@
                                 name="generos_pai[]"
                                 placeholder="Seleciona um ou mais géneros pais"
                                 aria-describedby="ajuda-generos-pai-novo-genero erro-generos-pai-novo-genero"
+                                autocomplete="off"
+                                data-ordenar-alfabeticamente
                                 multiple
                             >
                                 @foreach ($generos as $genero)

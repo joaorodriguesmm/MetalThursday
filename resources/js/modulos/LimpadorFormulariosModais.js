@@ -84,6 +84,18 @@ class LimpadorFormulariosModais {
             return;
         }
 
+        if (
+            modal.hasAttribute(
+                'data-preservar-formularios-ao-fechar',
+            )
+        ) {
+            modal.removeAttribute(
+                'data-preservar-formularios-ao-fechar',
+            );
+
+            return;
+        }
+
         modal.querySelectorAll(
             'form',
         ).forEach((formulario) => {

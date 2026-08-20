@@ -11,6 +11,7 @@
     id="formulario-banda"
     method="POST"
     action="{{ $enderecoFormulario }}"
+    autocomplete="off"
     novalidate
 >
     @csrf
@@ -42,7 +43,7 @@
             value="{{ $nomeBanda }}"
             placeholder="Nome da banda"
             maxlength="{{ App\Models\Musica\Banda::COMPRIMENTO_MAXIMO_NOME }}"
-            autocomplete="organization"
+            autocomplete="off"
             aria-describedby="erro-nome-banda"
             required
             autofocus
@@ -83,6 +84,7 @@
             name="origem_geografica_id"
             placeholder="Seleciona uma origem geográfica"
             aria-describedby="erro-origem-geografica-banda"
+            autocomplete="off"
             required
             @error('origem_geografica_id')
                 aria-invalid="true"
@@ -134,43 +136,66 @@
             </span>
         </label>
 
-        <select
-            id="generos-banda"
-            class="form-select tom-select-multiplo {{
-                (
+        <div class="input-group has-validation">
+            <select
+                id="generos-banda"
+                class="form-select tom-select-multiplo {{
+                    (
+                        $errors->has('generos')
+                        || $errors->has('generos.*')
+                    )
+                        ? 'is-invalid'
+                        : ''
+                }}"
+                name="generos[]"
+                placeholder="Seleciona um ou mais géneros"
+                aria-describedby="erro-generos-banda"
+                autocomplete="off"
+                data-ordenar-alfabeticamente
+                multiple
+                required
+                @if (
                     $errors->has('generos')
                     || $errors->has('generos.*')
                 )
-                    ? 'is-invalid'
-                    : ''
-            }}"
-            name="generos[]"
-            placeholder="Seleciona um ou mais géneros"
-            aria-describedby="erro-generos-banda"
-            multiple
-            required
-            @if (
-                $errors->has('generos')
-                || $errors->has('generos.*')
-            )
-                aria-invalid="true"
-            @endif
-        >
-            @foreach ($generos as $genero)
-                <option
-                    value="{{ $genero->getKey() }}"
-                    @selected(
-                        in_array(
-                            (string) $genero->getKey(),
-                            $identificadoresGenerosSelecionados,
-                            true,
+                    aria-invalid="true"
+                @endif
+            >
+                @foreach ($generos as $genero)
+                    <option
+                        value="{{ $genero->getKey() }}"
+                        @selected(
+                            in_array(
+                                (string) $genero->getKey(),
+                                $identificadoresGenerosSelecionados,
+                                true,
+                            )
                         )
-                    )
+                    >
+                        {{ $genero->nome }}
+                    </option>
+                @endforeach
+            </select>
+
+            @can(
+                'create',
+                App\Models\Musica\Genero::class
+            )
+                <button
+                    class="btn btn-secondary"
+                    type="button"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modal-criar-genero"
+                    aria-label="Criar novo género"
+                    title="Criar novo género"
                 >
-                    {{ $genero->nome }}
-                </option>
-            @endforeach
-        </select>
+                    <i
+                        class="bi bi-plus-lg"
+                        aria-hidden="true"
+                    ></i>
+                </button>
+            @endcan
+        </div>
 
         <div
             id="erro-generos-banda"
