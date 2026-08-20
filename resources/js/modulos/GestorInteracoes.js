@@ -1623,6 +1623,9 @@ class GestorInteracoes {
     /**
      * Carrega o SweetAlert2 apenas quando uma interação necessita dele.
      *
+     * A instância utiliza o tema escuro para manter o contraste e a coerência
+     * visual com o tema global da aplicação.
+     *
      * @returns {Promise<Function>} API do SweetAlert2.
      *
      * @since 2.0.0
@@ -1630,7 +1633,11 @@ class GestorInteracoes {
     carregarSweetAlert() {
         if (this.promessaSweetAlert === null) {
             this.promessaSweetAlert = import('sweetalert2')
-                .then((modulo) => modulo.default)
+                .then(
+                    (modulo) => modulo.default.mixin({
+                        theme: 'dark',
+                    }),
+                )
                 .catch((erro) => {
                     this.promessaSweetAlert = null;
 
