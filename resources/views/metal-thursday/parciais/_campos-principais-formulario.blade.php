@@ -63,7 +63,7 @@
                             === (string) $edicao->getKey()
                         )
                     >
-                        {{ $edicao->texto_apresentacao }}
+                        {{ $edicao->nome }}
                     </option>
                 @endforeach
             </select>

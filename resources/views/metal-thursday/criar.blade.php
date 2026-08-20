@@ -30,6 +30,7 @@
                 id="formulario-criar-metal-thursday"
                 method="POST"
                 action="{{ route('metal-thursday.guardar') }}"
+                autocomplete="off"
                 novalidate
             >
                 @csrf

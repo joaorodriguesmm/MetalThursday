@@ -40,6 +40,7 @@
                         $metalThursday,
                     )
                 }}"
+                autocomplete="off"
                 novalidate
             >
                 @csrf

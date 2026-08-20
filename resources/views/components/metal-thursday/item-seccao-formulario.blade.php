@@ -68,6 +68,7 @@
                 id="{{ $identificadores['tipoSeccao'] }}"
                 class="form-select tom-select-unico seletor-tipo-seccao @error($chavesErro['tipoSeccao']) is-invalid @enderror"
                 name="{{ $nomeBaseCampo }}[tipo_seccao_id]"
+                placeholder="Seleciona um tipo"
                 aria-describedby="erro-{{ $identificadores['tipoSeccao'] }}"
                 required
                 @error($chavesErro['tipoSeccao'])
@@ -150,6 +151,7 @@
                     id="{{ $identificadores['banda'] }}"
                     class="form-select tom-select-unico tom-select-bandas @error($chavesErro['banda']) is-invalid @enderror"
                     name="{{ $nomeBaseCampo }}[banda_id]"
+                    placeholder="Seleciona uma banda"
                     aria-describedby="erro-{{ $identificadores['banda'] }}"
                     @if ($exigeDetalhes)
                         required

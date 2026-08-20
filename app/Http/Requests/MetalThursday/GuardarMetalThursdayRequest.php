@@ -277,12 +277,12 @@ final class GuardarMetalThursdayRequest extends FormRequest
             'seccoes.*' => [
                 'bail',
                 'required',
-                'array:id,tipo_secao_id,titulo,descricao,banda_id,ligacao,tipo_incorporacao,ano',
+                'array:id,tipo_seccao_id,titulo,descricao,banda_id,ligacao,tipo_incorporacao,ano',
             ],
 
             'seccoes.*.id' => $regrasIdentificadorSeccao,
 
-            'seccoes.*.tipo_secao_id' => [
+            'seccoes.*.tipo_seccao_id' => [
                 'bail',
                 'required',
                 'integer',
@@ -448,11 +448,11 @@ final class GuardarMetalThursdayRequest extends FormRequest
 
             'seccoes.*.id.prohibited' => 'Uma nova MetalThursday não pode receber secções existentes.',
 
-            'seccoes.*.tipo_secao_id.required' => 'Por favor, seleciona o tipo da secção.',
+            'seccoes.*.tipo_seccao_id.required' => 'Por favor, seleciona o tipo da secção.',
 
-            'seccoes.*.tipo_secao_id.integer' => 'O tipo de uma das secções não é válido.',
+            'seccoes.*.tipo_seccao_id.integer' => 'O tipo de uma das secções não é válido.',
 
-            'seccoes.*.tipo_secao_id.exists' => 'O tipo de uma das secções não existe.',
+            'seccoes.*.tipo_seccao_id.exists' => 'O tipo de uma das secções não existe.',
 
             'seccoes.*.titulo.string' => 'O título da secção deve ser uma sequência de caracteres.',
 
@@ -523,7 +523,7 @@ final class GuardarMetalThursdayRequest extends FormRequest
 
             'seccoes.*.id' => 'identificador da secção',
 
-            'seccoes.*.tipo_secao_id' => 'tipo da secção',
+            'seccoes.*.tipo_seccao_id' => 'tipo da secção',
 
             'seccoes.*.titulo' => 'título da secção',
 
@@ -667,12 +667,12 @@ final class GuardarMetalThursdayRequest extends FormRequest
             if (
                 is_array($seccao)
                 && is_int(
-                    $seccao['tipo_secao_id']
+                    $seccao['tipo_seccao_id']
                         ?? null,
                 )
             ) {
                 $identificadoresTipos[] =
-                    $seccao['tipo_secao_id'];
+                    $seccao['tipo_seccao_id'];
             }
         }
 
@@ -724,7 +724,7 @@ final class GuardarMetalThursdayRequest extends FormRequest
             }
 
             $identificadorTipo =
-                $seccao['tipo_secao_id']
+                $seccao['tipo_seccao_id']
                 ?? null;
 
             if (! is_int($identificadorTipo)) {
@@ -879,9 +879,9 @@ final class GuardarMetalThursdayRequest extends FormRequest
                         ?? null,
                 );
 
-            $seccao['tipo_secao_id'] =
+            $seccao['tipo_seccao_id'] =
                 $this->normalizarIdentificador(
-                    $seccao['tipo_secao_id']
+                    $seccao['tipo_seccao_id']
                         ?? null,
                 );
 

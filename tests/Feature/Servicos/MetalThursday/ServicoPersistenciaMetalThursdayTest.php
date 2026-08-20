@@ -70,7 +70,7 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
                     [
                         'id' => null,
 
-                        'tipo_secao_id' => (int) $tipoSeccao->getKey(),
+                        'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
 
                         'titulo' => 'Faixa da semana',
 
@@ -448,7 +448,7 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
         return [
             'id' => null,
 
-            'tipo_secao_id' => (int) $tipoSeccao->getKey(),
+            'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
 
             'titulo' => null,
 

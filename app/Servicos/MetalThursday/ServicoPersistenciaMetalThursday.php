@@ -92,7 +92,7 @@ final class ServicoPersistenciaMetalThursday
                 ) {
                     $tipoSeccao = $this->obterTipoSeccaoDaColecao(
                         $tiposSeccao,
-                        $dadosSeccao['tipo_secao_id'],
+                        $dadosSeccao['tipo_seccao_id'],
                     );
 
                     $this->criarSeccao(
@@ -214,7 +214,7 @@ final class ServicoPersistenciaMetalThursday
                 ) {
                     $tipoSeccao = $this->obterTipoSeccaoDaColecao(
                         $tiposSeccao,
-                        $dadosSeccao['tipo_secao_id'],
+                        $dadosSeccao['tipo_seccao_id'],
                     );
 
                     $ordem =
@@ -279,7 +279,7 @@ final class ServicoPersistenciaMetalThursday
      *     proximo_nomeado_id: int|null,
      *     seccoes: list<array{
      *         id: int|null,
-     *         tipo_secao_id: int,
+     *         tipo_seccao_id: int,
      *         banda_id: int|null,
      *         titulo: string|null,
      *         ligacao: string|null,
@@ -341,10 +341,10 @@ final class ServicoPersistenciaMetalThursday
                     $prefixoCampo.'.id',
                 ),
 
-                'tipo_secao_id' => $this->normalizarIdentificadorObrigatorio(
-                    $dadosSeccao['tipo_secao_id']
+                'tipo_seccao_id' => $this->normalizarIdentificadorObrigatorio(
+                    $dadosSeccao['tipo_seccao_id']
                         ?? null,
-                    $prefixoCampo.'.tipo_secao_id',
+                    $prefixoCampo.'.tipo_seccao_id',
                 ),
 
                 'banda_id' => $this->normalizarIdentificadorOpcional(
@@ -830,7 +830,7 @@ final class ServicoPersistenciaMetalThursday
                 array_map(
                     static fn (
                         array $seccao,
-                    ): int => $seccao['tipo_secao_id'],
+                    ): int => $seccao['tipo_seccao_id'],
                     $seccoes,
                 ),
             ),
@@ -922,7 +922,7 @@ final class ServicoPersistenciaMetalThursday
         foreach ($seccoes as $seccao) {
             $tipoSeccao = $this->obterTipoSeccaoDaColecao(
                 $tiposSeccao,
-                $seccao['tipo_secao_id'],
+                $seccao['tipo_seccao_id'],
             );
 
             if (

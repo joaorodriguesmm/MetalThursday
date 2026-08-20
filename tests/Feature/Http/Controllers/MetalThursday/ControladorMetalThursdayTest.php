@@ -7,8 +7,10 @@ namespace Tests\Feature\Http\Controllers\MetalThursday;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
+use App\Models\MetalThursday\TipoSeccao;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -31,6 +33,121 @@ final class ControladorMetalThursdayTest extends TestCase
         parent::setUp();
 
         $this->withoutVite();
+    }
+
+    /**
+     * Confirma que o formulário de criação apresenta as edições disponíveis.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function formulario_criacao_apresenta_edicoes_disponiveis(): void
+    {
+        $utilizador = $this->criarUtilizador();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $edicao = $this->criarEdicao();
+
+        $this->get(
+            route(
+                'metal-thursday.criar',
+            ),
+        )
+            ->assertOk()
+            ->assertSee(
+                $edicao->nome,
+            )
+            ->assertSeeHtml(
+                'name="seccoes[__INDICE_SECCAO__][tipo_seccao_id]"',
+            )
+            ->assertDontSeeHtml(
+                'name="seccoes[__INDICE_SECCAO__][tipo_secao_id]"',
+            );
+    }
+
+    /**
+     * Confirma que é possível criar uma MetalThursday com uma secção simples.
+     *
+     * Este teste garante a coerência da chave `tipo_seccao_id` entre o
+     * formulário, a validação HTTP e o serviço de persistência.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function cria_metal_thursday_com_seccao_simples(): void
+    {
+        Notification::fake();
+
+        $utilizador = $this->criarUtilizador();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $edicao = $this->criarEdicao();
+
+        $tipoSeccao = TipoSeccao::factory()
+            ->semDetalhes()
+            ->create();
+
+        $this->post(
+            route(
+                'metal-thursday.guardar',
+            ),
+            [
+                'edicao_id' => $edicao->getKey(),
+
+                'data' => '2026-01-15',
+
+                'nome' => null,
+
+                'autor_id' => $utilizador->getKey(),
+
+                'proximo_nomeado_id' => $utilizador->getKey(),
+
+                'seccoes' => [
+                    [
+                        'id' => null,
+
+                        'tipo_seccao_id' => $tipoSeccao->getKey(),
+
+                        'descricao' => 'Secção de teste.',
+                    ],
+                ],
+            ],
+        )
+            ->assertRedirectToRoute(
+                'inicio',
+            )
+            ->assertSessionHas(
+                'sucesso',
+                'MetalThursday criada com sucesso.',
+            );
+
+        $this->assertDatabaseHas(
+            'metal_thursdays',
+            [
+                'edicao_id' => $edicao->getKey(),
+
+                'data' => '2026-01-15',
+            ],
+        );
+
+        $this->assertDatabaseHas(
+            'seccoes_metal_thursday',
+            [
+                'tipo_seccao_id' => $tipoSeccao->getKey(),
+
+                'descricao' => 'Secção de teste.',
+
+                'deleted_at' => null,
+            ],
+        );
     }
 
     /**

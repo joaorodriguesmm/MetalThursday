@@ -384,13 +384,25 @@ h6,
 }
 
 /**
- * Grupos compostos por Tom Select e uma ação lateral.
+ * Alinhamento dos campos Tom Select.
  *
- * O Tom Select introduz um wrapper entre o campo original e o botão. As
+ * O conteúdo das seleções únicas é centrado verticalmente para manter a
+ * mesma apresentação dos restantes controlos Bootstrap.
+ */
+.ts-wrapper.single > .ts-control {
+    align-items: center;
+}
+
+/**
+ * Grupos compostos por Tom Select e uma ou mais ações laterais.
+ *
+ * O Tom Select introduz um wrapper entre o campo original e os botões. As
  * regras normais do input group do Bootstrap deixam, por isso, de conseguir
  * aplicar corretamente os raios e a sobreposição das bordas.
  */
 .input-group:has(> .ts-wrapper) {
+    align-items: stretch;
+
     > .ts-wrapper {
         flex:
             1
@@ -412,6 +424,8 @@ h6,
             var(--bs-border-radius) !important;
 
         > .ts-control {
+            height: 100%;
+            align-items: center;
             border-top-left-radius:
                 var(--bs-border-radius) !important;
 
@@ -427,23 +441,24 @@ h6,
     }
 
     > .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         margin-left:
             calc(
                 -1
                 * var(--bs-border-width)
             );
 
-        border-top-left-radius:
-            0 !important;
+        border-radius: 0 !important;
+    }
 
+    > .btn:last-child {
         border-top-right-radius:
             var(--bs-border-radius) !important;
 
         border-bottom-right-radius:
             var(--bs-border-radius) !important;
-
-        border-bottom-left-radius:
-            0 !important;
     }
 }
 
