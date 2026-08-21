@@ -13,6 +13,7 @@ use App\Models\Interacoes\Gosto;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\MusicaFavoritaEdicao;
+use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Models\Notificacoes\NotificacaoPersistida;
 use App\Notifications\NotificacaoRedefinicaoPalavraPasse;
 use App\Notifications\NotificacaoVerificacaoEmail;
@@ -87,6 +88,8 @@ use SensitiveParameter;
  * @property-read Collection<int, Avaliacao> $avaliacoes
  * @property-read Collection<int, MusicaFavoritaEdicao> $musicasFavoritasEdicao
  * @property-read Collection<int, MusicaFavoritaEdicao> $musicasFavoritasEdicaoRegistadas
+ * @property bool $disponivel_para_nomeacao
+ * @property-read Collection<int, ReservaMetalThursday> $reservasMetalThursday
  *
  * @since 1.0.0
  */
@@ -197,6 +200,8 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
             'suspenso_em' => 'immutable_datetime',
 
             'suspenso_por_id' => 'integer',
+
+            'disponivel_para_nomeacao' => 'boolean',
         ];
     }
 
@@ -769,6 +774,40 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Limita a consulta aos utilizadores elegíveis para uma nova nomeação.
+     *
+     * Um utilizador elegível tem acesso ativo, não é superadministrador,
+     * declarou-se disponível e não possui nenhuma reserva ainda pendente.
+     *
+     * Esta definição deve ser reutilizada por todos os mecanismos de novas
+     * nomeações, independentemente da estratégia de seleção.
+     *
+     * @param  Builder<Utilizador>  $construtor  Consulta dos utilizadores.
+     * @return Builder<Utilizador> Consulta filtrada.
+     *
+     * @since 2.0.0
+     */
+    public function scopeElegiveisParaNomeacao(
+        Builder $construtor,
+    ): Builder {
+        return $construtor
+            ->comAcessoAtivo()
+            ->selecionaveis()
+            ->where(
+                'disponivel_para_nomeacao',
+                true,
+            )
+            ->whereDoesntHave(
+                'reservasMetalThursday',
+                static fn (
+                    Builder $reservas,
+                ): Builder => $reservas->whereNull(
+                    'metal_thursday_id',
+                ),
+            );
+    }
+
+    /**
      * Obtém os convites criados pelo utilizador.
      *
      * @return HasMany<Convite, $this> Relação com os convites.
@@ -1156,5 +1195,30 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
             '/',
             $segmentos,
         );
+    }
+
+    /**
+     * Obtém as reservas atribuídas ao utilizador.
+     *
+     * Os registos são ordenados cronologicamente para manter uma leitura
+     * determinística do histórico.
+     *
+     * @return HasMany<ReservaMetalThursday, $this> Relação com as reservas.
+     *
+     * @since 2.0.0
+     */
+    public function reservasMetalThursday(): HasMany
+    {
+        return $this
+            ->hasMany(
+                ReservaMetalThursday::class,
+                'responsavel_id',
+            )
+            ->orderBy(
+                'data',
+            )
+            ->orderBy(
+                'id',
+            );
     }
 }

@@ -98,6 +98,8 @@ final class UtilizadorFactory extends Factory
             'remember_token' => Str::random(
                 10,
             ),
+
+            'disponivel_para_nomeacao' => true,
         ];
     }
 
@@ -245,5 +247,19 @@ final class UtilizadorFactory extends Factory
         throw new InvalidArgumentException(
             'O utilizador responsável não possui um identificador válido.',
         );
+    }
+
+    /**
+     * Configura um utilizador indisponível para novas nomeações.
+     *
+     * @return static Factory configurada.
+     *
+     * @since 2.0.0
+     */
+    public function indisponivelParaNomeacao(): static
+    {
+        return $this->state([
+            'disponivel_para_nomeacao' => false,
+        ]);
     }
 }

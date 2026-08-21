@@ -9,9 +9,11 @@ use App\Enumeracoes\TipoIncorporacao;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
+use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
 use App\Models\Musica\Banda;
+use App\Servicos\MetalThursday\ServicoReservasMetalThursday;
 use Carbon\CarbonInterface;
 use Closure;
 use Illuminate\Database\Eloquent\Builder as ConstrutorEloquent;
@@ -283,21 +285,8 @@ final class GuardarMetalThursdayRequest extends FormRequest
                 'integer',
                 'different:autor_id',
 
-                Rule::exists(
-                    Utilizador::class,
-                    'id',
-                )->where(
-                    static fn (
-                        ConstrutorConsulta $construtor,
-                    ): ConstrutorConsulta => $construtor
-                        ->where(
-                            'papel',
-                            '!=',
-                            PapelUtilizador::SuperAdministrador->value,
-                        )
-                        ->whereNull(
-                            'suspenso_em',
-                        ),
+                $this->criarRegraElegibilidadeNomeacao(
+                    $metalThursday,
                 ),
             ],
 
@@ -421,6 +410,10 @@ final class GuardarMetalThursdayRequest extends FormRequest
                     $validador,
                 );
 
+                $this->validarCompatibilidadeReservaDaData(
+                    $validador,
+                );
+
                 $this->validarDataDentroDaEdicao(
                     $validador,
                 );
@@ -468,8 +461,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
             'proximo_nomeado_id.required' => 'Por favor, seleciona o próximo nomeado.',
 
             'proximo_nomeado_id.integer' => 'O próximo nomeado selecionado não é válido.',
-
-            'proximo_nomeado_id.exists' => 'O próximo nomeado selecionado não existe ou não está disponível.',
 
             'proximo_nomeado_id.different' => 'O próximo nomeado deve ser diferente do autor.',
 
@@ -678,8 +669,9 @@ final class GuardarMetalThursdayRequest extends FormRequest
      * Impede utilizadores sem privilégios administrativos de definirem uma
      * data diferente da permitida.
      *
-     * Na criação, a data tem de corresponder à data atual da aplicação.
-     * Durante uma atualização, a data existente tem de ser preservada.
+     * Na criação, a data corresponde obrigatoriamente à reserva pendente do
+     * utilizador, mesmo quando esta já pertence ao passado. Durante uma
+     * atualização, a data existente continua a ter de ser preservada.
      *
      * @param  Validator  $validador  Validador do pedido.
      *
@@ -707,14 +699,60 @@ final class GuardarMetalThursdayRequest extends FormRequest
         $metalThursday =
             $this->obterMetalThursdayDaRota();
 
-        $dataPermitida =
-            $metalThursday instanceof MetalThursday
-            ? $metalThursday->data->format(
-                'Y-m-d',
-            )
-            : now()->format(
-                'Y-m-d',
+        if ($metalThursday instanceof MetalThursday) {
+            $dataPermitida =
+                $metalThursday->data->format(
+                    'Y-m-d',
+                );
+
+            $dataRecebida =
+                $this->input(
+                    'data',
+                );
+
+            if (
+                is_string($dataRecebida)
+                && $dataRecebida === $dataPermitida
+            ) {
+                return;
+            }
+
+            $validador
+                ->errors()
+                ->add(
+                    'data',
+                    'Não tens permissão para alterar a data da MetalThursday.',
+                );
+
+            return;
+        }
+
+        $reserva =
+            app(
+                ServicoReservasMetalThursday::class,
+            )->obterReservaPendenteDoUtilizador(
+                $utilizador,
             );
+
+        if (! $reserva instanceof ReservaMetalThursday) {
+            $validador
+                ->errors()
+                ->add(
+                    'data',
+                    'Não tens nenhuma reserva pendente para publicar.',
+                );
+
+            return;
+        }
+
+        $dataReserva =
+            $reserva->data;
+
+        if (! $dataReserva instanceof CarbonInterface) {
+            throw new LogicException(
+                'A reserva pendente não possui uma data válida.',
+            );
+        }
 
         $dataRecebida =
             $this->input(
@@ -723,7 +761,9 @@ final class GuardarMetalThursdayRequest extends FormRequest
 
         if (
             is_string($dataRecebida)
-            && $dataRecebida === $dataPermitida
+            && $dataRecebida === $dataReserva->format(
+                'Y-m-d',
+            )
         ) {
             return;
         }
@@ -732,9 +772,82 @@ final class GuardarMetalThursdayRequest extends FormRequest
             ->errors()
             ->add(
                 'data',
-                $metalThursday instanceof MetalThursday
-                    ? 'Não tens permissão para alterar a data da MetalThursday.'
-                    : 'A data da MetalThursday deve corresponder à data atual.',
+                'A data da MetalThursday deve corresponder à data da tua reserva pendente.',
+            );
+    }
+
+    /**
+     * Impede que uma criação ocupe um slot reservado a outro utilizador.
+     *
+     * Um slot sem responsável pode ser tratado excepcionalmente por um
+     * administrador. Quando existe responsável, o autor tem de coincidir com
+     * esse utilizador.
+     *
+     * @param  Validator  $validador  Validador do pedido.
+     *
+     * @since 2.0.0
+     */
+    private function validarCompatibilidadeReservaDaData(
+        Validator $validador,
+    ): void {
+        if (
+            $this->obterMetalThursdayDaRota()
+            instanceof MetalThursday
+        ) {
+            return;
+        }
+
+        if (
+            $validador
+                ->errors()
+                ->hasAny([
+                    'data',
+                    'autor_id',
+                ])
+        ) {
+            return;
+        }
+
+        $data =
+            $this->input(
+                'data',
+            );
+
+        $identificadorAutor =
+            $this->input(
+                'autor_id',
+            );
+
+        if (
+            ! is_string($data)
+            || ! is_int($identificadorAutor)
+        ) {
+            return;
+        }
+
+        $reserva = ReservaMetalThursday::query()
+            ->where(
+                'data',
+                $data,
+            )
+            ->whereNull(
+                'metal_thursday_id',
+            )
+            ->first();
+
+        if (
+            ! $reserva instanceof ReservaMetalThursday
+            || $reserva->responsavel_id === null
+            || $reserva->responsavel_id === $identificadorAutor
+        ) {
+            return;
+        }
+
+        $validador
+            ->errors()
+            ->add(
+                'autor_id',
+                'O autor deve corresponder ao responsável da reserva desta data.',
             );
     }
 
@@ -1141,6 +1254,67 @@ final class GuardarMetalThursdayRequest extends FormRequest
                     'O tipo selecionado não permite detalhes adicionais.',
                 );
         }
+    }
+
+    /**
+     * Cria a regra que valida a elegibilidade de uma nova nomeação.
+     *
+     * Durante uma atualização, o nomeado já persistido pode ser conservado
+     * mesmo que tenha entretanto ficado indisponível, suspenso ou adquirido
+     * uma reserva pendente. Qualquer alteração para outro utilizador utiliza
+     * obrigatoriamente a definição comum de elegibilidade.
+     *
+     * @param  MetalThursday|null  $metalThursday  Registo atualmente editado.
+     * @return Closure(string, mixed, Closure(string): void): void Regra.
+     *
+     * @since 2.0.0
+     */
+    private function criarRegraElegibilidadeNomeacao(
+        ?MetalThursday $metalThursday,
+    ): Closure {
+        $identificadorNomeadoAtual =
+            $metalThursday?->proximo_nomeado_id;
+
+        return static function (
+            string $atributo,
+            mixed $valor,
+            Closure $falhar,
+        ) use (
+            $identificadorNomeadoAtual,
+        ): void {
+            if (
+                ! is_int(
+                    $valor,
+                )
+                || $valor < 1
+            ) {
+                return;
+            }
+
+            if (
+                is_numeric(
+                    $identificadorNomeadoAtual,
+                )
+                && (int) $identificadorNomeadoAtual === $valor
+            ) {
+                return;
+            }
+
+            if (
+                Utilizador::query()
+                    ->elegiveisParaNomeacao()
+                    ->whereKey(
+                        $valor,
+                    )
+                    ->exists()
+            ) {
+                return;
+            }
+
+            $falhar(
+                'O próximo nomeado selecionado não existe ou não está disponível.',
+            );
+        };
     }
 
     /**

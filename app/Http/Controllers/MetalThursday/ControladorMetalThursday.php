@@ -22,13 +22,13 @@ use App\Notifications\NotificacaoMetalThursdayCriada;
 use App\Notifications\NotificacaoUtilizadorNomeado;
 use App\Servicos\Incorporacoes\RenderizadorIncorporacoes;
 use App\Servicos\MetalThursday\ServicoPersistenciaMetalThursday;
+use App\Servicos\MetalThursday\ServicoReservasMetalThursday;
 use Carbon\CarbonInterface;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use Illuminate\Database\Query\JoinClause;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -168,12 +168,14 @@ final class ControladorMetalThursday extends Controller
      *                                                                responsável
      *                                                                pelas
      *                                                                incorporações.
+     * @param  ServicoReservasMetalThursday  $servicoReservas  Serviço responsável pelas reservas.
      *
      * @since 2.0.0
      */
     public function __construct(
         private readonly ServicoPersistenciaMetalThursday $servicoPersistencia,
         private readonly RenderizadorIncorporacoes $renderizadorIncorporacoes,
+        private readonly ServicoReservasMetalThursday $servicoReservas,
     ) {}
 
     /**
@@ -514,9 +516,9 @@ final class ControladorMetalThursday extends Controller
     /**
      * Obtém o utilizador há mais tempo sem ser nomeado.
      *
-     * Utilizadores nunca nomeados aparecem primeiro. Em caso de empate, é
-     * utilizado o nome e depois o identificador. Quando é recebido um
-     * identificador a excluir, esse utilizador não é considerado.
+     * O histórico é determinado exclusivamente pelas reservas atribuídas.
+     * Quando é recebido um identificador a excluir, esse utilizador não é
+     * considerado.
      *
      * @param  Request  $pedido  Pedido HTTP atual.
      * @return JsonResponse Identificador do utilizador encontrado.
@@ -536,62 +538,13 @@ final class ControladorMetalThursday extends Controller
                 'excluir_utilizador_id',
             );
 
-        $construtorUltimasNomeacoes = MetalThursday::query()
-            ->selectRaw(
-                'proximo_nomeado_id, MAX(data) AS ultima_nomeacao_em',
-            )
-            ->whereNotNull(
-                'proximo_nomeado_id',
-            )
-            ->groupBy(
-                'proximo_nomeado_id',
-            );
-
-        $utilizador = Utilizador::query()
-            ->comAcessoAtivo()
-            ->selecionaveis()
-            ->when(
-                $identificadorExcluido > 0,
-                static fn (
-                    Builder $construtor,
-                ): Builder => $construtor->where(
-                    'utilizadores.id',
-                    '!=',
-                    $identificadorExcluido,
-                ),
-            )
-            ->leftJoinSub(
-                $construtorUltimasNomeacoes,
-                'ultimas_nomeacoes',
-                static function (
-                    JoinClause $juncao,
-                ): void {
-                    $juncao->on(
-                        'utilizadores.id',
-                        '=',
-                        'ultimas_nomeacoes.proximo_nomeado_id',
-                    );
-                },
-            )
-            ->reorder()
-            ->orderByRaw(
-                'CASE '
-                    .'WHEN ultimas_nomeacoes.ultima_nomeacao_em IS NULL '
-                    .'THEN 0 ELSE 1 END ASC',
-            )
-            ->orderBy(
-                'ultimas_nomeacoes.ultima_nomeacao_em',
-            )
-            ->orderBy(
-                'utilizadores.nome',
-            )
-            ->orderBy(
-                'utilizadores.id',
-            )
-            ->select([
-                'utilizadores.id',
-            ])
-            ->first();
+        $utilizador =
+            $this->servicoReservas
+                ->obterUtilizadorHaMaisTempoSemNomeacao(
+                    $identificadorExcluido > 0
+                        ? $identificadorExcluido
+                        : null,
+                );
 
         return response()->json([
             'identificador' => is_numeric(
@@ -803,6 +756,16 @@ final class ControladorMetalThursday extends Controller
             $utilizadorAutenticado
                 ->possuiPrivilegiosAdministrativos();
 
+        $reservaPendente =
+            ! $possuiPrivilegiosAdministrativos
+            && ! $metalThursday instanceof MetalThursday
+            ? $this
+                ->servicoReservas
+                ->obterReservaPendenteDoUtilizador(
+                    $utilizadorAutenticado,
+                )
+            : null;
+
         return [
             'metalThursday' => $metalThursday,
 
@@ -818,7 +781,13 @@ final class ControladorMetalThursday extends Controller
 
             'edicoes' => $this->obterEdicoesParaSelecao(),
 
-            'utilizadores' => $this->obterUtilizadoresParaSelecao(),
+            'utilizadoresAutores' => $this->obterUtilizadoresParaSelecao(),
+
+            'utilizadoresElegiveisNomeacao' => $this->obterUtilizadoresElegiveisNomeacao(
+                $metalThursday,
+            ),
+
+            'reservaPendente' => $reservaPendente,
 
             'tiposSeccao' => TipoSeccao::query()
                 ->select([
@@ -908,7 +877,10 @@ final class ControladorMetalThursday extends Controller
     }
 
     /**
-     * Obtém os utilizadores disponíveis para seleção.
+     * Obtém os utilizadores disponíveis para seleção geral.
+     *
+     * A disponibilidade voluntária para nomeação não condiciona a seleção
+     * como autor nem a utilização nos filtros da listagem.
      *
      * @return Collection<int, Utilizador> Utilizadores.
      *
@@ -924,6 +896,63 @@ final class ControladorMetalThursday extends Controller
                 'nome',
             ])
             ->reorder(
+                'nome',
+            )
+            ->orderBy(
+                'id',
+            )
+            ->get();
+    }
+
+    /**
+     * Obtém os utilizadores disponíveis para uma nova nomeação.
+     *
+     * Durante a edição, o nomeado atualmente persistido continua disponível
+     * para permitir conservar uma nomeação anteriormente válida, mesmo que
+     * tenha entretanto deixado de ser elegível para novas nomeações.
+     *
+     * @param  MetalThursday|null  $metalThursday  Registo atualmente editado.
+     * @return Collection<int, Utilizador> Utilizadores.
+     *
+     * @since 2.0.0
+     */
+    private function obterUtilizadoresElegiveisNomeacao(
+        ?MetalThursday $metalThursday = null,
+    ): Collection {
+        $construtorElegiveis = Utilizador::query()
+            ->elegiveisParaNomeacao()
+            ->select([
+                'id',
+            ])
+            ->reorder();
+
+        $construtor = Utilizador::query()
+            ->whereIn(
+                'id',
+                $construtorElegiveis,
+            );
+
+        $identificadorNomeadoAtual =
+            $metalThursday?->proximo_nomeado_id;
+
+        if (
+            is_numeric(
+                $identificadorNomeadoAtual,
+            )
+            && (int) $identificadorNomeadoAtual > 0
+        ) {
+            $construtor->orWhere(
+                'utilizadores.id',
+                (int) $identificadorNomeadoAtual,
+            );
+        }
+
+        return $construtor
+            ->select([
+                'id',
+                'nome',
+            ])
+            ->orderBy(
                 'nome',
             )
             ->orderBy(
@@ -1766,7 +1795,8 @@ final class ControladorMetalThursday extends Controller
                 ),
             ],
 
-            'fornecedoresIncorporacao' => $this->renderizadorIncorporacoes
+            'fornecedoresIncorporacao' => $this
+                ->renderizadorIncorporacoes
                 ->definicoesParaJavaScript(),
         ];
     }

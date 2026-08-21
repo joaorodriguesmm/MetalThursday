@@ -240,6 +240,61 @@
                 </div>
             @endif
 
+            <div class="grupo-campo-formulario mb-4">
+                <input
+                    type="hidden"
+                    name="disponivel_para_nomeacao"
+                    value="0"
+                >
+
+                <div class="form-check form-switch">
+                    <input
+                        id="disponivel-para-nomeacao"
+                        class="form-check-input @error('disponivel_para_nomeacao', 'perfil') is-invalid @enderror"
+                        type="checkbox"
+                        name="disponivel_para_nomeacao"
+                        value="1"
+                        role="switch"
+                        aria-describedby="ajuda-disponibilidade-nomeacao erro-disponibilidade-nomeacao"
+                        @checked(
+                            (bool) old(
+                                'disponivel_para_nomeacao',
+                                $utilizador->disponivel_para_nomeacao,
+                            )
+                        )
+                        @error('disponivel_para_nomeacao', 'perfil')
+                            aria-invalid="true"
+                        @enderror
+                    >
+
+                    <label
+                        class="form-check-label fw-semibold"
+                        for="disponivel-para-nomeacao"
+                    >
+                        Disponível para novas nomeações
+                    </label>
+                </div>
+
+                <div
+                    id="ajuda-disponibilidade-nomeacao"
+                    class="form-text"
+                >
+                    Desativa esta opção quando não puderes preparar novas
+                    MetalThursdays. As reservas que já te tenham sido
+                    atribuídas mantêm-se inalteradas.
+                </div>
+
+                <div
+                    id="erro-disponibilidade-nomeacao"
+                    class="invalid-feedback @error('disponivel_para_nomeacao', 'perfil') d-block @enderror"
+                    aria-live="polite"
+                >
+                    @error('disponivel_para_nomeacao', 'perfil')
+                        {{ $message }}
+                    @enderror
+                </div>
+            </div>
+
             <div class="d-flex justify-content-end">
                 <button
                     class="btn btn-primary"

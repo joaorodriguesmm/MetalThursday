@@ -196,6 +196,9 @@ final class ControladorPerfil extends Controller
         $fotografia =
             $pedido->obterFotografia();
 
+        $disponivelParaNomeacao =
+            $pedido->obterDisponibilidadeNomeacao();
+
         try {
             $resultado =
                 $this
@@ -205,6 +208,7 @@ final class ControladorPerfil extends Controller
                         nome: $nome,
                         email: $email,
                         fotografia: $fotografia,
+                        disponivelParaNomeacao: $disponivelParaNomeacao,
                     );
         } catch (DomainException) {
             return to_route(
@@ -214,6 +218,10 @@ final class ControladorPerfil extends Controller
                     'nome' => $nome,
 
                     'email' => $email,
+
+                    'disponivel_para_nomeacao' => $disponivelParaNomeacao
+                        ? '1'
+                        : '0',
                 ])
                 ->withErrors(
                     [

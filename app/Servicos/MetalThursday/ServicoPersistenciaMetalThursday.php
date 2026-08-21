@@ -8,6 +8,7 @@ use App\Enumeracoes\TipoIncorporacao;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
+use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
 use App\Models\Musica\Banda;
@@ -64,6 +65,11 @@ final class ServicoPersistenciaMetalThursday
                     $dadosNormalizados,
                 );
 
+                $reserva =
+                    $this->obterReservaDaDataParaCriacao(
+                        $dadosNormalizados,
+                    );
+
                 $tiposSeccao = $this->obterTiposSeccao(
                     $dadosNormalizados['seccoes'],
                 );
@@ -102,6 +108,12 @@ final class ServicoPersistenciaMetalThursday
                         $indice + SeccaoMetalThursday::ORDEM_MINIMA,
                     );
                 }
+
+                $this->cumprirReserva(
+                    $reserva,
+                    $metalThursday,
+                    $dadosNormalizados['autor_id'],
+                );
 
                 return $metalThursday
                     ->refresh()
@@ -1747,5 +1759,98 @@ final class ServicoPersistenciaMetalThursday
                 SeccaoMetalThursday::ANO_MAXIMO,
             ),
         );
+    }
+
+    /**
+     * Obtém e bloqueia a reserva correspondente à data criada.
+     *
+     * Quando existe um responsável atribuído, o autor tem obrigatoriamente de
+     * coincidir com esse utilizador. Um slot sem responsável pode ser tratado
+     * administrativamente.
+     *
+     * @param  array<string, mixed>  $dados  Dados normalizados.
+     * @return ReservaMetalThursday|null Reserva encontrada ou nulo.
+     *
+     * @throws InvalidArgumentException Quando a reserva não pode ser cumprida
+     *                                  pela criação recebida.
+     *
+     * @since 2.0.0
+     */
+    private function obterReservaDaDataParaCriacao(
+        array $dados,
+    ): ?ReservaMetalThursday {
+        $reserva = ReservaMetalThursday::query()
+            ->where(
+                'data',
+                $dados['data'],
+            )
+            ->lockForUpdate()
+            ->first();
+
+        if (! $reserva instanceof ReservaMetalThursday) {
+            return null;
+        }
+
+        if (! $reserva->estaPendente()) {
+            throw new InvalidArgumentException(
+                'A reserva da data indicada já se encontra cumprida.',
+            );
+        }
+
+        $identificadorResponsavel =
+            $reserva->responsavel_id;
+
+        $identificadorAutor =
+            $dados['autor_id'];
+
+        if (
+            $identificadorResponsavel !== null
+            && $identificadorResponsavel
+            !== $identificadorAutor
+        ) {
+            throw new InvalidArgumentException(
+                'O autor não corresponde ao responsável da reserva.',
+            );
+        }
+
+        return $reserva;
+    }
+
+    /**
+     * Marca uma reserva como cumprida pela MetalThursday criada.
+     *
+     * Num slot originalmente sem responsável, o autor passa a representar o
+     * responsável que efectivamente tratou da publicação.
+     *
+     * @param  ReservaMetalThursday|null  $reserva  Reserva encontrada.
+     * @param  MetalThursday  $metalThursday  MetalThursday criada.
+     * @param  int|null  $identificadorAutor  Autor persistido.
+     *
+     * @since 2.0.0
+     */
+    private function cumprirReserva(
+        ?ReservaMetalThursday $reserva,
+        MetalThursday $metalThursday,
+        ?int $identificadorAutor,
+    ): void {
+        if (! $reserva instanceof ReservaMetalThursday) {
+            return;
+        }
+
+        if (
+            $reserva->responsavel_id === null
+            && $identificadorAutor !== null
+        ) {
+            $reserva->responsavel_id =
+                $identificadorAutor;
+        }
+
+        $reserva
+            ->metalThursday()
+            ->associate(
+                $metalThursday,
+            );
+
+        $reserva->saveOrFail();
     }
 }

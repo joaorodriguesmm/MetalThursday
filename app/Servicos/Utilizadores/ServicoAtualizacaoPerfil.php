@@ -63,6 +63,8 @@ final class ServicoAtualizacaoPerfil
      * @param  string  $nome  Novo nome.
      * @param  string  $email  Novo endereço de e-mail.
      * @param  UploadedFile|null  $fotografia  Nova fotografia opcional.
+     * @param  bool|null  $disponivelParaNomeacao  Nova disponibilidade ou
+     *                                             nulo para preservar o estado.
      * @return PerfilAtualizado Resultado da atualização.
      *
      * @throws DomainException Quando o endereço de e-mail já está em uso.
@@ -78,6 +80,7 @@ final class ServicoAtualizacaoPerfil
         string $nome,
         string $email,
         ?UploadedFile $fotografia = null,
+        ?bool $disponivelParaNomeacao = null,
     ): PerfilAtualizado {
         $identificadorUtilizador =
             $this->obterIdentificadorUtilizador(
@@ -111,6 +114,7 @@ final class ServicoAtualizacaoPerfil
                     $enderecoEmail,
                     $caminhoFotografiaNova,
                     &$caminhoFotografiaAnterior,
+                    $disponivelParaNomeacao,
                 ): PerfilAtualizado {
                     $utilizadorBloqueado =
                         Utilizador::query()
@@ -150,6 +154,11 @@ final class ServicoAtualizacaoPerfil
                     if ($emailAlterado) {
                         $utilizadorBloqueado->email_verified_at =
                             null;
+                    }
+
+                    if ($disponivelParaNomeacao !== null) {
+                        $utilizadorBloqueado->disponivel_para_nomeacao =
+                            $disponivelParaNomeacao;
                     }
 
                     $utilizadorBloqueado->saveOrFail();

@@ -8,6 +8,7 @@ use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
+use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -218,22 +219,29 @@ final class ControladorMetalThursdayTest extends TestCase
     }
 
     /**
-     * Confirma que um utilizador comum recebe a data atual fixa na criação.
+     * Confirma que um utilizador comum recebe a data da reserva pendente.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function formulario_criacao_utilizador_comum_fixa_data_atual(): void
+    public function formulario_criacao_utilizador_comum_fixa_data_da_reserva(): void
     {
         $utilizador = $this->criarUtilizador();
+
+        ReservaMetalThursday::factory()
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-01-15',
+                ),
+            )
+            ->comResponsavel(
+                $utilizador,
+            )
+            ->create();
 
         $this->actingAs(
             $utilizador,
             'sessao',
-        );
-
-        $dataAtual = now()->format(
-            'Y-m-d',
         );
 
         $this->get(
@@ -243,13 +251,13 @@ final class ControladorMetalThursdayTest extends TestCase
         )
             ->assertOk()
             ->assertSeeHtml(
-                'value="'.$dataAtual.'"',
+                'value="2026-01-15"',
             )
             ->assertSeeHtml(
                 'aria-readonly="true"',
             )
             ->assertSee(
-                'A data é definida automaticamente como a data atual.',
+                'A data corresponde à tua reserva pendente e não pode ser alterada.',
             );
     }
 
@@ -287,40 +295,35 @@ final class ControladorMetalThursdayTest extends TestCase
     }
 
     /**
-     * Confirma que um utilizador comum não pode falsificar a data na criação.
+     * Confirma que um utilizador comum não pode falsificar a data reservada.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function utilizador_comum_nao_pode_criar_metal_thursday_noutra_data(): void
+    public function utilizador_comum_nao_pode_criar_fora_da_data_reservada(): void
     {
         Notification::fake();
 
         $utilizador = $this->criarUtilizador();
         $proximoNomeado = $this->criarUtilizador();
 
+        ReservaMetalThursday::factory()
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-01-15',
+                ),
+            )
+            ->comResponsavel(
+                $utilizador,
+            )
+            ->create();
+
         $this->actingAs(
             $utilizador,
             'sessao',
         );
 
-        $dataAtual = CarbonImmutable::parse(
-            now()->format(
-                'Y-m-d',
-            ),
-        );
-
-        $dataManipulada = $dataAtual->subDay();
-
-        Edicao::factory()
-            ->comNome(
-                'Edição para validação da data',
-            )
-            ->comPeriodo(
-                $dataManipulada->subDay(),
-                $dataAtual->addDay(),
-            )
-            ->create();
+        $this->criarEdicao();
 
         $tipoSeccao = TipoSeccao::factory()
             ->semDetalhes()
@@ -331,9 +334,7 @@ final class ControladorMetalThursdayTest extends TestCase
                 'metal-thursday.guardar',
             ),
             [
-                'data' => $dataManipulada->format(
-                    'Y-m-d',
-                ),
+                'data' => '2026-01-16',
 
                 'nome' => null,
 
@@ -358,15 +359,13 @@ final class ControladorMetalThursdayTest extends TestCase
             ])
             ->assertJsonPath(
                 'errors.data.0',
-                'A data da MetalThursday deve corresponder à data atual.',
+                'A data da MetalThursday deve corresponder à data da tua reserva pendente.',
             );
 
         $this->assertDatabaseMissing(
             'metal_thursdays',
             [
-                'data' => $dataManipulada->format(
-                    'Y-m-d',
-                ),
+                'data' => '2026-01-16',
             ],
         );
     }
@@ -1013,21 +1012,20 @@ final class ControladorMetalThursdayTest extends TestCase
             'sessao',
         );
 
-        $dataAtual = CarbonImmutable::parse(
-            now()->format(
-                'Y-m-d',
-            ),
+        $dataReserva = CarbonImmutable::parse(
+            '2026-01-15',
         );
 
-        $edicao = Edicao::factory()
-            ->comNome(
-                'Edição da data atual',
+        $reserva = ReservaMetalThursday::factory()
+            ->comData(
+                $dataReserva,
             )
-            ->comPeriodo(
-                $dataAtual->startOfMonth(),
-                $dataAtual->endOfMonth(),
+            ->comResponsavel(
+                $utilizador,
             )
             ->create();
+
+        $edicao = $this->criarEdicao();
 
         $tipoSeccao = TipoSeccao::factory()
             ->semDetalhes()
@@ -1038,7 +1036,7 @@ final class ControladorMetalThursdayTest extends TestCase
                 'metal-thursday.guardar',
             ),
             [
-                'data' => $dataAtual->format(
+                'data' => $dataReserva->format(
                     'Y-m-d',
                 ),
 
@@ -1072,7 +1070,7 @@ final class ControladorMetalThursdayTest extends TestCase
             [
                 'edicao_id' => $edicao->getKey(),
 
-                'data' => $dataAtual->format(
+                'data' => $dataReserva->format(
                     'Y-m-d',
                 ),
             ],
@@ -1087,6 +1085,22 @@ final class ControladorMetalThursdayTest extends TestCase
 
                 'deleted_at' => null,
             ],
+        );
+
+        $metalThursday = MetalThursday::query()
+            ->where(
+                'data',
+                $dataReserva->format(
+                    'Y-m-d',
+                ),
+            )
+            ->firstOrFail();
+
+        self::assertSame(
+            $metalThursday->getKey(),
+            $reserva
+                ->refresh()
+                ->metal_thursday_id,
         );
     }
 

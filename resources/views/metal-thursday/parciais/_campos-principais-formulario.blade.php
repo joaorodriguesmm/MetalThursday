@@ -3,7 +3,7 @@
     de uma MetalThursday.
 
     A variável $metalThursday contém o modelo editado ou nulo durante
-    a criação. As coleções de edições e utilizadores são preparadas pelo
+    a criação. As coleções de edições, autores e utilizadores elegíveis para nomeação são preparadas pelo
     App\Http\Controllers\MetalThursday\ControladorMetalThursday.
 
     A edição é determinada automaticamente no servidor a partir da data da
@@ -102,6 +102,9 @@
             $dataPersistida =
                 $metalThursday?->data?->format('Y-m-d');
 
+            $dataReservaPendente =
+                $reservaPendente?->data?->format('Y-m-d');
+
             $dataFormulario =
                 $podeAlterarData
                     ? old(
@@ -110,6 +113,7 @@
                     )
                     : (
                         $dataPersistida
+                        ?? $dataReservaPendente
                         ?? now()->format('Y-m-d')
                     );
         @endphp
@@ -173,8 +177,10 @@
             >
                 @if ($metalThursday instanceof App\Models\MetalThursday\MetalThursday)
                     A data desta MetalThursday não pode ser alterada.
+                @elseif ($dataReservaPendente !== null)
+                    A data corresponde à tua reserva pendente e não pode ser alterada.
                 @else
-                    A data é definida automaticamente como a data atual.
+                    Não tens nenhuma reserva pendente para publicar.
                 @endif
             </div>
         @endif
@@ -270,7 +276,7 @@
                     Seleciona o autor
                 </option>
 
-                @foreach ($utilizadores as $utilizador)
+                @foreach ($utilizadoresAutores as $utilizador)
                     <option
                         value="{{ $utilizador->getKey() }}"
                         @selected(
@@ -359,7 +365,7 @@
                     Seleciona o próximo nomeado
                 </option>
 
-                @foreach ($utilizadores as $utilizador)
+                @foreach ($utilizadoresElegiveisNomeacao as $utilizador)
                     <option
                         value="{{ $utilizador->getKey() }}"
                         @selected(

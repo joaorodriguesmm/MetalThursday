@@ -156,6 +156,11 @@ final class AtualizarPerfilRequest extends FormRequest
                     $utilizador,
                 ),
             ],
+
+            'disponivel_para_nomeacao' => [
+                'sometimes',
+                'boolean',
+            ],
         ];
     }
 
@@ -186,6 +191,8 @@ final class AtualizarPerfilRequest extends FormRequest
             'email.string' => 'O endereço de e-mail deve ser uma sequência de caracteres.',
 
             'email.unique' => 'O endereço de e-mail já está associado a outro utilizador.',
+
+            'disponivel_para_nomeacao.boolean' => 'A disponibilidade para nomeação não é válida.',
         ];
     }
 
@@ -204,6 +211,8 @@ final class AtualizarPerfilRequest extends FormRequest
             'nome' => 'nome',
 
             'email' => 'endereço de e-mail',
+
+            'disponivel_para_nomeacao' => 'disponibilidade para nomeação',
         ];
     }
 
@@ -472,5 +481,48 @@ final class AtualizarPerfilRequest extends FormRequest
         } catch (InvalidArgumentException) {
             return $valor;
         }
+    }
+
+    /**
+     * Obtém a disponibilidade validada para novas nomeações.
+     *
+     * Quando o campo não é recebido, preserva o estado atual do utilizador.
+     *
+     * @return bool Disponibilidade pretendida.
+     *
+     * @throws LogicException Quando o valor validado possui um tipo
+     *                        inesperado.
+     *
+     * @since 2.0.0
+     */
+    public function obterDisponibilidadeNomeacao(): bool
+    {
+        $dados =
+            $this->validated();
+
+        if (
+            ! array_key_exists(
+                'disponivel_para_nomeacao',
+                $dados,
+            )
+        ) {
+            return (bool) $this
+                ->obterUtilizadorAutenticado()
+                ->disponivel_para_nomeacao;
+        }
+
+        return match ($dados['disponivel_para_nomeacao']) {
+            true,
+            1,
+            '1' => true,
+
+            false,
+            0,
+            '0' => false,
+
+            default => throw new LogicException(
+                'O pedido validado não contém uma disponibilidade para nomeação válida.',
+            ),
+        };
     }
 }
