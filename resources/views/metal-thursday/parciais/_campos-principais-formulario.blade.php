@@ -6,6 +6,9 @@
     a criação. As coleções de edições e utilizadores são preparadas pelo
     App\Http\Controllers\MetalThursday\ControladorMetalThursday.
 
+    A edição é determinada automaticamente no servidor a partir da data da
+    MetalThursday e, por isso, não é enviada como escolha do utilizador.
+
     @since 1.0.0
 --}}
 
@@ -17,13 +20,6 @@
         >
             <strong>
                 Edição
-
-                <span
-                    class="text-danger"
-                    aria-hidden="true"
-                >
-                    *
-                </span>
             </strong>
 
             <span
@@ -31,42 +27,31 @@
                 role="img"
                 tabindex="0"
                 data-bs-toggle="tooltip"
-                data-bs-title="Edição à qual pertence esta MetalThursday."
-                aria-label="Edição à qual pertence esta MetalThursday."
+                data-bs-title="A edição é determinada automaticamente pela data da MetalThursday."
+                aria-label="A edição é determinada automaticamente pela data da MetalThursday."
             ></span>
         </label>
 
-        <div class="input-group has-validation">
-            <select
+        <div class="input-group">
+            <input
                 id="edicao-metal-thursday"
-                class="form-select tom-select-unico @error('edicao_id') is-invalid @enderror"
-                name="edicao_id"
-                placeholder="Seleciona uma edição ou cria uma nova"
-                aria-describedby="erro-edicao-metal-thursday"
-                required
-                @error('edicao_id')
-                    aria-invalid="true"
-                @enderror
-            >
-                <option value="">
-                    Seleciona uma edição
-                </option>
-
-                @foreach ($edicoes as $edicao)
-                    <option
-                        value="{{ $edicao->getKey() }}"
-                        @selected(
-                            (string) old(
+                class="form-control"
+                type="text"
+                value="{{
+                    $edicoes
+                        ->firstWhere(
+                            'id',
+                            old(
                                 'edicao_id',
                                 $metalThursday?->edicao_id,
-                            )
-                            === (string) $edicao->getKey()
+                            ),
                         )
-                    >
-                        {{ $edicao->nome }}
-                    </option>
-                @endforeach
-            </select>
+                        ?->nome
+                }}"
+                placeholder="Determinada automaticamente pela data"
+                aria-describedby="estado-edicao-metal-thursday"
+                readonly
+            >
 
             @can(
                 'create',
@@ -89,17 +74,46 @@
         </div>
 
         <div
-            id="erro-edicao-metal-thursday"
-            class="invalid-feedback @error('edicao_id') d-block @enderror"
+            id="estado-edicao-metal-thursday"
+            class="form-text"
             aria-live="polite"
         >
-            @error('edicao_id')
-                {{ $message }}
-            @enderror
+            A edição é determinada automaticamente pela data da MetalThursday.
+        </div>
+
+        <div
+            id="dados-edicoes-metal-thursday"
+            data-data-referencia="{{ now()->format('Y-m-d') }}"
+            hidden
+        >
+            @foreach ($edicoes as $edicao)
+                <span
+                    data-edicao-identificador="{{ $edicao->getKey() }}"
+                    data-edicao-nome="{{ $edicao->nome }}"
+                    data-edicao-inicio="{{ $edicao->data_inicio?->format('Y-m-d') }}"
+                    data-edicao-fim="{{ $edicao->data_fim?->format('Y-m-d') }}"
+                ></span>
+            @endforeach
         </div>
     </div>
 
     <div class="col-md-4 grupo-campo-formulario mb-3">
+        @php
+            $dataPersistida =
+                $metalThursday?->data?->format('Y-m-d');
+
+            $dataFormulario =
+                $podeAlterarData
+                    ? old(
+                        'data',
+                        $dataPersistida,
+                    )
+                    : (
+                        $dataPersistida
+                        ?? now()->format('Y-m-d')
+                    );
+        @endphp
+
         <label
             class="form-label"
             for="data-metal-thursday"
@@ -130,14 +144,13 @@
             class="form-control @error('data') is-invalid @enderror"
             type="date"
             name="data"
-            value="{{
-                old(
-                    'data',
-                    $metalThursday?->data?->format('Y-m-d'),
-                )
-            }}"
-            aria-describedby="erro-data-metal-thursday"
+            value="{{ $dataFormulario }}"
+            aria-describedby="erro-data-metal-thursday @if (! $podeAlterarData) ajuda-data-metal-thursday @endif"
             required
+            @if (! $podeAlterarData)
+                readonly
+                aria-readonly="true"
+            @endif
             @error('data')
                 aria-invalid="true"
             @enderror
@@ -152,6 +165,19 @@
                 {{ $message }}
             @enderror
         </div>
+
+        @if (! $podeAlterarData)
+            <div
+                id="ajuda-data-metal-thursday"
+                class="form-text"
+            >
+                @if ($metalThursday instanceof App\Models\MetalThursday\MetalThursday)
+                    A data desta MetalThursday não pode ser alterada.
+                @else
+                    A data é definida automaticamente como a data atual.
+                @endif
+            </div>
+        @endif
     </div>
 
     <div class="col-md-4 grupo-campo-formulario mb-3">
@@ -228,36 +254,57 @@
             ></span>
         </label>
 
-        <select
-            id="autor-metal-thursday"
-            class="form-select tom-select-unico @error('autor_id') is-invalid @enderror"
-            name="autor_id"
-            placeholder="Seleciona o autor"
-            aria-describedby="erro-autor-metal-thursday"
-            required
-            @error('autor_id')
-                aria-invalid="true"
-            @enderror
-        >
-            <option value="">
-                Seleciona o autor
-            </option>
-
-            @foreach ($utilizadores as $utilizador)
-                <option
-                    value="{{ $utilizador->getKey() }}"
-                    @selected(
-                        (string) old(
-                            'autor_id',
-                            $metalThursday?->autor_id,
-                        )
-                        === (string) $utilizador->getKey()
-                    )
-                >
-                    {{ $utilizador->nome }}
+        @if ($podeSelecionarAutor)
+            <select
+                id="autor-metal-thursday"
+                class="form-select tom-select-unico @error('autor_id') is-invalid @enderror"
+                name="autor_id"
+                placeholder="Seleciona o autor"
+                aria-describedby="erro-autor-metal-thursday"
+                required
+                @error('autor_id')
+                    aria-invalid="true"
+                @enderror
+            >
+                <option value="">
+                    Seleciona o autor
                 </option>
-            @endforeach
-        </select>
+
+                @foreach ($utilizadores as $utilizador)
+                    <option
+                        value="{{ $utilizador->getKey() }}"
+                        @selected(
+                            (string) old(
+                                'autor_id',
+                                $metalThursday?->autor_id,
+                            )
+                            === (string) $utilizador->getKey()
+                        )
+                    >
+                        {{ $utilizador->nome }}
+                    </option>
+                @endforeach
+            </select>
+        @else
+            <input
+                id="autor-metal-thursday"
+                class="form-control @error('autor_id') is-invalid @enderror"
+                type="text"
+                value="{{ $autorFormulario?->nome }}"
+                aria-describedby="erro-autor-metal-thursday"
+                readonly
+                @error('autor_id')
+                    aria-invalid="true"
+                @enderror
+            >
+
+            <input
+                type="hidden"
+                name="autor_id"
+                value="{{ $autorFormulario?->getKey() }}"
+                aria-describedby="erro-autor-metal-thursday"
+            >
+        @endif
 
         <div
             id="erro-autor-metal-thursday"

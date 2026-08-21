@@ -3,6 +3,7 @@ import {
     adicionarOpcaoTomSelect,
     obterOpcaoResposta,
 } from './OpcoesTomSelect';
+import GestorEdicaoMetalThursday from './GestorEdicaoMetalThursday';
 import GestorFormulariosModais from './GestorFormulariosModais';
 import GestorSeccoes from './GestorSeccoes';
 import InicializadorTomSelect from './InicializadorTomSelect';
@@ -873,6 +874,9 @@ function inicializarNovaSeccao(
  *     campos Tom Select.
  * @param {Readonly<Record<string, string>>} enderecos Endereços validados.
  * @param {Map<number, string>} bandasCriadas Bandas criadas na página.
+ * @param {GestorEdicaoMetalThursday} gestorEdicao Gestor da edição por data.
+ * @param {object} contextoCriacaoRapida Contexto dos campos que originaram
+ *     as criações rápidas.
  *
  * @returns {Array<object>} Configurações dos formulários.
  *
@@ -882,6 +886,8 @@ function criarConfiguracoesModais(
     inicializadorTomSelect,
     enderecos,
     bandasCriadas,
+    gestorEdicao,
+    contextoCriacaoRapida,
 ) {
     const maximoNomeEdicao = obterComprimentoMaximo(
         'nome-nova-edicao',
@@ -952,24 +958,17 @@ function criarConfiguracoesModais(
             aoSucesso: (
                 dadosResposta,
             ) => {
-                const opcao = obterOpcaoResposta(
-                    dadosResposta,
-                    'edicao',
-                    'texto_apresentacao',
-                );
-
-                if (opcao === null) {
+                if (
+                    !eObjeto(dadosResposta)
+                    || !eObjeto(
+                        dadosResposta.edicao,
+                    )
+                ) {
                     return;
                 }
 
-                adicionarOpcaoTomSelect(
-                    inicializadorTomSelect
-                        .obterInstancia(
-                            'edicao-metal-thursday',
-                        ),
-                    opcao.identificador,
-                    opcao.nome,
-                    true,
+                gestorEdicao.adicionarEdicao(
+                    dadosResposta.edicao,
                 );
             },
         },
@@ -1053,10 +1052,17 @@ function criarConfiguracoesModais(
                                     ?? null,
                                     opcao.identificador,
                                     opcao.nome,
+                                    selecao
+                                    === contextoCriacaoRapida
+                                        .selecaoBandaDestino,
                                 );
                             }
                         },
                     );
+
+                contextoCriacaoRapida
+                    .selecaoBandaDestino =
+                    null;
             },
         },
         {
@@ -1110,6 +1116,10 @@ function criarConfiguracoesModais(
                                 ),
                             opcao.identificador,
                             opcao.nome,
+                            identificadorCampo
+                                === 'generos-nova-banda'
+                            && contextoCriacaoRapida
+                                .generoParaBanda,
                         );
                     },
                 );
@@ -1119,14 +1129,82 @@ function criarConfiguracoesModais(
 }
 
 /**
- * Mantém o formulário da banda ao criar um género a partir do respetivo
- * modal e regressa à banda quando o modal do género é fechado.
+ * Guarda o campo de Banda que originou a abertura do modal de criação.
+ *
+ * A referência é preservada quando o modal da Banda é reaberto
+ * programaticamente depois da criação de um Género.
+ *
+ * @param {object} contextoCriacaoRapida Contexto partilhado das criações.
  *
  * @returns {void}
  *
  * @since 2.0.0
  */
-function configurarRetornoCriacaoGeneroParaBanda() {
+function configurarDestinoCriacaoBanda(
+    contextoCriacaoRapida,
+) {
+    const modalBanda =
+        document.getElementById(
+            'modal-criar-banda',
+        );
+
+    if (!(modalBanda instanceof HTMLElement)) {
+        return;
+    }
+
+    modalBanda.addEventListener(
+        'show.bs.modal',
+        (evento) => {
+            const acionador =
+                evento.relatedTarget;
+
+            if (!(acionador instanceof Element)) {
+                return;
+            }
+
+            contextoCriacaoRapida
+                .selecaoBandaDestino =
+                null;
+
+            const seccao =
+                acionador.closest(
+                    '.item-seccao',
+                );
+
+            if (!(seccao instanceof HTMLElement)) {
+                return;
+            }
+
+            const selecaoBanda =
+                seccao.querySelector(
+                    '.tom-select-bandas',
+                );
+
+            if (
+                selecaoBanda
+                instanceof HTMLSelectElement
+            ) {
+                contextoCriacaoRapida
+                    .selecaoBandaDestino =
+                    selecaoBanda;
+            }
+        },
+    );
+}
+
+/**
+ * Mantém o formulário da banda ao criar um género a partir do respetivo
+ * modal e regressa à banda quando o modal do género é fechado.
+ *
+ * @param {object} contextoCriacaoRapida Contexto partilhado das criações.
+ *
+ * @returns {void}
+ *
+ * @since 2.0.0
+ */
+function configurarRetornoCriacaoGeneroParaBanda(
+    contextoCriacaoRapida,
+) {
     const modalBanda =
         document.getElementById(
             'modal-criar-banda',
@@ -1159,6 +1237,10 @@ function configurarRetornoCriacaoGeneroParaBanda() {
                     '#modal-criar-banda',
                 ) === modalBanda;
 
+            contextoCriacaoRapida
+                .generoParaBanda =
+                regressarAoModalBanda;
+
             if (!regressarAoModalBanda) {
                 return;
             }
@@ -1178,6 +1260,10 @@ function configurarRetornoCriacaoGeneroParaBanda() {
             }
 
             regressarAoModalBanda =
+                false;
+
+            contextoCriacaoRapida
+                .generoParaBanda =
                 false;
 
             Modal
@@ -1208,6 +1294,32 @@ function inicializarFormularioMetalThursday(
 
     const configuracao = obterConfiguracaoFormulario();
 
+    const gestorEdicao = new GestorEdicaoMetalThursday({
+        campoData: obterElementoObrigatorio(
+            'data-metal-thursday',
+            HTMLInputElement,
+            'o campo da data da MetalThursday',
+        ),
+
+        campoEdicao: obterElementoObrigatorio(
+            'edicao-metal-thursday',
+            HTMLInputElement,
+            'o campo informativo da edição',
+        ),
+
+        elementoEstado: obterElementoObrigatorio(
+            'estado-edicao-metal-thursday',
+            HTMLElement,
+            'o elemento de estado da edição',
+        ),
+
+        contentorDados: obterElementoObrigatorio(
+            'dados-edicoes-metal-thursday',
+            HTMLElement,
+            'o contentor dos dados das edições',
+        ),
+    });
+
     const contentorSeccoes = obterElementoObrigatorio(
         'contentor-seccoes',
         HTMLElement,
@@ -1221,6 +1333,11 @@ function inicializarFormularioMetalThursday(
     );
 
     const bandasCriadas = new Map();
+
+    const contextoCriacaoRapida = {
+        selecaoBandaDestino: null,
+        generoParaBanda: false,
+    };
 
     /*
      * Ambos os inicializadores fazem um único passe global no respetivo
@@ -1294,6 +1411,22 @@ function inicializarFormularioMetalThursday(
             configuracao
                 .enderecos
                 .obterUtilizadorHaMaisTempoSemNomeacao,
+
+        obterValorExcluido: () => {
+            const campoAutor =
+                formulario.querySelector(
+                    '[name="autor_id"]',
+                );
+
+            if (
+                campoAutor instanceof HTMLInputElement
+                || campoAutor instanceof HTMLSelectElement
+            ) {
+                return campoAutor.value;
+            }
+
+            return null;
+        },
     });
 
     const maximoNomeMetalThursday = obterComprimentoMaximo(
@@ -1306,14 +1439,14 @@ function inicializarFormularioMetalThursday(
             formulario,
             {
                 regras: {
-                    edicao_id: [
-                        'obrigatorio',
-                        'inteiro',
-                    ],
-
                     data: [
                         'obrigatorio',
                         'data',
+
+                        ({ valor }) =>
+                            gestorEdicao.validarData(
+                                valor,
+                            ),
                     ],
 
                     nome: [
@@ -1328,18 +1461,11 @@ function inicializarFormularioMetalThursday(
                     proximo_nomeado_id: [
                         'obrigatorio',
                         'inteiro',
+                        'diferente:autor_id',
                     ],
                 },
 
                 mensagens: {
-                    edicao_id: {
-                        obrigatorio:
-                            'Por favor, seleciona a edição.',
-
-                        inteiro:
-                            'A edição selecionada não é válida.',
-                    },
-
                     data: {
                         obrigatorio:
                             'Por favor, seleciona a data.',
@@ -1367,6 +1493,9 @@ function inicializarFormularioMetalThursday(
 
                         inteiro:
                             'O próximo nomeado selecionado não é válido.',
+
+                        diferente:
+                            'O próximo nomeado deve ser diferente do autor.',
                     },
                 },
 
@@ -1385,13 +1514,21 @@ function inicializarFormularioMetalThursday(
         validadorFormulario,
     );
 
-    configurarRetornoCriacaoGeneroParaBanda();
+    configurarDestinoCriacaoBanda(
+        contextoCriacaoRapida,
+    );
+
+    configurarRetornoCriacaoGeneroParaBanda(
+        contextoCriacaoRapida,
+    );
 
     new GestorFormulariosModais(
         criarConfiguracoesModais(
             inicializadorTomSelect,
             configuracao.enderecos,
             bandasCriadas,
+            gestorEdicao,
+            contextoCriacaoRapida,
         ),
     );
 }

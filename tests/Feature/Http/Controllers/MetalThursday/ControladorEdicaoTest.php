@@ -82,6 +82,212 @@ final class ControladorEdicaoTest extends TestCase
     }
 
     /**
+     * Confirma que um período não pode partilhar a data final de outra edição.
+     *
+     * As datas dos períodos são inclusivas.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function administrador_nao_cria_edicao_com_periodo_sobreposto(): void
+    {
+        $this->criarEdicao();
+
+        $administrador = $this->criarAdministrador();
+
+        $this
+            ->actingAs(
+                $administrador,
+                'sessao',
+            )
+            ->postJson(
+                route(
+                    'edicoes.guardar',
+                ),
+                [
+                    'nome' => 'Edição sobreposta',
+
+                    'data_inicio' => '2026-01-31',
+
+                    'data_fim' => '2026-02-28',
+                ],
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'data_inicio',
+            ])
+            ->assertJsonPath(
+                'errors.data_inicio.0',
+                'O período da edição sobrepõe-se ao período de outra edição.',
+            );
+
+        $this->assertDatabaseMissing(
+            'edicoes',
+            [
+                'nome' => 'Edição sobreposta',
+            ],
+        );
+    }
+
+    /**
+     * Confirma que uma edição pode começar no dia seguinte ao fim da anterior.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function administrador_cria_edicao_imediatamente_apos_periodo_existente(): void
+    {
+        $this->criarEdicao();
+
+        $administrador = $this->criarAdministrador();
+
+        $this
+            ->actingAs(
+                $administrador,
+                'sessao',
+            )
+            ->postJson(
+                route(
+                    'edicoes.guardar',
+                ),
+                [
+                    'nome' => 'Edição de fevereiro',
+
+                    'data_inicio' => '2026-02-01',
+
+                    'data_fim' => '2026-02-28',
+                ],
+            )
+            ->assertCreated();
+
+        $this->assertDatabaseHas(
+            'edicoes',
+            [
+                'nome' => 'Edição de fevereiro',
+
+                'data_inicio' => '2026-02-01',
+
+                'data_fim' => '2026-02-28',
+
+                'deleted_at' => null,
+            ],
+        );
+    }
+
+    /**
+     * Confirma que uma edição aberta impede a criação de uma edição posterior.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function edicao_aberta_impede_criacao_de_edicao_posterior(): void
+    {
+        Edicao::factory()
+            ->comNome(
+                'Edição aberta',
+            )
+            ->comPeriodo(
+                CarbonImmutable::parse(
+                    '2026-01-01',
+                ),
+            )
+            ->create();
+
+        $administrador = $this->criarAdministrador();
+
+        $this
+            ->actingAs(
+                $administrador,
+                'sessao',
+            )
+            ->postJson(
+                route(
+                    'edicoes.guardar',
+                ),
+                [
+                    'nome' => 'Edição posterior',
+
+                    'data_inicio' => '2026-03-01',
+
+                    'data_fim' => '2026-03-31',
+                ],
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'data_inicio',
+            ])
+            ->assertJsonPath(
+                'errors.data_inicio.0',
+                'O período da edição sobrepõe-se ao período de outra edição.',
+            );
+
+        $this->assertDatabaseMissing(
+            'edicoes',
+            [
+                'nome' => 'Edição posterior',
+            ],
+        );
+    }
+
+    /**
+     * Confirma que uma nova edição aberta não pode abranger uma edição futura.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function administrador_nao_cria_edicao_aberta_que_abrange_edicao_futura(): void
+    {
+        Edicao::factory()
+            ->comNome(
+                'Edição futura',
+            )
+            ->comPeriodo(
+                CarbonImmutable::parse(
+                    '2026-03-01',
+                ),
+                CarbonImmutable::parse(
+                    '2026-03-31',
+                ),
+            )
+            ->create();
+
+        $administrador = $this->criarAdministrador();
+
+        $this
+            ->actingAs(
+                $administrador,
+                'sessao',
+            )
+            ->postJson(
+                route(
+                    'edicoes.guardar',
+                ),
+                [
+                    'nome' => 'Edição aberta',
+
+                    'data_inicio' => '2026-02-01',
+
+                    'data_fim' => null,
+                ],
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'data_inicio',
+            ])
+            ->assertJsonPath(
+                'errors.data_inicio.0',
+                'O período da edição sobrepõe-se ao período de outra edição.',
+            );
+
+        $this->assertDatabaseMissing(
+            'edicoes',
+            [
+                'nome' => 'Edição aberta',
+            ],
+        );
+    }
+
+    /**
      * Confirma que um administrador atualiza os dados principais da edição.
      *
      * @since 2.0.0
@@ -137,6 +343,71 @@ final class ControladorEdicaoTest extends TestCase
                 'data_fim' => '2026-02-28',
 
                 'deleted_at' => null,
+            ],
+        );
+    }
+
+    /**
+     * Confirma que uma edição não pode ser atualizada para sobrepor outra.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function administrador_nao_atualiza_edicao_para_periodo_sobreposto(): void
+    {
+        $this->criarEdicao();
+
+        $edicaoMarco = Edicao::factory()
+            ->comNome(
+                'Edição de março',
+            )
+            ->comPeriodo(
+                CarbonImmutable::parse(
+                    '2026-03-01',
+                ),
+                CarbonImmutable::parse(
+                    '2026-03-31',
+                ),
+            )
+            ->create();
+
+        $administrador = $this->criarAdministrador();
+
+        $this
+            ->actingAs(
+                $administrador,
+                'sessao',
+            )
+            ->patchJson(
+                route(
+                    'edicoes.atualizar',
+                    $edicaoMarco,
+                ),
+                [
+                    'nome' => 'Edição de março',
+
+                    'data_inicio' => '2026-01-15',
+
+                    'data_fim' => '2026-02-15',
+                ],
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'data_inicio',
+            ])
+            ->assertJsonPath(
+                'errors.data_inicio.0',
+                'O período da edição sobrepõe-se ao período de outra edição.',
+            );
+
+        $this->assertDatabaseHas(
+            'edicoes',
+            [
+                'id' => $edicaoMarco->getKey(),
+
+                'data_inicio' => '2026-03-01',
+
+                'data_fim' => '2026-03-31',
             ],
         );
     }

@@ -7,9 +7,11 @@ namespace App\Http\Requests\MetalThursday;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
 use Closure;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Unique;
+use Illuminate\Validation\Validator;
 use LogicException;
 
 /**
@@ -202,6 +204,26 @@ abstract class PedidoEdicaoRequest extends FormRequest
     }
 
     /**
+     * Obtém as validações executadas depois das regras principais.
+     *
+     * @return list<callable(Validator): void> Validações adicionais.
+     *
+     * @since 2.0.0
+     */
+    public function after(): array
+    {
+        return [
+            function (
+                Validator $validador,
+            ): void {
+                $this->validarPeriodoSemSobreposicao(
+                    $validador,
+                );
+            },
+        ];
+    }
+
+    /**
      * Obtém as mensagens de validação.
      *
      * @return array<string, string> Mensagens de validação.
@@ -301,6 +323,106 @@ abstract class PedidoEdicaoRequest extends FormRequest
             true;
 
         return $this->edicaoDaRota;
+    }
+
+    /**
+     * Impede a existência de períodos sobrepostos entre edições ativas.
+     *
+     * As datas inicial e final são inclusivas. Uma edição sem data de fim é
+     * considerada aberta indefinidamente.
+     *
+     * Durante uma atualização, a própria edição é excluída da consulta.
+     * Edições eliminadas logicamente são ignoradas pelo âmbito global de
+     * SoftDeletes do modelo.
+     *
+     * @param  Validator  $validador  Validador do pedido.
+     *
+     * @since 2.0.0
+     */
+    private function validarPeriodoSemSobreposicao(
+        Validator $validador,
+    ): void {
+        if (
+            $validador
+                ->errors()
+                ->hasAny([
+                    'data_inicio',
+                    'data_fim',
+                ])
+        ) {
+            return;
+        }
+
+        $dataInicio =
+            $this->input(
+                'data_inicio',
+            );
+
+        $dataFim =
+            $this->input(
+                'data_fim',
+            );
+
+        if (
+            ! is_string($dataInicio)
+            || (
+                $dataFim !== null
+                && ! is_string($dataFim)
+            )
+        ) {
+            return;
+        }
+
+        $edicaoAtual =
+            $this->obterEdicaoDaRota();
+
+        $construtor = Edicao::query()
+            ->when(
+                $edicaoAtual instanceof Edicao,
+                static fn (
+                    Builder $consulta,
+                ): Builder => $consulta->where(
+                    'id',
+                    '!=',
+                    $edicaoAtual->getKey(),
+                ),
+            )
+            ->where(
+                static function (
+                    Builder $consulta,
+                ) use (
+                    $dataInicio,
+                ): void {
+                    $consulta
+                        ->whereNull(
+                            'data_fim',
+                        )
+                        ->orWhere(
+                            'data_fim',
+                            '>=',
+                            $dataInicio,
+                        );
+                },
+            );
+
+        if ($dataFim !== null) {
+            $construtor->where(
+                'data_inicio',
+                '<=',
+                $dataFim,
+            );
+        }
+
+        if (! $construtor->exists()) {
+            return;
+        }
+
+        $validador
+            ->errors()
+            ->add(
+                'data_inicio',
+                'O período da edição sobrepõe-se ao período de outra edição.',
+            );
     }
 
     /**

@@ -79,6 +79,10 @@ final class GuardarMetalThursdayRequestTest extends TestCase
     /**
      * Confirma que um utilizador autorizado alcança a validação dos dados.
      *
+     * O identificador de edição enviado pelo cliente não pertence ao contrato
+     * do pedido. A edição é determinada internamente através da data e, por
+     * isso, um valor forjado nesse campo não deve produzir um erro próprio.
+     *
      * @since 2.0.0
      */
     #[Test]
@@ -112,17 +116,22 @@ final class GuardarMetalThursdayRequestTest extends TestCase
         $resposta
             ->assertUnprocessable()
             ->assertJsonValidationErrors([
-                'edicao_id',
                 'data',
                 'nome',
                 'autor_id',
                 'proximo_nomeado_id',
                 'seccoes',
+            ])
+            ->assertJsonMissingValidationErrors([
+                'edicao_id',
             ]);
     }
 
     /**
      * Obtém dados deliberadamente inválidos para o pedido.
+     *
+     * O valor inválido de `edicao_id` é enviado deliberadamente para confirmar
+     * que o campo não é aceite como fonte da associação à edição.
      *
      * @return array<string, mixed> Dados inválidos.
      *

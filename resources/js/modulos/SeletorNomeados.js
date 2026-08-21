@@ -19,6 +19,8 @@ class SeletorNomeados {
      *     Instância Tom Select associada ao campo de nomeados.
      * @param {string|null} opcoes.urlNomeadoMaisAntigo
      *     Endereço utilizado para obter o nomeado mais antigo.
+     * @param {Function|null} opcoes.obterValorExcluido
+     *     Callback que devolve o identificador que não pode ser nomeado.
      *
      * @throws {TypeError} Quando algum seletor CSS ou elemento é inválido.
      *
@@ -29,6 +31,7 @@ class SeletorNomeados {
         seletorBotaoMaisAntigo = null,
         instanciaTomSelect = null,
         urlNomeadoMaisAntigo = null,
+        obterValorExcluido = null,
     } = {}) {
         this.botaoAleatorio =
             this.obterBotaoOpcional(
@@ -49,6 +52,11 @@ class SeletorNomeados {
             typeof urlNomeadoMaisAntigo === 'string'
                 ? urlNomeadoMaisAntigo.trim()
                 : '';
+
+        this.obterValorExcluido =
+            typeof obterValorExcluido === 'function'
+                ? obterValorExcluido
+                : null;
 
         this.emPedidoMaisAntigo =
             false;
@@ -90,6 +98,41 @@ class SeletorNomeados {
     }
 
     /**
+     * Obtém o identificador atualmente excluído da nomeação.
+     *
+     * @returns {string} Identificador positivo ou cadeia vazia.
+     *
+     * @since 2.0.0
+     */
+    obterValorExcluidoNormalizado() {
+        if (this.obterValorExcluido === null) {
+            return '';
+        }
+
+        const valor =
+            this.obterValorExcluido();
+
+        if (
+            typeof valor === 'number'
+            && Number.isInteger(valor)
+            && valor > 0
+        ) {
+            return String(valor);
+        }
+
+        if (
+            typeof valor === 'string'
+            && /^[1-9]\d*$/u.test(
+                valor.trim(),
+            )
+        ) {
+            return valor.trim();
+        }
+
+        return '';
+    }
+
+    /**
      * Seleciona aleatoriamente um dos nomeados disponíveis.
      *
      * @returns {void}
@@ -104,11 +147,18 @@ class SeletorNomeados {
             return;
         }
 
+        const valorExcluido =
+            this.obterValorExcluidoNormalizado();
+
         const valoresDisponiveis =
             Object.keys(
                 this.tomSelect.options,
             ).filter((valor) => {
                 if (valor.trim() === '') {
+                    return false;
+                }
+
+                if (valor === valorExcluido) {
                     return false;
                 }
 
@@ -168,9 +218,21 @@ class SeletorNomeados {
         this.bloquearInteracao();
 
         try {
+            const valorExcluido =
+                this.obterValorExcluidoNormalizado();
+
             const resposta =
                 await axios.get(
                     this.urlNomeadoMaisAntigo,
+                    {
+                        params:
+                            valorExcluido === ''
+                                ? {}
+                                : {
+                                    excluir_utilizador_id:
+                                        valorExcluido,
+                                },
+                    },
                 );
 
             const identificador =
@@ -210,6 +272,7 @@ class SeletorNomeados {
             if (
                 !opcao
                 || opcao.disabled === true
+                || valor === valorExcluido
             ) {
                 await this.apresentarAlerta({
                     icon: 'error',

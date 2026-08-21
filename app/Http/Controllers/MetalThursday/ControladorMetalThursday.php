@@ -515,18 +515,26 @@ final class ControladorMetalThursday extends Controller
      * Obtém o utilizador há mais tempo sem ser nomeado.
      *
      * Utilizadores nunca nomeados aparecem primeiro. Em caso de empate, é
-     * utilizado o nome e depois o identificador.
+     * utilizado o nome e depois o identificador. Quando é recebido um
+     * identificador a excluir, esse utilizador não é considerado.
      *
+     * @param  Request  $pedido  Pedido HTTP atual.
      * @return JsonResponse Identificador do utilizador encontrado.
      *
      * @since 1.0.0
      */
-    public function obterUtilizadorHaMaisTempoSemNomeacao(): JsonResponse
-    {
+    public function obterUtilizadorHaMaisTempoSemNomeacao(
+        Request $pedido,
+    ): JsonResponse {
         $this->authorize(
             'create',
             MetalThursday::class,
         );
+
+        $identificadorExcluido =
+            $pedido->integer(
+                'excluir_utilizador_id',
+            );
 
         $construtorUltimasNomeacoes = MetalThursday::query()
             ->selectRaw(
@@ -540,7 +548,18 @@ final class ControladorMetalThursday extends Controller
             );
 
         $utilizador = Utilizador::query()
+            ->comAcessoAtivo()
             ->selecionaveis()
+            ->when(
+                $identificadorExcluido > 0,
+                static fn (
+                    Builder $construtor,
+                ): Builder => $construtor->where(
+                    'utilizadores.id',
+                    '!=',
+                    $identificadorExcluido,
+                ),
+            )
             ->leftJoinSub(
                 $construtorUltimasNomeacoes,
                 'ultimas_nomeacoes',
@@ -777,8 +796,25 @@ final class ControladorMetalThursday extends Controller
     private function obterDadosFormulario(
         ?MetalThursday $metalThursday = null,
     ): array {
+        $utilizadorAutenticado =
+            $this->obterUtilizadorAutenticado();
+
+        $possuiPrivilegiosAdministrativos =
+            $utilizadorAutenticado
+                ->possuiPrivilegiosAdministrativos();
+
         return [
             'metalThursday' => $metalThursday,
+
+            'utilizadorAutenticado' => $utilizadorAutenticado,
+
+            'podeSelecionarAutor' => $possuiPrivilegiosAdministrativos,
+
+            'podeAlterarData' => $possuiPrivilegiosAdministrativos,
+
+            'autorFormulario' => $metalThursday instanceof MetalThursday
+                ? $metalThursday->autor
+                : $utilizadorAutenticado,
 
             'edicoes' => $this->obterEdicoesParaSelecao(),
 
@@ -792,7 +828,7 @@ final class ControladorMetalThursday extends Controller
                     'exige_detalhes',
                 ])
                 ->orderBy(
-                    'nome',
+                    'ordem',
                 )
                 ->orderBy(
                     'id',
@@ -881,6 +917,7 @@ final class ControladorMetalThursday extends Controller
     private function obterUtilizadoresParaSelecao(): Collection
     {
         return Utilizador::query()
+            ->comAcessoAtivo()
             ->selecionaveis()
             ->select([
                 'id',
@@ -1007,6 +1044,31 @@ final class ControladorMetalThursday extends Controller
     }
 
     /**
+     * Obtém o utilizador autenticado.
+     *
+     * @return Utilizador Utilizador autenticado.
+     *
+     * @throws AuthenticationException Quando não existe autenticação válida.
+     *
+     * @since 2.0.0
+     */
+    private function obterUtilizadorAutenticado(): Utilizador
+    {
+        $utilizador =
+            Auth::guard(
+                'sessao',
+            )->user();
+
+        if (! $utilizador instanceof Utilizador) {
+            throw new AuthenticationException(
+                'Não foi possível identificar o utilizador autenticado.',
+            );
+        }
+
+        return $utilizador;
+    }
+
+    /**
      * Obtém o identificador do utilizador autenticado.
      *
      * Todas as rotas deste controlador pertencem ao grupo autenticado da
@@ -1021,19 +1083,9 @@ final class ControladorMetalThursday extends Controller
      */
     private function obterIdentificadorUtilizadorAutenticado(): int
     {
-        $utilizador =
-            Auth::guard(
-                'sessao',
-            )->user();
-
-        if (! $utilizador instanceof Utilizador) {
-            throw new AuthenticationException(
-                'Não foi possível identificar o utilizador autenticado.',
-            );
-        }
-
         $identificador =
-            $utilizador->getKey();
+            $this->obterUtilizadorAutenticado()
+                ->getKey();
 
         if (
             ! is_numeric($identificador)

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Http\Controllers\MetalThursday;
 
+use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
@@ -36,12 +37,12 @@ final class ControladorMetalThursdayTest extends TestCase
     }
 
     /**
-     * Confirma que o formulário de criação apresenta as edições disponíveis.
+     * Confirma que a edição deixou de ser selecionável pelo utilizador.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function formulario_criacao_apresenta_edicoes_disponiveis(): void
+    public function formulario_criacao_nao_apresenta_seletor_manual_de_edicao(): void
     {
         $utilizador = $this->criarUtilizador();
 
@@ -58,8 +59,26 @@ final class ControladorMetalThursdayTest extends TestCase
             ),
         )
             ->assertOk()
+            ->assertSeeHtml(
+                'id="edicao-metal-thursday"',
+            )
+            ->assertDontSeeHtml(
+                'name="edicao_id"',
+            )
             ->assertSee(
-                $edicao->nome,
+                'A edição é determinada automaticamente pela data da MetalThursday.',
+            )
+            ->assertSeeHtml(
+                'id="dados-edicoes-metal-thursday"',
+            )
+            ->assertSeeHtml(
+                'data-edicao-identificador="'.$edicao->getKey().'"',
+            )
+            ->assertSeeHtml(
+                'data-edicao-inicio="2026-01-01"',
+            )
+            ->assertSeeHtml(
+                'data-edicao-fim="2026-01-31"',
             )
             ->assertSeeHtml(
                 'name="seccoes[__INDICE_SECCAO__][tipo_seccao_id]"',
@@ -67,6 +86,909 @@ final class ControladorMetalThursdayTest extends TestCase
             ->assertDontSeeHtml(
                 'name="seccoes[__INDICE_SECCAO__][tipo_secao_id]"',
             );
+    }
+
+    /**
+     * Confirma que o formulário de criação apresenta os tipos de secção
+     * segundo a ordem funcional configurada.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function formulario_criacao_apresenta_tipos_seccao_pela_ordem_configurada(): void
+    {
+        $utilizador = $this->criarUtilizador();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        TipoSeccao::factory()
+            ->comDados(
+                'tipo_primeiro',
+                'Zulu',
+                'Primeiro tipo.',
+            )
+            ->naOrdem(
+                1,
+            )
+            ->create();
+
+        TipoSeccao::factory()
+            ->comDados(
+                'tipo_segundo',
+                'Alfa',
+                'Segundo tipo.',
+            )
+            ->naOrdem(
+                2,
+            )
+            ->create();
+
+        TipoSeccao::factory()
+            ->comDados(
+                'tipo_terceiro',
+                'Mike',
+                'Terceiro tipo.',
+            )
+            ->naOrdem(
+                3,
+            )
+            ->create();
+
+        $this->get(
+            route(
+                'metal-thursday.criar',
+            ),
+        )
+            ->assertOk()
+            ->assertSeeInOrder([
+                'Zulu',
+                'Alfa',
+                'Mike',
+            ]);
+    }
+
+    /**
+     * Confirma que um utilizador comum recebe o próprio autor fixo.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function formulario_criacao_utilizador_comum_fixa_autor_autenticado(): void
+    {
+        $utilizador = $this->criarUtilizador();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $this->get(
+            route(
+                'metal-thursday.criar',
+            ),
+        )
+            ->assertOk()
+            ->assertSee(
+                $utilizador->nome,
+            )
+            ->assertSeeHtml(
+                'readonly',
+            )
+            ->assertDontSeeHtml(
+                'placeholder="Seleciona o autor"',
+            );
+    }
+
+    /**
+     * Confirma que um administrador pode selecionar o autor.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function formulario_criacao_administrador_permite_selecionar_autor(): void
+    {
+        $administrador = Utilizador::factory()
+            ->comPapel(
+                PapelUtilizador::Administrador,
+            )
+            ->create();
+
+        $autor = $this->criarUtilizador();
+
+        $this->actingAs(
+            $administrador,
+            'sessao',
+        );
+
+        $this->get(
+            route(
+                'metal-thursday.criar',
+            ),
+        )
+            ->assertOk()
+            ->assertSeeHtml(
+                'placeholder="Seleciona o autor"',
+            )
+            ->assertSee(
+                $autor->nome,
+            );
+    }
+
+    /**
+     * Confirma que um utilizador comum recebe a data atual fixa na criação.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function formulario_criacao_utilizador_comum_fixa_data_atual(): void
+    {
+        $utilizador = $this->criarUtilizador();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $dataAtual = now()->format(
+            'Y-m-d',
+        );
+
+        $this->get(
+            route(
+                'metal-thursday.criar',
+            ),
+        )
+            ->assertOk()
+            ->assertSeeHtml(
+                'value="'.$dataAtual.'"',
+            )
+            ->assertSeeHtml(
+                'aria-readonly="true"',
+            )
+            ->assertSee(
+                'A data é definida automaticamente como a data atual.',
+            );
+    }
+
+    /**
+     * Confirma que um administrador pode escolher a data na criação.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function formulario_criacao_administrador_permite_alterar_data(): void
+    {
+        $administrador = Utilizador::factory()
+            ->comPapel(
+                PapelUtilizador::Administrador,
+            )
+            ->create();
+
+        $this->actingAs(
+            $administrador,
+            'sessao',
+        );
+
+        $this->get(
+            route(
+                'metal-thursday.criar',
+            ),
+        )
+            ->assertOk()
+            ->assertDontSeeHtml(
+                'aria-readonly="true"',
+            )
+            ->assertDontSee(
+                'A data é definida automaticamente como a data atual.',
+            );
+    }
+
+    /**
+     * Confirma que um utilizador comum não pode falsificar a data na criação.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function utilizador_comum_nao_pode_criar_metal_thursday_noutra_data(): void
+    {
+        Notification::fake();
+
+        $utilizador = $this->criarUtilizador();
+        $proximoNomeado = $this->criarUtilizador();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $dataAtual = CarbonImmutable::parse(
+            now()->format(
+                'Y-m-d',
+            ),
+        );
+
+        $dataManipulada = $dataAtual->subDay();
+
+        Edicao::factory()
+            ->comNome(
+                'Edição para validação da data',
+            )
+            ->comPeriodo(
+                $dataManipulada->subDay(),
+                $dataAtual->addDay(),
+            )
+            ->create();
+
+        $tipoSeccao = TipoSeccao::factory()
+            ->semDetalhes()
+            ->create();
+
+        $this->postJson(
+            route(
+                'metal-thursday.guardar',
+            ),
+            [
+                'data' => $dataManipulada->format(
+                    'Y-m-d',
+                ),
+
+                'nome' => null,
+
+                'autor_id' => $utilizador->getKey(),
+
+                'proximo_nomeado_id' => $proximoNomeado->getKey(),
+
+                'seccoes' => [
+                    [
+                        'id' => null,
+
+                        'tipo_seccao_id' => $tipoSeccao->getKey(),
+
+                        'descricao' => 'Secção de teste.',
+                    ],
+                ],
+            ],
+        )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'data',
+            ])
+            ->assertJsonPath(
+                'errors.data.0',
+                'A data da MetalThursday deve corresponder à data atual.',
+            );
+
+        $this->assertDatabaseMissing(
+            'metal_thursdays',
+            [
+                'data' => $dataManipulada->format(
+                    'Y-m-d',
+                ),
+            ],
+        );
+    }
+
+    /**
+     * Confirma que utilizadores suspensos não são apresentados nas opções
+     * disponíveis ao administrador.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function formulario_criacao_nao_apresenta_utilizador_suspenso(): void
+    {
+        $administrador = Utilizador::factory()
+            ->comPapel(
+                PapelUtilizador::Administrador,
+            )
+            ->create();
+
+        $superAdministrador = Utilizador::factory()
+            ->comPapel(
+                PapelUtilizador::SuperAdministrador,
+            )
+            ->create();
+
+        $utilizadorAtivo = Utilizador::factory()
+            ->create([
+                'nome' => 'Utilizador Ativo',
+            ]);
+
+        $utilizadorSuspenso = Utilizador::factory()
+            ->suspensoPor(
+                $superAdministrador,
+            )
+            ->create([
+                'nome' => 'Utilizador Suspenso',
+            ]);
+
+        $this->actingAs(
+            $administrador,
+            'sessao',
+        );
+
+        $this->get(
+            route(
+                'metal-thursday.criar',
+            ),
+        )
+            ->assertOk()
+            ->assertSee(
+                $utilizadorAtivo->nome,
+            )
+            ->assertDontSee(
+                $utilizadorSuspenso->nome,
+            );
+    }
+
+    /**
+     * Confirma que um administrador não pode definir o superadministrador
+     * como autor através de um pedido manipulado.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function administrador_nao_pode_definir_superadministrador_como_autor(): void
+    {
+        Notification::fake();
+
+        $administrador = Utilizador::factory()
+            ->comPapel(
+                PapelUtilizador::Administrador,
+            )
+            ->create();
+
+        $superAdministrador = Utilizador::factory()
+            ->comPapel(
+                PapelUtilizador::SuperAdministrador,
+            )
+            ->create();
+
+        $proximoNomeado = $this->criarUtilizador();
+
+        $this->actingAs(
+            $administrador,
+            'sessao',
+        );
+
+        $this->criarEdicao();
+
+        $tipoSeccao = TipoSeccao::factory()
+            ->semDetalhes()
+            ->create();
+
+        $this->postJson(
+            route(
+                'metal-thursday.guardar',
+            ),
+            [
+                'data' => '2026-01-19',
+
+                'nome' => null,
+
+                'autor_id' => $superAdministrador->getKey(),
+
+                'proximo_nomeado_id' => $proximoNomeado->getKey(),
+
+                'seccoes' => [
+                    [
+                        'id' => null,
+
+                        'tipo_seccao_id' => $tipoSeccao->getKey(),
+
+                        'descricao' => 'Secção de teste.',
+                    ],
+                ],
+            ],
+        )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'autor_id',
+            ])
+            ->assertJsonPath(
+                'errors.autor_id.0',
+                'O autor selecionado não existe ou não está disponível.',
+            );
+
+        $this->assertDatabaseMissing(
+            'metal_thursdays',
+            [
+                'data' => '2026-01-19',
+            ],
+        );
+    }
+
+    /**
+     * Confirma que o superadministrador não pode ser definido como próximo
+     * nomeado através de um pedido manipulado.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_pode_definir_superadministrador_como_proximo_nomeado(): void
+    {
+        Notification::fake();
+
+        $utilizador = $this->criarUtilizador();
+
+        $superAdministrador = Utilizador::factory()
+            ->comPapel(
+                PapelUtilizador::SuperAdministrador,
+            )
+            ->create();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $this->criarEdicao();
+
+        $tipoSeccao = TipoSeccao::factory()
+            ->semDetalhes()
+            ->create();
+
+        $this->postJson(
+            route(
+                'metal-thursday.guardar',
+            ),
+            [
+                'data' => '2026-01-21',
+
+                'nome' => null,
+
+                'autor_id' => $utilizador->getKey(),
+
+                'proximo_nomeado_id' => $superAdministrador->getKey(),
+
+                'seccoes' => [
+                    [
+                        'id' => null,
+
+                        'tipo_seccao_id' => $tipoSeccao->getKey(),
+
+                        'descricao' => 'Secção de teste.',
+                    ],
+                ],
+            ],
+        )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'proximo_nomeado_id',
+            ])
+            ->assertJsonPath(
+                'errors.proximo_nomeado_id.0',
+                'O próximo nomeado selecionado não existe ou não está disponível.',
+            );
+
+        $this->assertDatabaseMissing(
+            'metal_thursdays',
+            [
+                'data' => '2026-01-21',
+            ],
+        );
+    }
+
+    /**
+     * Confirma que um administrador não pode definir um utilizador suspenso
+     * como autor através de um pedido manipulado.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function administrador_nao_pode_definir_utilizador_suspenso_como_autor(): void
+    {
+        Notification::fake();
+
+        $administrador = Utilizador::factory()
+            ->comPapel(
+                PapelUtilizador::Administrador,
+            )
+            ->create();
+
+        $superAdministrador = Utilizador::factory()
+            ->comPapel(
+                PapelUtilizador::SuperAdministrador,
+            )
+            ->create();
+
+        $autorSuspenso = Utilizador::factory()
+            ->suspensoPor(
+                $superAdministrador,
+            )
+            ->create();
+
+        $proximoNomeado = $this->criarUtilizador();
+
+        $this->actingAs(
+            $administrador,
+            'sessao',
+        );
+
+        $this->criarEdicao();
+
+        $tipoSeccao = TipoSeccao::factory()
+            ->semDetalhes()
+            ->create();
+
+        $this->postJson(
+            route(
+                'metal-thursday.guardar',
+            ),
+            [
+                'data' => '2026-01-22',
+
+                'nome' => null,
+
+                'autor_id' => $autorSuspenso->getKey(),
+
+                'proximo_nomeado_id' => $proximoNomeado->getKey(),
+
+                'seccoes' => [
+                    [
+                        'id' => null,
+
+                        'tipo_seccao_id' => $tipoSeccao->getKey(),
+
+                        'descricao' => 'Secção de teste.',
+                    ],
+                ],
+            ],
+        )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'autor_id',
+            ])
+            ->assertJsonPath(
+                'errors.autor_id.0',
+                'O autor selecionado não existe ou não está disponível.',
+            );
+
+        $this->assertDatabaseMissing(
+            'metal_thursdays',
+            [
+                'data' => '2026-01-22',
+            ],
+        );
+    }
+
+    /**
+     * Confirma que um utilizador suspenso não pode ser definido como próximo
+     * nomeado através de um pedido manipulado.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_pode_definir_utilizador_suspenso_como_proximo_nomeado(): void
+    {
+        Notification::fake();
+
+        $utilizador = $this->criarUtilizador();
+
+        $superAdministrador = Utilizador::factory()
+            ->comPapel(
+                PapelUtilizador::SuperAdministrador,
+            )
+            ->create();
+
+        $proximoNomeadoSuspenso = Utilizador::factory()
+            ->suspensoPor(
+                $superAdministrador,
+            )
+            ->create();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $this->criarEdicao();
+
+        $tipoSeccao = TipoSeccao::factory()
+            ->semDetalhes()
+            ->create();
+
+        $this->postJson(
+            route(
+                'metal-thursday.guardar',
+            ),
+            [
+                'data' => '2026-01-23',
+
+                'nome' => null,
+
+                'autor_id' => $utilizador->getKey(),
+
+                'proximo_nomeado_id' => $proximoNomeadoSuspenso->getKey(),
+
+                'seccoes' => [
+                    [
+                        'id' => null,
+
+                        'tipo_seccao_id' => $tipoSeccao->getKey(),
+
+                        'descricao' => 'Secção de teste.',
+                    ],
+                ],
+            ],
+        )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'proximo_nomeado_id',
+            ])
+            ->assertJsonPath(
+                'errors.proximo_nomeado_id.0',
+                'O próximo nomeado selecionado não existe ou não está disponível.',
+            );
+
+        $this->assertDatabaseMissing(
+            'metal_thursdays',
+            [
+                'data' => '2026-01-23',
+            ],
+        );
+    }
+
+    /**
+     * Confirma que um utilizador comum não pode falsificar o autor.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function utilizador_comum_nao_pode_criar_metal_thursday_em_nome_de_outro(): void
+    {
+        Notification::fake();
+
+        $utilizador = $this->criarUtilizador();
+        $autorFalsificado = $this->criarUtilizador();
+        $proximoNomeado = $this->criarUtilizador();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $edicao = $this->criarEdicao();
+
+        $tipoSeccao = TipoSeccao::factory()
+            ->semDetalhes()
+            ->create();
+
+        $this->postJson(
+            route(
+                'metal-thursday.guardar',
+            ),
+            [
+                'edicao_id' => $edicao->getKey(),
+
+                'data' => '2026-01-17',
+
+                'nome' => null,
+
+                'autor_id' => $autorFalsificado->getKey(),
+
+                'proximo_nomeado_id' => $proximoNomeado->getKey(),
+
+                'seccoes' => [
+                    [
+                        'id' => null,
+
+                        'tipo_seccao_id' => $tipoSeccao->getKey(),
+
+                        'descricao' => 'Secção de teste.',
+                    ],
+                ],
+            ],
+        )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'autor_id',
+            ])
+            ->assertJsonPath(
+                'errors.autor_id.0',
+                'Não tens permissão para definir este autor.',
+            );
+
+        $this->assertDatabaseMissing(
+            'metal_thursdays',
+            [
+                'data' => '2026-01-17',
+            ],
+        );
+    }
+
+    /**
+     * Confirma que um utilizador comum não pode alterar a data durante a edição.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function utilizador_comum_nao_pode_alterar_data_na_edicao(): void
+    {
+        Notification::fake();
+
+        $utilizador = $this->criarUtilizador();
+        $proximoNomeado = $this->criarUtilizador();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $edicao = $this->criarEdicao();
+
+        $metalThursday = MetalThursday::factory()
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-01-18',
+                ),
+            )
+            ->comEdicao(
+                $edicao,
+            )
+            ->comAutor(
+                $utilizador,
+            )
+            ->comProximoNomeado(
+                $proximoNomeado,
+            )
+            ->create();
+
+        $tipoSeccao = TipoSeccao::factory()
+            ->semDetalhes()
+            ->create();
+
+        $this->patchJson(
+            route(
+                'metal-thursday.atualizar',
+                $metalThursday,
+            ),
+            [
+                'data' => '2026-01-19',
+
+                'nome' => null,
+
+                'autor_id' => $utilizador->getKey(),
+
+                'proximo_nomeado_id' => $proximoNomeado->getKey(),
+
+                'seccoes' => [
+                    [
+                        'id' => null,
+
+                        'tipo_seccao_id' => $tipoSeccao->getKey(),
+
+                        'descricao' => 'Secção de teste.',
+                    ],
+                ],
+            ],
+        )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'data',
+            ])
+            ->assertJsonPath(
+                'errors.data.0',
+                'Não tens permissão para alterar a data da MetalThursday.',
+            );
+
+        $this->assertDatabaseHas(
+            'metal_thursdays',
+            [
+                'id' => $metalThursday->getKey(),
+
+                'data' => '2026-01-18',
+            ],
+        );
+
+        $this->assertDatabaseMissing(
+            'metal_thursdays',
+            [
+                'id' => $metalThursday->getKey(),
+
+                'data' => '2026-01-19',
+            ],
+        );
+    }
+
+    /**
+     * Confirma que um utilizador comum não pode alterar o autor durante a edição.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function utilizador_comum_nao_pode_alterar_autor_na_edicao(): void
+    {
+        Notification::fake();
+
+        $utilizador = $this->criarUtilizador();
+        $autorFalsificado = $this->criarUtilizador();
+        $proximoNomeado = $this->criarUtilizador();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $edicao = $this->criarEdicao();
+
+        $metalThursday = MetalThursday::factory()
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-01-18',
+                ),
+            )
+            ->comEdicao(
+                $edicao,
+            )
+            ->comAutor(
+                $utilizador,
+            )
+            ->comProximoNomeado(
+                $proximoNomeado,
+            )
+            ->create();
+
+        $tipoSeccao = TipoSeccao::factory()
+            ->semDetalhes()
+            ->create();
+
+        $this->patchJson(
+            route(
+                'metal-thursday.atualizar',
+                $metalThursday,
+            ),
+            [
+                'edicao_id' => $edicao->getKey(),
+
+                'data' => '2026-01-18',
+
+                'nome' => null,
+
+                'autor_id' => $autorFalsificado->getKey(),
+
+                'proximo_nomeado_id' => $proximoNomeado->getKey(),
+
+                'seccoes' => [
+                    [
+                        'id' => null,
+
+                        'tipo_seccao_id' => $tipoSeccao->getKey(),
+
+                        'descricao' => 'Secção de teste.',
+                    ],
+                ],
+            ],
+        )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'autor_id',
+            ])
+            ->assertJsonPath(
+                'errors.autor_id.0',
+                'Não tens permissão para definir este autor.',
+            );
+
+        $this->assertDatabaseHas(
+            'metal_thursdays',
+            [
+                'id' => $metalThursday->getKey(),
+
+                'autor_id' => $utilizador->getKey(),
+            ],
+        );
+
+        $this->assertDatabaseMissing(
+            'metal_thursdays',
+            [
+                'id' => $metalThursday->getKey(),
+
+                'autor_id' => $autorFalsificado->getKey(),
+            ],
+        );
     }
 
     /**
@@ -84,12 +1006,28 @@ final class ControladorMetalThursdayTest extends TestCase
 
         $utilizador = $this->criarUtilizador();
 
+        $proximoNomeado = $this->criarUtilizador();
+
         $this->actingAs(
             $utilizador,
             'sessao',
         );
 
-        $edicao = $this->criarEdicao();
+        $dataAtual = CarbonImmutable::parse(
+            now()->format(
+                'Y-m-d',
+            ),
+        );
+
+        $edicao = Edicao::factory()
+            ->comNome(
+                'Edição da data atual',
+            )
+            ->comPeriodo(
+                $dataAtual->startOfMonth(),
+                $dataAtual->endOfMonth(),
+            )
+            ->create();
 
         $tipoSeccao = TipoSeccao::factory()
             ->semDetalhes()
@@ -100,15 +1038,15 @@ final class ControladorMetalThursdayTest extends TestCase
                 'metal-thursday.guardar',
             ),
             [
-                'edicao_id' => $edicao->getKey(),
-
-                'data' => '2026-01-15',
+                'data' => $dataAtual->format(
+                    'Y-m-d',
+                ),
 
                 'nome' => null,
 
                 'autor_id' => $utilizador->getKey(),
 
-                'proximo_nomeado_id' => $utilizador->getKey(),
+                'proximo_nomeado_id' => $proximoNomeado->getKey(),
 
                 'seccoes' => [
                     [
@@ -134,7 +1072,9 @@ final class ControladorMetalThursdayTest extends TestCase
             [
                 'edicao_id' => $edicao->getKey(),
 
-                'data' => '2026-01-15',
+                'data' => $dataAtual->format(
+                    'Y-m-d',
+                ),
             ],
         );
 
@@ -146,6 +1086,336 @@ final class ControladorMetalThursdayTest extends TestCase
                 'descricao' => 'Secção de teste.',
 
                 'deleted_at' => null,
+            ],
+        );
+    }
+
+    /**
+     * Confirma que um identificador de edição manipulado pelo cliente é
+     * ignorado e substituído pela edição correspondente à data.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function criacao_ignora_edicao_enviada_e_determina_edicao_pela_data(): void
+    {
+        Notification::fake();
+
+        $utilizador = Utilizador::factory()
+            ->comPapel(
+                PapelUtilizador::Administrador,
+            )
+            ->create();
+        $proximoNomeado = $this->criarUtilizador();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $edicaoJaneiro = $this->criarEdicao();
+
+        $edicaoFevereiro = Edicao::factory()
+            ->comNome(
+                'Edição de fevereiro',
+            )
+            ->comPeriodo(
+                CarbonImmutable::parse(
+                    '2026-02-01',
+                ),
+                CarbonImmutable::parse(
+                    '2026-02-28',
+                ),
+            )
+            ->create();
+
+        $tipoSeccao = TipoSeccao::factory()
+            ->semDetalhes()
+            ->create();
+
+        $this->postJson(
+            route(
+                'metal-thursday.guardar',
+            ),
+            [
+                'edicao_id' => $edicaoFevereiro->getKey(),
+
+                'data' => '2026-01-20',
+
+                'nome' => null,
+
+                'autor_id' => $utilizador->getKey(),
+
+                'proximo_nomeado_id' => $proximoNomeado->getKey(),
+
+                'seccoes' => [
+                    [
+                        'id' => null,
+
+                        'tipo_seccao_id' => $tipoSeccao->getKey(),
+
+                        'descricao' => 'Secção de teste.',
+                    ],
+                ],
+            ],
+        )
+            ->assertCreated();
+
+        $this->assertDatabaseHas(
+            'metal_thursdays',
+            [
+                'data' => '2026-01-20',
+
+                'edicao_id' => $edicaoJaneiro->getKey(),
+            ],
+        );
+
+        $this->assertDatabaseMissing(
+            'metal_thursdays',
+            [
+                'data' => '2026-01-20',
+
+                'edicao_id' => $edicaoFevereiro->getKey(),
+            ],
+        );
+    }
+
+    /**
+     * Confirma que uma data sem edição correspondente impede a criação.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function rejeita_criacao_quando_data_nao_pertence_a_nenhuma_edicao(): void
+    {
+        Notification::fake();
+
+        $utilizador = Utilizador::factory()
+            ->comPapel(
+                PapelUtilizador::Administrador,
+            )
+            ->create();
+        $proximoNomeado = $this->criarUtilizador();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $tipoSeccao = TipoSeccao::factory()
+            ->semDetalhes()
+            ->create();
+
+        $this->postJson(
+            route(
+                'metal-thursday.guardar',
+            ),
+            [
+                'edicao_id' => 999999,
+
+                'data' => '2026-05-15',
+
+                'nome' => null,
+
+                'autor_id' => $utilizador->getKey(),
+
+                'proximo_nomeado_id' => $proximoNomeado->getKey(),
+
+                'seccoes' => [
+                    [
+                        'id' => null,
+
+                        'tipo_seccao_id' => $tipoSeccao->getKey(),
+
+                        'descricao' => 'Secção de teste.',
+                    ],
+                ],
+            ],
+        )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'data',
+            ])
+            ->assertJsonPath(
+                'errors.data.0',
+                'Não existe nenhuma edição que inclua a data selecionada.',
+            );
+
+        $this->assertDatabaseMissing(
+            'metal_thursdays',
+            [
+                'data' => '2026-05-15',
+            ],
+        );
+    }
+
+    /**
+     * Confirma que alterar a data durante a edição também altera
+     * automaticamente a edição associada.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function atualizacao_determina_nova_edicao_pela_data(): void
+    {
+        Notification::fake();
+
+        $utilizador = Utilizador::factory()
+            ->comPapel(
+                PapelUtilizador::Administrador,
+            )
+            ->create();
+        $proximoNomeado = $this->criarUtilizador();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $edicaoJaneiro = $this->criarEdicao();
+
+        $edicaoFevereiro = Edicao::factory()
+            ->comNome(
+                'Edição de fevereiro',
+            )
+            ->comPeriodo(
+                CarbonImmutable::parse(
+                    '2026-02-01',
+                ),
+                CarbonImmutable::parse(
+                    '2026-02-28',
+                ),
+            )
+            ->create();
+
+        $metalThursday = MetalThursday::factory()
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-01-10',
+                ),
+            )
+            ->comEdicao(
+                $edicaoJaneiro,
+            )
+            ->comAutor(
+                $utilizador,
+            )
+            ->comProximoNomeado(
+                $proximoNomeado,
+            )
+            ->create();
+
+        $tipoSeccao = TipoSeccao::factory()
+            ->semDetalhes()
+            ->create();
+
+        $this->patchJson(
+            route(
+                'metal-thursday.atualizar',
+                $metalThursday,
+            ),
+            [
+                'edicao_id' => $edicaoJaneiro->getKey(),
+
+                'data' => '2026-02-12',
+
+                'nome' => null,
+
+                'autor_id' => $utilizador->getKey(),
+
+                'proximo_nomeado_id' => $proximoNomeado->getKey(),
+
+                'seccoes' => [
+                    [
+                        'id' => null,
+
+                        'tipo_seccao_id' => $tipoSeccao->getKey(),
+
+                        'descricao' => 'Secção de teste.',
+                    ],
+                ],
+            ],
+        )
+            ->assertOk();
+
+        $this->assertDatabaseHas(
+            'metal_thursdays',
+            [
+                'id' => $metalThursday->getKey(),
+
+                'data' => '2026-02-12',
+
+                'edicao_id' => $edicaoFevereiro->getKey(),
+            ],
+        );
+    }
+
+    /**
+     * Confirma que o próximo nomeado não pode coincidir com o autor.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function rejeita_proximo_nomeado_igual_ao_autor_na_criacao(): void
+    {
+        Notification::fake();
+
+        $utilizador = Utilizador::factory()
+            ->comPapel(
+                PapelUtilizador::Administrador,
+            )
+            ->create();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $edicao = $this->criarEdicao();
+
+        $tipoSeccao = TipoSeccao::factory()
+            ->semDetalhes()
+            ->create();
+
+        $this->postJson(
+            route(
+                'metal-thursday.guardar',
+            ),
+            [
+                'edicao_id' => $edicao->getKey(),
+
+                'data' => '2026-01-16',
+
+                'nome' => null,
+
+                'autor_id' => $utilizador->getKey(),
+
+                'proximo_nomeado_id' => $utilizador->getKey(),
+
+                'seccoes' => [
+                    [
+                        'id' => null,
+
+                        'tipo_seccao_id' => $tipoSeccao->getKey(),
+
+                        'descricao' => 'Secção de teste.',
+                    ],
+                ],
+            ],
+        )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'proximo_nomeado_id',
+            ])
+            ->assertJsonPath(
+                'errors.proximo_nomeado_id.0',
+                'O próximo nomeado deve ser diferente do autor.',
+            );
+
+        $this->assertDatabaseMissing(
+            'metal_thursdays',
+            [
+                'data' => '2026-01-16',
             ],
         );
     }
@@ -286,6 +1556,101 @@ final class ControladorMetalThursdayTest extends TestCase
             ->assertJsonPath(
                 'identificador',
                 $primeiroNuncaNomeado->getKey(),
+            );
+    }
+
+    /**
+     * Confirma que o autor é excluído da sugestão do nomeado mais antigo.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function obtem_utilizador_ha_mais_tempo_sem_nomeacao_exclui_autor(): void
+    {
+        $utilizadorAutenticado = Utilizador::factory()
+            ->create([
+                'nome' => 'Zelda',
+            ]);
+
+        $autor = Utilizador::factory()
+            ->create([
+                'nome' => 'Ana',
+            ]);
+
+        $proximoDisponivel = Utilizador::factory()
+            ->create([
+                'nome' => 'Beatriz',
+            ]);
+
+        $this->actingAs(
+            $utilizadorAutenticado,
+            'sessao',
+        );
+
+        $this
+            ->getJson(
+                route(
+                    'utilizadores.ha-mais-tempo-sem-nomeacao',
+                    [
+                        'excluir_utilizador_id' => $autor->getKey(),
+                    ],
+                ),
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'identificador',
+                $proximoDisponivel->getKey(),
+            );
+    }
+
+    /**
+     * Confirma que um utilizador suspenso é ignorado na sugestão do nomeado
+     * há mais tempo sem nomeação.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function obtem_utilizador_ha_mais_tempo_sem_nomeacao_ignora_suspenso(): void
+    {
+        $utilizadorAutenticado = Utilizador::factory()
+            ->create([
+                'nome' => 'Zelda',
+            ]);
+
+        $superAdministrador = Utilizador::factory()
+            ->comPapel(
+                PapelUtilizador::SuperAdministrador,
+            )
+            ->create();
+
+        Utilizador::factory()
+            ->suspensoPor(
+                $superAdministrador,
+            )
+            ->create([
+                'nome' => 'Ana',
+            ]);
+
+        $proximoDisponivel = Utilizador::factory()
+            ->create([
+                'nome' => 'Beatriz',
+            ]);
+
+        $this->actingAs(
+            $utilizadorAutenticado,
+            'sessao',
+        );
+
+        $this
+            ->getJson(
+                route(
+                    'utilizadores.ha-mais-tempo-sem-nomeacao',
+                ),
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'identificador',
+                $proximoDisponivel->getKey(),
             );
     }
 

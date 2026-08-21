@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\MetalThursday;
 
+use App\Enumeracoes\PapelUtilizador;
 use App\Enumeracoes\TipoIncorporacao;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
@@ -13,6 +14,7 @@ use App\Models\MetalThursday\TipoSeccao;
 use App\Models\Musica\Banda;
 use Carbon\CarbonInterface;
 use Closure;
+use Illuminate\Database\Eloquent\Builder as ConstrutorEloquent;
 use Illuminate\Database\Query\Builder as ConstrutorConsulta;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -23,8 +25,8 @@ use LogicException;
  * Valida os dados necessários para criar ou atualizar uma MetalThursday.
  *
  * Valida também a estrutura das secções, a pertença das secções existentes à
- * MetalThursday atual, o intervalo da edição e os campos exigidos por cada
- * tipo de secção.
+ * MetalThursday atual, a edição determinada pela data e os campos exigidos
+ * por cada tipo de secção.
  *
  * A validação HTTP apresenta mensagens adequadas ao utilizador. Os modelos e
  * o serviço de persistência mantêm validações próprias antes da escrita na
@@ -110,6 +112,10 @@ final class GuardarMetalThursdayRequest extends FormRequest
      * opcionais vazios são convertidos para nulo e as secções são
      * reindexadas pela respetiva ordem no formulário.
      *
+     * O identificador da edição recebido do cliente é normalizado nesta fase,
+     * mas é sempre substituído pela edição determinada pela data antes da
+     * construção das regras de validação.
+     *
      * @since 2.0.0
      */
     protected function prepareForValidation(): void
@@ -157,6 +163,9 @@ final class GuardarMetalThursdayRequest extends FormRequest
     /**
      * Obtém as regras de validação.
      *
+     * A edição é sempre determinada no servidor a partir da data normalizada,
+     * ignorando qualquer identificador de edição recebido do cliente.
+     *
      * A data é única em toda a aplicação. Durante uma atualização, a
      * MetalThursday atual é ignorada nessa verificação.
      *
@@ -169,6 +178,8 @@ final class GuardarMetalThursdayRequest extends FormRequest
      */
     public function rules(): array
     {
+        $this->determinarEdicaoPelaData();
+
         $metalThursday =
             $this->obterMetalThursdayDaRota();
 
@@ -212,7 +223,7 @@ final class GuardarMetalThursdayRequest extends FormRequest
         return [
             'edicao_id' => [
                 'bail',
-                'required',
+                'nullable',
                 'integer',
 
                 Rule::exists(
@@ -251,6 +262,18 @@ final class GuardarMetalThursdayRequest extends FormRequest
                 Rule::exists(
                     Utilizador::class,
                     'id',
+                )->where(
+                    static fn (
+                        ConstrutorConsulta $construtor,
+                    ): ConstrutorConsulta => $construtor
+                        ->where(
+                            'papel',
+                            '!=',
+                            PapelUtilizador::SuperAdministrador->value,
+                        )
+                        ->whereNull(
+                            'suspenso_em',
+                        ),
                 ),
             ],
 
@@ -258,10 +281,23 @@ final class GuardarMetalThursdayRequest extends FormRequest
                 'bail',
                 'required',
                 'integer',
+                'different:autor_id',
 
                 Rule::exists(
                     Utilizador::class,
                     'id',
+                )->where(
+                    static fn (
+                        ConstrutorConsulta $construtor,
+                    ): ConstrutorConsulta => $construtor
+                        ->where(
+                            'papel',
+                            '!=',
+                            PapelUtilizador::SuperAdministrador->value,
+                        )
+                        ->whereNull(
+                            'suspenso_em',
+                        ),
                 ),
             ],
 
@@ -373,6 +409,18 @@ final class GuardarMetalThursdayRequest extends FormRequest
             function (
                 Validator $validador,
             ): void {
+                $this->validarDataPermitida(
+                    $validador,
+                );
+
+                $this->validarEdicaoDeterminadaPelaData(
+                    $validador,
+                );
+
+                $this->validarAutorPermitido(
+                    $validador,
+                );
+
                 $this->validarDataDentroDaEdicao(
                     $validador,
                 );
@@ -394,11 +442,9 @@ final class GuardarMetalThursdayRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'edicao_id.required' => 'Por favor, seleciona uma edição.',
+            'edicao_id.integer' => 'A edição determinada não é válida.',
 
-            'edicao_id.integer' => 'A edição selecionada não é válida.',
-
-            'edicao_id.exists' => 'A edição selecionada não existe ou não está disponível.',
+            'edicao_id.exists' => 'A edição determinada não existe ou não está disponível.',
 
             'data.required' => 'Por favor, insere a data da MetalThursday.',
 
@@ -417,13 +463,15 @@ final class GuardarMetalThursdayRequest extends FormRequest
 
             'autor_id.integer' => 'O autor selecionado não é válido.',
 
-            'autor_id.exists' => 'O autor selecionado não existe.',
+            'autor_id.exists' => 'O autor selecionado não existe ou não está disponível.',
 
             'proximo_nomeado_id.required' => 'Por favor, seleciona o próximo nomeado.',
 
             'proximo_nomeado_id.integer' => 'O próximo nomeado selecionado não é válido.',
 
-            'proximo_nomeado_id.exists' => 'O próximo nomeado selecionado não existe.',
+            'proximo_nomeado_id.exists' => 'O próximo nomeado selecionado não existe ou não está disponível.',
+
+            'proximo_nomeado_id.different' => 'O próximo nomeado deve ser diferente do autor.',
 
             'seccoes.required' => 'Por favor, insere pelo menos uma secção.',
 
@@ -540,7 +588,258 @@ final class GuardarMetalThursdayRequest extends FormRequest
     }
 
     /**
+     * Determina no servidor a edição correspondente à data recebida.
+     *
+     * O identificador enviado pelo cliente nunca é utilizado para decidir a
+     * associação. Uma data pode corresponder no máximo a uma edição. Mais do
+     * que uma correspondência representa uma quebra da integridade temporal
+     * das edições e interrompe o pedido.
+     *
+     * @throws LogicException Quando mais do que uma edição inclui a data.
+     *
+     * @since 2.0.0
+     */
+    private function determinarEdicaoPelaData(): void
+    {
+        $data =
+            $this->input(
+                'data',
+            );
+
+        if (
+            ! is_string($data)
+            || preg_match(
+                '/^\d{4}-\d{2}-\d{2}$/D',
+                $data,
+            ) !== 1
+        ) {
+            $this->merge([
+                'edicao_id' => null,
+            ]);
+
+            return;
+        }
+
+        $identificadores = Edicao::query()
+            ->where(
+                'data_inicio',
+                '<=',
+                $data,
+            )
+            ->where(
+                static function (
+                    ConstrutorEloquent $construtor,
+                ) use (
+                    $data,
+                ): void {
+                    $construtor
+                        ->whereNull(
+                            'data_fim',
+                        )
+                        ->orWhere(
+                            'data_fim',
+                            '>=',
+                            $data,
+                        );
+                },
+            )
+            ->orderBy(
+                'data_inicio',
+            )
+            ->orderBy(
+                'id',
+            )
+            ->limit(
+                2,
+            )
+            ->pluck(
+                'id',
+            );
+
+        if ($identificadores->count() > 1) {
+            throw new LogicException(
+                'Existe mais do que uma edição para a data indicada.',
+            );
+        }
+
+        $identificador =
+            $identificadores->first();
+
+        $this->merge([
+            'edicao_id' => is_numeric(
+                $identificador,
+            )
+                ? (int) $identificador
+                : null,
+        ]);
+    }
+
+    /**
+     * Impede utilizadores sem privilégios administrativos de definirem uma
+     * data diferente da permitida.
+     *
+     * Na criação, a data tem de corresponder à data atual da aplicação.
+     * Durante uma atualização, a data existente tem de ser preservada.
+     *
+     * @param  Validator  $validador  Validador do pedido.
+     *
+     * @since 2.0.0
+     */
+    private function validarDataPermitida(
+        Validator $validador,
+    ): void {
+        if ($validador->errors()->has('data')) {
+            return;
+        }
+
+        $utilizador =
+            $this->user(
+                'sessao',
+            );
+
+        if (
+            ! $utilizador instanceof Utilizador
+            || $utilizador->possuiPrivilegiosAdministrativos()
+        ) {
+            return;
+        }
+
+        $metalThursday =
+            $this->obterMetalThursdayDaRota();
+
+        $dataPermitida =
+            $metalThursday instanceof MetalThursday
+            ? $metalThursday->data->format(
+                'Y-m-d',
+            )
+            : now()->format(
+                'Y-m-d',
+            );
+
+        $dataRecebida =
+            $this->input(
+                'data',
+            );
+
+        if (
+            is_string($dataRecebida)
+            && $dataRecebida === $dataPermitida
+        ) {
+            return;
+        }
+
+        $validador
+            ->errors()
+            ->add(
+                'data',
+                $metalThursday instanceof MetalThursday
+                    ? 'Não tens permissão para alterar a data da MetalThursday.'
+                    : 'A data da MetalThursday deve corresponder à data atual.',
+            );
+    }
+
+    /**
+     * Confirma que foi possível determinar uma edição para a data válida.
+     *
+     * @param  Validator  $validador  Validador do pedido.
+     *
+     * @since 2.0.0
+     */
+    private function validarEdicaoDeterminadaPelaData(
+        Validator $validador,
+    ): void {
+        if (
+            $validador
+                ->errors()
+                ->has(
+                    'data',
+                )
+        ) {
+            return;
+        }
+
+        if (
+            ! $validador
+                ->errors()
+                ->has(
+                    'edicao_id',
+                )
+            && is_int(
+                $this->input(
+                    'edicao_id',
+                ),
+            )
+        ) {
+            return;
+        }
+
+        $validador
+            ->errors()
+            ->add(
+                'data',
+                'Não existe nenhuma edição que inclua a data selecionada.',
+            );
+    }
+
+    /**
+     * Impede utilizadores sem privilégios administrativos de alterarem o autor.
+     *
+     * Na criação, o autor tem de corresponder ao utilizador autenticado.
+     * Durante uma atualização, o autor existente tem de ser preservado.
+     *
+     * @param  Validator  $validador  Validador do pedido.
+     *
+     * @since 2.0.0
+     */
+    private function validarAutorPermitido(
+        Validator $validador,
+    ): void {
+        if ($validador->errors()->has('autor_id')) {
+            return;
+        }
+
+        $utilizador =
+            $this->user(
+                'sessao',
+            );
+
+        if (
+            ! $utilizador instanceof Utilizador
+            || $utilizador->possuiPrivilegiosAdministrativos()
+        ) {
+            return;
+        }
+
+        $metalThursday =
+            $this->obterMetalThursdayDaRota();
+
+        $autorPermitido =
+            $metalThursday instanceof MetalThursday
+            ? $metalThursday->autor_id
+            : $utilizador->getKey();
+
+        $autorRecebido =
+            $this->input(
+                'autor_id',
+            );
+
+        if (
+            ! is_numeric($autorPermitido)
+            || ! is_numeric($autorRecebido)
+            || (int) $autorPermitido !== (int) $autorRecebido
+        ) {
+            $validador->errors()->add(
+                'autor_id',
+                'Não tens permissão para definir este autor.',
+            );
+        }
+    }
+
+    /**
      * Confirma que a data pertence ao intervalo da edição.
+     *
+     * Esta validação permanece como defesa adicional depois de a edição ter
+     * sido determinada automaticamente.
      *
      * @param  Validator  $validador  Validador do pedido.
      *

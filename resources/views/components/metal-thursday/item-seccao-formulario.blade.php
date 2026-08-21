@@ -309,7 +309,7 @@
                 ></i>
             </button>
 
-            <div class="input-group has-validation">
+            <div class="input-group">
                 <input
                     id="{{ $identificadores['ligacao'] }}"
                     class="form-control campo-ligacao @error($chavesErro['ligacao']) is-invalid @enderror"
@@ -596,7 +596,7 @@
     </div>
 
     <button
-        class="btn btn-sm btn-outline-danger botao-remover-seccao"
+        class="btn btn-sm btn-danger botao-remover-seccao"
         type="button"
         aria-label="Remover esta secção"
     >
