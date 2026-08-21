@@ -348,6 +348,386 @@ final class ControladorEdicaoTest extends TestCase
     }
 
     /**
+     * Confirma que a data inicial não pode excluir uma MetalThursday associada.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function administrador_nao_atualiza_edicao_para_excluir_metal_thursday_anterior(): void
+    {
+        $edicao = $this->criarEdicao();
+
+        MetalThursday::factory()
+            ->comEdicao(
+                $edicao,
+            )
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-01-08',
+                ),
+            )
+            ->create();
+
+        $administrador = $this->criarAdministrador();
+
+        $this
+            ->actingAs(
+                $administrador,
+                'sessao',
+            )
+            ->patchJson(
+                route(
+                    'edicoes.atualizar',
+                    $edicao,
+                ),
+                [
+                    'nome' => 'Edição de janeiro',
+
+                    'data_inicio' => '2026-01-09',
+
+                    'data_fim' => '2026-01-31',
+                ],
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'data_inicio',
+            ])
+            ->assertJsonPath(
+                'errors.data_inicio.0',
+                'A data de início não pode excluir MetalThursdays já associadas à edição.',
+            );
+
+        $this->assertDatabaseHas(
+            'edicoes',
+            [
+                'id' => $edicao->getKey(),
+
+                'data_inicio' => '2026-01-01',
+
+                'data_fim' => '2026-01-31',
+            ],
+        );
+    }
+
+    /**
+     * Confirma que a data inicial não pode excluir uma MetalThursday
+     * eliminada logicamente.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function administrador_nao_atualiza_edicao_para_excluir_metal_thursday_eliminada_anterior(): void
+    {
+        $edicao = $this->criarEdicao();
+
+        $metalThursday = MetalThursday::factory()
+            ->comEdicao(
+                $edicao,
+            )
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-01-08',
+                ),
+            )
+            ->create();
+
+        $metalThursday->deleteOrFail();
+
+        $administrador = $this->criarAdministrador();
+
+        $this
+            ->actingAs(
+                $administrador,
+                'sessao',
+            )
+            ->patchJson(
+                route(
+                    'edicoes.atualizar',
+                    $edicao,
+                ),
+                [
+                    'nome' => 'Edição de janeiro',
+
+                    'data_inicio' => '2026-01-09',
+
+                    'data_fim' => '2026-01-31',
+                ],
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'data_inicio',
+            ])
+            ->assertJsonPath(
+                'errors.data_inicio.0',
+                'A data de início não pode excluir MetalThursdays já associadas à edição.',
+            );
+
+        $this->assertDatabaseHas(
+            'edicoes',
+            [
+                'id' => $edicao->getKey(),
+
+                'data_inicio' => '2026-01-01',
+
+                'data_fim' => '2026-01-31',
+            ],
+        );
+    }
+
+    /**
+     * Confirma que a data final não pode excluir uma MetalThursday associada.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function administrador_nao_atualiza_edicao_para_excluir_metal_thursday_posterior(): void
+    {
+        $edicao = $this->criarEdicao();
+
+        MetalThursday::factory()
+            ->comEdicao(
+                $edicao,
+            )
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-01-22',
+                ),
+            )
+            ->create();
+
+        $administrador = $this->criarAdministrador();
+
+        $this
+            ->actingAs(
+                $administrador,
+                'sessao',
+            )
+            ->patchJson(
+                route(
+                    'edicoes.atualizar',
+                    $edicao,
+                ),
+                [
+                    'nome' => 'Edição de janeiro',
+
+                    'data_inicio' => '2026-01-01',
+
+                    'data_fim' => '2026-01-21',
+                ],
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'data_fim',
+            ])
+            ->assertJsonPath(
+                'errors.data_fim.0',
+                'A data de fim não pode excluir MetalThursdays já associadas à edição.',
+            );
+
+        $this->assertDatabaseHas(
+            'edicoes',
+            [
+                'id' => $edicao->getKey(),
+
+                'data_inicio' => '2026-01-01',
+
+                'data_fim' => '2026-01-31',
+            ],
+        );
+    }
+
+    /**
+     * Confirma que a data final não pode excluir uma MetalThursday eliminada
+     * logicamente.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function administrador_nao_atualiza_edicao_para_excluir_metal_thursday_eliminada_posterior(): void
+    {
+        $edicao = $this->criarEdicao();
+
+        $metalThursday = MetalThursday::factory()
+            ->comEdicao(
+                $edicao,
+            )
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-01-22',
+                ),
+            )
+            ->create();
+
+        $metalThursday->deleteOrFail();
+
+        $administrador = $this->criarAdministrador();
+
+        $this
+            ->actingAs(
+                $administrador,
+                'sessao',
+            )
+            ->patchJson(
+                route(
+                    'edicoes.atualizar',
+                    $edicao,
+                ),
+                [
+                    'nome' => 'Edição de janeiro',
+
+                    'data_inicio' => '2026-01-01',
+
+                    'data_fim' => '2026-01-21',
+                ],
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'data_fim',
+            ])
+            ->assertJsonPath(
+                'errors.data_fim.0',
+                'A data de fim não pode excluir MetalThursdays já associadas à edição.',
+            );
+
+        $this->assertDatabaseHas(
+            'edicoes',
+            [
+                'id' => $edicao->getKey(),
+
+                'data_inicio' => '2026-01-01',
+
+                'data_fim' => '2026-01-31',
+            ],
+        );
+    }
+
+    /**
+     * Confirma que uma MetalThursday pode coincidir com a nova data inicial.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function administrador_atualiza_edicao_com_metal_thursday_na_nova_data_inicial(): void
+    {
+        $edicao = $this->criarEdicao();
+
+        MetalThursday::factory()
+            ->comEdicao(
+                $edicao,
+            )
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-01-08',
+                ),
+            )
+            ->create();
+
+        $administrador = $this->criarAdministrador();
+
+        $this
+            ->actingAs(
+                $administrador,
+                'sessao',
+            )
+            ->patchJson(
+                route(
+                    'edicoes.atualizar',
+                    $edicao,
+                ),
+                [
+                    'nome' => 'Edição de janeiro',
+
+                    'data_inicio' => '2026-01-08',
+
+                    'data_fim' => '2026-01-31',
+                ],
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'edicao.data_inicio',
+                '2026-01-08',
+            )
+            ->assertJsonPath(
+                'edicao.data_fim',
+                '2026-01-31',
+            );
+
+        $this->assertDatabaseHas(
+            'edicoes',
+            [
+                'id' => $edicao->getKey(),
+
+                'data_inicio' => '2026-01-08',
+
+                'data_fim' => '2026-01-31',
+            ],
+        );
+    }
+
+    /**
+     * Confirma que uma MetalThursday pode coincidir com a nova data final.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function administrador_atualiza_edicao_com_metal_thursday_na_nova_data_final(): void
+    {
+        $edicao = $this->criarEdicao();
+
+        MetalThursday::factory()
+            ->comEdicao(
+                $edicao,
+            )
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-01-22',
+                ),
+            )
+            ->create();
+
+        $administrador = $this->criarAdministrador();
+
+        $this
+            ->actingAs(
+                $administrador,
+                'sessao',
+            )
+            ->patchJson(
+                route(
+                    'edicoes.atualizar',
+                    $edicao,
+                ),
+                [
+                    'nome' => 'Edição de janeiro',
+
+                    'data_inicio' => '2026-01-01',
+
+                    'data_fim' => '2026-01-22',
+                ],
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'edicao.data_inicio',
+                '2026-01-01',
+            )
+            ->assertJsonPath(
+                'edicao.data_fim',
+                '2026-01-22',
+            );
+
+        $this->assertDatabaseHas(
+            'edicoes',
+            [
+                'id' => $edicao->getKey(),
+
+                'data_inicio' => '2026-01-01',
+
+                'data_fim' => '2026-01-22',
+            ],
+        );
+    }
+
+    /**
      * Confirma que uma edição não pode ser atualizada para sobrepor outra.
      *
      * @since 2.0.0

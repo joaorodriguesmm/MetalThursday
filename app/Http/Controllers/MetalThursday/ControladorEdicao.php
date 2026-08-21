@@ -22,6 +22,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use LogicException;
 use Symfony\Component\HttpFoundation\Response;
@@ -284,6 +285,14 @@ final class ControladorEdicao extends Controller
 
                 $edicaoBloqueada->fill(
                     $dados,
+                );
+
+                $this->validarDataInicioContemMetalThursdays(
+                    $edicaoBloqueada,
+                );
+
+                $this->validarDataFimContemMetalThursdays(
+                    $edicaoBloqueada,
                 );
 
                 if ($edicaoBloqueada->isDirty()) {
@@ -559,6 +568,99 @@ final class ControladorEdicao extends Controller
                 ? 'Guardar alterações'
                 : 'Criar edição',
         ];
+    }
+
+    /**
+     * Impede que a data inicial exclua MetalThursdays associadas.
+     *
+     * A verificação é necessária apenas quando a data inicial foi alterada.
+     * Deve ser executada depois de a edição ter sido bloqueada dentro da
+     * transação.
+     *
+     * @param  Edicao  $edicao  Edição preenchida com os novos dados.
+     *
+     * @throws ValidationException Quando existem MetalThursdays anteriores à
+     *                             nova data de início.
+     *
+     * @since 2.0.0
+     */
+    private function validarDataInicioContemMetalThursdays(
+        Edicao $edicao,
+    ): void {
+        if (! $edicao->isDirty('data_inicio')) {
+            return;
+        }
+
+        $possuiMetalThursdaysExcluidas =
+            MetalThursday::query()
+                ->withTrashed()
+                ->where(
+                    'edicao_id',
+                    $edicao->getKey(),
+                )
+                ->where(
+                    'data',
+                    '<',
+                    $edicao->data_inicio,
+                )
+                ->exists();
+
+        if (! $possuiMetalThursdaysExcluidas) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'data_inicio' => 'A data de início não pode excluir MetalThursdays já associadas à edição.',
+        ]);
+    }
+
+    /**
+     * Impede que a data final exclua MetalThursdays associadas.
+     *
+     * A verificação é necessária apenas quando a data final foi alterada e
+     * continua definida. Deve ser executada depois de a edição ter sido
+     * bloqueada dentro da transação.
+     *
+     * @param  Edicao  $edicao  Edição preenchida com os novos dados.
+     *
+     * @throws ValidationException Quando existem MetalThursdays posteriores à
+     *                             nova data de fim.
+     *
+     * @since 2.0.0
+     */
+    private function validarDataFimContemMetalThursdays(
+        Edicao $edicao,
+    ): void {
+        if (
+            ! $edicao->isDirty(
+                'data_fim',
+            )
+            || $edicao->data_fim === null
+        ) {
+            return;
+        }
+
+        $possuiMetalThursdaysExcluidas =
+            MetalThursday::query()
+                ->withTrashed()
+                ->where(
+                    'edicao_id',
+                    $edicao->getKey(),
+                )
+                ->where(
+                    'data',
+                    '>',
+                    $edicao->data_fim,
+                )
+                ->exists();
+
+        if (! $possuiMetalThursdaysExcluidas) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'data_fim' => 'A data de fim não pode excluir MetalThursdays já associadas à edição.',
+        ]);
     }
 
     /**
