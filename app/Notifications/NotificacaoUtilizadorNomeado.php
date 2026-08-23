@@ -6,17 +6,22 @@ namespace App\Notifications;
 
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\MetalThursday;
-use Carbon\CarbonImmutable;
+use App\Models\MetalThursday\ReservaMetalThursday;
 use Carbon\CarbonInterface;
 use InvalidArgumentException;
 
 /**
- * Notifica um utilizador quando é nomeado para preparar a próxima
+ * Notifica um utilizador quando recebe uma reserva para preparar uma
  * MetalThursday.
  *
+ * A notificação utiliza a reserva efetivamente criada como fonte da nomeação.
+ * Quando existe uma MetalThursday de origem, a mensagem identifica o respetivo
+ * autor. Quando a reserva resulta do fallback semanal, a mensagem identifica a
+ * nomeação como automática.
+ *
  * A notificação guarda apenas um retrato de valores escalares obtidos no
- * momento da nomeação. O processamento posterior da fila não depende da
- * existência atual do modelo nem executa consultas para reconstruir a
+ * momento da criação. O processamento posterior da fila não depende da
+ * existência atual dos modelos nem executa consultas para reconstruir a
  * mensagem.
  *
  * @since 1.0.0
@@ -43,59 +48,77 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
         'alertas_nomeacao';
 
     /**
-     * Identificador da MetalThursday onde ocorreu a nomeação.
+     * Identificador da MetalThursday onde ocorreu a nomeação manual.
+     *
+     * É nulo quando a reserva foi criada automaticamente pelo fallback.
      *
      * @since 2.0.0
      */
-    private readonly int $identificadorMetalThursday;
+    private readonly ?int $identificadorMetalThursday;
 
     /**
-     * Nome do utilizador responsável pela nomeação.
+     * Nome do utilizador responsável pela nomeação manual.
+     *
+     * É nulo quando a reserva foi criada automaticamente pelo fallback.
      *
      * @since 2.0.0
      */
-    private readonly string $nomeAutor;
+    private readonly ?string $nomeAutor;
 
     /**
      * Prazo apresentado ao utilizador nomeado.
      *
      * @since 2.0.0
      */
-    private readonly ?string $prazo;
+    private readonly string $prazo;
 
     /**
      * Cria a notificação e captura os dados necessários para a fila.
      *
-     * @param  MetalThursday  $metalThursday  MetalThursday onde ocorreu a
-     *                                        nomeação.
+     * @param  ReservaMetalThursday  $reserva  Reserva efetivamente atribuída ao
+     *                                         utilizador.
+     * @param  MetalThursday|null  $metalThursdayOrigem  MetalThursday que
+     *                                                   originou uma nomeação
+     *                                                   manual ou nulo numa
+     *                                                   nomeação automática.
      *
-     * @throws InvalidArgumentException Quando a MetalThursday não está
-     *                                  persistida ou não possui um
-     *                                  identificador válido.
+     * @throws InvalidArgumentException Quando a reserva ou a MetalThursday de
+     *                                  origem não estão persistidas ou possuem
+     *                                  dados inválidos.
      *
      * @since 1.0.0
      */
     public function __construct(
-        MetalThursday $metalThursday,
+        ReservaMetalThursday $reserva,
+        ?MetalThursday $metalThursdayOrigem = null,
     ) {
-        $this->identificadorMetalThursday =
-            $this->obterIdentificadorMetalThursday(
-                $metalThursday,
-            );
-
-        $metalThursday->loadMissing([
-            'autor:id,nome',
-        ]);
-
-        $this->nomeAutor =
-            $this->obterNomeAutor(
-                $metalThursday,
-            );
+        $this->validarReserva(
+            $reserva,
+        );
 
         $this->prazo =
             $this->obterPrazo(
-                $metalThursday->data,
+                $reserva->data,
             );
+
+        if ($metalThursdayOrigem instanceof MetalThursday) {
+            $this->identificadorMetalThursday =
+                $this->obterIdentificadorMetalThursday(
+                    $metalThursdayOrigem,
+                );
+
+            $metalThursdayOrigem->loadMissing([
+                'autor:id,nome',
+            ]);
+
+            $this->nomeAutor =
+                $this->obterNomeAutor(
+                    $metalThursdayOrigem,
+                );
+        } else {
+            $this->identificadorMetalThursday = null;
+            $this->nomeAutor = null;
+        }
 
         $this->afterCommit();
     }
@@ -125,7 +148,7 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
      * @param  Utilizador  $utilizador  Utilizador destinatário.
      * @return array{
      *     tipo: string,
-     *     identificador_metal_thursday: int,
+     *     identificador_metal_thursday: int|null,
      *     titulo: string,
      *     mensagem: string,
      *     ligacao: string,
@@ -196,20 +219,32 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
     protected function obterTextoAcao(
         Utilizador $utilizador,
     ): ?string {
-        return 'Ver MetalThursday';
+        return $this->identificadorMetalThursday === null
+            ? 'Preparar MetalThursday'
+            : 'Ver MetalThursday';
     }
 
     /**
-     * Obtém o endereço da MetalThursday onde ocorreu a nomeação.
+     * Obtém o endereço associado à nomeação.
+     *
+     * Nas nomeações manuais é apresentada a MetalThursday onde ocorreu a
+     * escolha. Nas nomeações automáticas é apresentado diretamente o formulário
+     * de criação correspondente à reserva pendente.
      *
      * @param  Utilizador  $utilizador  Utilizador destinatário.
-     * @return string Endereço da MetalThursday.
+     * @return string Endereço da ação.
      *
      * @since 1.0.0
      */
     protected function obterUrlAcao(
         Utilizador $utilizador,
     ): ?string {
+        if ($this->identificadorMetalThursday === null) {
+            return route(
+                'metal-thursday.criar',
+            );
+        }
+
         return route(
             'metal-thursday.detalhes',
             [
@@ -227,10 +262,10 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
      */
     private function obterMensagem(): string
     {
-        if ($this->prazo === null) {
+        if ($this->nomeAutor === null) {
             return sprintf(
-                'Foste nomeado por %s! Prepara a tua próxima MetalThursday.',
-                $this->nomeAutor,
+                'Foste nomeado automaticamente! Prepara e publica a tua MetalThursday até quinta-feira, dia %s.',
+                $this->prazo,
             );
         }
 
@@ -242,7 +277,7 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
     }
 
     /**
-     * Obtém o nome do utilizador que realizou a nomeação.
+     * Obtém o nome do utilizador que realizou a nomeação manual.
      *
      * @param  MetalThursday  $metalThursday  MetalThursday consultada.
      * @return string Nome do autor ou valor alternativo.
@@ -269,37 +304,67 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
     }
 
     /**
-     * Obtém a data limite da próxima MetalThursday.
+     * Obtém a data limite da reserva atribuída.
      *
-     * A data corresponde à primeira quinta-feira posterior à data da
-     * MetalThursday onde ocorreu a nomeação.
+     * @param  mixed  $data  Data da reserva.
+     * @return string Data formatada.
      *
-     * @param  mixed  $data  Data original da MetalThursday.
-     * @return string|null Data formatada ou nulo quando a data original não
-     *                     está disponível.
+     * @throws InvalidArgumentException Quando a reserva não possui uma data
+     *                                  válida.
      *
      * @since 2.0.0
      */
     private function obterPrazo(
         mixed $data,
-    ): ?string {
+    ): string {
         if (! $data instanceof CarbonInterface) {
-            return null;
+            throw new InvalidArgumentException(
+                'A reserva da notificação deve possuir uma data válida.',
+            );
         }
 
-        return CarbonImmutable::instance(
-            $data,
-        )
-            ->next(
-                CarbonImmutable::THURSDAY,
-            )
-            ->format(
-                'd/m/Y',
-            );
+        return $data->format(
+            'd/m/Y',
+        );
     }
 
     /**
-     * Obtém o identificador persistido da MetalThursday.
+     * Valida a reserva que representa a nomeação efetiva.
+     *
+     * @param  ReservaMetalThursday  $reserva  Reserva recebida.
+     *
+     * @throws InvalidArgumentException Quando a reserva não está persistida,
+     *                                  não possui identificador ou não possui
+     *                                  responsável.
+     *
+     * @since 2.0.0
+     */
+    private function validarReserva(
+        ReservaMetalThursday $reserva,
+    ): void {
+        if (
+            ! $reserva->exists
+            || $reserva->getKey() === null
+        ) {
+            throw new InvalidArgumentException(
+                'A reserva da notificação deve estar persistida.',
+            );
+        }
+
+        if (
+            ! is_numeric(
+                $reserva->responsavel_id,
+            )
+            || (int) $reserva->responsavel_id < 1
+        ) {
+            throw new InvalidArgumentException(
+                'A reserva da notificação deve possuir um responsável válido.',
+            );
+        }
+    }
+
+    /**
+     * Obtém o identificador persistido da MetalThursday de origem.
      *
      * Representações textuais do identificador podem conter apenas espaços
      * ASCII exteriores. Restantes caracteres, incluindo caracteres de

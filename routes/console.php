@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Models\Autenticacao\Utilizador;
+use App\Models\MetalThursday\ReservaMetalThursday;
+use App\Notifications\NotificacaoUtilizadorNomeado;
 use App\Servicos\MetalThursday\ServicoReservasMetalThursday;
 use Illuminate\Support\Facades\Schedule;
 
@@ -17,7 +20,35 @@ Schedule::call(
                 ServicoReservasMetalThursday::class,
             );
 
-        $servicoReservas->criarReservaSemanal();
+        $reserva =
+            $servicoReservas->criarReservaSemanal();
+
+        if (! $reserva instanceof ReservaMetalThursday) {
+            return;
+        }
+
+        $reserva->loadMissing([
+            'responsavel.permissoesEmail',
+        ]);
+
+        $responsavel =
+            $reserva->responsavel;
+
+        if (! $responsavel instanceof Utilizador) {
+            return;
+        }
+
+        try {
+            $responsavel->notify(
+                new NotificacaoUtilizadorNomeado(
+                    $reserva,
+                ),
+            );
+        } catch (Throwable $excecao) {
+            report(
+                $excecao,
+            );
+        }
     },
 )
     ->name(

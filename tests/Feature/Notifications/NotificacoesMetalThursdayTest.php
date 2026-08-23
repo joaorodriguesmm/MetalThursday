@@ -7,6 +7,7 @@ namespace Tests\Feature\Notifications;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
+use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Notifications\NotificacaoMetalThursdayCriada;
 use App\Notifications\NotificacaoUtilizadorNomeado;
 use Carbon\CarbonImmutable;
@@ -144,13 +145,14 @@ final class NotificacoesMetalThursdayTest extends TestCase
     }
 
     /**
-     * Confirma que a notificação de nomeação conserva o autor e o prazo do
-     * momento da criação sem consultas posteriores.
+     * Confirma que uma nomeação manual conserva a MetalThursday de origem, o
+     * autor e o prazo da reserva efetivamente criada, sem consultas
+     * posteriores.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function nomeacao_preserva_retrato_sem_consultas_posteriores(): void
+    public function nomeacao_manual_preserva_retrato_sem_consultas_posteriores(): void
     {
         $autor = Utilizador::factory()
             ->create([
@@ -188,12 +190,26 @@ final class NotificacoesMetalThursdayTest extends TestCase
             )
             ->create();
 
+        $reserva = ReservaMetalThursday::factory()
+            ->comData(
+                CarbonImmutable::create(
+                    2026,
+                    8,
+                    6,
+                ),
+            )
+            ->comResponsavel(
+                $nomeado,
+            )
+            ->create();
+
         $identificadorMetalThursday =
             (int) $metalThursday->getKey();
 
         $notificacao = unserialize(
             serialize(
                 new NotificacaoUtilizadorNomeado(
+                    $reserva,
                     $metalThursday,
                 ),
             ),
@@ -245,6 +261,98 @@ final class NotificacoesMetalThursdayTest extends TestCase
         self::assertSame(
             'Foste nomeado por Autor da nomeação! Prepara e publica a tua MetalThursday até quinta-feira, dia 06/08/2026.',
             $dados['mensagem'],
+        );
+
+        self::assertSame(
+            route(
+                'metal-thursday.detalhes',
+                [
+                    'metalThursday' => $identificadorMetalThursday,
+                ],
+            ),
+            $dados['ligacao'],
+        );
+
+        self::assertSame(
+            [],
+            $consultas,
+        );
+    }
+
+    /**
+     * Confirma que a nomeação automática utiliza a data da reserva, não exige
+     * uma MetalThursday de origem e encaminha o utilizador para o formulário de
+     * criação.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nomeacao_automatica_utiliza_reserva_e_ligacao_de_criacao(): void
+    {
+        $nomeado = Utilizador::factory()
+            ->create();
+
+        $reserva = ReservaMetalThursday::factory()
+            ->comData(
+                CarbonImmutable::create(
+                    2026,
+                    8,
+                    6,
+                ),
+            )
+            ->comResponsavel(
+                $nomeado,
+            )
+            ->create();
+
+        $notificacao = unserialize(
+            serialize(
+                new NotificacaoUtilizadorNomeado(
+                    $reserva,
+                ),
+            ),
+            [
+                'allowed_classes' => true,
+            ],
+        );
+
+        self::assertInstanceOf(
+            NotificacaoUtilizadorNomeado::class,
+            $notificacao,
+        );
+
+        $consultas = [];
+
+        DB::listen(
+            static function (
+                QueryExecuted $consulta,
+            ) use (&$consultas): void {
+                $consultas[] = $consulta->sql;
+            },
+        );
+
+        $dados = $notificacao->toArray(
+            $nomeado,
+        );
+
+        $notificacao->toMail(
+            $nomeado,
+        );
+
+        self::assertNull(
+            $dados['identificador_metal_thursday'],
+        );
+
+        self::assertSame(
+            'Foste nomeado automaticamente! Prepara e publica a tua MetalThursday até quinta-feira, dia 06/08/2026.',
+            $dados['mensagem'],
+        );
+
+        self::assertSame(
+            route(
+                'metal-thursday.criar',
+            ),
+            $dados['ligacao'],
         );
 
         self::assertSame(

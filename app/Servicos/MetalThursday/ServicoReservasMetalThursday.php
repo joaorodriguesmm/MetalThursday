@@ -33,32 +33,63 @@ final class ServicoReservasMetalThursday
     private const TENTATIVAS_TRANSACAO = 3;
 
     /**
-     * Cria a reserva correspondente à quinta-feira seguinte.
+     * Executa o fallback semanal das reservas.
      *
-     * Este método constitui o ponto de entrada do agendamento semanal
-     * executado à sexta-feira.
+     * É verificada a reserva da quinta-feira imediatamente anterior ao momento
+     * de referência. Apenas quando essa reserva existe e continua pendente é
+     * tentada a criação do slot da quinta-feira seguinte.
+     *
+     * Uma reserva anterior inexistente ou já cumprida não desencadeia qualquer
+     * nova reserva.
      *
      * @param  CarbonInterface|null  $referencia  Momento de referência.
-     * @return ReservaMetalThursday Reserva criada ou previamente existente.
+     * @return ReservaMetalThursday|null Reserva criada pelo fallback ou nulo
+     *                                   quando nenhuma criação foi necessária.
      *
      * @since 2.0.0
      */
     public function criarReservaSemanal(
         ?CarbonInterface $referencia = null,
-    ): ReservaMetalThursday {
+    ): ?ReservaMetalThursday {
         $momentoReferencia = CarbonImmutable::instance(
             $referencia
                 ?? now(),
         );
 
-        $data = $momentoReferencia
-            ->next(
+        $dataAnterior = $momentoReferencia
+            ->previous(
                 CarbonImmutable::THURSDAY,
             )
             ->startOfDay();
 
-        return $this->criarReservaAutomatica(
-            $data,
+        $dataSeguinte =
+            $dataAnterior->addWeek();
+
+        return DB::transaction(
+            function () use (
+                $dataAnterior,
+                $dataSeguinte,
+            ): ?ReservaMetalThursday {
+                $reservaAnterior = ReservaMetalThursday::query()
+                    ->where(
+                        'data',
+                        $dataAnterior->toDateString(),
+                    )
+                    ->lockForUpdate()
+                    ->first();
+
+                if (
+                    ! $reservaAnterior instanceof ReservaMetalThursday
+                    || ! $reservaAnterior->estaPendente()
+                ) {
+                    return null;
+                }
+
+                return $this->criarReservaAutomatica(
+                    $dataSeguinte,
+                );
+            },
+            self::TENTATIVAS_TRANSACAO,
         );
     }
 
@@ -73,7 +104,8 @@ final class ServicoReservasMetalThursday
      * administrador.
      *
      * @param  CarbonInterface  $data  Quinta-feira reservada.
-     * @return ReservaMetalThursday Reserva criada ou existente.
+     * @return ReservaMetalThursday|null Reserva criada ou nulo quando o slot já
+     *                                   existia.
      *
      * @throws InvalidArgumentException Quando a data não é uma quinta-feira.
      *
@@ -81,16 +113,11 @@ final class ServicoReservasMetalThursday
      */
     public function criarReservaAutomatica(
         CarbonInterface $data,
-    ): ReservaMetalThursday {
-        $dataNormalizada = CarbonImmutable::instance(
-            $data,
-        )->startOfDay();
-
-        if (! $dataNormalizada->isThursday()) {
-            throw new InvalidArgumentException(
-                'A data da reserva tem de corresponder a uma quinta-feira.',
+    ): ?ReservaMetalThursday {
+        $dataNormalizada =
+            $this->normalizarDataReserva(
+                $data,
             );
-        }
 
         $dataPersistivel =
             $dataNormalizada->toDateString();
@@ -100,7 +127,7 @@ final class ServicoReservasMetalThursday
                 function () use (
                     $dataNormalizada,
                     $dataPersistivel,
-                ): ReservaMetalThursday {
+                ): ?ReservaMetalThursday {
                     $reservaExistente = ReservaMetalThursday::query()
                         ->where(
                             'data',
@@ -113,7 +140,7 @@ final class ServicoReservasMetalThursday
                         $reservaExistente
                         instanceof ReservaMetalThursday
                     ) {
-                        return $reservaExistente;
+                        return null;
                     }
 
                     Utilizador::query()
@@ -164,7 +191,143 @@ final class ServicoReservasMetalThursday
                 $reservaExistente
                 instanceof ReservaMetalThursday
             ) {
-                return $reservaExistente;
+                return null;
+            }
+
+            throw $excecao;
+        }
+    }
+
+    /**
+     * Tenta criar uma reserva para um utilizador explicitamente nomeado.
+     *
+     * A operação nunca substitui uma reserva já existente para a data. Nesse
+     * caso, devolve nulo sem alterar o responsável ou qualquer outro dado do
+     * slot.
+     *
+     * A elegibilidade do nomeado é novamente confirmada dentro da transação,
+     * depois de o utilizador ter sido bloqueado. Assim, a operação não depende
+     * exclusivamente da validação anteriormente realizada pela camada HTTP.
+     *
+     * @param  CarbonInterface  $data  Quinta-feira reservada.
+     * @param  int  $identificadorResponsavel  Utilizador nomeado.
+     * @return ReservaMetalThursday|null Reserva criada ou nulo quando o slot
+     *                                   já existia.
+     *
+     * @throws InvalidArgumentException Quando a data, o identificador ou a
+     *                                  elegibilidade não são válidos.
+     *
+     * @since 2.0.0
+     */
+    public function criarReservaParaNomeado(
+        CarbonInterface $data,
+        int $identificadorResponsavel,
+    ): ?ReservaMetalThursday {
+        $dataNormalizada =
+            $this->normalizarDataReserva(
+                $data,
+            );
+
+        if ($identificadorResponsavel < 1) {
+            throw new InvalidArgumentException(
+                'O utilizador nomeado deve possuir um identificador válido.',
+            );
+        }
+
+        $dataPersistivel =
+            $dataNormalizada->toDateString();
+
+        try {
+            return DB::transaction(
+                function () use (
+                    $dataNormalizada,
+                    $dataPersistivel,
+                    $identificadorResponsavel,
+                ): ?ReservaMetalThursday {
+                    $reservaExistente = ReservaMetalThursday::query()
+                        ->where(
+                            'data',
+                            $dataPersistivel,
+                        )
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (
+                        $reservaExistente
+                        instanceof ReservaMetalThursday
+                    ) {
+                        return null;
+                    }
+
+                    Utilizador::query()
+                        ->elegiveisParaNomeacao()
+                        ->select([
+                            'utilizadores.id',
+                        ])
+                        ->reorder(
+                            'utilizadores.id',
+                        )
+                        ->lockForUpdate()
+                        ->get();
+
+                    $responsavel = Utilizador::query()
+                        ->whereKey(
+                            $identificadorResponsavel,
+                        )
+                        ->first();
+
+                    if (! $responsavel instanceof Utilizador) {
+                        throw new InvalidArgumentException(
+                            'O utilizador nomeado não existe.',
+                        );
+                    }
+
+                    $estaElegivel = Utilizador::query()
+                        ->elegiveisParaNomeacao()
+                        ->whereKey(
+                            $identificadorResponsavel,
+                        )
+                        ->exists();
+
+                    if (! $estaElegivel) {
+                        throw new InvalidArgumentException(
+                            'O utilizador nomeado não está disponível para uma nova nomeação.',
+                        );
+                    }
+
+                    $reserva =
+                        new ReservaMetalThursday;
+
+                    $reserva->data =
+                        $dataNormalizada;
+
+                    $reserva
+                        ->responsavel()
+                        ->associate(
+                            $responsavel,
+                        );
+
+                    $reserva->saveOrFail();
+
+                    return $reserva->refresh();
+                },
+                self::TENTATIVAS_TRANSACAO,
+            );
+        } catch (
+            UniqueConstraintViolationException $excecao
+        ) {
+            $reservaExistente = ReservaMetalThursday::query()
+                ->where(
+                    'data',
+                    $dataPersistivel,
+                )
+                ->first();
+
+            if (
+                $reservaExistente
+                instanceof ReservaMetalThursday
+            ) {
+                return null;
             }
 
             throw $excecao;
@@ -293,5 +456,31 @@ final class ServicoReservasMetalThursday
                 'id',
             )
             ->first();
+    }
+
+    /**
+     * Normaliza e valida a data de uma reserva.
+     *
+     * @param  CarbonInterface  $data  Data recebida.
+     * @return CarbonImmutable Data normalizada para o início do dia.
+     *
+     * @throws InvalidArgumentException Quando a data não é uma quinta-feira.
+     *
+     * @since 2.0.0
+     */
+    private function normalizarDataReserva(
+        CarbonInterface $data,
+    ): CarbonImmutable {
+        $dataNormalizada = CarbonImmutable::instance(
+            $data,
+        )->startOfDay();
+
+        if (! $dataNormalizada->isThursday()) {
+            throw new InvalidArgumentException(
+                'A data da reserva tem de corresponder a uma quinta-feira.',
+            );
+        }
+
+        return $dataNormalizada;
     }
 }

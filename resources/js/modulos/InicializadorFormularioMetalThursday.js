@@ -1350,6 +1350,15 @@ function inicializarFormularioMetalThursday(
     const inicializadorTooltips =
         new InicializadorTooltips();
 
+    const campoProximoNomeado =
+        formulario.querySelector(
+            '[name="proximo_nomeado_id"]',
+        );
+
+    const possuiSelecaoProximoNomeado =
+        campoProximoNomeado
+        instanceof HTMLSelectElement;
+
     /*
      * O testador de incorporação é específico de cada secção e, por isso,
      * continua a necessitar de uma instância por item.
@@ -1394,40 +1403,42 @@ function inicializarFormularioMetalThursday(
         },
     );
 
-    new SeletorNomeados({
-        seletorBotaoAleatorio:
-            '#botao-selecionar-nomeado-aleatorio',
+    if (possuiSelecaoProximoNomeado) {
+        new SeletorNomeados({
+            seletorBotaoAleatorio:
+                '#botao-selecionar-nomeado-aleatorio',
 
-        seletorBotaoMaisAntigo:
-            '#botao-selecionar-nomeado-mais-antigo',
+            seletorBotaoMaisAntigo:
+                '#botao-selecionar-nomeado-mais-antigo',
 
-        instanciaTomSelect:
-            inicializadorTomSelect
-                .obterInstancia(
-                    'proximo-nomeado-metal-thursday',
-                ),
+            instanciaTomSelect:
+                inicializadorTomSelect
+                    .obterInstancia(
+                        'proximo-nomeado-metal-thursday',
+                    ),
 
-        urlNomeadoMaisAntigo:
-            configuracao
-                .enderecos
-                .obterUtilizadorHaMaisTempoSemNomeacao,
+            urlNomeadoMaisAntigo:
+                configuracao
+                    .enderecos
+                    .obterUtilizadorHaMaisTempoSemNomeacao,
 
-        obterValorExcluido: () => {
-            const campoAutor =
-                formulario.querySelector(
-                    '[name="autor_id"]',
-                );
+            obterValorExcluido: () => {
+                const campoAutor =
+                    formulario.querySelector(
+                        '[name="autor_id"]',
+                    );
 
-            if (
-                campoAutor instanceof HTMLInputElement
-                || campoAutor instanceof HTMLSelectElement
-            ) {
-                return campoAutor.value;
-            }
+                if (
+                    campoAutor instanceof HTMLInputElement
+                    || campoAutor instanceof HTMLSelectElement
+                ) {
+                    return campoAutor.value;
+                }
 
-            return null;
-        },
-    });
+                return null;
+            },
+        });
+    }
 
     const maximoNomeMetalThursday = obterComprimentoMaximo(
         'nome-metal-thursday',
@@ -1458,11 +1469,15 @@ function inicializarFormularioMetalThursday(
                         'inteiro',
                     ],
 
-                    proximo_nomeado_id: [
-                        'obrigatorio',
-                        'inteiro',
-                        'diferente:autor_id',
-                    ],
+                    ...(possuiSelecaoProximoNomeado
+                        ? {
+                            proximo_nomeado_id: [
+                                'obrigatorio',
+                                'inteiro',
+                                'diferente:autor_id',
+                            ],
+                        }
+                        : {}),
                 },
 
                 mensagens: {
@@ -1487,16 +1502,20 @@ function inicializarFormularioMetalThursday(
                             'O autor selecionado não é válido.',
                     },
 
-                    proximo_nomeado_id: {
-                        obrigatorio:
-                            'Por favor, seleciona o próximo nomeado.',
+                    ...(possuiSelecaoProximoNomeado
+                        ? {
+                            proximo_nomeado_id: {
+                                obrigatorio:
+                                    'Por favor, seleciona o próximo nomeado.',
 
-                        inteiro:
-                            'O próximo nomeado selecionado não é válido.',
+                                inteiro:
+                                    'O próximo nomeado selecionado não é válido.',
 
-                        diferente:
-                            'O próximo nomeado deve ser diferente do autor.',
-                    },
+                                diferente:
+                                    'O próximo nomeado deve ser diferente do autor.',
+                            },
+                        }
+                        : {}),
                 },
 
                 validadorPersonalizado: (

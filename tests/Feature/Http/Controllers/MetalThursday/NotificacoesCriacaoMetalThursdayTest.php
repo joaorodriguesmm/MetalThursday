@@ -8,9 +8,11 @@ use App\Enumeracoes\PapelUtilizador;
 use App\Http\Controllers\MetalThursday\ControladorMetalThursday;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\MetalThursday;
+use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Notifications\NotificacaoAplicacao;
 use App\Notifications\NotificacaoMetalThursdayCriada;
 use App\Notifications\NotificacaoUtilizadorNomeado;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -32,9 +34,9 @@ final class NotificacoesCriacaoMetalThursdayTest extends TestCase
      * Confirma que as permissões são carregadas por conjunto e que a
      * determinação dos canais não executa consultas por destinatário.
      *
-     * O utilizador nomeado origina uma consulta de carregamento antecipado.
-     * Os restantes destinatários do bloco originam uma segunda consulta,
-     * independentemente da quantidade de utilizadores notificados.
+     * O utilizador efetivamente nomeado origina uma consulta de carregamento
+     * antecipado. Os restantes destinatários do bloco originam uma segunda
+     * consulta, independentemente da quantidade de utilizadores notificados.
      *
      * A facade de notificações é substituída pelo fake oficial do Laravel,
      * garantindo a interceção tanto de `notify()` como de
@@ -50,7 +52,10 @@ final class NotificacoesCriacaoMetalThursdayTest extends TestCase
         $criador =
             $this->criarUtilizadorSelecionavel();
 
-        $nomeado =
+        $nomeadoEfetivo =
+            $this->criarUtilizadorSelecionavel();
+
+        $nomeadoLegado =
             $this->criarUtilizadorSelecionavel();
 
         $primeiroDestinatario =
@@ -64,11 +69,22 @@ final class NotificacoesCriacaoMetalThursdayTest extends TestCase
                 $criador,
             )
             ->comProximoNomeado(
-                $nomeado,
+                $nomeadoLegado,
             )
             ->create([
                 'criado_por_id' => $criador->getKey(),
             ]);
+
+        $reservaSeguinte = ReservaMetalThursday::factory()
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-08-27',
+                ),
+            )
+            ->comResponsavel(
+                $nomeadoEfetivo,
+            )
+            ->create();
 
         $consultas = [];
 
@@ -100,11 +116,17 @@ final class NotificacoesCriacaoMetalThursdayTest extends TestCase
             $controlador,
             $metalThursday,
             (int) $criador->getKey(),
+            $reservaSeguinte,
         );
 
         $this->confirmarNotificacaoComPermissoesCarregadas(
-            $nomeado,
+            $nomeadoEfetivo,
             NotificacaoUtilizadorNomeado::class,
+        );
+
+        $this->confirmarNotificacaoComPermissoesCarregadas(
+            $nomeadoLegado,
+            NotificacaoMetalThursdayCriada::class,
         );
 
         $this->confirmarNotificacaoComPermissoesCarregadas(
@@ -128,8 +150,13 @@ final class NotificacoesCriacaoMetalThursdayTest extends TestCase
         );
 
         Notification::assertNotSentTo(
-            $nomeado,
+            $nomeadoEfetivo,
             NotificacaoMetalThursdayCriada::class,
+        );
+
+        Notification::assertNotSentTo(
+            $nomeadoLegado,
+            NotificacaoUtilizadorNomeado::class,
         );
 
         $consultasPermissoes =
@@ -148,6 +175,77 @@ final class NotificacoesCriacaoMetalThursdayTest extends TestCase
         self::assertCount(
             2,
             $consultasPermissoes,
+        );
+    }
+
+    /**
+     * Confirma que uma proposta de nomeação sem reserva efetivamente criada não
+     * origina uma notificação de nomeação nem exclui o utilizador da notificação
+     * geral.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function ignora_nomeado_legado_quando_nao_existe_nova_reserva(): void
+    {
+        Notification::fake();
+
+        $criador =
+            $this->criarUtilizadorSelecionavel();
+
+        $propostaTardia =
+            $this->criarUtilizadorSelecionavel();
+
+        $outroDestinatario =
+            $this->criarUtilizadorSelecionavel();
+
+        $metalThursday = MetalThursday::factory()
+            ->comAutor(
+                $criador,
+            )
+            ->comProximoNomeado(
+                $propostaTardia,
+            )
+            ->create([
+                'criado_por_id' => $criador->getKey(),
+            ]);
+
+        $controlador =
+            app(
+                ControladorMetalThursday::class,
+            );
+
+        $metodo =
+            new ReflectionMethod(
+                $controlador,
+                'notificarCriacao',
+            );
+
+        $metodo->invoke(
+            $controlador,
+            $metalThursday,
+            (int) $criador->getKey(),
+            null,
+        );
+
+        Notification::assertNotSentTo(
+            $propostaTardia,
+            NotificacaoUtilizadorNomeado::class,
+        );
+
+        Notification::assertSentTo(
+            $propostaTardia,
+            NotificacaoMetalThursdayCriada::class,
+        );
+
+        Notification::assertSentTo(
+            $outroDestinatario,
+            NotificacaoMetalThursdayCriada::class,
+        );
+
+        Notification::assertNotSentTo(
+            $criador,
+            NotificacaoMetalThursdayCriada::class,
         );
     }
 

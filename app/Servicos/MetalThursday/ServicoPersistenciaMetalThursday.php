@@ -12,6 +12,8 @@ use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
 use App\Models\Musica\Banda;
+use App\Resultados\MetalThursday\MetalThursdayCriada;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection as ColecaoEloquent;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -39,6 +41,18 @@ final class ServicoPersistenciaMetalThursday
     private const TENTATIVAS_TRANSACAO = 3;
 
     /**
+     * Cria o serviço com a gestão de reservas necessária ao encadeamento.
+     *
+     * @param  ServicoReservasMetalThursday  $servicoReservas  Serviço de
+     *                                                         reservas.
+     *
+     * @since 2.0.0
+     */
+    public function __construct(
+        private readonly ServicoReservasMetalThursday $servicoReservas,
+    ) {}
+
+    /**
      * Cria uma MetalThursday e as respetivas secções.
      *
      * @param  array<string, mixed>  $dados  Dados recebidos.
@@ -53,6 +67,31 @@ final class ServicoPersistenciaMetalThursday
     public function criar(
         array $dados,
     ): MetalThursday {
+        return $this
+            ->criarComResultado(
+                $dados,
+            )
+            ->obterMetalThursday();
+    }
+
+    /**
+     * Cria uma MetalThursday e devolve o resultado completo da operação.
+     *
+     * O resultado identifica também a reserva seguinte efectivamente criada. Se
+     * o slot seguinte já existia, essa reserva é nula.
+     *
+     * @param  array<string, mixed>  $dados  Dados recebidos.
+     * @return MetalThursdayCriada Resultado da criação.
+     *
+     * @throws InvalidArgumentException Quando os dados ou as relações não são
+     *                                  válidos.
+     * @throws Throwable Quando ocorre outro erro durante a transação.
+     *
+     * @since 2.0.0
+     */
+    public function criarComResultado(
+        array $dados,
+    ): MetalThursdayCriada {
         $dadosNormalizados = $this->normalizarDados(
             $dados,
         );
@@ -60,8 +99,8 @@ final class ServicoPersistenciaMetalThursday
         return DB::transaction(
             function () use (
                 $dadosNormalizados,
-            ): MetalThursday {
-                $this->bloquearRelacoesPrincipais(
+            ): MetalThursdayCriada {
+                $this->bloquearEdicaoPrincipal(
                     $dadosNormalizados,
                 );
 
@@ -69,6 +108,28 @@ final class ServicoPersistenciaMetalThursday
                     $this->obterReservaDaDataParaCriacao(
                         $dadosNormalizados,
                     );
+
+                $reservaSeguinte =
+                    $this->criarReservaSeguinte(
+                        $dadosNormalizados,
+                    );
+
+                $reservaSeguinteEfetiva =
+                    $reservaSeguinte instanceof ReservaMetalThursday
+                    ? $reservaSeguinte
+                    : $this->obterReservaSeguinteEfetiva(
+                        $dadosNormalizados,
+                    );
+
+                $dadosPersistencia =
+                    $this->substituirNomeadoPeloResponsavelEfetivo(
+                        $dadosNormalizados,
+                        $reservaSeguinteEfetiva,
+                    );
+
+                $this->bloquearUtilizadoresPrincipais(
+                    $dadosPersistencia,
+                );
 
                 $tiposSeccao = $this->obterTiposSeccao(
                     $dadosNormalizados['seccoes'],
@@ -83,7 +144,7 @@ final class ServicoPersistenciaMetalThursday
 
                 $this->preencherMetalThursday(
                     $metalThursday,
-                    $dadosNormalizados,
+                    $dadosPersistencia,
                 );
 
                 $metalThursday->saveOrFail();
@@ -115,11 +176,16 @@ final class ServicoPersistenciaMetalThursday
                     $dadosNormalizados['autor_id'],
                 );
 
-                return $metalThursday
+                $metalThursdayCriada = $metalThursday
                     ->refresh()
                     ->load(
                         'seccoes',
                     );
+
+                return new MetalThursdayCriada(
+                    $metalThursdayCriada,
+                    $reservaSeguinte,
+                );
             },
             self::TENTATIVAS_TRANSACAO,
         );
@@ -168,6 +234,12 @@ final class ServicoPersistenciaMetalThursday
                     ->lockForUpdate()
                     ->firstOrFail();
 
+                $dadosPersistencia =
+                    $this->preservarNomeadoPersistidoNaAtualizacao(
+                        $dadosNormalizados,
+                        $metalThursdayBloqueada,
+                    );
+
                 $seccoesExistentes = SeccaoMetalThursday::query()
                     ->where(
                         'metal_thursday_id',
@@ -189,8 +261,12 @@ final class ServicoPersistenciaMetalThursday
                     $seccoesExistentes,
                 );
 
-                $this->bloquearRelacoesPrincipais(
-                    $dadosNormalizados,
+                $this->bloquearEdicaoPrincipal(
+                    $dadosPersistencia,
+                );
+
+                $this->bloquearUtilizadoresPrincipais(
+                    $dadosPersistencia,
                 );
 
                 $tiposSeccao = $this->obterTiposSeccao(
@@ -211,7 +287,7 @@ final class ServicoPersistenciaMetalThursday
 
                 $this->preencherMetalThursday(
                     $metalThursdayBloqueada,
-                    $dadosNormalizados,
+                    $dadosPersistencia,
                 );
 
                 $metalThursdayBloqueada->saveOrFail();
@@ -352,44 +428,37 @@ final class ServicoPersistenciaMetalThursday
                         ?? null,
                     $prefixoCampo.'.id',
                 ),
-
                 'tipo_seccao_id' => $this->normalizarIdentificadorObrigatorio(
                     $dadosSeccao['tipo_seccao_id']
                         ?? null,
                     $prefixoCampo.'.tipo_seccao_id',
                 ),
-
                 'banda_id' => $this->normalizarIdentificadorOpcional(
                     $dadosSeccao['banda_id']
                         ?? null,
                     $prefixoCampo.'.banda_id',
                 ),
-
                 'titulo' => $this->normalizarTextoLinhaOpcional(
                     $dadosSeccao['titulo']
                         ?? null,
                     $prefixoCampo.'.titulo',
                     SeccaoMetalThursday::COMPRIMENTO_MAXIMO_TITULO,
                 ),
-
                 'ligacao' => $this->normalizarLigacao(
                     $dadosSeccao['ligacao']
                         ?? null,
                     $prefixoCampo.'.ligacao',
                 ),
-
                 'tipo_incorporacao' => $this->normalizarTipoIncorporacao(
                     $dadosSeccao['tipo_incorporacao']
                         ?? null,
                     $prefixoCampo.'.tipo_incorporacao',
                 ),
-
                 'ano' => $this->normalizarAno(
                     $dadosSeccao['ano']
                         ?? null,
                     $prefixoCampo.'.ano',
                 ),
-
                 'descricao' => $this->normalizarDescricaoObrigatoria(
                     $dadosSeccao['descricao']
                         ?? null,
@@ -404,31 +473,26 @@ final class ServicoPersistenciaMetalThursday
                     ?? null,
                 'edicao_id',
             ),
-
             'data' => $this->normalizarData(
                 $dados['data']
                     ?? null,
             ),
-
             'nome' => $this->normalizarTextoLinhaOpcional(
                 $dados['nome']
                     ?? null,
                 'nome',
                 MetalThursday::COMPRIMENTO_MAXIMO_NOME,
             ),
-
             'autor_id' => $this->normalizarIdentificadorOpcional(
                 $dados['autor_id']
                     ?? null,
                 'autor_id',
             ),
-
             'proximo_nomeado_id' => $this->normalizarIdentificadorOpcional(
                 $dados['proximo_nomeado_id']
                     ?? null,
                 'proximo_nomeado_id',
             ),
-
             'seccoes' => $seccoes,
         ];
     }
@@ -563,8 +627,11 @@ final class ServicoPersistenciaMetalThursday
                 ->dissociate();
 
             $seccao->titulo = null;
+
             $seccao->ligacao = null;
+
             $seccao->tipo_incorporacao = null;
+
             $seccao->ano = null;
 
             return;
@@ -634,15 +701,16 @@ final class ServicoPersistenciaMetalThursday
     }
 
     /**
-     * Bloqueia e confirma a existência das relações principais.
+     * Bloqueia e confirma a edição principal.
      *
      * @param  array<string, mixed>  $dados  Dados normalizados.
      *
-     * @throws InvalidArgumentException Quando alguma relação não existe.
+     * @throws InvalidArgumentException Quando a edição não existe ou a data não
+     *                                  lhe pertence.
      *
      * @since 2.0.0
      */
-    private function bloquearRelacoesPrincipais(
+    private function bloquearEdicaoPrincipal(
         array $dados,
     ): void {
         $edicao = Edicao::query()
@@ -662,7 +730,20 @@ final class ServicoPersistenciaMetalThursday
             $dados['data'],
             $edicao,
         );
+    }
 
+    /**
+     * Bloqueia e confirma os utilizadores das relações principais.
+     *
+     * @param  array<string, mixed>  $dados  Dados normalizados.
+     *
+     * @throws InvalidArgumentException Quando algum utilizador não existe.
+     *
+     * @since 2.0.0
+     */
+    private function bloquearUtilizadoresPrincipais(
+        array $dados,
+    ): void {
         $identificadoresUtilizadores = array_values(
             array_unique(
                 array_filter(
@@ -771,13 +852,9 @@ final class ServicoPersistenciaMetalThursday
     ): void {
         $camposObrigatorios = [
             'titulo' => 'O título é obrigatório numa secção detalhada.',
-
             'banda_id' => 'A banda é obrigatória numa secção detalhada.',
-
             'ligacao' => 'A ligação é obrigatória numa secção detalhada.',
-
             'tipo_incorporacao' => 'O tipo de incorporação é obrigatório numa secção detalhada.',
-
             'ano' => 'O ano é obrigatório numa secção detalhada.',
         ];
 
@@ -1759,6 +1836,150 @@ final class ServicoPersistenciaMetalThursday
                 SeccaoMetalThursday::ANO_MAXIMO,
             ),
         );
+    }
+
+    /**
+     * Cria a reserva da quinta-feira seguinte para o nomeado indicado.
+     *
+     * Se o slot seguinte já existir, o serviço de reservas preserva-o sem
+     * qualquer alteração. Assim, uma publicação tardia não consegue substituir
+     * uma decisão já tomada pelo fallback.
+     *
+     * @param  array<string, mixed>  $dados  Dados normalizados.
+     * @return ReservaMetalThursday|null Reserva criada ou nulo quando não foi
+     *                                   criado um novo slot.
+     *
+     * @since 2.0.0
+     */
+    private function criarReservaSeguinte(
+        array $dados,
+    ): ?ReservaMetalThursday {
+        $identificadorNomeado =
+            $dados['proximo_nomeado_id'];
+
+        if ($identificadorNomeado === null) {
+            return null;
+        }
+
+        return $this
+            ->servicoReservas
+            ->criarReservaParaNomeado(
+                $this->obterDataReservaSeguinte(
+                    $dados['data'],
+                ),
+                $identificadorNomeado,
+            );
+    }
+
+    /**
+     * Obtém e bloqueia a reserva seguinte efetivamente válida.
+     *
+     * A consulta é necessária quando a tentativa de criação devolve nulo, quer
+     * porque o slot já existia, quer porque não foi proposto um nomeado. Dessa
+     * forma, o campo legado da MetalThursday pode espelhar a decisão persistida
+     * em `reservas_metal_thursday`.
+     *
+     * @param  array<string, mixed>  $dados  Dados normalizados.
+     * @return ReservaMetalThursday|null Reserva efetiva ou nulo quando o slot
+     *                                   ainda não existe.
+     *
+     * @since 2.0.0
+     */
+    private function obterReservaSeguinteEfetiva(
+        array $dados,
+    ): ?ReservaMetalThursday {
+        return ReservaMetalThursday::query()
+            ->where(
+                'data',
+                $this
+                    ->obterDataReservaSeguinte(
+                        $dados['data'],
+                    )
+                    ->toDateString(),
+            )
+            ->lockForUpdate()
+            ->first();
+    }
+
+    /**
+     * Substitui a proposta recebida pelo responsável da reserva efetiva.
+     *
+     * `proximo_nomeado_id` permanece temporariamente na MetalThursday apenas
+     * como espelho de compatibilidade. A reserva seguinte é sempre a fonte de
+     * verdade, incluindo quando o fallback já tinha decidido outro responsável
+     * ou quando o slot existe sem responsável atribuído.
+     *
+     * @param  array<string, mixed>  $dados  Dados normalizados.
+     * @param  ReservaMetalThursday|null  $reservaSeguinte  Reserva efetiva.
+     * @return array<string, mixed> Dados preparados para persistência.
+     *
+     * @since 2.0.0
+     */
+    private function substituirNomeadoPeloResponsavelEfetivo(
+        array $dados,
+        ?ReservaMetalThursday $reservaSeguinte,
+    ): array {
+        $dados['proximo_nomeado_id'] =
+            $reservaSeguinte instanceof ReservaMetalThursday
+            && is_numeric(
+                $reservaSeguinte->responsavel_id,
+            )
+            ? (int) $reservaSeguinte->responsavel_id
+            : null;
+
+        return $dados;
+    }
+
+    /**
+     * Preserva durante a edição o espelho da nomeação já persistida.
+     *
+     * A atualização de conteúdo não pode alterar uma decisão que já produziu
+     * uma reserva real. A camada HTTP deixará também de apresentar este campo
+     * como editável, mas o serviço mantém esta proteção independentemente do
+     * pedido recebido.
+     *
+     * @param  array<string, mixed>  $dados  Dados normalizados.
+     * @param  MetalThursday  $metalThursday  Registo bloqueado.
+     * @return array<string, mixed> Dados preparados para persistência.
+     *
+     * @since 2.0.0
+     */
+    private function preservarNomeadoPersistidoNaAtualizacao(
+        array $dados,
+        MetalThursday $metalThursday,
+    ): array {
+        $dados['proximo_nomeado_id'] =
+            is_numeric(
+                $metalThursday->proximo_nomeado_id,
+            )
+            ? (int) $metalThursday->proximo_nomeado_id
+            : null;
+
+        return $dados;
+    }
+
+    /**
+     * Calcula a quinta-feira seguinte à data da MetalThursday.
+     *
+     * A criação administrativa pode utilizar uma data que não seja quinta-feira,
+     * pelo que o cálculo procura explicitamente a próxima quinta-feira em vez de
+     * adicionar simplesmente uma semana.
+     *
+     * @param  string  $data  Data normalizada da MetalThursday.
+     * @return CarbonImmutable Quinta-feira seguinte no início do dia.
+     *
+     * @since 2.0.0
+     */
+    private function obterDataReservaSeguinte(
+        string $data,
+    ): CarbonImmutable {
+        return CarbonImmutable::parse(
+            $data,
+        )
+            ->next(
+                CarbonImmutable::THURSDAY,
+            )
+            ->startOfDay();
     }
 
     /**

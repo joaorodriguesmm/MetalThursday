@@ -46,14 +46,20 @@ final class ServicoReservasMetalThursdayTest extends TestCase
     }
 
     /**
-     * Confirma que a execução semanal cria o slot da quinta-feira seguinte.
+     * Confirma que o fallback cria a reserva seguinte quando a quinta-feira
+     * anterior ficou pendente.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function cria_reserva_da_quinta_feira_seguinte(): void
+    public function cria_reserva_seguinte_quando_anterior_ficou_pendente(): void
     {
-        $primeiro = Utilizador::factory()
+        $responsavelAnterior = Utilizador::factory()
+            ->create([
+                'nome' => 'Carlos',
+            ]);
+
+        $primeiroElegivel = Utilizador::factory()
             ->create([
                 'nome' => 'Ana',
             ]);
@@ -62,6 +68,17 @@ final class ServicoReservasMetalThursdayTest extends TestCase
             ->create([
                 'nome' => 'Beatriz',
             ]);
+
+        ReservaMetalThursday::factory()
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-08-20',
+                ),
+            )
+            ->comResponsavel(
+                $responsavelAnterior,
+            )
+            ->create();
 
         $reserva =
             $this
@@ -73,28 +90,39 @@ final class ServicoReservasMetalThursdayTest extends TestCase
                     ),
                 );
 
+        self::assertInstanceOf(
+            ReservaMetalThursday::class,
+            $reserva,
+        );
+
         self::assertSame(
             '2026-08-27',
             $reserva->data->toDateString(),
         );
 
         self::assertSame(
-            $primeiro->getKey(),
+            $primeiroElegivel->getKey(),
             $reserva->responsavel_id,
         );
 
         self::assertTrue(
             $reserva->estaPendente(),
         );
+
+        $this->assertDatabaseCount(
+            'reservas_metal_thursday',
+            2,
+        );
     }
 
     /**
-     * Confirma que a criação do mesmo slot é idempotente.
+     * Confirma que a criação automática não altera um slot já existente e
+     * sinaliza que não criou uma nova reserva.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function reutiliza_reserva_quando_slot_ja_existe(): void
+    public function nao_altera_reserva_automatica_quando_slot_ja_existe(): void
     {
         Utilizador::factory()
             ->create();
@@ -110,6 +138,11 @@ final class ServicoReservasMetalThursdayTest extends TestCase
                     $data,
                 );
 
+        self::assertInstanceOf(
+            ReservaMetalThursday::class,
+            $primeira,
+        );
+
         $segunda =
             $this
                 ->servicoReservas
@@ -117,14 +150,325 @@ final class ServicoReservasMetalThursdayTest extends TestCase
                     $data,
                 );
 
-        self::assertSame(
-            $primeira->getKey(),
-            $segunda->getKey(),
+        self::assertNull(
+            $segunda,
         );
 
         self::assertSame(
             1,
             ReservaMetalThursday::query()->count(),
+        );
+    }
+
+    /**
+     * Confirma que o fallback não cria um slot quando não existe reserva para a
+     * quinta-feira anterior.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_cria_fallback_sem_reserva_anterior(): void
+    {
+        Utilizador::factory()
+            ->create();
+
+        $resultado =
+            $this
+                ->servicoReservas
+                ->criarReservaSemanal(
+                    CarbonImmutable::parse(
+                        '2026-08-21 00:00:00',
+                        'Europe/Lisbon',
+                    ),
+                );
+
+        self::assertNull(
+            $resultado,
+        );
+
+        $this->assertDatabaseCount(
+            'reservas_metal_thursday',
+            0,
+        );
+    }
+
+    /**
+     * Confirma que o fallback não cria uma nova reserva quando a quinta-feira
+     * anterior já foi cumprida.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_cria_fallback_quando_reserva_anterior_foi_cumprida(): void
+    {
+        $responsavel = Utilizador::factory()
+            ->create();
+
+        Utilizador::factory()
+            ->create();
+
+        $edicao = Edicao::factory()
+            ->comPeriodo(
+                CarbonImmutable::parse(
+                    '2026-08-01',
+                ),
+                CarbonImmutable::parse(
+                    '2026-08-31',
+                ),
+            )
+            ->create();
+
+        $this->criarReservaCumprida(
+            $responsavel,
+            $edicao,
+            '2026-08-20',
+        );
+
+        $resultado =
+            $this
+                ->servicoReservas
+                ->criarReservaSemanal(
+                    CarbonImmutable::parse(
+                        '2026-08-21 00:00:00',
+                        'Europe/Lisbon',
+                    ),
+                );
+
+        self::assertNull(
+            $resultado,
+        );
+
+        $this->assertDatabaseMissing(
+            'reservas_metal_thursday',
+            [
+                'data' => '2026-08-27',
+            ],
+        );
+
+        $this->assertDatabaseCount(
+            'reservas_metal_thursday',
+            1,
+        );
+    }
+
+    /**
+     * Confirma que o fallback preserva integralmente uma reserva seguinte que já
+     * exista.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function preserva_reserva_seguinte_ja_existente_no_fallback(): void
+    {
+        $responsavelAnterior = Utilizador::factory()
+            ->create();
+
+        $responsavelSeguinte = Utilizador::factory()
+            ->create();
+
+        ReservaMetalThursday::factory()
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-08-20',
+                ),
+            )
+            ->comResponsavel(
+                $responsavelAnterior,
+            )
+            ->create();
+
+        $reservaSeguinte = ReservaMetalThursday::factory()
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-08-27',
+                ),
+            )
+            ->comResponsavel(
+                $responsavelSeguinte,
+            )
+            ->create();
+
+        $resultado =
+            $this
+                ->servicoReservas
+                ->criarReservaSemanal(
+                    CarbonImmutable::parse(
+                        '2026-08-21 00:00:00',
+                        'Europe/Lisbon',
+                    ),
+                );
+
+        self::assertNull(
+            $resultado,
+        );
+
+        self::assertSame(
+            $responsavelSeguinte->getKey(),
+            $reservaSeguinte
+                ->refresh()
+                ->responsavel_id,
+        );
+
+        $this->assertDatabaseCount(
+            'reservas_metal_thursday',
+            2,
+        );
+    }
+
+    /**
+     * Confirma que uma nomeação explícita cria a reserva para o utilizador
+     * indicado.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function cria_reserva_para_nomeado_explicito(): void
+    {
+        $nomeado = Utilizador::factory()
+            ->create();
+
+        $reserva =
+            $this
+                ->servicoReservas
+                ->criarReservaParaNomeado(
+                    CarbonImmutable::parse(
+                        '2026-08-27',
+                    ),
+                    (int) $nomeado->getKey(),
+                );
+
+        self::assertInstanceOf(
+            ReservaMetalThursday::class,
+            $reserva,
+        );
+
+        self::assertSame(
+            '2026-08-27',
+            $reserva->data->toDateString(),
+        );
+
+        self::assertSame(
+            $nomeado->getKey(),
+            $reserva->responsavel_id,
+        );
+
+        self::assertTrue(
+            $reserva->estaPendente(),
+        );
+
+        $this->assertDatabaseCount(
+            'reservas_metal_thursday',
+            1,
+        );
+    }
+
+    /**
+     * Confirma que uma nomeação explícita nunca substitui um slot já
+     * existente.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_substitui_reserva_existente_ao_nomear(): void
+    {
+        $responsavelExistente = Utilizador::factory()
+            ->create();
+
+        $novoNomeado = Utilizador::factory()
+            ->indisponivelParaNomeacao()
+            ->create();
+
+        $reservaExistente = ReservaMetalThursday::factory()
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-08-27',
+                ),
+            )
+            ->comResponsavel(
+                $responsavelExistente,
+            )
+            ->create();
+
+        $resultado =
+            $this
+                ->servicoReservas
+                ->criarReservaParaNomeado(
+                    CarbonImmutable::parse(
+                        '2026-08-27',
+                    ),
+                    (int) $novoNomeado->getKey(),
+                );
+
+        self::assertNull(
+            $resultado,
+        );
+
+        self::assertSame(
+            $responsavelExistente->getKey(),
+            $reservaExistente
+                ->refresh()
+                ->responsavel_id,
+        );
+
+        $this->assertDatabaseCount(
+            'reservas_metal_thursday',
+            1,
+        );
+    }
+
+    /**
+     * Confirma que a camada de serviço não permite atribuir uma segunda
+     * reserva pendente ao mesmo utilizador.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function rejeita_nomeado_com_reserva_pendente(): void
+    {
+        $nomeado = Utilizador::factory()
+            ->create();
+
+        ReservaMetalThursday::factory()
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-08-20',
+                ),
+            )
+            ->comResponsavel(
+                $nomeado,
+            )
+            ->create();
+
+        try {
+            $this
+                ->servicoReservas
+                ->criarReservaParaNomeado(
+                    CarbonImmutable::parse(
+                        '2026-08-27',
+                    ),
+                    (int) $nomeado->getKey(),
+                );
+
+            self::fail(
+                'Era esperada uma exceção para um utilizador com reserva pendente.',
+            );
+        } catch (InvalidArgumentException $excecao) {
+            self::assertSame(
+                'O utilizador nomeado não está disponível para uma nova nomeação.',
+                $excecao->getMessage(),
+            );
+        }
+
+        $this->assertDatabaseMissing(
+            'reservas_metal_thursday',
+            [
+                'data' => '2026-08-27',
+            ],
+        );
+
+        $this->assertDatabaseCount(
+            'reservas_metal_thursday',
+            1,
         );
     }
 

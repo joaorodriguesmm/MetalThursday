@@ -14,6 +14,7 @@ use App\Models\Geografia\OrigemGeografica;
 use App\Models\Interacoes\Comentario;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
+use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
 use App\Models\Musica\Banda;
@@ -312,15 +313,22 @@ final class ControladorMetalThursday extends Controller
         $identificadorCriador =
             $this->obterIdentificadorUtilizadorAutenticado();
 
-        $metalThursday =
+        $resultadoCriacao =
             $this->servicoPersistencia
-                ->criar(
+                ->criarComResultado(
                     $pedido->validated(),
                 );
+
+        $metalThursday =
+            $resultadoCriacao->obterMetalThursday();
+
+        $reservaSeguinte =
+            $resultadoCriacao->obterReservaSeguinte();
 
         $this->notificarCriacao(
             $metalThursday,
             $identificadorCriador,
+            $reservaSeguinte,
         );
 
         if ($pedido->expectsJson()) {
@@ -1208,27 +1216,39 @@ final class ControladorMetalThursday extends Controller
      *
      * @param  MetalThursday  $metalThursday  MetalThursday criada.
      * @param  int  $identificadorCriador  Criador autenticado.
+     * @param  ReservaMetalThursday|null  $reservaSeguinte  Reserva seguinte
+     *                                                      criada nesta
+     *                                                      publicação.
      *
      * @since 2.0.0
      */
     private function notificarCriacao(
         MetalThursday $metalThursday,
         int $identificadorCriador,
+        ?ReservaMetalThursday $reservaSeguinte,
     ): void {
         $metalThursday->load([
             'edicao',
             'autor',
             'criadoPor',
-            'proximoNomeado.permissoesEmail',
         ]);
 
+        if ($reservaSeguinte instanceof ReservaMetalThursday) {
+            $reservaSeguinte->loadMissing([
+                'responsavel.permissoesEmail',
+            ]);
+        }
+
         $nomeado =
-            $metalThursday->proximoNomeado;
+            $reservaSeguinte instanceof ReservaMetalThursday
+            ? $reservaSeguinte->responsavel
+            : null;
 
         if ($nomeado instanceof Utilizador) {
             try {
                 $nomeado->notify(
                     new NotificacaoUtilizadorNomeado(
+                        $reservaSeguinte,
                         $metalThursday,
                     ),
                 );

@@ -7,9 +7,12 @@ namespace Tests\Feature\Servicos\MetalThursday;
 use App\Enumeracoes\TipoIncorporacao;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
+use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
 use App\Models\Musica\Banda;
+use App\Resultados\MetalThursday\MetalThursdayCriada;
 use App\Servicos\MetalThursday\ServicoPersistenciaMetalThursday;
+use App\Servicos\MetalThursday\ServicoReservasMetalThursday;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
@@ -110,6 +113,425 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
                 'ano' => 2026,
 
                 'deleted_at' => null,
+            ],
+        );
+    }
+
+    /**
+     * Confirma que a publicação cumpre a reserva atual e encadeia a reserva da
+     * quinta-feira seguinte para o utilizador nomeado.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function cria_reserva_seguinte_ao_publicar(): void
+    {
+        $autor = Utilizador::factory()
+            ->create();
+
+        $nomeado = Utilizador::factory()
+            ->create();
+
+        $edicao =
+            $this->criarEdicao();
+
+        $tipoSeccao = TipoSeccao::factory()
+            ->semDetalhes()
+            ->create();
+
+        $reservaAtual = ReservaMetalThursday::factory()
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-01-08',
+                ),
+            )
+            ->comResponsavel(
+                $autor,
+            )
+            ->create();
+
+        $resultado = $this
+            ->servico()
+            ->criarComResultado([
+                'edicao_id' => (int) $edicao->getKey(),
+
+                'data' => '2026-01-08',
+
+                'nome' => null,
+
+                'autor_id' => (int) $autor->getKey(),
+
+                'proximo_nomeado_id' => (int) $nomeado->getKey(),
+
+                'seccoes' => [
+                    $this->dadosSeccaoSimples(
+                        $tipoSeccao,
+                        'Descrição válida.',
+                    ),
+                ],
+            ]);
+
+        self::assertInstanceOf(
+            MetalThursdayCriada::class,
+            $resultado,
+        );
+
+        $metalThursday =
+            $resultado->obterMetalThursday();
+
+        $reservaSeguinte =
+            $resultado->obterReservaSeguinte();
+
+        self::assertInstanceOf(
+            ReservaMetalThursday::class,
+            $reservaSeguinte,
+        );
+
+        self::assertSame(
+            '2026-01-15',
+            $reservaSeguinte->data->toDateString(),
+        );
+
+        self::assertSame(
+            $nomeado->getKey(),
+            $reservaSeguinte->responsavel_id,
+        );
+
+        self::assertSame(
+            $nomeado->getKey(),
+            $metalThursday->proximo_nomeado_id,
+        );
+
+        self::assertSame(
+            $metalThursday->getKey(),
+            $reservaAtual
+                ->refresh()
+                ->metal_thursday_id,
+        );
+
+        $this->assertDatabaseHas(
+            'reservas_metal_thursday',
+            [
+                'data' => '2026-01-15',
+
+                'responsavel_id' => $nomeado->getKey(),
+
+                'metal_thursday_id' => null,
+            ],
+        );
+
+        $this->assertDatabaseCount(
+            'reservas_metal_thursday',
+            2,
+        );
+    }
+
+    /**
+     * Confirma que uma publicação tardia cumpre a reserva antiga sem substituir
+     * a reserva seguinte que já tinha sido criada.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function preserva_reserva_seguinte_existente_em_publicacao_tardia(): void
+    {
+        $autor = Utilizador::factory()
+            ->create();
+
+        $responsavelSeguinte = Utilizador::factory()
+            ->create();
+
+        $propostaTardia = Utilizador::factory()
+            ->indisponivelParaNomeacao()
+            ->create();
+
+        $edicao =
+            $this->criarEdicao();
+
+        $tipoSeccao = TipoSeccao::factory()
+            ->semDetalhes()
+            ->create();
+
+        $reservaAtual = ReservaMetalThursday::factory()
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-01-08',
+                ),
+            )
+            ->comResponsavel(
+                $autor,
+            )
+            ->create();
+
+        $reservaSeguinte = ReservaMetalThursday::factory()
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-01-15',
+                ),
+            )
+            ->comResponsavel(
+                $responsavelSeguinte,
+            )
+            ->create();
+
+        $resultado = $this
+            ->servico()
+            ->criarComResultado([
+                'edicao_id' => (int) $edicao->getKey(),
+
+                'data' => '2026-01-08',
+
+                'nome' => null,
+
+                'autor_id' => (int) $autor->getKey(),
+
+                'proximo_nomeado_id' => (int) $propostaTardia->getKey(),
+
+                'seccoes' => [
+                    $this->dadosSeccaoSimples(
+                        $tipoSeccao,
+                        'Descrição válida.',
+                    ),
+                ],
+            ]);
+
+        self::assertInstanceOf(
+            MetalThursdayCriada::class,
+            $resultado,
+        );
+
+        $metalThursday =
+            $resultado->obterMetalThursday();
+
+        self::assertNull(
+            $resultado->obterReservaSeguinte(),
+        );
+
+        self::assertSame(
+            $metalThursday->getKey(),
+            $reservaAtual
+                ->refresh()
+                ->metal_thursday_id,
+        );
+
+        self::assertSame(
+            $responsavelSeguinte->getKey(),
+            $reservaSeguinte
+                ->refresh()
+                ->responsavel_id,
+        );
+
+        self::assertSame(
+            $responsavelSeguinte->getKey(),
+            $metalThursday->proximo_nomeado_id,
+        );
+
+        self::assertNotSame(
+            $propostaTardia->getKey(),
+            $metalThursday->proximo_nomeado_id,
+        );
+
+        $this->assertDatabaseMissing(
+            'reservas_metal_thursday',
+            [
+                'responsavel_id' => $propostaTardia->getKey(),
+            ],
+        );
+
+        $this->assertDatabaseCount(
+            'reservas_metal_thursday',
+            2,
+        );
+    }
+
+    /**
+     * Confirma que um slot seguinte sem responsável prevalece sobre uma
+     * proposta tardia e mantém o campo legado sem nomeado.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function espelha_reserva_seguinte_sem_responsavel_na_publicacao(): void
+    {
+        $autor = Utilizador::factory()
+            ->create();
+
+        $propostaTardia = Utilizador::factory()
+            ->create();
+
+        $edicao =
+            $this->criarEdicao();
+
+        $tipoSeccao = TipoSeccao::factory()
+            ->semDetalhes()
+            ->create();
+
+        ReservaMetalThursday::factory()
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-01-08',
+                ),
+            )
+            ->comResponsavel(
+                $autor,
+            )
+            ->create();
+
+        $reservaSeguinte = ReservaMetalThursday::factory()
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-01-15',
+                ),
+            )
+            ->semResponsavel()
+            ->create();
+
+        $resultado = $this
+            ->servico()
+            ->criarComResultado([
+                'edicao_id' => (int) $edicao->getKey(),
+
+                'data' => '2026-01-08',
+
+                'nome' => null,
+
+                'autor_id' => (int) $autor->getKey(),
+
+                'proximo_nomeado_id' => (int) $propostaTardia->getKey(),
+
+                'seccoes' => [
+                    $this->dadosSeccaoSimples(
+                        $tipoSeccao,
+                        'Descrição válida.',
+                    ),
+                ],
+            ]);
+
+        self::assertNull(
+            $resultado->obterReservaSeguinte(),
+        );
+
+        $metalThursday =
+            $resultado->obterMetalThursday();
+
+        self::assertNull(
+            $metalThursday->proximo_nomeado_id,
+        );
+
+        self::assertNull(
+            $reservaSeguinte
+                ->refresh()
+                ->responsavel_id,
+        );
+
+        $this->assertDatabaseMissing(
+            'reservas_metal_thursday',
+            [
+                'responsavel_id' => $propostaTardia->getKey(),
+            ],
+        );
+    }
+
+    /**
+     * Confirma que uma atualização não consegue alterar o espelho da reserva
+     * seguinte já persistida.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function atualizacao_preserva_nomeado_efetivo_persistido(): void
+    {
+        $autor = Utilizador::factory()
+            ->create();
+
+        $nomeadoEfetivo = Utilizador::factory()
+            ->create();
+
+        $novaProposta = Utilizador::factory()
+            ->create();
+
+        $edicao =
+            $this->criarEdicao();
+
+        $tipoSeccao = TipoSeccao::factory()
+            ->semDetalhes()
+            ->create();
+
+        $servico =
+            $this->servico();
+
+        $metalThursday = $servico->criar([
+            'edicao_id' => (int) $edicao->getKey(),
+
+            'data' => '2026-01-08',
+
+            'nome' => null,
+
+            'autor_id' => (int) $autor->getKey(),
+
+            'proximo_nomeado_id' => (int) $nomeadoEfetivo->getKey(),
+
+            'seccoes' => [
+                $this->dadosSeccaoSimples(
+                    $tipoSeccao,
+                    'Descrição inicial.',
+                ),
+            ],
+        ]);
+
+        $seccao =
+            $metalThursday->seccoes->first();
+
+        self::assertNotNull(
+            $seccao,
+        );
+
+        $metalThursdayAtualizada = $servico->atualizar(
+            $metalThursday,
+            [
+                'edicao_id' => (int) $edicao->getKey(),
+
+                'data' => '2026-01-08',
+
+                'nome' => 'Nome atualizado',
+
+                'autor_id' => (int) $autor->getKey(),
+
+                'proximo_nomeado_id' => (int) $novaProposta->getKey(),
+
+                'seccoes' => [
+                    [
+                        ...$this->dadosSeccaoSimples(
+                            $tipoSeccao,
+                            'Descrição atualizada.',
+                        ),
+
+                        'id' => (int) $seccao->getKey(),
+                    ],
+                ],
+            ],
+        );
+
+        self::assertSame(
+            $nomeadoEfetivo->getKey(),
+            $metalThursdayAtualizada->proximo_nomeado_id,
+        );
+
+        $this->assertDatabaseHas(
+            'reservas_metal_thursday',
+            [
+                'data' => '2026-01-15',
+
+                'responsavel_id' => $nomeadoEfetivo->getKey(),
+
+                'metal_thursday_id' => null,
+            ],
+        );
+
+        $this->assertDatabaseMissing(
+            'reservas_metal_thursday',
+            [
+                'responsavel_id' => $novaProposta->getKey(),
             ],
         );
     }
@@ -473,6 +895,8 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
      */
     private function servico(): ServicoPersistenciaMetalThursday
     {
-        return new ServicoPersistenciaMetalThursday;
+        return new ServicoPersistenciaMetalThursday(
+            new ServicoReservasMetalThursday,
+        );
     }
 }

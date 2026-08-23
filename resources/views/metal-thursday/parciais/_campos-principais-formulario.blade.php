@@ -324,98 +324,157 @@
     </div>
 
     <div class="col-md-6 grupo-campo-formulario mb-3">
-        <label
-            class="form-label"
-            for="proximo-nomeado-metal-thursday"
-        >
-            <strong>
-                Próximo nomeado
+        @if ($metalThursday instanceof App\Models\MetalThursday\MetalThursday)
+            @php
+                $nomeProximoNomeado =
+                    $utilizadoresElegiveisNomeacao
+                        ->firstWhere(
+                            'id',
+                            $metalThursday->proximo_nomeado_id,
+                        )
+                        ?->nome;
+            @endphp
+
+            <label
+                class="form-label"
+                for="proximo-nomeado-metal-thursday"
+            >
+                <strong>
+                    Próximo nomeado
+                </strong>
 
                 <span
-                    class="text-danger"
-                    aria-hidden="true"
-                >
-                    *
-                </span>
-            </strong>
+                    class="bi bi-info-circle"
+                    role="img"
+                    tabindex="0"
+                    data-bs-toggle="tooltip"
+                    data-bs-title="A nomeação efetiva já foi definida pela reserva seguinte e não pode ser alterada nesta edição."
+                    aria-label="A nomeação efetiva já foi definida pela reserva seguinte e não pode ser alterada nesta edição."
+                ></span>
+            </label>
 
-            <span
-                class="bi bi-info-circle"
-                role="img"
-                tabindex="0"
-                data-bs-toggle="tooltip"
-                data-bs-title="Utilizador nomeado para preparar a próxima MetalThursday."
-                aria-label="Utilizador nomeado para preparar a próxima MetalThursday."
-            ></span>
-        </label>
-
-        <div class="input-group has-validation">
-            <select
+            <input
                 id="proximo-nomeado-metal-thursday"
-                class="form-select tom-select-unico @error('proximo_nomeado_id') is-invalid @enderror"
-                name="proximo_nomeado_id"
-                placeholder="Seleciona o próximo nomeado"
-                aria-describedby="erro-proximo-nomeado-metal-thursday"
-                required
+                class="form-control @error('proximo_nomeado_id') is-invalid @enderror"
+                type="text"
+                value="{{ $nomeProximoNomeado ?? 'Não definido' }}"
+                aria-describedby="erro-proximo-nomeado-metal-thursday ajuda-proximo-nomeado-metal-thursday"
+                readonly
+                aria-readonly="true"
                 @error('proximo_nomeado_id')
                     aria-invalid="true"
                 @enderror
             >
-                <option value="">
-                    Seleciona o próximo nomeado
-                </option>
 
-                @foreach ($utilizadoresElegiveisNomeacao as $utilizador)
-                    <option
-                        value="{{ $utilizador->getKey() }}"
-                        @selected(
-                            (string) old(
-                                'proximo_nomeado_id',
-                                $metalThursday?->proximo_nomeado_id,
-                            )
-                            === (string) $utilizador->getKey()
-                        )
+            <div
+                id="erro-proximo-nomeado-metal-thursday"
+                class="invalid-feedback @error('proximo_nomeado_id') d-block @enderror"
+                aria-live="polite"
+            >
+                @error('proximo_nomeado_id')
+                    {{ $message }}
+                @enderror
+            </div>
+
+            <div
+                id="ajuda-proximo-nomeado-metal-thursday"
+                class="form-text"
+            >
+                A nomeação desta MetalThursday já está definida pela reserva seguinte e não pode ser alterada.
+            </div>
+        @else
+            <label
+                class="form-label"
+                for="proximo-nomeado-metal-thursday"
+            >
+                <strong>
+                    Próximo nomeado
+
+                    <span
+                        class="text-danger"
+                        aria-hidden="true"
                     >
-                        {{ $utilizador->nome }}
+                        *
+                    </span>
+                </strong>
+
+                <span
+                    class="bi bi-info-circle"
+                    role="img"
+                    tabindex="0"
+                    data-bs-toggle="tooltip"
+                    data-bs-title="Utilizador nomeado para preparar a próxima MetalThursday."
+                    aria-label="Utilizador nomeado para preparar a próxima MetalThursday."
+                ></span>
+            </label>
+
+            <div class="input-group has-validation">
+                <select
+                    id="proximo-nomeado-metal-thursday"
+                    class="form-select tom-select-unico @error('proximo_nomeado_id') is-invalid @enderror"
+                    name="proximo_nomeado_id"
+                    placeholder="Seleciona o próximo nomeado"
+                    aria-describedby="erro-proximo-nomeado-metal-thursday"
+                    required
+                    @error('proximo_nomeado_id')
+                        aria-invalid="true"
+                    @enderror
+                >
+                    <option value="">
+                        Seleciona o próximo nomeado
                     </option>
-                @endforeach
-            </select>
 
-            <button
-                id="botao-selecionar-nomeado-aleatorio"
-                class="btn btn-secondary"
-                type="button"
-                aria-label="Selecionar um nomeado aleatoriamente"
-                title="Selecionar um nomeado aleatoriamente"
+                    @foreach ($utilizadoresElegiveisNomeacao as $utilizador)
+                        <option
+                            value="{{ $utilizador->getKey() }}"
+                            @selected(
+                                (string) old(
+                                    'proximo_nomeado_id',
+                                )
+                                === (string) $utilizador->getKey()
+                            )
+                        >
+                            {{ $utilizador->nome }}
+                        </option>
+                    @endforeach
+                </select>
+
+                <button
+                    id="botao-selecionar-nomeado-aleatorio"
+                    class="btn btn-secondary"
+                    type="button"
+                    aria-label="Selecionar um nomeado aleatoriamente"
+                    title="Selecionar um nomeado aleatoriamente"
+                >
+                    <i
+                        class="bi bi-shuffle"
+                        aria-hidden="true"
+                    ></i>
+                </button>
+
+                <button
+                    id="botao-selecionar-nomeado-mais-antigo"
+                    class="btn btn-secondary"
+                    type="button"
+                    aria-label="Selecionar o utilizador que não é nomeado há mais tempo"
+                    title="Selecionar o utilizador que não é nomeado há mais tempo"
+                >
+                    <i
+                        class="bi bi-calendar-x"
+                        aria-hidden="true"
+                    ></i>
+                </button>
+            </div>
+
+            <div
+                id="erro-proximo-nomeado-metal-thursday"
+                class="invalid-feedback @error('proximo_nomeado_id') d-block @enderror"
+                aria-live="polite"
             >
-                <i
-                    class="bi bi-shuffle"
-                    aria-hidden="true"
-                ></i>
-            </button>
-
-            <button
-                id="botao-selecionar-nomeado-mais-antigo"
-                class="btn btn-secondary"
-                type="button"
-                aria-label="Selecionar o utilizador que não é nomeado há mais tempo"
-                title="Selecionar o utilizador que não é nomeado há mais tempo"
-            >
-                <i
-                    class="bi bi-calendar-x"
-                    aria-hidden="true"
-                ></i>
-            </button>
-        </div>
-
-        <div
-            id="erro-proximo-nomeado-metal-thursday"
-            class="invalid-feedback @error('proximo_nomeado_id') d-block @enderror"
-            aria-live="polite"
-        >
-            @error('proximo_nomeado_id')
-                {{ $message }}
-            @enderror
-        </div>
+                @error('proximo_nomeado_id')
+                    {{ $message }}
+                @enderror
+            </div>
+        @endif
     </div>
 </div>
