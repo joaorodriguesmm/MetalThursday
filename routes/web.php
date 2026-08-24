@@ -10,5 +10,6 @@ declare(strict_types=1);
 
 require __DIR__.'/auth.php';
 require __DIR__.'/metalthursday.php';
+require __DIR__.'/reservas-metal-thursday.php';
 require __DIR__.'/utilizadores.php';
 require __DIR__.'/convites.php';

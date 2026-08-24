@@ -25,6 +25,8 @@
         <div class="col-lg-9">
             <x-estado-sessao class="mb-4" />
 
+            <x-metal-thursday.reservas-pendentes />
+
             @include(
                 'metal-thursday.parciais._filtros'
             )

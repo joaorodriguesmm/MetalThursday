@@ -2,9 +2,10 @@
     Apresenta os acessos rápidos às principais áreas de gestão relacionadas
     com a MetalThursday.
 
-    A identificação das páginas ativas é efetuada pela classe
-    App\View\Components\MetalThursday\AcoesLaterais. A visibilidade de cada
-    acesso é determinada pela respetiva política de autorização.
+    A identificação das páginas ativas e a disponibilidade da ação genérica de
+    criação são preparadas pela classe
+    App\View\Components\MetalThursday\AcoesLaterais. A autorização de cada
+    acesso continua a ser validada pela respetiva política.
 
     @since 1.0.0
 --}}
@@ -34,29 +35,31 @@
     </div>
 
     <div class="list-group list-group-flush">
-        @can(
-            'create',
-            App\Models\MetalThursday\MetalThursday::class
-        )
-            <a
-                class="list-group-item list-group-item-action bg-dark text-white border-secondary {{
-                    $paginaCriacaoMetalThursdayAtiva
-                        ? 'active'
-                        : ''
-                }}"
-                href="{{ route('metal-thursday.criar') }}"
-                @if ($paginaCriacaoMetalThursdayAtiva)
-                    aria-current="page"
-                @endif
-            >
-                <i
-                    class="bi bi-plus-circle me-2"
-                    aria-hidden="true"
-                ></i>
+        @if ($apresentaAcaoCriacaoMetalThursday)
+            @can(
+                'create',
+                App\Models\MetalThursday\MetalThursday::class
+            )
+                <a
+                    class="list-group-item list-group-item-action bg-dark text-white border-secondary {{
+                        $paginaCriacaoMetalThursdayAtiva
+                            ? 'active'
+                            : ''
+                    }}"
+                    href="{{ route('metal-thursday.criar') }}"
+                    @if ($paginaCriacaoMetalThursdayAtiva)
+                        aria-current="page"
+                    @endif
+                >
+                    <i
+                        class="bi bi-plus-circle me-2"
+                        aria-hidden="true"
+                    ></i>
 
-                Criar MetalThursday
-            </a>
-        @endcan
+                    Criar MetalThursday
+                </a>
+            @endcan
+        @endif
 
         @can(
             'viewAny',

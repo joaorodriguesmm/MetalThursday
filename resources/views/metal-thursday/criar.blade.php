@@ -1,8 +1,11 @@
 {{--
-    Apresenta o formulário de criação de uma MetalThursday.
+    Apresenta o formulário de criação ou preparação de uma MetalThursday.
 
     O formulário permite criar dinamicamente secções, edições, bandas
     e géneros sem abandonar a página.
+
+    Quando a página é aberta através de uma reserva explícita, a data e o
+    autor são determinados pela própria reserva e não podem ser alterados.
 
     As secções anteriores e a configuração necessária ao JavaScript são
     preparadas pelo
@@ -11,14 +14,21 @@
     @since 1.0.0
 --}}
 
+@php
+    $tituloFormulario =
+        $modoPreparacaoReserva
+            ? 'Preparar MetalThursday'
+            : 'Criar MetalThursday';
+@endphp
+
 <x-layout-aplicacao>
     <x-slot name="titulo">
-        Criar MetalThursday
+        {{ $tituloFormulario }}
     </x-slot>
 
     <x-slot name="cabecalho">
         <h1 class="h4 mb-0 fw-bold">
-            Criar MetalThursday
+            {{ $tituloFormulario }}
         </h1>
     </x-slot>
 
@@ -29,7 +39,16 @@
             <form
                 id="formulario-criar-metal-thursday"
                 method="POST"
-                action="{{ route('metal-thursday.guardar') }}"
+                action="{{
+                    $modoPreparacaoReserva
+                        ? route(
+                            'metal-thursday.reservas.guardar',
+                            $reservaPendente,
+                        )
+                        : route(
+                            'metal-thursday.guardar',
+                        )
+                }}"
                 autocomplete="off"
                 novalidate
             >
@@ -116,7 +135,7 @@
                         class="btn btn-primary btn-lg"
                         type="submit"
                     >
-                        Criar MetalThursday
+                        {{ $tituloFormulario }}
                     </button>
                 </div>
             </form>

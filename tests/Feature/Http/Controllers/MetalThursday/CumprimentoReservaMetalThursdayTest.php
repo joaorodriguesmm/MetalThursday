@@ -87,7 +87,8 @@ final class CumprimentoReservaMetalThursdayTest extends TestCase
             )
             ->postJson(
                 route(
-                    'metal-thursday.guardar',
+                    'metal-thursday.reservas.guardar',
+                    $reserva,
                 ),
                 [
                     'edicao_id' => $edicao->getKey(),
@@ -134,7 +135,8 @@ final class CumprimentoReservaMetalThursdayTest extends TestCase
     }
 
     /**
-     * Confirma que um utilizador sem reserva pendente não pode publicar.
+     * Confirma que um utilizador sem reserva pendente não é autorizado a
+     * publicar.
      *
      * @since 2.0.0
      */
@@ -184,14 +186,7 @@ final class CumprimentoReservaMetalThursdayTest extends TestCase
                     ],
                 ],
             )
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors([
-                'data',
-            ])
-            ->assertJsonPath(
-                'errors.data.0',
-                'Não tens nenhuma reserva pendente para publicar.',
-            );
+            ->assertForbidden();
 
         $this->assertDatabaseMissing(
             'metal_thursdays',

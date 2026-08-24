@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\View\Components\MetalThursday;
 
+use App\Models\Autenticacao\Utilizador;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\View\Component;
@@ -11,14 +12,22 @@ use Illuminate\View\Component;
 /**
  * Prepara os acessos rápidos às áreas de gestão da MetalThursday.
  *
- * O componente determina qual das páginas representadas se encontra ativa.
- * A autorização de cada acesso é aplicada na vista através da respetiva
- * política.
+ * O componente determina qual das páginas representadas se encontra ativa e
+ * se a ação genérica de criação deve ser apresentada. Esta ação fica reservada
+ * a utilizadores com privilégios administrativos; utilizadores comuns
+ * publicam através da respetiva reserva pendente.
  *
  * @since 1.0.0
  */
 final class AcoesLaterais extends Component
 {
+    /**
+     * Indica se a ação genérica de criação deve ser apresentada.
+     *
+     * @since 2.0.0
+     */
+    public readonly bool $apresentaAcaoCriacaoMetalThursday;
+
     /**
      * Indica se a página de criação de uma MetalThursday está ativa.
      *
@@ -57,6 +66,15 @@ final class AcoesLaterais extends Component
     public function __construct(
         Request $pedido,
     ) {
+        $utilizador =
+            $pedido->user(
+                'sessao',
+            );
+
+        $this->apresentaAcaoCriacaoMetalThursday =
+            $utilizador instanceof Utilizador
+            && $utilizador->possuiPrivilegiosAdministrativos();
+
         $this->paginaCriacaoMetalThursdayAtiva =
             $pedido->routeIs(
                 'metal-thursday.criar',

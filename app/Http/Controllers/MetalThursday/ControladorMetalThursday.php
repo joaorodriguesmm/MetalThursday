@@ -8,6 +8,7 @@ use App\Enumeracoes\DirecaoOrdenacao;
 use App\Enumeracoes\OrdenacaoMetalThursday;
 use App\Filtros\FiltrosMetalThursday;
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\MetalThursday\ExigirCriacaoAdministrativaMetalThursday;
 use App\Http\Requests\MetalThursday\GuardarMetalThursdayRequest;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\Geografia\OrigemGeografica;
@@ -34,6 +35,8 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -47,9 +50,33 @@ use Throwable;
  *
  * @since 1.0.0
  */
-final class ControladorMetalThursday extends Controller
+final class ControladorMetalThursday extends Controller implements HasMiddleware
 {
     use AuthorizesRequests;
+
+    /**
+     * Define o middleware aplicado diretamente às ações do controlador.
+     *
+     * O fluxo genérico de criação fica reservado à administração. A preparação
+     * e a submissão de uma reserva utilizam ações distintas e não recebem este
+     * middleware.
+     *
+     * @return array<int, Middleware|string> Middleware do controlador.
+     *
+     * @since 2.0.0
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware(
+                ExigirCriacaoAdministrativaMetalThursday::class,
+                only: [
+                    'criar',
+                    'guardar',
+                ],
+            ),
+        ];
+    }
 
     /**
      * Identificador da vista completa.
@@ -283,12 +310,99 @@ final class ControladorMetalThursday extends Controller
             [
                 ...$this->obterDadosFormulario(),
 
+                'modoPreparacaoReserva' => false,
+
                 'seccoesFormulario' => $this->obterSeccoesAnteriores(
                     $pedido,
                 ),
 
                 'configuracaoFormularioMetalThursday' => $this->obterConfiguracaoFormulario(),
             ],
+        );
+    }
+
+    /**
+     * Apresenta o formulário de preparação de uma reserva pendente.
+     *
+     * A reserva torna-se a fonte autoritativa para a data e para o autor,
+     * mesmo quando o respetivo responsável possui privilégios administrativos.
+     *
+     * @param  Request  $pedido  Pedido HTTP atual.
+     * @param  ReservaMetalThursday  $reservaMetalThursday  Reserva preparada.
+     * @return View Página de preparação.
+     *
+     * @since 2.0.0
+     */
+    public function prepararReserva(
+        Request $pedido,
+        ReservaMetalThursday $reservaMetalThursday,
+    ): View {
+        $this->authorize(
+            'create',
+            MetalThursday::class,
+        );
+
+        $utilizadorAutenticado =
+            $this->obterUtilizadorAutenticado();
+
+        if (
+            ! $reservaMetalThursday->estaPendente()
+            || ! is_numeric(
+                $reservaMetalThursday->responsavel_id,
+            )
+            || (int) $reservaMetalThursday->responsavel_id
+            !== (int) $utilizadorAutenticado->getKey()
+        ) {
+            abort(
+                Response::HTTP_FORBIDDEN,
+            );
+        }
+
+        return view(
+            'metal-thursday.criar',
+            [
+                ...$this->obterDadosFormulario(
+                    null,
+                    $reservaMetalThursday,
+                ),
+
+                'modoPreparacaoReserva' => true,
+
+                'seccoesFormulario' => $this->obterSeccoesAnteriores(
+                    $pedido,
+                ),
+
+                'configuracaoFormularioMetalThursday' => $this->obterConfiguracaoFormulario(),
+            ],
+        );
+    }
+
+    /**
+     * Guarda uma MetalThursday através de uma reserva explícita.
+     *
+     * O middleware da rota já confirmou o responsável da reserva e substituiu
+     * a data e o autor recebidos pelos valores autoritativos da própria
+     * reserva. A criação continua a utilizar a mesma persistência
+     * transacional do fluxo geral.
+     *
+     * @param  GuardarMetalThursdayRequest  $pedido  Pedido validado.
+     * @param  ReservaMetalThursday  $reservaMetalThursday  Reserva preparada.
+     * @return JsonResponse|RedirectResponse Resposta da operação.
+     *
+     * @since 2.0.0
+     */
+    public function guardarReserva(
+        GuardarMetalThursdayRequest $pedido,
+        ReservaMetalThursday $reservaMetalThursday,
+    ): JsonResponse|RedirectResponse {
+        if (! $reservaMetalThursday->estaPendente()) {
+            abort(
+                Response::HTTP_FORBIDDEN,
+            );
+        }
+
+        return $this->guardar(
+            $pedido,
         );
     }
 
@@ -750,12 +864,15 @@ final class ControladorMetalThursday extends Controller
      *
      * @param  MetalThursday|null  $metalThursday  Registo editado ou nulo
      *                                             durante a criação.
+     * @param  ReservaMetalThursday|null  $reservaPreparada  Reserva explícita
+     *                                                       preparada ou nula.
      * @return array<string, mixed> Dados dos formulários.
      *
      * @since 2.0.0
      */
     private function obterDadosFormulario(
         ?MetalThursday $metalThursday = null,
+        ?ReservaMetalThursday $reservaPreparada = null,
     ): array {
         $utilizadorAutenticado =
             $this->obterUtilizadorAutenticado();
@@ -764,24 +881,33 @@ final class ControladorMetalThursday extends Controller
             $utilizadorAutenticado
                 ->possuiPrivilegiosAdministrativos();
 
+        $estaAPrepararReserva =
+            $reservaPreparada instanceof ReservaMetalThursday;
+
         $reservaPendente =
-            ! $possuiPrivilegiosAdministrativos
-            && ! $metalThursday instanceof MetalThursday
-            ? $this
-                ->servicoReservas
-                ->obterReservaPendenteDoUtilizador(
-                    $utilizadorAutenticado,
-                )
-            : null;
+            $estaAPrepararReserva
+            ? $reservaPreparada
+            : (
+                ! $possuiPrivilegiosAdministrativos
+                && ! $metalThursday instanceof MetalThursday
+                ? $this
+                    ->servicoReservas
+                    ->obterReservaPendenteDoUtilizador(
+                        $utilizadorAutenticado,
+                    )
+                : null
+            );
 
         return [
             'metalThursday' => $metalThursday,
 
             'utilizadorAutenticado' => $utilizadorAutenticado,
 
-            'podeSelecionarAutor' => $possuiPrivilegiosAdministrativos,
+            'podeSelecionarAutor' => $possuiPrivilegiosAdministrativos
+                && ! $estaAPrepararReserva,
 
-            'podeAlterarData' => $possuiPrivilegiosAdministrativos,
+            'podeAlterarData' => $possuiPrivilegiosAdministrativos
+                && ! $estaAPrepararReserva,
 
             'autorFormulario' => $metalThursday instanceof MetalThursday
                 ? $metalThursday->autor

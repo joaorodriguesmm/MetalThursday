@@ -45,10 +45,14 @@ final class ControladorMetalThursdayTest extends TestCase
     #[Test]
     public function formulario_criacao_nao_apresenta_seletor_manual_de_edicao(): void
     {
-        $utilizador = $this->criarUtilizador();
+        $administrador = Utilizador::factory()
+            ->comPapel(
+                PapelUtilizador::Administrador,
+            )
+            ->create();
 
         $this->actingAs(
-            $utilizador,
+            $administrador,
             'sessao',
         );
 
@@ -98,10 +102,14 @@ final class ControladorMetalThursdayTest extends TestCase
     #[Test]
     public function formulario_criacao_apresenta_tipos_seccao_pela_ordem_configurada(): void
     {
-        $utilizador = $this->criarUtilizador();
+        $administrador = Utilizador::factory()
+            ->comPapel(
+                PapelUtilizador::Administrador,
+            )
+            ->create();
 
         $this->actingAs(
-            $utilizador,
+            $administrador,
             'sessao',
         );
 
@@ -161,6 +169,10 @@ final class ControladorMetalThursdayTest extends TestCase
     {
         $utilizador = $this->criarUtilizador();
 
+        $reserva = $this->criarReservaPendente(
+            $utilizador,
+        );
+
         $this->actingAs(
             $utilizador,
             'sessao',
@@ -168,7 +180,8 @@ final class ControladorMetalThursdayTest extends TestCase
 
         $this->get(
             route(
-                'metal-thursday.criar',
+                'metal-thursday.reservas.preparar',
+                $reserva,
             ),
         )
             ->assertOk()
@@ -228,7 +241,7 @@ final class ControladorMetalThursdayTest extends TestCase
     {
         $utilizador = $this->criarUtilizador();
 
-        ReservaMetalThursday::factory()
+        $reserva = ReservaMetalThursday::factory()
             ->comData(
                 CarbonImmutable::parse(
                     '2026-01-15',
@@ -246,7 +259,8 @@ final class ControladorMetalThursdayTest extends TestCase
 
         $this->get(
             route(
-                'metal-thursday.criar',
+                'metal-thursday.reservas.preparar',
+                $reserva,
             ),
         )
             ->assertOk()
@@ -300,14 +314,14 @@ final class ControladorMetalThursdayTest extends TestCase
      * @since 2.0.0
      */
     #[Test]
-    public function utilizador_comum_nao_pode_criar_fora_da_data_reservada(): void
+    public function preparacao_reserva_ignora_data_adulterada(): void
     {
         Notification::fake();
 
         $utilizador = $this->criarUtilizador();
         $proximoNomeado = $this->criarUtilizador();
 
-        ReservaMetalThursday::factory()
+        $reserva = ReservaMetalThursday::factory()
             ->comData(
                 CarbonImmutable::parse(
                     '2026-01-15',
@@ -331,7 +345,8 @@ final class ControladorMetalThursdayTest extends TestCase
 
         $this->postJson(
             route(
-                'metal-thursday.guardar',
+                'metal-thursday.reservas.guardar',
+                $reserva,
             ),
             [
                 'data' => '2026-01-16',
@@ -353,14 +368,20 @@ final class ControladorMetalThursdayTest extends TestCase
                 ],
             ],
         )
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors([
-                'data',
-            ])
+            ->assertCreated()
             ->assertJsonPath(
-                'errors.data.0',
-                'A data da MetalThursday deve corresponder à data da tua reserva pendente.',
+                'metal_thursday.data',
+                '2026-01-15',
             );
+
+        $this->assertDatabaseHas(
+            'metal_thursdays',
+            [
+                'data' => '2026-01-15',
+
+                'autor_id' => $utilizador->getKey(),
+            ],
+        );
 
         $this->assertDatabaseMissing(
             'metal_thursdays',
@@ -513,6 +534,10 @@ final class ControladorMetalThursdayTest extends TestCase
 
         $utilizador = $this->criarUtilizador();
 
+        $reserva = $this->criarReservaPendente(
+            $utilizador,
+        );
+
         $superAdministrador = Utilizador::factory()
             ->comPapel(
                 PapelUtilizador::SuperAdministrador,
@@ -532,10 +557,11 @@ final class ControladorMetalThursdayTest extends TestCase
 
         $this->postJson(
             route(
-                'metal-thursday.guardar',
+                'metal-thursday.reservas.guardar',
+                $reserva,
             ),
             [
-                'data' => '2026-01-21',
+                'data' => '2026-01-15',
 
                 'nome' => null,
 
@@ -566,7 +592,7 @@ final class ControladorMetalThursdayTest extends TestCase
         $this->assertDatabaseMissing(
             'metal_thursdays',
             [
-                'data' => '2026-01-21',
+                'data' => '2026-01-15',
             ],
         );
     }
@@ -667,6 +693,10 @@ final class ControladorMetalThursdayTest extends TestCase
 
         $utilizador = $this->criarUtilizador();
 
+        $reserva = $this->criarReservaPendente(
+            $utilizador,
+        );
+
         $superAdministrador = Utilizador::factory()
             ->comPapel(
                 PapelUtilizador::SuperAdministrador,
@@ -692,10 +722,11 @@ final class ControladorMetalThursdayTest extends TestCase
 
         $this->postJson(
             route(
-                'metal-thursday.guardar',
+                'metal-thursday.reservas.guardar',
+                $reserva,
             ),
             [
-                'data' => '2026-01-23',
+                'data' => '2026-01-15',
 
                 'nome' => null,
 
@@ -726,7 +757,7 @@ final class ControladorMetalThursdayTest extends TestCase
         $this->assertDatabaseMissing(
             'metal_thursdays',
             [
-                'data' => '2026-01-23',
+                'data' => '2026-01-15',
             ],
         );
     }
@@ -737,11 +768,16 @@ final class ControladorMetalThursdayTest extends TestCase
      * @since 2.0.0
      */
     #[Test]
-    public function utilizador_comum_nao_pode_criar_metal_thursday_em_nome_de_outro(): void
+    public function preparacao_reserva_ignora_autor_adulterado(): void
     {
         Notification::fake();
 
         $utilizador = $this->criarUtilizador();
+
+        $reserva = $this->criarReservaPendente(
+            $utilizador,
+        );
+
         $autorFalsificado = $this->criarUtilizador();
         $proximoNomeado = $this->criarUtilizador();
 
@@ -758,12 +794,13 @@ final class ControladorMetalThursdayTest extends TestCase
 
         $this->postJson(
             route(
-                'metal-thursday.guardar',
+                'metal-thursday.reservas.guardar',
+                $reserva,
             ),
             [
                 'edicao_id' => $edicao->getKey(),
 
-                'data' => '2026-01-17',
+                'data' => '2026-01-15',
 
                 'nome' => null,
 
@@ -782,19 +819,23 @@ final class ControladorMetalThursdayTest extends TestCase
                 ],
             ],
         )
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors([
-                'autor_id',
-            ])
-            ->assertJsonPath(
-                'errors.autor_id.0',
-                'Não tens permissão para definir este autor.',
-            );
+            ->assertCreated();
+
+        $this->assertDatabaseHas(
+            'metal_thursdays',
+            [
+                'data' => '2026-01-15',
+
+                'autor_id' => $utilizador->getKey(),
+            ],
+        );
 
         $this->assertDatabaseMissing(
             'metal_thursdays',
             [
-                'data' => '2026-01-17',
+                'data' => '2026-01-15',
+
+                'autor_id' => $autorFalsificado->getKey(),
             ],
         );
     }
@@ -1033,7 +1074,8 @@ final class ControladorMetalThursdayTest extends TestCase
 
         $this->post(
             route(
-                'metal-thursday.guardar',
+                'metal-thursday.reservas.guardar',
+                $reserva,
             ),
             [
                 'data' => $dataReserva->format(
@@ -1534,6 +1576,10 @@ final class ControladorMetalThursdayTest extends TestCase
                 'nome' => 'Zelda',
             ]);
 
+        $this->criarReservaPendente(
+            $utilizadorAutenticado,
+        );
+
         $primeiroNuncaNomeado = Utilizador::factory()
             ->create([
                 'nome' => 'Ana',
@@ -1586,6 +1632,10 @@ final class ControladorMetalThursdayTest extends TestCase
                 'nome' => 'Zelda',
             ]);
 
+        $this->criarReservaPendente(
+            $utilizadorAutenticado,
+        );
+
         $autor = Utilizador::factory()
             ->create([
                 'nome' => 'Ana',
@@ -1630,6 +1680,10 @@ final class ControladorMetalThursdayTest extends TestCase
             ->create([
                 'nome' => 'Zelda',
             ]);
+
+        $this->criarReservaPendente(
+            $utilizadorAutenticado,
+        );
 
         $superAdministrador = Utilizador::factory()
             ->comPapel(
@@ -1760,6 +1814,31 @@ final class ControladorMetalThursdayTest extends TestCase
     private function criarUtilizador(): Utilizador
     {
         return Utilizador::factory()
+            ->create();
+    }
+
+    /**
+     * Cria uma reserva pendente para um utilizador comum.
+     *
+     * @param  Utilizador  $utilizador  Utilizador responsável pela reserva.
+     * @param  string  $data  Data da reserva no formato AAAA-MM-DD.
+     * @return ReservaMetalThursday Reserva criada.
+     *
+     * @since 2.0.0
+     */
+    private function criarReservaPendente(
+        Utilizador $utilizador,
+        string $data = '2026-01-15',
+    ): ReservaMetalThursday {
+        return ReservaMetalThursday::factory()
+            ->comData(
+                CarbonImmutable::parse(
+                    $data,
+                ),
+            )
+            ->comResponsavel(
+                $utilizador,
+            )
             ->create();
     }
 

@@ -10,7 +10,10 @@ use App\Models\MetalThursday\MetalThursday;
 /**
  * Define as regras de autorização aplicáveis às MetalThursdays.
  *
- * Qualquer utilizador autenticado pode consultar e criar MetalThursdays.
+ * Qualquer utilizador autenticado pode consultar MetalThursdays. A criação é
+ * permitida livremente a utilizadores com privilégios administrativos e, para
+ * utilizadores comuns, apenas quando existe uma reserva ainda pendente.
+ *
  * A alteração é permitida ao autor e ao utilizador que criou o registo.
  * A eliminação e restauração ficam limitadas ao criador, exceto para o
  * superadministrador.
@@ -80,18 +83,31 @@ final class PoliticaMetalThursday
     /**
      * Determina se o utilizador pode criar uma MetalThursday.
      *
+     * Utilizadores com privilégios administrativos podem criar livremente.
+     * Um utilizador comum apenas pode criar quando possui uma reserva ainda
+     * pendente, isto é, sem MetalThursday associada.
+     *
      * O nome permanece em inglês por corresponder à capacidade convencional
      * utilizada pelo Laravel.
      *
      * @param  Utilizador  $utilizador  Utilizador autenticado.
-     * @return bool Verdadeiro para qualquer utilizador autenticado.
+     * @return bool Verdadeiro quando a criação é permitida.
      *
      * @since 2.0.0
      */
     public function create(
         Utilizador $utilizador,
     ): bool {
-        return true;
+        if ($utilizador->possuiPrivilegiosAdministrativos()) {
+            return true;
+        }
+
+        return $utilizador
+            ->reservasMetalThursday()
+            ->whereNull(
+                'metal_thursday_id',
+            )
+            ->exists();
     }
 
     /**

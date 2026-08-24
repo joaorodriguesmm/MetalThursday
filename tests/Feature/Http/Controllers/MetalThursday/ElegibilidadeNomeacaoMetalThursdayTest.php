@@ -52,6 +52,17 @@ final class ElegibilidadeNomeacaoMetalThursdayTest extends TestCase
                 'nome' => 'Utilizador Autenticado',
             ]);
 
+        $reserva = ReservaMetalThursday::factory()
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-08-20',
+                ),
+            )
+            ->comResponsavel(
+                $utilizadorAutenticado,
+            )
+            ->create();
+
         $elegivel = Utilizador::factory()
             ->create([
                 'nome' => 'Utilizador Elegível',
@@ -86,7 +97,8 @@ final class ElegibilidadeNomeacaoMetalThursdayTest extends TestCase
             )
             ->get(
                 route(
-                    'metal-thursday.criar',
+                    'metal-thursday.reservas.preparar',
+                    $reserva,
                 ),
             );
 
@@ -147,6 +159,17 @@ final class ElegibilidadeNomeacaoMetalThursdayTest extends TestCase
             ->create([
                 'nome' => 'Zelda',
             ]);
+
+        ReservaMetalThursday::factory()
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-08-20',
+                ),
+            )
+            ->comResponsavel(
+                $utilizadorAutenticado,
+            )
+            ->create();
 
         Utilizador::factory()
             ->indisponivelParaNomeacao()
