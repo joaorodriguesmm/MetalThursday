@@ -107,6 +107,12 @@ final class PreparacaoReservaMetalThursdayTest extends TestCase
             ->assertSee(
                 'Responsável Comum',
             )
+            ->assertSee(
+                'Próximo nomeado',
+            )
+            ->assertSeeHtml(
+                'name="proximo_nomeado_id"',
+            )
             ->assertSeeHtml(
                 'action="'.
                     route(
@@ -170,6 +176,129 @@ final class PreparacaoReservaMetalThursdayTest extends TestCase
             )
             ->assertSee(
                 'Administrador Responsável',
+            );
+    }
+
+    /**
+     * Confirma que uma reserva seguinte já atribuída é apresentada como a
+     * nomeação efetiva, sem pedir uma nova escolha ao responsável atual.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function preparacao_com_slot_seguinte_atribuida_nao_pede_nova_nomeacao(): void
+    {
+        $responsavel = Utilizador::factory()
+            ->create();
+
+        $responsavelSeguinte = Utilizador::factory()
+            ->create([
+                'nome' => 'Responsável Seguinte',
+            ]);
+
+        $dataReserva = CarbonImmutable::parse(
+            '2026-09-17',
+        );
+
+        $reserva = ReservaMetalThursday::factory()
+            ->comData(
+                $dataReserva,
+            )
+            ->comResponsavel(
+                $responsavel,
+            )
+            ->create();
+
+        ReservaMetalThursday::factory()
+            ->comData(
+                $dataReserva->addWeek(),
+            )
+            ->comResponsavel(
+                $responsavelSeguinte,
+            )
+            ->create();
+
+        $this
+            ->actingAs(
+                $responsavel,
+                'sessao',
+            )
+            ->get(
+                route(
+                    'metal-thursday.reservas.preparar',
+                    $reserva,
+                ),
+            )
+            ->assertOk()
+            ->assertDontSeeHtml(
+                'name="proximo_nomeado_id"',
+            )
+            ->assertSee(
+                'Próxima reserva',
+            )
+            ->assertSee(
+                'Responsável Seguinte',
+            )
+            ->assertSee(
+                '24/09/2026',
+            );
+    }
+
+    /**
+     * Confirma que uma reserva seguinte sem responsável é apresentada como
+     * por atribuir e não bloqueia a preparação com um seletor obrigatório.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function preparacao_com_slot_seguinte_sem_responsavel_nao_pede_nova_nomeacao(): void
+    {
+        $responsavel = Utilizador::factory()
+            ->create();
+
+        $dataReserva = CarbonImmutable::parse(
+            '2026-09-24',
+        );
+
+        $reserva = ReservaMetalThursday::factory()
+            ->comData(
+                $dataReserva,
+            )
+            ->comResponsavel(
+                $responsavel,
+            )
+            ->create();
+
+        ReservaMetalThursday::factory()
+            ->comData(
+                $dataReserva->addWeek(),
+            )
+            ->semResponsavel()
+            ->create();
+
+        $this
+            ->actingAs(
+                $responsavel,
+                'sessao',
+            )
+            ->get(
+                route(
+                    'metal-thursday.reservas.preparar',
+                    $reserva,
+                ),
+            )
+            ->assertOk()
+            ->assertDontSeeHtml(
+                'name="proximo_nomeado_id"',
+            )
+            ->assertSee(
+                'Próxima reserva',
+            )
+            ->assertSee(
+                'Por atribuir',
+            )
+            ->assertSee(
+                '01/10/2026',
             );
     }
 

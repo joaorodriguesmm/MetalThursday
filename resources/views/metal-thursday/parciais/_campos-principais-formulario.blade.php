@@ -382,6 +382,42 @@
             >
                 A nomeação desta MetalThursday já está definida pela reserva seguinte e não pode ser alterada.
             </div>
+        @elseif ($reservaSeguinte instanceof App\Models\MetalThursday\ReservaMetalThursday)
+            <label
+                class="form-label"
+                for="reserva-seguinte-metal-thursday"
+            >
+                <strong>
+                    Próxima reserva
+                </strong>
+
+                <span
+                    class="bi bi-info-circle"
+                    role="img"
+                    tabindex="0"
+                    data-bs-toggle="tooltip"
+                    data-bs-title="A reserva da próxima quinta-feira já existe e não pode ser substituída por uma nova nomeação."
+                    aria-label="A reserva da próxima quinta-feira já existe e não pode ser substituída por uma nova nomeação."
+                ></span>
+            </label>
+
+            <input
+                id="reserva-seguinte-metal-thursday"
+                class="form-control"
+                type="text"
+                value="{{ $reservaSeguinte->responsavel?->nome ?? 'Por atribuir' }}"
+                aria-describedby="ajuda-reserva-seguinte-metal-thursday"
+                readonly
+                aria-readonly="true"
+            >
+
+            <div
+                id="ajuda-reserva-seguinte-metal-thursday"
+                class="form-text"
+            >
+                Reserva de {{ $reservaSeguinte->data?->format('d/m/Y') }}.
+                Esta slot já existe e será preservada quando publicares.
+            </div>
         @else
             <label
                 class="form-label"

@@ -25,6 +25,7 @@ use App\Notifications\NotificacaoUtilizadorNomeado;
 use App\Servicos\Incorporacoes\RenderizadorIncorporacoes;
 use App\Servicos\MetalThursday\ServicoPersistenciaMetalThursday;
 use App\Servicos\MetalThursday\ServicoReservasMetalThursday;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\Builder;
@@ -898,6 +899,13 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                 : null
             );
 
+        $reservaSeguinte =
+            $estaAPrepararReserva
+            ? $this->obterReservaSeguinteParaPreparacao(
+                $reservaPreparada,
+            )
+            : null;
+
         return [
             'metalThursday' => $metalThursday,
 
@@ -922,6 +930,8 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
             ),
 
             'reservaPendente' => $reservaPendente,
+
+            'reservaSeguinte' => $reservaSeguinte,
 
             'tiposSeccao' => TipoSeccao::query()
                 ->select([
@@ -955,6 +965,57 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
 
             'generos' => $this->obterGenerosParaSelecao(),
         ];
+    }
+
+    /**
+     * Obtém a reserva da quinta-feira seguinte à reserva preparada.
+     *
+     * A consulta é efetuada apenas no fluxo explícito de preparação. Quando o
+     * slot seguinte já existe, essa reserva é autoritativa para a nomeação
+     * apresentada no formulário.
+     *
+     * @param  ReservaMetalThursday  $reservaPreparada  Reserva atual.
+     * @return ReservaMetalThursday|null Reserva seguinte ou nulo quando ainda
+     *                                   não existe.
+     *
+     * @throws LogicException Quando a reserva preparada não possui uma data
+     *                        válida.
+     *
+     * @since 2.0.0
+     */
+    private function obterReservaSeguinteParaPreparacao(
+        ReservaMetalThursday $reservaPreparada,
+    ): ?ReservaMetalThursday {
+        $dataReserva =
+            $reservaPreparada->data;
+
+        if (! $dataReserva instanceof CarbonInterface) {
+            throw new LogicException(
+                'A reserva preparada não possui uma data válida.',
+            );
+        }
+
+        $dataSeguinte = CarbonImmutable::instance(
+            $dataReserva,
+        )
+            ->addWeek()
+            ->toDateString();
+
+        return ReservaMetalThursday::query()
+            ->select([
+                'id',
+                'data',
+                'responsavel_id',
+                'metal_thursday_id',
+            ])
+            ->with([
+                'responsavel:id,nome',
+            ])
+            ->where(
+                'data',
+                $dataSeguinte,
+            )
+            ->first();
     }
 
     /**

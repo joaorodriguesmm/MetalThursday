@@ -243,7 +243,7 @@ final class ElegibilidadeNomeacaoMetalThursdayTest extends TestCase
         ReservaMetalThursday::factory()
             ->comData(
                 CarbonImmutable::parse(
-                    '2026-09-03',
+                    '2026-09-10',
                 ),
             )
             ->comResponsavel(

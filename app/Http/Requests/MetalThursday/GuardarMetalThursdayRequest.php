@@ -14,6 +14,7 @@ use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
 use App\Models\Musica\Banda;
 use App\Servicos\MetalThursday\ServicoReservasMetalThursday;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Closure;
 use Illuminate\Database\Eloquent\Builder as ConstrutorEloquent;
@@ -222,6 +223,7 @@ final class GuardarMetalThursdayRequest extends FormRequest
 
         $regrasProximoNomeado =
             $metalThursday instanceof MetalThursday
+            || $this->existeReservaSeguinteParaCriacao()
             ? [
                 'bail',
                 'nullable',
@@ -1180,6 +1182,72 @@ final class GuardarMetalThursdayRequest extends FormRequest
                     'O tipo selecionado não permite detalhes adicionais.',
                 );
         }
+    }
+
+    /**
+     * Determina se já existe uma reserva para a quinta-feira seguinte.
+     *
+     * Durante uma criação, uma reserva seguinte previamente existente é
+     * autoritativa. Nessa situação, o próximo nomeado recebido no pedido deixa
+     * de ser obrigatório porque a persistência preserva o responsável efetivo
+     * dessa reserva, incluindo a possibilidade de ainda estar por atribuir.
+     *
+     * A data da reserva seguinte é calculada com a mesma regra da persistência:
+     * procura-se explicitamente a próxima quinta-feira. Isto mantém o fluxo
+     * administrativo correto quando a MetalThursday é criada numa data que não
+     * corresponde a uma quinta-feira.
+     *
+     * Uma data inválida não é interpretada nesta fase. As regras próprias do
+     * campo `data` continuam responsáveis por rejeitar esse pedido.
+     *
+     * @return bool Verdadeiro quando a slot seguinte já existe.
+     *
+     * @since 2.0.0
+     */
+    private function existeReservaSeguinteParaCriacao(): bool
+    {
+        if (
+            $this->obterMetalThursdayDaRota()
+            instanceof MetalThursday
+        ) {
+            return false;
+        }
+
+        $data = $this->input(
+            'data',
+        );
+
+        if (
+            ! is_string($data)
+            || ! CarbonImmutable::canBeCreatedFromFormat(
+                $data,
+                'Y-m-d',
+            )
+        ) {
+            return false;
+        }
+
+        $dataCriacao = CarbonImmutable::createFromFormat(
+            'Y-m-d',
+            $data,
+        );
+
+        if (! $dataCriacao instanceof CarbonImmutable) {
+            return false;
+        }
+
+        $dataReservaSeguinte = $dataCriacao
+            ->next(
+                CarbonImmutable::THURSDAY,
+            )
+            ->startOfDay();
+
+        return ReservaMetalThursday::query()
+            ->where(
+                'data',
+                $dataReservaSeguinte->toDateString(),
+            )
+            ->exists();
     }
 
     /**
