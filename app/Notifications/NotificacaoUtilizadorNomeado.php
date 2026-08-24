@@ -48,6 +48,13 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
         'alertas_nomeacao';
 
     /**
+     * Identificador da reserva efetivamente atribuída.
+     *
+     * @since 2.0.0
+     */
+    private readonly int $identificadorReserva;
+
+    /**
      * Identificador da MetalThursday onde ocorreu a nomeação manual.
      *
      * É nulo quando a reserva foi criada automaticamente pelo fallback.
@@ -95,6 +102,9 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
         $this->validarReserva(
             $reserva,
         );
+
+        $this->identificadorReserva =
+            (int) $reserva->getKey();
 
         $this->prazo =
             $this->obterPrazo(
@@ -229,7 +239,7 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
      *
      * Nas nomeações manuais é apresentada a MetalThursday onde ocorreu a
      * escolha. Nas nomeações automáticas é apresentado diretamente o formulário
-     * de criação correspondente à reserva pendente.
+     * de preparação correspondente à reserva pendente.
      *
      * @param  Utilizador  $utilizador  Utilizador destinatário.
      * @return string Endereço da ação.
@@ -241,7 +251,10 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
     ): ?string {
         if ($this->identificadorMetalThursday === null) {
             return route(
-                'metal-thursday.criar',
+                'metal-thursday.reservas.preparar',
+                [
+                    'reservaMetalThursday' => $this->identificadorReserva,
+                ],
             );
         }
 

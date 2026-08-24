@@ -282,12 +282,12 @@ final class NotificacoesMetalThursdayTest extends TestCase
     /**
      * Confirma que a nomeação automática utiliza a data da reserva, não exige
      * uma MetalThursday de origem e encaminha o utilizador para o formulário de
-     * criação.
+     * preparação da reserva.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function nomeacao_automatica_utiliza_reserva_e_ligacao_de_criacao(): void
+    public function nomeacao_automatica_utiliza_reserva_e_ligacao_de_preparacao(): void
     {
         $nomeado = Utilizador::factory()
             ->create();
@@ -350,7 +350,10 @@ final class NotificacoesMetalThursdayTest extends TestCase
 
         self::assertSame(
             route(
-                'metal-thursday.criar',
+                'metal-thursday.reservas.preparar',
+                [
+                    'reservaMetalThursday' => $reserva->getKey(),
+                ],
             ),
             $dados['ligacao'],
         );
