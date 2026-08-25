@@ -96,8 +96,8 @@ final class ServicoReservasMetalThursday
     /**
      * Cria uma reserva automática para uma quinta-feira concreta.
      *
-     * A operação é idempotente: se o slot já existir, é devolvida a reserva
-     * existente sem alterar o respetivo responsável.
+     * A operação é idempotente: se o slot já existir, nenhuma nova reserva é
+     * criada e a operação devolve nulo sem alterar o respetivo responsável.
      *
      * Quando não existe nenhum utilizador elegível, o slot é criado sem
      * responsável para que possa ser posteriormente tratado por um
