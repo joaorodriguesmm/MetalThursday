@@ -6,12 +6,14 @@ namespace Tests\Feature\Servicos\Utilizadores;
 
 use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\Utilizador;
+use App\Notifications\NotificacaoPapelUtilizadorAlterado;
 use App\Servicos\Autenticacao\ServicoSessoesUtilizador;
 use App\Servicos\Utilizadores\ServicoPapeisUtilizadores;
 use Carbon\CarbonImmutable;
 use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
@@ -131,6 +133,67 @@ final class ServicoPapeisUtilizadoresTest extends TestCase
     }
 
     /**
+     * Confirma que uma alteração de papel concluída é comunicada ao utilizador.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function alteracao_de_papel_bem_sucedida_notifica_o_utilizador(): void
+    {
+        Notification::fake();
+
+        $responsavel =
+            $this->criarSuperAdministrador();
+
+        $utilizador =
+            Utilizador::factory()
+                ->comPapel(
+                    PapelUtilizador::Utilizador,
+                )
+                ->create();
+
+        $this
+            ->servico
+            ->alterar(
+                utilizador: $utilizador,
+                responsavel: $responsavel,
+                papelNovo: PapelUtilizador::Administrador,
+            );
+
+        Notification::assertSentTo(
+            $utilizador,
+            NotificacaoPapelUtilizadorAlterado::class,
+            static function (
+                NotificacaoPapelUtilizadorAlterado $notificacao,
+            ) use (
+                $utilizador,
+            ): bool {
+                $mensagem =
+                    $notificacao->toMail(
+                        $utilizador,
+                    );
+
+                return $mensagem->subject
+                    === 'MetalThursday — Papel da conta alterado'
+                    && in_array(
+                        'Papel anterior: Utilizador.',
+                        $mensagem->introLines,
+                        true,
+                    )
+                    && in_array(
+                        'Novo papel: Administrador.',
+                        $mensagem->introLines,
+                        true,
+                    );
+            },
+        );
+
+        Notification::assertCount(
+            1,
+        );
+    }
+
+    /**
      * Confirma que a alteração do papel preserva a suspensão atual.
      *
      * @since 2.0.0
@@ -201,24 +264,31 @@ final class ServicoPapeisUtilizadoresTest extends TestCase
     #[Test]
     public function rejeita_a_alteracao_do_proprio_papel(): void
     {
+        Notification::fake();
+
         $superAdministrador =
             $this->criarSuperAdministrador();
 
-        $this->expectException(
-            DomainException::class,
-        );
+        try {
+            $this
+                ->servico
+                ->alterar(
+                    $superAdministrador,
+                    $superAdministrador,
+                    PapelUtilizador::Administrador,
+                );
 
-        $this->expectExceptionMessage(
-            'Um utilizador não pode alterar o próprio papel.',
-        );
-
-        $this
-            ->servico
-            ->alterar(
-                $superAdministrador,
-                $superAdministrador,
-                PapelUtilizador::Administrador,
+            self::fail(
+                'Era esperada uma exceção de domínio.',
             );
+        } catch (DomainException $excecao) {
+            self::assertSame(
+                'Um utilizador não pode alterar o próprio papel.',
+                $excecao->getMessage(),
+            );
+        }
+
+        Notification::assertNothingSent();
     }
 
     /**
@@ -230,6 +300,8 @@ final class ServicoPapeisUtilizadoresTest extends TestCase
     #[Test]
     public function rejeita_um_responsavel_sem_papel_de_superadministrador(): void
     {
+        Notification::fake();
+
         $responsavel =
             Utilizador::factory()
                 ->comPapel(
@@ -241,21 +313,26 @@ final class ServicoPapeisUtilizadoresTest extends TestCase
             Utilizador::factory()
                 ->create();
 
-        $this->expectException(
-            DomainException::class,
-        );
+        try {
+            $this
+                ->servico
+                ->alterar(
+                    $utilizador,
+                    $responsavel,
+                    PapelUtilizador::Administrador,
+                );
 
-        $this->expectExceptionMessage(
-            'A gestão dos papéis exige um superadministrador com acesso ativo.',
-        );
-
-        $this
-            ->servico
-            ->alterar(
-                $utilizador,
-                $responsavel,
-                PapelUtilizador::Administrador,
+            self::fail(
+                'Era esperada uma exceção de domínio.',
             );
+        } catch (DomainException $excecao) {
+            self::assertSame(
+                'A gestão dos papéis exige um superadministrador com acesso ativo.',
+                $excecao->getMessage(),
+            );
+        }
+
+        Notification::assertNothingSent();
     }
 
     /**
@@ -266,6 +343,8 @@ final class ServicoPapeisUtilizadoresTest extends TestCase
     #[Test]
     public function rejeita_um_superadministrador_suspenso(): void
     {
+        Notification::fake();
+
         $outroSuperAdministrador =
             $this->criarSuperAdministrador();
 
@@ -283,17 +362,23 @@ final class ServicoPapeisUtilizadoresTest extends TestCase
             Utilizador::factory()
                 ->create();
 
-        $this->expectException(
-            DomainException::class,
-        );
+        try {
+            $this
+                ->servico
+                ->alterar(
+                    $utilizador,
+                    $responsavel,
+                    PapelUtilizador::Administrador,
+                );
 
-        $this
-            ->servico
-            ->alterar(
-                $utilizador,
-                $responsavel,
-                PapelUtilizador::Administrador,
+            self::fail(
+                'Era esperada uma exceção de domínio.',
             );
+        } catch (DomainException) {
+            // Exceção esperada.
+        }
+
+        Notification::assertNothingSent();
     }
 
     /**
@@ -305,6 +390,8 @@ final class ServicoPapeisUtilizadoresTest extends TestCase
     #[Test]
     public function rejeita_um_papel_ja_atribuido(): void
     {
+        Notification::fake();
+
         $responsavel =
             $this->criarSuperAdministrador();
 
@@ -372,6 +459,8 @@ final class ServicoPapeisUtilizadoresTest extends TestCase
             'registos_papel_utilizadores',
             0,
         );
+
+        Notification::assertNothingSent();
     }
 
     /**

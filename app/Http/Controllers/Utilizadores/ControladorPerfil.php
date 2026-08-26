@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Utilizadores;
 
+use App\Enumeracoes\IdentificadorPermissaoEmail;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Utilizadores\AtualizarPerfilRequest;
 use App\Models\Autenticacao\Utilizador;
@@ -41,16 +42,6 @@ final class ControladorPerfil extends Controller
      */
     private const SACO_ERROS =
         'perfil';
-
-    /**
-     * Identificador da permissão que representa todas as comunicações.
-     *
-     * @var string
-     *
-     * @since 2.0.0
-     */
-    private const IDENTIFICADOR_PERMISSAO_TODAS =
-        'todas_notificacoes';
 
     /**
      * Mensagem apresentada depois de atualizar os dados gerais do perfil.
@@ -411,7 +402,7 @@ final class ControladorPerfil extends Controller
         PermissaoEmail $permissao,
     ): bool {
         return $permissao->identificador
-            === self::IDENTIFICADOR_PERMISSAO_TODAS;
+            === IdentificadorPermissaoEmail::TodasNotificacoes->value;
     }
 
     /**

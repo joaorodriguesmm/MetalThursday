@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Models\Autenticacao\Utilizador;
-use App\Models\MetalThursday\ReservaMetalThursday;
-use App\Notifications\NotificacaoUtilizadorNomeado;
-use App\Servicos\MetalThursday\ServicoReservasMetalThursday;
+use App\Servicos\Agendamentos\ExecutarLembreteAtrasosMetalThursday;
+use App\Servicos\Agendamentos\ExecutarLembreteTarefasMetalThursday;
+use App\Servicos\Agendamentos\ExecutarReservaSemanalMetalThursday;
 use Illuminate\Support\Facades\Schedule;
 
 /**
@@ -13,43 +12,13 @@ use Illuminate\Support\Facades\Schedule;
  *
  * @since 1.0.0
  */
+$fusoHorario =
+    (string) config(
+        'app.timezone',
+    );
+
 Schedule::call(
-    static function (): void {
-        $servicoReservas =
-            app(
-                ServicoReservasMetalThursday::class,
-            );
-
-        $reserva =
-            $servicoReservas->criarReservaSemanal();
-
-        if (! $reserva instanceof ReservaMetalThursday) {
-            return;
-        }
-
-        $reserva->loadMissing([
-            'responsavel.permissoesEmail',
-        ]);
-
-        $responsavel =
-            $reserva->responsavel;
-
-        if (! $responsavel instanceof Utilizador) {
-            return;
-        }
-
-        try {
-            $responsavel->notify(
-                new NotificacaoUtilizadorNomeado(
-                    $reserva,
-                ),
-            );
-        } catch (Throwable $excecao) {
-            report(
-                $excecao,
-            );
-        }
-    },
+    new ExecutarReservaSemanalMetalThursday,
 )
     ->name(
         'reservas-metal-thursday:criar-semanal',
@@ -59,8 +28,34 @@ Schedule::call(
         '00:00',
     )
     ->timezone(
-        (string) config(
-            'app.timezone',
-        ),
+        $fusoHorario,
+    )
+    ->withoutOverlapping();
+
+Schedule::call(
+    new ExecutarLembreteTarefasMetalThursday,
+)
+    ->name(
+        'lembretes-metal-thursday:tarefas-do-dia',
+    )
+    ->dailyAt(
+        '08:00',
+    )
+    ->timezone(
+        $fusoHorario,
+    )
+    ->withoutOverlapping();
+
+Schedule::call(
+    new ExecutarLembreteAtrasosMetalThursday,
+)
+    ->name(
+        'lembretes-metal-thursday:atrasos',
+    )
+    ->dailyAt(
+        '08:05',
+    )
+    ->timezone(
+        $fusoHorario,
     )
     ->withoutOverlapping();

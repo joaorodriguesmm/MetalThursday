@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Servicos\Notificacoes;
 
+use App\Enumeracoes\IdentificadorPermissaoEmail;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\Comunicacao\PermissaoEmail;
 use App\Models\MetalThursday\MetalThursday;
 use App\Notifications\NotificacaoInteracaoUtilizador;
 use App\Servicos\Notificacoes\NotificadorInteracoes;
+use Database\Seeders\PermissaoEmailSeeder;
 use Illuminate\Contracts\Notifications\Dispatcher as DespachanteNotificacoes;
 use Illuminate\Database\Eloquent\Collection as ColecaoEloquent;
 use Illuminate\Database\Events\QueryExecuted;
@@ -36,6 +38,10 @@ final class NotificadorInteracoesTest extends TestCase
     #[Test]
     public function carrega_permissoes_sem_consultas_por_destinatario(): void
     {
+        app(
+            PermissaoEmailSeeder::class,
+        )->run();
+
         $causador = Utilizador::factory()
             ->create();
 
@@ -45,11 +51,12 @@ final class NotificadorInteracoesTest extends TestCase
         $destinatarioSemEmail = Utilizador::factory()
             ->create();
 
-        $permissaoTodas = PermissaoEmail::factory()
-            ->comIdentificador(
-                'todas',
+        $permissaoTodas = PermissaoEmail::query()
+            ->where(
+                'identificador',
+                IdentificadorPermissaoEmail::TodasNotificacoes->value,
             )
-            ->create();
+            ->sole();
 
         $destinatarioComEmail
             ->permissoesEmail()

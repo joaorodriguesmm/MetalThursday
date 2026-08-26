@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Enumeracoes\IdentificadorPermissaoEmail;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\ReservaMetalThursday;
@@ -28,25 +29,6 @@ use InvalidArgumentException;
  */
 final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
 {
-    /**
-     * Identificador da permissão que autoriza todas as comunicações.
-     *
-     * @var string
-     *
-     * @since 2.0.0
-     */
-    private const PERMISSAO_TODAS = 'todas';
-
-    /**
-     * Identificador da permissão relativa aos alertas de nomeação.
-     *
-     * @var string
-     *
-     * @since 2.0.0
-     */
-    private const PERMISSAO_ALERTAS_NOMEACAO =
-        'alertas_nomeacao';
-
     /**
      * Identificador da reserva efetivamente atribuída.
      *
@@ -145,10 +127,10 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
         Utilizador $utilizador,
     ): bool {
         return $utilizador->temPermissaoEmail(
-            self::PERMISSAO_TODAS,
+            IdentificadorPermissaoEmail::TodasNotificacoes->value,
         )
             || $utilizador->temPermissaoEmail(
-                self::PERMISSAO_ALERTAS_NOMEACAO,
+                IdentificadorPermissaoEmail::AlertaNomeacao->value,
             );
     }
 

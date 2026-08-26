@@ -7,6 +7,7 @@ namespace App\Servicos\Utilizadores;
 use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\RegistoPapelUtilizador;
 use App\Models\Autenticacao\Utilizador;
+use App\Notifications\NotificacaoPapelUtilizadorAlterado;
 use App\Servicos\Autenticacao\ServicoSessoesUtilizador;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -165,6 +166,13 @@ final class ServicoPapeisUtilizadores
                     ->encerrarTodas(
                         $utilizadorBloqueado,
                     );
+
+                $utilizadorBloqueado->notify(
+                    new NotificacaoPapelUtilizadorAlterado(
+                        $papelAnterior,
+                        $papelNovo,
+                    ),
+                );
 
                 return $utilizadorBloqueado;
             },

@@ -1,10 +1,10 @@
 /**
  * Gere uma opção global que representa todas as permissões disponíveis.
  *
- * Quando a opção global é selecionada, as permissões individuais são
- * ocultadas, desmarcadas e desativadas para não serem submetidas. Quando a
- * opção global é desmarcada, as escolhas individuais anteriores são
- * restauradas.
+ * Quando a opção global é selecionada, as permissões individuais permanecem
+ * visíveis e são apresentadas como incluídas, mas ficam desativadas. As
+ * escolhas individuais existentes são memorizadas para que possam ser
+ * restauradas quando a opção global for desmarcada.
  *
  * @since 1.0.0
  */
@@ -54,9 +54,7 @@ class SeletorPermissoes {
         this.selecoesAnteriores =
             new Set();
 
-        if (!this.campoTodas.checked) {
-            this.memorizarSelecoesIndividuais();
-        }
+        this.memorizarSelecoesIndividuais();
 
         this.campoTodas.addEventListener(
             'change',
@@ -124,9 +122,7 @@ class SeletorPermissoes {
             () => {
                 this.selecoesAnteriores.clear();
 
-                if (!this.campoTodas.checked) {
-                    this.memorizarSelecoesIndividuais();
-                }
+                this.memorizarSelecoesIndividuais();
 
                 this.atualizarEstado({
                     restaurarSelecoes: false,
@@ -139,6 +135,9 @@ class SeletorPermissoes {
     /**
      * Atualiza a apresentação e o estado dos campos individuais.
      *
+     * As permissões individuais permanecem sempre visíveis. Quando a permissão
+     * global está ativa, são apresentadas como incluídas e ficam desativadas.
+     *
      * @param {object} opcoes Opções da atualização.
      * @param {boolean} opcoes.restaurarSelecoes
      *     Indica se as escolhas anteriores devem ser restauradas.
@@ -150,7 +149,7 @@ class SeletorPermissoes {
     atualizarEstado({
         restaurarSelecoes,
     }) {
-        const ocultarIndividuais =
+        const bloquearIndividuais =
             this.campoTodas.checked;
 
         this.itensIndividuais.forEach(
@@ -161,25 +160,29 @@ class SeletorPermissoes {
                     ];
 
                 item.hidden =
-                    ocultarIndividuais;
+                    false;
 
                 this.atualizarCampo(
                     campo,
-                    ocultarIndividuais,
+                    bloquearIndividuais,
                     restaurarSelecoes,
                 );
             },
         );
+
+        this.sincronizarCamposPreservados();
     }
 
     /**
      * Atualiza um campo de permissão individual.
      *
-     * Os campos ocultos são também desativados, impedindo a sua submissão e
-     * utilização através do teclado.
+     * Quando a permissão global está ativa, o campo é apresentado como
+     * selecionado para indicar que essa comunicação está incluída, mas fica
+     * desativado. Ao remover a permissão global, são restauradas as escolhas
+     * específicas memorizadas anteriormente.
      *
      * @param {HTMLInputElement} campo Campo atualizado.
-     * @param {boolean} ocultar Indicação de ocultação.
+     * @param {boolean} bloquear Indicação de bloqueio pela permissão global.
      * @param {boolean} restaurarSelecao Indicação de restauro.
      *
      * @returns {void}
@@ -188,12 +191,12 @@ class SeletorPermissoes {
      */
     atualizarCampo(
         campo,
-        ocultar,
+        bloquear,
         restaurarSelecao,
     ) {
-        if (ocultar) {
+        if (bloquear) {
             campo.checked =
-                false;
+                true;
 
             campo.disabled =
                 true;
@@ -210,6 +213,68 @@ class SeletorPermissoes {
                     campo,
                 );
         }
+    }
+
+    /**
+     * Sincroniza os campos ocultos utilizados para preservar a submissão das
+     * escolhas individuais enquanto a permissão global está ativa.
+     *
+     * As checkboxes individuais desativadas não são submetidas pelo navegador.
+     * Por esse motivo, cada escolha específica memorizada é representada por um
+     * campo oculto com o mesmo nome e valor. Quando a permissão global deixa de
+     * estar ativa, esses campos deixam de ser necessários e são removidos.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    sincronizarCamposPreservados() {
+        const formulario =
+            this.campoTodas.form;
+
+        if (!(formulario instanceof HTMLFormElement)) {
+            return;
+        }
+
+        formulario
+            .querySelectorAll(
+                'input[type="hidden"][data-permissao-email-preservada="true"]',
+            )
+            .forEach(
+                (campo) => {
+                    campo.remove();
+                },
+            );
+
+        if (!this.campoTodas.checked) {
+            return;
+        }
+
+        this.selecoesAnteriores.forEach(
+            (campo) => {
+                const campoPreservado =
+                    document.createElement(
+                        'input',
+                    );
+
+                campoPreservado.type =
+                    'hidden';
+
+                campoPreservado.name =
+                    campo.name;
+
+                campoPreservado.value =
+                    campo.value;
+
+                campoPreservado.dataset
+                    .permissaoEmailPreservada =
+                    'true';
+
+                formulario.append(
+                    campoPreservado,
+                );
+            },
+        );
     }
 
     /**

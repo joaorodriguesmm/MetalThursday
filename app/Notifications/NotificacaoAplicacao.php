@@ -14,9 +14,12 @@ use LogicException;
 /**
  * Define o comportamento comum das notificações da aplicação.
  *
- * Todas as notificações são guardadas na base de dados. O envio por e-mail
- * depende das preferências do destinatário e da existência de um endereço de
- * e-mail válido.
+ * As notificações são guardadas na base de dados por predefinição. Classes
+ * concretas podem optar por comunicações exclusivamente por e-mail quando a
+ * natureza da mensagem assim o exigir.
+ *
+ * O envio por e-mail depende da política definida pela notificação concreta e
+ * da existência de um endereço de e-mail válido.
  *
  * @since 1.0.0
  */
@@ -27,8 +30,8 @@ abstract class NotificacaoAplicacao extends Notification implements ShouldQueue
     /**
      * Obtém os canais utilizados para enviar a notificação.
      *
-     * A notificação é sempre guardada na base de dados. O canal de e-mail
-     * apenas é considerado quando o utilizador possui primeiro um endereço
+     * A notificação é guardada na base de dados por predefinição. O canal de
+     * e-mail apenas é considerado quando o utilizador possui primeiro um endereço
      * disponível. Desta forma, as preferências de e-mail não são consultadas
      * para destinatários que nunca poderiam receber esse canal.
      *
@@ -47,9 +50,12 @@ abstract class NotificacaoAplicacao extends Notification implements ShouldQueue
                 $notificavel,
             );
 
-        $canais = [
-            'database',
-        ];
+        $canais = [];
+
+        if ($this->deveGuardarNaBaseDados()) {
+            $canais[] =
+                'database';
+        }
 
         if (
             $this->utilizadorPossuiEmail(
@@ -104,6 +110,16 @@ abstract class NotificacaoAplicacao extends Notification implements ShouldQueue
                 ),
             );
 
+        foreach (
+            $this->obterLinhasAdicionais(
+                $utilizador,
+            ) as $linha
+        ) {
+            $mensagem->line(
+                $linha,
+            );
+        }
+
         $textoAcao =
             $this->obterTextoAcao(
                 $utilizador,
@@ -129,6 +145,22 @@ abstract class NotificacaoAplicacao extends Notification implements ShouldQueue
         return $mensagem->line(
             'Obrigado por fazeres parte da comunidade MetalThursday!',
         );
+    }
+
+    /**
+     * Determina se a notificação deve ser guardada na base de dados.
+     *
+     * Por predefinição, todas as notificações da aplicação permanecem
+     * disponíveis internamente. Notificações exclusivamente destinadas ao canal
+     * de e-mail podem substituir este comportamento.
+     *
+     * @return bool Verdadeiro quando deve utilizar o canal de base de dados.
+     *
+     * @since 2.0.0
+     */
+    protected function deveGuardarNaBaseDados(): bool
+    {
+        return true;
     }
 
     /**
@@ -166,6 +198,23 @@ abstract class NotificacaoAplicacao extends Notification implements ShouldQueue
     abstract protected function obterLinhaMensagem(
         Utilizador $utilizador,
     ): string;
+
+    /**
+     * Obtém linhas adicionais da mensagem de e-mail.
+     *
+     * As notificações que apenas necessitam da linha principal não precisam de
+     * substituir este método.
+     *
+     * @param  Utilizador  $utilizador  Utilizador destinatário.
+     * @return array<int, string> Linhas adicionais.
+     *
+     * @since 2.0.0
+     */
+    protected function obterLinhasAdicionais(
+        Utilizador $utilizador,
+    ): array {
+        return [];
+    }
 
     /**
      * Obtém o texto apresentado no botão da mensagem.

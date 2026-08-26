@@ -7,6 +7,8 @@ namespace App\Servicos\Utilizadores;
 use App\Enumeracoes\AcaoAcessoUtilizador;
 use App\Models\Autenticacao\RegistoAcessoUtilizador;
 use App\Models\Autenticacao\Utilizador;
+use App\Notifications\NotificacaoEstadoAcessoUtilizador;
+use App\Notifications\NotificacaoSessoesEncerradasUtilizador;
 use App\ObjetosValor\Utilizadores\MotivoSuspensaoUtilizador;
 use App\Servicos\Autenticacao\ServicoSessoesUtilizador;
 use Carbon\CarbonImmutable;
@@ -181,6 +183,13 @@ final class ServicoAcessoUtilizadores
                         $utilizadorBloqueado,
                     );
 
+                $utilizadorBloqueado->notify(
+                    new NotificacaoEstadoAcessoUtilizador(
+                        AcaoAcessoUtilizador::Suspensao,
+                        $motivoSuspensao->valor(),
+                    ),
+                );
+
                 return $utilizadorBloqueado;
             },
             self::TENTATIVAS_TRANSACAO,
@@ -287,6 +296,12 @@ final class ServicoAcessoUtilizadores
                         $utilizadorBloqueado,
                     );
 
+                $utilizadorBloqueado->notify(
+                    new NotificacaoEstadoAcessoUtilizador(
+                        AcaoAcessoUtilizador::Reativacao,
+                    ),
+                );
+
                 return $utilizadorBloqueado;
             },
             self::TENTATIVAS_TRANSACAO,
@@ -352,11 +367,18 @@ final class ServicoAcessoUtilizadores
 
                 $utilizadorBloqueado->saveOrFail();
 
-                return $this
-                    ->servicoSessoesUtilizador
-                    ->encerrarTodas(
-                        $utilizadorBloqueado,
-                    );
+                $numeroSessoesEncerradas =
+                    $this
+                        ->servicoSessoesUtilizador
+                        ->encerrarTodas(
+                            $utilizadorBloqueado,
+                        );
+
+                $utilizadorBloqueado->notify(
+                    new NotificacaoSessoesEncerradasUtilizador,
+                );
+
+                return $numeroSessoesEncerradas;
             },
             self::TENTATIVAS_TRANSACAO,
         );

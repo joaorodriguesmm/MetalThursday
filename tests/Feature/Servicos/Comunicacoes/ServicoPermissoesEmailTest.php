@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Servicos\Comunicacoes;
 
+use App\Enumeracoes\IdentificadorPermissaoEmail;
 use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\Comunicacao\PermissaoEmail;
 use App\Servicos\Comunicacoes\ServicoPermissoesEmail;
+use Database\Seeders\PermissaoEmailSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
@@ -366,6 +368,194 @@ final class ServicoPermissoesEmailTest extends TestCase
                 $utilizador,
                 [],
             );
+    }
+
+    /**
+     * Confirma que a permissão global preserva as escolhas específicas recebidas.
+     *
+     * Quando a opção global está ativa, o formulário envia também as escolhas
+     * específicas anteriormente selecionadas. O serviço deve sincronizar
+     * exatamente esse conjunto para permitir a sua recuperação quando a opção
+     * global for posteriormente desativada.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function permissao_global_preserva_permissoes_especificas_recebidas(): void
+    {
+        app(
+            PermissaoEmailSeeder::class,
+        )->run();
+
+        $utilizador =
+            $this->criarUtilizador();
+
+        $permissaoEspecifica = PermissaoEmail::query()
+            ->where(
+                'identificador',
+                IdentificadorPermissaoEmail::NovasPublicacoes->value,
+            )
+            ->sole();
+
+        $permissaoGlobal = PermissaoEmail::query()
+            ->where(
+                'identificador',
+                IdentificadorPermissaoEmail::TodasNotificacoes->value,
+            )
+            ->sole();
+
+        $identificadorEspecifica =
+            (int) $permissaoEspecifica->getKey();
+
+        $identificadorGlobal =
+            (int) $permissaoGlobal->getKey();
+
+        $this
+            ->servico
+            ->sincronizar(
+                $utilizador,
+                [
+                    $identificadorEspecifica,
+                ],
+            );
+
+        $resultado =
+            $this
+                ->servico
+                ->sincronizar(
+                    $utilizador,
+                    [
+                        $identificadorGlobal,
+                        $identificadorEspecifica,
+                    ],
+                );
+
+        self::assertSame(
+            [
+                $identificadorGlobal,
+                $identificadorEspecifica,
+            ],
+            $resultado,
+        );
+
+        self::assertSame(
+            [
+                $identificadorGlobal,
+                $identificadorEspecifica,
+            ],
+            $this->obterIdentificadoresPermissoes(
+                $utilizador,
+            ),
+        );
+
+        $resultadoSemGlobal =
+            $this
+                ->servico
+                ->sincronizar(
+                    $utilizador,
+                    [
+                        $identificadorEspecifica,
+                    ],
+                );
+
+        self::assertSame(
+            [
+                $identificadorEspecifica,
+            ],
+            $resultadoSemGlobal,
+        );
+
+        self::assertSame(
+            [
+                $identificadorEspecifica,
+            ],
+            $this->obterIdentificadoresPermissoes(
+                $utilizador,
+            ),
+        );
+    }
+
+    /**
+     * Confirma que a permissão global respeita o subconjunto específico recebido.
+     *
+     * Os campos preservados do formulário enviam explicitamente as permissões
+     * específicas que devem permanecer associadas quando a opção global está
+     * ativa. Uma permissão específica removida antes da gravação não pode ser
+     * novamente introduzida pelo serviço.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function permissao_global_respeita_subconjunto_especifico_recebido(): void
+    {
+        $this->seed(
+            PermissaoEmailSeeder::class,
+        );
+
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $permissaoGlobal =
+            PermissaoEmail::query()
+                ->where(
+                    'identificador',
+                    IdentificadorPermissaoEmail::TodasNotificacoes->value,
+                )
+                ->sole();
+
+        $novasPublicacoes =
+            PermissaoEmail::query()
+                ->where(
+                    'identificador',
+                    IdentificadorPermissaoEmail::NovasPublicacoes->value,
+                )
+                ->sole();
+
+        $lembreteTarefas =
+            PermissaoEmail::query()
+                ->where(
+                    'identificador',
+                    IdentificadorPermissaoEmail::LembreteDiarioTarefas->value,
+                )
+                ->sole();
+
+        $utilizador
+            ->permissoesEmail()
+            ->sync([
+                $permissaoGlobal->getKey(),
+                $novasPublicacoes->getKey(),
+                $lembreteTarefas->getKey(),
+            ]);
+
+        $this
+            ->servico
+            ->sincronizar(
+                $utilizador,
+                [
+                    (int) $permissaoGlobal->getKey(),
+                    (int) $novasPublicacoes->getKey(),
+                ],
+            );
+
+        self::assertSame(
+            [
+                (int) $permissaoGlobal->getKey(),
+                (int) $novasPublicacoes->getKey(),
+            ],
+            $utilizador
+                ->permissoesEmail()
+                ->orderBy(
+                    'permissoes_email.id',
+                )
+                ->pluck(
+                    'permissoes_email.id',
+                )
+                ->map(
+                    static fn (mixed $identificador): int => (int) $identificador,
+                )
+                ->all(),
+        );
     }
 
     /**

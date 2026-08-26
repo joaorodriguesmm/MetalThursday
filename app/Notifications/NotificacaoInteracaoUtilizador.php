@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Enumeracoes\IdentificadorPermissaoEmail;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\Interacoes\Comentario;
 use App\Models\MetalThursday\Edicao;
@@ -50,30 +51,6 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      */
     private const TIPO_COMENTARIO =
         'comentario';
-
-    /**
-     * Permissão que autoriza todas as comunicações por e-mail.
-     *
-     * @since 2.0.0
-     */
-    private const PERMISSAO_TODAS =
-        'todas';
-
-    /**
-     * Permissão relativa a todas as novas interações.
-     *
-     * @since 2.0.0
-     */
-    private const PERMISSAO_NOVAS_INTERACOES =
-        'novas_interacoes';
-
-    /**
-     * Permissão relativa às interações nas publicações do utilizador.
-     *
-     * @since 2.0.0
-     */
-    private const PERMISSAO_INTERACOES_PUBLICACOES =
-        'interacoes_nas_minhas_publicacoes';
 
     /**
      * Tipo interno do sujeito da interação.
@@ -241,15 +218,15 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
             === $this->identificadorAutorMetalThursday;
 
         return $utilizador->temPermissaoEmail(
-            self::PERMISSAO_TODAS,
+            IdentificadorPermissaoEmail::TodasNotificacoes->value,
         )
             || $utilizador->temPermissaoEmail(
-                self::PERMISSAO_NOVAS_INTERACOES,
+                IdentificadorPermissaoEmail::TodasInteracoes->value,
             )
             || (
                 $eAutor
                 && $utilizador->temPermissaoEmail(
-                    self::PERMISSAO_INTERACOES_PUBLICACOES,
+                    IdentificadorPermissaoEmail::InteracoesNasMinhasPublicacoes->value,
                 )
             );
     }

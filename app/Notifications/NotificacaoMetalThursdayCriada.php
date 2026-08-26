@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Enumeracoes\IdentificadorPermissaoEmail;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
@@ -22,25 +23,6 @@ use InvalidArgumentException;
  */
 final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
 {
-    /**
-     * Identificador da permissão que autoriza todas as comunicações.
-     *
-     * @var string
-     *
-     * @since 2.0.0
-     */
-    private const PERMISSAO_TODAS = 'todas';
-
-    /**
-     * Identificador da permissão relativa a novas publicações.
-     *
-     * @var string
-     *
-     * @since 2.0.0
-     */
-    private const PERMISSAO_NOVAS_PUBLICACOES =
-        'novas_publicacoes';
-
     /**
      * Identificador da MetalThursday publicada.
      *
@@ -126,10 +108,10 @@ final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
         Utilizador $utilizador,
     ): bool {
         return $utilizador->temPermissaoEmail(
-            self::PERMISSAO_TODAS,
+            IdentificadorPermissaoEmail::TodasNotificacoes->value,
         )
             || $utilizador->temPermissaoEmail(
-                self::PERMISSAO_NOVAS_PUBLICACOES,
+                IdentificadorPermissaoEmail::NovasPublicacoes->value,
             );
     }
 

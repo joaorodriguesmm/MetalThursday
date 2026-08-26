@@ -8,12 +8,15 @@ use App\Enumeracoes\AcaoAcessoUtilizador;
 use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\RegistoAcessoUtilizador;
 use App\Models\Autenticacao\Utilizador;
+use App\Notifications\NotificacaoEstadoAcessoUtilizador;
+use App\Notifications\NotificacaoSessoesEncerradasUtilizador;
 use App\Servicos\Autenticacao\ServicoSessoesUtilizador;
 use App\Servicos\Utilizadores\ServicoAcessoUtilizadores;
 use Carbon\CarbonImmutable;
 use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
@@ -291,6 +294,112 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
     }
 
     /**
+     * Confirma que uma suspensão concluída comunica a alteração ao utilizador.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function suspensao_bem_sucedida_notifica_o_utilizador(): void
+    {
+        Notification::fake();
+
+        $responsavel =
+            $this->criarSuperAdministrador();
+
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $this
+            ->servico
+            ->suspender(
+                utilizador: $utilizador,
+                responsavel: $responsavel,
+                motivo: "  Suspensão \n administrativa.  ",
+            );
+
+        Notification::assertSentTo(
+            $utilizador,
+            NotificacaoEstadoAcessoUtilizador::class,
+            static function (
+                NotificacaoEstadoAcessoUtilizador $notificacao,
+            ) use (
+                $utilizador,
+            ): bool {
+                $mensagem =
+                    $notificacao->toMail(
+                        $utilizador,
+                    );
+
+                return $mensagem->subject
+                    === 'MetalThursday — Acesso suspenso'
+                    && in_array(
+                        'Motivo: Suspensão administrativa.',
+                        $mensagem->introLines,
+                        true,
+                    );
+            },
+        );
+
+        Notification::assertCount(
+            1,
+        );
+    }
+
+    /**
+     * Confirma que uma reativação concluída comunica a alteração ao utilizador.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function reativacao_bem_sucedida_notifica_o_utilizador(): void
+    {
+        Notification::fake();
+
+        $responsavel =
+            $this->criarSuperAdministrador();
+
+        $utilizador =
+            Utilizador::factory()
+                ->suspensoPor(
+                    $responsavel,
+                    'Motivo anterior.',
+                )
+                ->create();
+
+        $this
+            ->servico
+            ->reativar(
+                utilizador: $utilizador,
+                responsavel: $responsavel,
+            );
+
+        Notification::assertSentTo(
+            $utilizador,
+            NotificacaoEstadoAcessoUtilizador::class,
+            static function (
+                NotificacaoEstadoAcessoUtilizador $notificacao,
+            ) use (
+                $utilizador,
+            ): bool {
+                $mensagem =
+                    $notificacao->toMail(
+                        $utilizador,
+                    );
+
+                return $mensagem->subject
+                    === 'MetalThursday — Acesso reativado'
+                    && $mensagem->actionText
+                    === 'Iniciar sessão';
+            },
+        );
+
+        Notification::assertCount(
+            1,
+        );
+    }
+
+    /**
      * Confirma o encerramento administrativo das sessões sem alterar o
      * estado do acesso.
      *
@@ -360,6 +469,121 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
     }
 
     /**
+     * Confirma que o encerramento administrativo das sessões é comunicado ao
+     * utilizador afetado.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function encerramento_administrativo_de_sessoes_notifica_o_utilizador(): void
+    {
+        Notification::fake();
+
+        $responsavel =
+            $this->criarSuperAdministrador();
+
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $this->criarSessao(
+            $utilizador,
+            'sessao-a-encerrar',
+        );
+
+        $numeroSessoesEncerradas =
+            $this
+                ->servico
+                ->encerrarSessoes(
+                    $utilizador,
+                    $responsavel,
+                );
+
+        self::assertSame(
+            1,
+            $numeroSessoesEncerradas,
+        );
+
+        Notification::assertSentTo(
+            $utilizador,
+            NotificacaoSessoesEncerradasUtilizador::class,
+            static function (
+                NotificacaoSessoesEncerradasUtilizador $notificacao,
+            ) use (
+                $utilizador,
+            ): bool {
+                $mensagem =
+                    $notificacao->toMail(
+                        $utilizador,
+                    );
+
+                return $mensagem->subject
+                    === 'MetalThursday — Sessões encerradas'
+                    && $mensagem->actionText
+                    === 'Iniciar sessão';
+            },
+        );
+
+        Notification::assertCount(
+            1,
+        );
+    }
+
+    /**
+     * Confirma que a invalidação das autenticações persistentes é comunicada
+     * mesmo quando não existem sessões ativas para encerrar.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function encerramento_sem_sessoes_ativas_continua_a_notificar_o_utilizador(): void
+    {
+        Notification::fake();
+
+        $responsavel =
+            $this->criarSuperAdministrador();
+
+        $tokenOriginal =
+            'token-persistente-original';
+
+        $utilizador =
+            Utilizador::factory()
+                ->state([
+                    'remember_token' => $tokenOriginal,
+                ])
+                ->create();
+
+        $numeroSessoesEncerradas =
+            $this
+                ->servico
+                ->encerrarSessoes(
+                    $utilizador,
+                    $responsavel,
+                );
+
+        $utilizador->refresh();
+
+        self::assertSame(
+            0,
+            $numeroSessoesEncerradas,
+        );
+
+        self::assertNotSame(
+            $tokenOriginal,
+            $utilizador->getRememberToken(),
+        );
+
+        Notification::assertSentTo(
+            $utilizador,
+            NotificacaoSessoesEncerradasUtilizador::class,
+        );
+
+        Notification::assertCount(
+            1,
+        );
+    }
+
+    /**
      * Confirma que um utilizador não pode suspender-se a si próprio.
      *
      * @since 2.0.0
@@ -367,20 +591,28 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
     #[Test]
     public function rejeita_a_autossuspensao(): void
     {
+        Notification::fake();
+
         $utilizador =
             $this->criarSuperAdministrador();
 
-        $this->expectException(
-            DomainException::class,
-        );
+        try {
+            $this
+                ->servico
+                ->suspender(
+                    $utilizador,
+                    $utilizador,
+                    'Motivo válido.',
+                );
 
-        $this
-            ->servico
-            ->suspender(
-                $utilizador,
-                $utilizador,
-                'Motivo válido.',
+            self::fail(
+                'Era esperada uma exceção de domínio.',
             );
+        } catch (DomainException) {
+            // Exceção esperada.
+        }
+
+        Notification::assertNothingSent();
     }
 
     /**
@@ -391,6 +623,8 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
     #[Test]
     public function rejeita_um_responsavel_sem_papel_de_superadministrador(): void
     {
+        Notification::fake();
+
         $responsavel = Utilizador::factory()
             ->comPapel(
                 PapelUtilizador::Administrador,
@@ -445,6 +679,8 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
             RegistoAcessoUtilizador::query()
                 ->count(),
         );
+
+        Notification::assertNothingSent();
     }
 
     /**
@@ -455,6 +691,8 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
     #[Test]
     public function rejeita_um_superadministrador_suspenso(): void
     {
+        Notification::fake();
+
         $superAdministradorAtivo =
             $this->criarSuperAdministrador();
 
@@ -471,17 +709,23 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
         $utilizador = Utilizador::factory()
             ->create();
 
-        $this->expectException(
-            DomainException::class,
-        );
+        try {
+            $this
+                ->servico
+                ->suspender(
+                    $utilizador,
+                    $responsavelSuspenso,
+                    'Motivo válido.',
+                );
 
-        $this
-            ->servico
-            ->suspender(
-                $utilizador,
-                $responsavelSuspenso,
-                'Motivo válido.',
+            self::fail(
+                'Era esperada uma exceção de domínio.',
             );
+        } catch (DomainException) {
+            // Exceção esperada.
+        }
+
+        Notification::assertNothingSent();
     }
 
     /**
@@ -492,6 +736,8 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
     #[Test]
     public function rejeita_um_utilizador_ja_suspenso(): void
     {
+        Notification::fake();
+
         $responsavel =
             $this->criarSuperAdministrador();
 
@@ -548,6 +794,8 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
             RegistoAcessoUtilizador::query()
                 ->count(),
         );
+
+        Notification::assertNothingSent();
     }
 
     /**
@@ -558,22 +806,30 @@ final class ServicoAcessoUtilizadoresTest extends TestCase
     #[Test]
     public function rejeita_um_utilizador_que_ja_possui_acesso_ativo(): void
     {
+        Notification::fake();
+
         $responsavel =
             $this->criarSuperAdministrador();
 
         $utilizador = Utilizador::factory()
             ->create();
 
-        $this->expectException(
-            DomainException::class,
-        );
+        try {
+            $this
+                ->servico
+                ->reativar(
+                    $utilizador,
+                    $responsavel,
+                );
 
-        $this
-            ->servico
-            ->reativar(
-                $utilizador,
-                $responsavel,
+            self::fail(
+                'Era esperada uma exceção de domínio.',
             );
+        } catch (DomainException) {
+            // Exceção esperada.
+        }
+
+        Notification::assertNothingSent();
     }
 
     /**

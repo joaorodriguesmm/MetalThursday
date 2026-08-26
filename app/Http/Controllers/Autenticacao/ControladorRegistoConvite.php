@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Autenticacao;
 
+use App\Enumeracoes\IdentificadorPermissaoEmail;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Autenticacao\AceitarConviteRequest;
 use App\Models\Comunicacao\PermissaoEmail;
@@ -36,16 +37,6 @@ use Throwable;
  */
 final class ControladorRegistoConvite extends Controller
 {
-    /**
-     * Identificador da permissão que ativa todas as comunicações por e-mail.
-     *
-     * @var string
-     *
-     * @since 2.0.0
-     */
-    private const IDENTIFICADOR_PERMISSAO_TODAS =
-        'todas_notificacoes';
-
     /**
      * Mensagem apresentada para qualquer convite indisponível.
      *
@@ -143,7 +134,7 @@ final class ControladorRegistoConvite extends Controller
             $permissoesEmail
                 ->firstWhere(
                     'identificador',
-                    self::IDENTIFICADOR_PERMISSAO_TODAS,
+                    IdentificadorPermissaoEmail::TodasNotificacoes->value,
                 );
 
         $outrasPermissoes =
@@ -151,7 +142,7 @@ final class ControladorRegistoConvite extends Controller
                 ->where(
                     'identificador',
                     '!=',
-                    self::IDENTIFICADOR_PERMISSAO_TODAS,
+                    IdentificadorPermissaoEmail::TodasNotificacoes->value,
                 )
                 ->values();
 
