@@ -94,6 +94,10 @@ final class ControladorAudicaoTest extends TestCase
             ->assertJsonPath(
                 'conteudo_indicador_html',
                 'Ana<br>Bruno',
+            )
+            ->assertJsonPath(
+                'mensagem',
+                'MetalThursday marcada como ouvida.',
             );
 
         self::assertSame(
@@ -119,6 +123,119 @@ final class ControladorAudicaoTest extends TestCase
             'audicoes',
             [
                 'utilizador_id' => $segundoUtilizador->getKey(),
+
+                'tipo_audivel' => $metalThursday->getMorphClass(),
+
+                'audivel_id' => $metalThursday->getKey(),
+            ],
+        );
+    }
+
+    /**
+     * Confirma a mensagem devolvida ao marcar uma secção como ouvida.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function adiciona_audicao_a_uma_seccao_com_mensagem_de_sucesso(): void
+    {
+        Notification::fake();
+
+        $utilizador = Utilizador::factory()
+            ->create();
+
+        $seccao = SeccaoMetalThursday::factory()
+            ->create();
+
+        $this
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
+            ->postJson(
+                route(
+                    'audicoes.alternar',
+                    [
+                        'tipoAudivel' => TipoEntidadeInteracao::SeccaoMetalThursday->value,
+
+                        'identificadorAudivel' => $seccao->getKey(),
+                    ],
+                ),
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'marcado_como_ouvido',
+                true,
+            )
+            ->assertJsonPath(
+                'mensagem',
+                'Secção marcada como ouvida.',
+            );
+
+        $this->assertDatabaseHas(
+            'audicoes',
+            [
+                'utilizador_id' => $utilizador->getKey(),
+
+                'tipo_audivel' => $seccao->getMorphClass(),
+
+                'audivel_id' => $seccao->getKey(),
+            ],
+        );
+    }
+
+    /**
+     * Confirma a mensagem devolvida ao remover a audição de uma
+     * MetalThursday.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function remove_audicao_de_uma_metal_thursday_com_mensagem_de_sucesso(): void
+    {
+        Notification::fake();
+
+        $utilizador = Utilizador::factory()
+            ->create();
+
+        $metalThursday = MetalThursday::factory()
+            ->create();
+
+        $metalThursday
+            ->audicoes()
+            ->create([
+                'utilizador_id' => $utilizador->getKey(),
+            ]);
+
+        $this
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
+            ->postJson(
+                route(
+                    'audicoes.alternar',
+                    [
+                        'tipoAudivel' => TipoEntidadeInteracao::MetalThursday->value,
+
+                        'identificadorAudivel' => $metalThursday->getKey(),
+                    ],
+                ),
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'marcado_como_ouvido',
+                false,
+            )
+            ->assertJsonPath(
+                'mensagem',
+                'MetalThursday marcada como não ouvida.',
+            );
+
+        $this->assertDatabaseMissing(
+            'audicoes',
+            [
+                'utilizador_id' => $utilizador->getKey(),
 
                 'tipo_audivel' => $metalThursday->getMorphClass(),
 
@@ -179,6 +296,10 @@ final class ControladorAudicaoTest extends TestCase
             ->assertJsonPath(
                 'conteudo_indicador_html',
                 'Ninguém marcou como ouvido.',
+            )
+            ->assertJsonPath(
+                'mensagem',
+                'Secção marcada como não ouvida.',
             );
 
         $this->assertDatabaseMissing(

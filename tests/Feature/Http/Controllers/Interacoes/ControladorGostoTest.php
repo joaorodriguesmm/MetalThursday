@@ -281,4 +281,110 @@ final class ControladorGostoTest extends TestCase
 
         return $comentario;
     }
+
+    /**
+     * Confirma que não é possível alterar gostos num tombstone.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_alterna_gosto_em_comentario_com_conteudo_eliminado(): void
+    {
+        Notification::fake();
+
+        $autor =
+            Utilizador::factory()
+                ->create();
+
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $comentario =
+            $this->criarComentario(
+                $autor,
+            );
+
+        $comentario
+            ->forceFill([
+                'conteudo_eliminado_em' => now(),
+            ])
+            ->saveOrFail();
+
+        $this
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
+            ->postJson(
+                route(
+                    'gostos.alternar',
+                    $comentario,
+                ),
+            )
+            ->assertStatus(
+                410,
+            );
+
+        $this->assertDatabaseMissing(
+            'gostos',
+            [
+                'comentario_id' => $comentario->getKey(),
+
+                'utilizador_id' => $utilizador->getKey(),
+            ],
+        );
+
+        Notification::assertNothingSent();
+    }
+
+    /**
+     * Confirma que os utilizadores associados aos gostos de um tombstone deixam
+     * de ser consultáveis.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_lista_gostos_de_comentario_com_conteudo_eliminado(): void
+    {
+        $autor =
+            Utilizador::factory()
+                ->create();
+
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $comentario =
+            $this->criarComentario(
+                $autor,
+            );
+
+        $comentario
+            ->gostos()
+            ->create([
+                'utilizador_id' => $utilizador->getKey(),
+            ]);
+
+        $comentario
+            ->forceFill([
+                'conteudo_eliminado_em' => now(),
+            ])
+            ->saveOrFail();
+
+        $this
+            ->actingAs(
+                $autor,
+                'sessao',
+            )
+            ->getJson(
+                route(
+                    'comentarios.utilizadores-gosto',
+                    $comentario,
+                ),
+            )
+            ->assertStatus(
+                410,
+            );
+    }
 }

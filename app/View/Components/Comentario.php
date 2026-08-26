@@ -8,17 +8,19 @@ use App\Models\Autenticacao\Utilizador;
 use App\Models\Interacoes\Comentario as ModeloComentario;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\View\View;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\Component;
 use LogicException;
 
 /**
- * Prepara a apresentação de um comentário e das respetivas respostas.
+ * Prepara a apresentação de um comentário.
  *
- * O componente exige que as relações `utilizador` e `respostas` tenham sido
- * previamente carregadas, impedindo consultas implícitas durante a
- * renderização recursiva da árvore de comentários.
+ * O componente apresenta apenas o comentário recebido. As respostas são
+ * carregadas assincronamente quando o utilizador expande o respetivo ramo.
+ *
+ * A consulta deve preparar previamente a relação `utilizador`, a quantidade
+ * de gostos, a quantidade de respostas diretas e o estado de gosto do
+ * utilizador autenticado.
  *
  * @since 1.0.0
  */
@@ -37,13 +39,6 @@ final class Comentario extends Component
      * @since 2.0.0
      */
     public readonly int $identificadorComentario;
-
-    /**
-     * Identificador do comentário principal da árvore.
-     *
-     * @since 2.0.0
-     */
-    public readonly int $identificadorPrincipal;
 
     /**
      * Utilizador responsável pelo comentário.
@@ -76,6 +71,13 @@ final class Comentario extends Component
     public readonly int $quantidadeGostos;
 
     /**
+     * Quantidade de respostas diretas ao comentário.
+     *
+     * @since 2.0.0
+     */
+    public readonly int $quantidadeRespostas;
+
+    /**
      * Indica se o utilizador autenticado atribuiu gosto ao comentário.
      *
      * @since 2.0.0
@@ -97,42 +99,25 @@ final class Comentario extends Component
     public readonly ?CarbonInterface $momentoCriacao;
 
     /**
-     * Respostas diretas ao comentário.
-     *
-     * @var Collection<int, ModeloComentario>
-     *
-     * @since 2.0.0
-     */
-    public readonly Collection $respostas;
-
-    /**
      * Cria uma nova instância do componente.
      *
      * @param  ModeloComentario  $comentario  Comentário apresentado.
-     * @param  int|string|null  $identificadorComentarioPrincipal  Identificador
-     *                                                             da raiz.
      *
-     * @throws LogicException Quando o comentário não está persistido, um
-     *                        identificador é inválido, uma relação necessária
-     *                        não está carregada ou possui um tipo inesperado.
+     * @throws LogicException Quando o comentário não está persistido, a
+     *                        relação do utilizador não foi carregada ou contém
+     *                        dados inesperados.
      *
      * @since 1.0.0
      */
     public function __construct(
         ModeloComentario $comentario,
-        int|string|null $identificadorComentarioPrincipal = null,
     ) {
-        $this->comentario = $comentario;
+        $this->comentario =
+            $comentario;
 
         $this->identificadorComentario =
             $this->obterIdentificadorComentario(
                 $comentario,
-            );
-
-        $this->identificadorPrincipal =
-            $this->normalizarIdentificadorPrincipal(
-                $identificadorComentarioPrincipal,
-                $this->identificadorComentario,
             );
 
         $this->utilizador =
@@ -140,51 +125,59 @@ final class Comentario extends Component
                 $comentario,
             );
 
-        $nomeUtilizador = trim(
-            (string) (
-                $this->utilizador?->nome
-                ?? ''
-            ),
-        );
+        $nomeUtilizador =
+            trim(
+                (string) (
+                    $this->utilizador?->nome
+                    ?? ''
+                ),
+            );
 
         $this->nomeUtilizador =
             $nomeUtilizador !== ''
             ? $nomeUtilizador
             : 'Utilizador removido';
 
-        $this->quantidadeGostos = max(
-            0,
-            (int) (
-                $comentario->quantidade_gostos
-                ?? 0
-            ),
-        );
+        $this->quantidadeGostos =
+            max(
+                0,
+                (int) (
+                    $comentario->quantidade_gostos
+                    ?? 0
+                ),
+            );
 
-        $this->temGosto = (bool) (
-            $comentario->gostado_pelo_utilizador_autenticado
-            ?? false
-        );
+        $this->quantidadeRespostas =
+            max(
+                0,
+                (int) (
+                    $comentario->quantidade_respostas
+                    ?? 0
+                ),
+            );
+
+        $this->temGosto =
+            (bool) (
+                $comentario->gostado_pelo_utilizador_autenticado
+                ?? false
+            );
 
         $descricaoQuantidadeGostos =
             $this->quantidadeGostos === 1
             ? '1 gosto'
             : "{$this->quantidadeGostos} gostos";
 
-        $this->descricaoAcaoGosto = sprintf(
-            '%s. %s.',
-            $this->temGosto
-                ? 'Remover gosto'
-                : 'Adicionar gosto',
-            $descricaoQuantidadeGostos,
-        );
+        $this->descricaoAcaoGosto =
+            sprintf(
+                '%s. %s.',
+                $this->temGosto
+                    ? 'Remover gosto'
+                    : 'Adicionar gosto',
+                $descricaoQuantidadeGostos,
+            );
 
         $this->momentoCriacao =
             $this->obterMomentoCriacao(
-                $comentario,
-            );
-
-        $this->respostas =
-            $this->obterRespostas(
                 $comentario,
             );
 
@@ -226,7 +219,8 @@ final class Comentario extends Component
             );
         }
 
-        $identificador = $comentario->getKey();
+        $identificador =
+            $comentario->getKey();
 
         if (
             is_int($identificador)
@@ -249,52 +243,9 @@ final class Comentario extends Component
     }
 
     /**
-     * Normaliza o identificador do comentário principal.
-     *
-     * Quando o identificador não é fornecido, é utilizado o identificador do
-     * comentário atual. Qualquer valor fornecido deve representar um inteiro
-     * positivo.
-     *
-     * @param  int|string|null  $identificador  Identificador recebido.
-     * @param  int  $identificadorPredefinido  Identificador alternativo.
-     * @return int Identificador normalizado.
-     *
-     * @throws LogicException Quando o identificador fornecido é inválido.
-     *
-     * @since 2.0.0
-     */
-    private function normalizarIdentificadorPrincipal(
-        int|string|null $identificador,
-        int $identificadorPredefinido,
-    ): int {
-        if ($identificador === null) {
-            return $identificadorPredefinido;
-        }
-
-        if (
-            is_int($identificador)
-            && $identificador > 0
-        ) {
-            return $identificador;
-        }
-
-        if (
-            is_string($identificador)
-            && ctype_digit($identificador)
-            && (int) $identificador > 0
-        ) {
-            return (int) $identificador;
-        }
-
-        throw new LogicException(
-            'O identificador do comentário principal deve ser um inteiro positivo.',
-        );
-    }
-
-    /**
      * Obtém o utilizador associado ao comentário.
      *
-     * @param  ModeloComentario  $comentario  Comentário apresentado.
+     * @param  ModeloComentario  $comentario  Comentário recebido.
      * @return Utilizador|null Utilizador relacionado.
      *
      * @throws LogicException Quando a relação não está carregada ou possui
@@ -311,9 +262,10 @@ final class Comentario extends Component
             );
         }
 
-        $utilizador = $comentario->getRelation(
-            'utilizador',
-        );
+        $utilizador =
+            $comentario->getRelation(
+                'utilizador',
+            );
 
         if (
             $utilizador !== null
@@ -328,51 +280,9 @@ final class Comentario extends Component
     }
 
     /**
-     * Obtém as respostas previamente carregadas.
-     *
-     * @param  ModeloComentario  $comentario  Comentário apresentado.
-     * @return Collection<int, ModeloComentario> Respostas diretas.
-     *
-     * @throws LogicException Quando a relação não está carregada ou possui
-     *                        um tipo inesperado.
-     *
-     * @since 2.0.0
-     */
-    private function obterRespostas(
-        ModeloComentario $comentario,
-    ): Collection {
-        if (! $comentario->relationLoaded('respostas')) {
-            throw new LogicException(
-                'A relação "respostas" deve ser carregada antes de apresentar o comentário.',
-            );
-        }
-
-        $respostas = $comentario->getRelation(
-            'respostas',
-        );
-
-        if (! $respostas instanceof Collection) {
-            throw new LogicException(
-                'A relação "respostas" do comentário possui um tipo inesperado.',
-            );
-        }
-
-        foreach ($respostas as $resposta) {
-            if (! $resposta instanceof ModeloComentario) {
-                throw new LogicException(
-                    'A relação "respostas" contém um modelo inesperado.',
-                );
-            }
-        }
-
-        /** @var Collection<int, ModeloComentario> $respostas */
-        return $respostas;
-    }
-
-    /**
      * Obtém o momento de criação do comentário.
      *
-     * @param  ModeloComentario  $comentario  Comentário apresentado.
+     * @param  ModeloComentario  $comentario  Comentário recebido.
      * @return CarbonInterface|null Momento de criação.
      *
      * @throws LogicException Quando o valor possui um tipo inesperado.
@@ -382,7 +292,8 @@ final class Comentario extends Component
     private function obterMomentoCriacao(
         ModeloComentario $comentario,
     ): ?CarbonInterface {
-        $momentoCriacao = $comentario->created_at;
+        $momentoCriacao =
+            $comentario->created_at;
 
         if (
             $momentoCriacao !== null
@@ -407,9 +318,10 @@ final class Comentario extends Component
      */
     private function obterUtilizadorAutenticado(): ?Utilizador
     {
-        $utilizador = Auth::guard(
-            'sessao',
-        )->user();
+        $utilizador =
+            Auth::guard(
+                'sessao',
+            )->user();
 
         if (
             $utilizador !== null

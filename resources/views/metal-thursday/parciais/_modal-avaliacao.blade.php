@@ -71,7 +71,6 @@
                                     type="button"
                                     data-valor="{{ $pontuacao }}"
                                     aria-label="Selecionar até {{ $pontuacao }} em {{ $pontuacaoMaxima }}"
-                                    title="{{ $pontuacao }} em {{ $pontuacaoMaxima }}"
                                 ></button>
                             @endforeach
                         </div>

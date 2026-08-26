@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { Tooltip } from 'bootstrap';
+import GestorAlertas from './GestorAlertas';
 
 /**
  * Gere as interações assíncronas e os controlos dos comentários.
@@ -65,15 +66,6 @@ class GestorInteracoes {
          * @since 2.0.0
          */
         this.pedidosTooltipGostos = new WeakMap();
-
-        /**
-         * Promessa partilhada do carregamento assíncrono do SweetAlert2.
-         *
-         * @type {Promise<Function>|null}
-         *
-         * @since 2.0.0
-         */
-        this.promessaSweetAlert = null;
 
         this.contentor.addEventListener(
             'click',
@@ -396,27 +388,24 @@ class GestorInteracoes {
      * @since 2.0.0
      */
     async confirmarEliminacao(botao) {
-        const mensagem = botao.dataset.mensagemConfirmacao
-            ?.trim()
+        const mensagem =
+            botao.dataset
+                .mensagemConfirmacao
+                ?.trim()
             || 'Tens a certeza de que pretendes eliminar?';
 
-        try {
-            const Swal = await this.carregarSweetAlert();
+        return GestorAlertas.confirmar({
+            titulo:
+                'Confirmar eliminação',
 
-            const resultado = await Swal.fire({
-                title: 'Confirmar eliminação',
-                text: mensagem,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Sim, eliminar',
-                cancelButtonText: 'Cancelar',
-                focusCancel: true,
-            });
+            mensagem,
 
-            return resultado.isConfirmed === true;
-        } catch {
-            return window.confirm(mensagem);
-        }
+            textoConfirmar:
+                'Sim, eliminar',
+
+            textoCancelar:
+                'Cancelar',
+        });
     }
 
     /**
@@ -527,6 +516,11 @@ class GestorInteracoes {
                 ?.comentario
                 ?.conteudo;
 
+            const editadoEm =
+                resposta.data
+                    ?.comentario
+                    ?.editado_em;
+
             const comentario = formulario.closest(
                 '.comentario',
             );
@@ -541,6 +535,10 @@ class GestorInteracoes {
 
             const contentorConteudo = comentario?.querySelector(
                 '[data-conteudo-comentario]',
+            );
+
+            const indicadorEditado = comentario?.querySelector(
+                '[data-indicador-comentario-editado]',
             );
 
             if (
@@ -561,6 +559,14 @@ class GestorInteracoes {
 
             campoConteudo.value = conteudoAtualizado;
             campoConteudo.dataset.valorOriginal = conteudoAtualizado;
+
+            if (indicadorEditado instanceof HTMLElement) {
+                indicadorEditado.hidden =
+                    !(
+                        typeof editadoEm === 'string'
+                        && editadoEm.trim() !== ''
+                    );
+            }
 
             this.definirVisibilidade(
                 contentorFormulario,
@@ -694,7 +700,10 @@ class GestorInteracoes {
                 break;
 
             case 'eliminar':
-                this.removerElemento(botao);
+                this.atualizarEliminacaoComentario(
+                    botao,
+                    dados,
+                );
                 break;
 
             case 'alternar-resposta-comentario':
@@ -712,11 +721,15 @@ class GestorInteracoes {
                 break;
 
             case 'iniciar-edicao-comentario':
-                this.iniciarEdicaoComentario(botao);
+                this.iniciarEdicaoComentario(
+                    botao,
+                );
                 break;
 
             case 'cancelar-edicao-comentario':
-                this.cancelarEdicaoComentario(botao);
+                this.cancelarEdicaoComentario(
+                    botao,
+                );
                 break;
 
             default:
@@ -849,20 +862,22 @@ class GestorInteracoes {
             return;
         }
 
-        const marcadoComoOuvido = dados.marcado_como_ouvido;
+        const marcadoComoOuvido =
+            dados.marcado_como_ouvido;
 
         const numeroAudicoes = Number.parseInt(
             String(dados.numero_audicoes ?? ''),
             10,
         );
 
-        const texto = tipoAudivel === 'seccao-metal-thursday'
-            ? marcadoComoOuvido
-                ? 'Ouvido'
-                : 'Marcar como ouvido'
-            : marcadoComoOuvido
-                ? 'Ouvida'
-                : 'Marcar MetalThursday como ouvida';
+        const texto =
+            tipoAudivel === 'seccao-metal-thursday'
+                ? marcadoComoOuvido
+                    ? 'Ouvido'
+                    : 'Marcar como ouvido'
+                : marcadoComoOuvido
+                    ? 'Ouvida'
+                    : 'Marcar como ouvida';
 
         const descricaoAcao =
             tipoAudivel === 'seccao-metal-thursday'
@@ -910,10 +925,12 @@ class GestorInteracoes {
             && Number.isInteger(numeroAudicoes)
             && numeroAudicoes >= 0
         ) {
-            quantidade.textContent = String(numeroAudicoes);
+            quantidade.textContent =
+                String(numeroAudicoes);
         }
 
-        const conteudo = dados.conteudo_indicador_html;
+        const conteudo =
+            dados.conteudo_indicador_html;
 
         if (
             typeof conteudo === 'string'
@@ -927,7 +944,566 @@ class GestorInteracoes {
     }
 
     /**
-     * Remove o elemento associado a uma eliminação.
+     * Atualiza a interface depois da eliminação de um comentário.
+     *
+     * Um comentário com respostas é substituído por um marcador estrutural.
+     * Uma folha é removida juntamente com eventuais tombstones ancestrais que o
+     * servidor tenha determinado como desnecessários.
+     *
+     * @param {HTMLButtonElement} botao Botão utilizado na eliminação.
+     * @param {Record<string, unknown>} dados Dados devolvidos pelo servidor.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    atualizarEliminacaoComentario(
+        botao,
+        dados,
+    ) {
+        const comentario =
+            botao.closest(
+                '.comentario',
+            );
+
+        if (!(comentario instanceof HTMLElement)) {
+            this.removerElemento(
+                botao,
+            );
+
+            return;
+        }
+
+        const modo =
+            typeof dados.modo_eliminacao === 'string'
+                ? dados.modo_eliminacao.trim()
+                : '';
+
+        if (
+            modo !== 'marcador'
+            && modo !== 'remover'
+        ) {
+            this.removerElemento(
+                botao,
+            );
+
+            return;
+        }
+
+        const numeroConteudosRemovidos =
+            Number.parseInt(
+                String(
+                    dados.numero_conteudos_removidos
+                    ?? '',
+                ),
+                10,
+            );
+
+        if (
+            Number.isInteger(
+                numeroConteudosRemovidos,
+            )
+            && numeroConteudosRemovidos > 0
+        ) {
+            this.decrementarContadorComentarios(
+                comentario,
+                numeroConteudosRemovidos,
+            );
+        }
+
+        if (modo === 'marcador') {
+            this.substituirComentarioPorMarcador(
+                comentario,
+                dados,
+            );
+
+            return;
+        }
+
+        this.removerComentariosEliminados(
+            comentario,
+            dados,
+        );
+
+        this.atualizarPaiDepoisEliminacao(
+            dados.pai_atualizado,
+        );
+    }
+
+    /**
+     * Substitui um comentário eliminado pelo marcador estrutural devolvido pelo
+     * servidor.
+     *
+     * O ramo é recolhido depois da substituição. As respostas continuam
+     * disponíveis através do respetivo carregamento assíncrono.
+     *
+     * @param {HTMLElement} comentario Comentário original.
+     * @param {Record<string, unknown>} dados Dados devolvidos.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    substituirComentarioPorMarcador(
+        comentario,
+        dados,
+    ) {
+        const html =
+            typeof dados.comentario_html === 'string'
+                ? dados.comentario_html.trim()
+                : '';
+
+        if (html === '') {
+            return;
+        }
+
+        const novoComentario =
+            this.criarComentarioAPartirHtml(
+                html,
+            );
+
+        if (!(novoComentario instanceof HTMLElement)) {
+            return;
+        }
+
+        const nivelVisual =
+            comentario.dataset
+                .nivelVisual
+                ?.trim();
+
+        if (
+            typeof nivelVisual === 'string'
+            && nivelVisual !== ''
+        ) {
+            novoComentario.dataset
+                .nivelVisual =
+                    nivelVisual;
+        }
+
+        this.eliminarTooltips(
+            comentario,
+        );
+
+        comentario.replaceWith(
+            novoComentario,
+        );
+    }
+
+    /**
+     * Remove da interface todos os comentários que o servidor indicou como
+     * eliminados logicamente.
+     *
+     * A lista pode conter, além da folha eliminada pelo utilizador, tombstones
+     * ancestrais que deixaram de ser necessários.
+     *
+     * @param {HTMLElement} comentarioOriginal Comentário eliminado.
+     * @param {Record<string, unknown>} dados Dados devolvidos.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    removerComentariosEliminados(
+        comentarioOriginal,
+        dados,
+    ) {
+        const identificadores =
+            Array.isArray(
+                dados.comentarios_removidos_ids,
+            )
+                ? dados.comentarios_removidos_ids
+                : [];
+
+        const identificadoresValidos =
+            identificadores
+                .map(
+                    (valor) =>
+                        Number.parseInt(
+                            String(
+                                valor,
+                            ),
+                            10,
+                        ),
+                )
+                .filter(
+                    (identificador) =>
+                        Number.isSafeInteger(
+                            identificador,
+                        )
+                        && identificador > 0,
+                );
+
+        if (identificadoresValidos.length === 0) {
+            this.removerElementoHtml(
+                comentarioOriginal,
+            );
+
+            return;
+        }
+
+        identificadoresValidos.forEach(
+            (identificador) => {
+                const elemento =
+                    document.getElementById(
+                        `comentario-${identificador}`,
+                    );
+
+                if (
+                    !(elemento instanceof HTMLElement)
+                    || !this.contentor.contains(
+                        elemento,
+                    )
+                ) {
+                    return;
+                }
+
+                this.removerElementoHtml(
+                    elemento,
+                );
+            },
+        );
+    }
+
+    /**
+     * Atualiza o alternador de respostas do primeiro pai que permaneceu ativo
+     * depois de uma eliminação.
+     *
+     * @param {unknown} dadosPai Dados do pai devolvidos pelo servidor.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    atualizarPaiDepoisEliminacao(
+        dadosPai,
+    ) {
+        if (!this.eObjeto(dadosPai)) {
+            return;
+        }
+
+        const identificador =
+            Number.parseInt(
+                String(
+                    dadosPai.id
+                    ?? '',
+                ),
+                10,
+            );
+
+        const numeroRespostas =
+            Number.parseInt(
+                String(
+                    dadosPai.numero_respostas
+                    ?? '',
+                ),
+                10,
+            );
+
+        if (
+            !Number.isSafeInteger(
+                identificador,
+            )
+            || identificador < 1
+            || !Number.isSafeInteger(
+                numeroRespostas,
+            )
+            || numeroRespostas < 0
+        ) {
+            return;
+        }
+
+        const comentarioPai =
+            document.getElementById(
+                `comentario-${identificador}`,
+            );
+
+        if (
+            !(comentarioPai instanceof HTMLElement)
+            || !this.contentor.contains(
+                comentarioPai,
+            )
+        ) {
+            return;
+        }
+
+        const alternador =
+            Array.from(
+                comentarioPai.querySelectorAll(
+                    'button[data-acao-comentarios="alternar-respostas"]',
+                ),
+            ).find(
+                (elemento) =>
+                    elemento
+                        instanceof HTMLButtonElement
+                    && elemento.closest(
+                        '.comentario',
+                    ) === comentarioPai,
+            );
+
+        if (!(alternador instanceof HTMLButtonElement)) {
+            return;
+        }
+
+        alternador.dataset
+            .quantidadeRespostas =
+                String(
+                    numeroRespostas,
+                );
+
+        alternador.hidden =
+            numeroRespostas === 0;
+
+        const texto =
+            alternador.querySelector(
+                '[data-texto-alternador-respostas]',
+            );
+
+        if (numeroRespostas === 0) {
+            alternador.setAttribute(
+                'aria-expanded',
+                'false',
+            );
+
+            const identificadorContentor =
+                alternador.getAttribute(
+                    'aria-controls',
+                );
+
+            if (identificadorContentor !== null) {
+                const contentorRespostas =
+                    document.getElementById(
+                        identificadorContentor,
+                    );
+
+                if (
+                    contentorRespostas
+                    instanceof HTMLElement
+                ) {
+                    contentorRespostas.hidden =
+                        true;
+                }
+            }
+
+            if (texto instanceof HTMLElement) {
+                texto.textContent =
+                    'Ver 0 respostas';
+            }
+
+            return;
+        }
+
+        if (
+            alternador.getAttribute(
+                'aria-expanded',
+            ) === 'true'
+        ) {
+            return;
+        }
+
+        if (texto instanceof HTMLElement) {
+            texto.textContent =
+                numeroRespostas === 1
+                    ? 'Ver 1 resposta'
+                    : `Ver ${numeroRespostas} respostas`;
+        }
+    }
+
+    /**
+     * Decrementa o contador global de comentários da conversa apresentada.
+     *
+     * Tombstones estruturais não são contabilizados. Por isso o valor decrementado
+     * corresponde ao número de conteúdos efetivamente eliminados indicado pelo
+     * servidor, e não ao número de nós removidos da árvore.
+     *
+     * @param {HTMLElement} comentario Comentário que originou a eliminação.
+     * @param {number} quantidade Quantidade de conteúdos eliminados.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    decrementarContadorComentarios(
+        comentario,
+        quantidade,
+    ) {
+        const seccaoComentarios =
+            comentario.closest(
+                'section[aria-label="Comentários"]',
+            );
+
+        if (!(seccaoComentarios instanceof HTMLElement)) {
+            return;
+        }
+
+        const contentorColapsavel =
+            seccaoComentarios.closest(
+                '.collapse',
+            );
+
+        if (
+            !(contentorColapsavel instanceof HTMLElement)
+            || contentorColapsavel.id.trim() === ''
+        ) {
+            return;
+        }
+
+        const identificadorContentor =
+            contentorColapsavel.id;
+
+        const controlador =
+            Array.from(
+                document.querySelectorAll(
+                    'button[aria-controls]',
+                ),
+            ).find(
+                (elemento) =>
+                    elemento
+                        instanceof HTMLButtonElement
+                    && elemento.getAttribute(
+                        'aria-controls',
+                    ) === identificadorContentor
+                    && elemento.querySelector(
+                        '[data-quantidade-comentarios]',
+                    ) !== null,
+            );
+
+        if (!(controlador instanceof HTMLButtonElement)) {
+            return;
+        }
+
+        const contador =
+            controlador.querySelector(
+                '[data-quantidade-comentarios]',
+            );
+
+        if (!(contador instanceof HTMLElement)) {
+            return;
+        }
+
+        const quantidadeAtual =
+            Number.parseInt(
+                contador.textContent?.trim()
+                ?? '',
+                10,
+            );
+
+        if (
+            !Number.isSafeInteger(
+                quantidadeAtual,
+            )
+            || quantidadeAtual < 0
+        ) {
+            return;
+        }
+
+        contador.textContent =
+            String(
+                Math.max(
+                    0,
+                    quantidadeAtual - quantidade,
+                ),
+            );
+    }
+
+    /**
+     * Converte o fragmento HTML de um comentário num elemento válido.
+     *
+     * @param {string} html Fragmento renderizado pelo servidor.
+     *
+     * @returns {HTMLElement|null} Comentário criado ou nulo.
+     *
+     * @since 2.0.0
+     */
+    criarComentarioAPartirHtml(
+        html,
+    ) {
+        const modelo =
+            document.createElement(
+                'template',
+            );
+
+        modelo.innerHTML =
+            html.trim();
+
+        const elementos =
+            Array.from(
+                modelo.content.children,
+            );
+
+        if (
+            elementos.length !== 1
+            || !(elementos[0] instanceof HTMLElement)
+            || !elementos[0]
+                .classList
+                .contains(
+                    'comentario',
+                )
+        ) {
+            return null;
+        }
+
+        return elementos[0];
+    }
+
+    /**
+     * Elimina instâncias de tooltip existentes dentro de um elemento.
+     *
+     * @param {HTMLElement} elemento Elemento processado.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    eliminarTooltips(
+        elemento,
+    ) {
+        [
+            elemento,
+            ...elemento.querySelectorAll(
+                '[data-bs-toggle="tooltip"]',
+            ),
+        ].forEach(
+            (elementoTooltip) => {
+                if (
+                    elementoTooltip
+                    instanceof HTMLElement
+                ) {
+                    Tooltip.getInstance(
+                        elementoTooltip,
+                    )?.dispose();
+                }
+            },
+        );
+    }
+
+    /**
+     * Remove um elemento da DOM e atualiza o respetivo contentor.
+     *
+     * @param {HTMLElement} elemento Elemento removido.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    removerElementoHtml(
+        elemento,
+    ) {
+        const contentorPai =
+            elemento.parentElement;
+
+        this.eliminarTooltips(
+            elemento,
+        );
+
+        elemento.remove();
+
+        this.atualizarContentorDepoisEliminacao(
+            contentorPai,
+        );
+    }
+
+    /**
+     * Remove o elemento associado a uma eliminação genérica.
      *
      * @param {HTMLButtonElement} botao Botão da interação.
      *
@@ -935,10 +1511,13 @@ class GestorInteracoes {
      *
      * @since 2.0.0
      */
-    removerElemento(botao) {
-        const seletor = botao.dataset
-            .seletorElementoRemovivel
-            ?.trim();
+    removerElemento(
+        botao,
+    ) {
+        const seletor =
+            botao.dataset
+                .seletorElementoRemovivel
+                ?.trim();
 
         if (!seletor) {
             return;
@@ -947,8 +1526,13 @@ class GestorInteracoes {
         let elemento;
 
         try {
-            elemento = botao.closest(seletor)
-                ?? this.contentor.querySelector(seletor);
+            elemento =
+                botao.closest(
+                    seletor,
+                )
+                ?? this.contentor.querySelector(
+                    seletor,
+                );
         } catch {
             return;
         }
@@ -957,25 +1541,8 @@ class GestorInteracoes {
             return;
         }
 
-        const contentorPai = elemento.parentElement;
-
-        [
+        this.removerElementoHtml(
             elemento,
-            ...elemento.querySelectorAll(
-                '[data-bs-toggle="tooltip"]',
-            ),
-        ].forEach((elementoTooltip) => {
-            if (elementoTooltip instanceof HTMLElement) {
-                Tooltip.getInstance(
-                    elementoTooltip,
-                )?.dispose();
-            }
-        });
-
-        elemento.remove();
-
-        this.atualizarContentorDepoisEliminacao(
-            contentorPai,
         );
     }
 
@@ -1544,34 +2111,23 @@ class GestorInteracoes {
      *
      * @since 2.0.0
      */
-    async mostrarMensagemSucesso(mensagem) {
+    async mostrarMensagemSucesso(
+        mensagem,
+    ) {
         if (typeof mensagem !== 'string') {
             return;
         }
 
-        const texto = mensagem.trim();
+        const texto =
+            mensagem.trim();
 
         if (texto === '') {
             return;
         }
 
-        try {
-            const Swal = await this.carregarSweetAlert();
-
-            void Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'success',
-                text: texto,
-                showConfirmButton: false,
-                timer: 3000,
-                timerProgressBar: true,
-            });
-        } catch {
-            /*
-             * A ação já terminou com sucesso; a notificação é complementar.
-             */
-        }
+        await GestorAlertas.mostrarSucesso(
+            texto,
+        );
     }
 
     /**
@@ -1589,7 +2145,9 @@ class GestorInteracoes {
         mensagemPredefinida = undefined,
     ) {
         const mensagemResposta =
-            axios.isAxiosError(erro)
+            axios.isAxiosError(
+                erro,
+            )
             && typeof erro.response
                 ?.data
                 ?.mensagem === 'string'
@@ -1599,53 +2157,19 @@ class GestorInteracoes {
                 : '';
 
         const mensagemConfigurada =
-            typeof mensagemPredefinida === 'string'
+            typeof mensagemPredefinida
+                === 'string'
                 ? mensagemPredefinida.trim()
                 : '';
 
-        const mensagem = mensagemResposta
+        const mensagem =
+            mensagemResposta
             || mensagemConfigurada
             || 'Ocorreu um erro ao processar a ação.';
 
-        try {
-            const Swal = await this.carregarSweetAlert();
-
-            void Swal.fire({
-                icon: 'error',
-                title: 'Erro',
-                text: mensagem,
-            });
-        } catch {
-            window.alert(mensagem);
-        }
-    }
-
-    /**
-     * Carrega o SweetAlert2 apenas quando uma interação necessita dele.
-     *
-     * A instância utiliza o tema escuro para manter o contraste e a coerência
-     * visual com o tema global da aplicação.
-     *
-     * @returns {Promise<Function>} API do SweetAlert2.
-     *
-     * @since 2.0.0
-     */
-    carregarSweetAlert() {
-        if (this.promessaSweetAlert === null) {
-            this.promessaSweetAlert = import('sweetalert2')
-                .then(
-                    (modulo) => modulo.default.mixin({
-                        theme: 'dark',
-                    }),
-                )
-                .catch((erro) => {
-                    this.promessaSweetAlert = null;
-
-                    throw erro;
-                });
-        }
-
-        return this.promessaSweetAlert;
+        await GestorAlertas.mostrarErro(
+            mensagem,
+        );
     }
 
     /**

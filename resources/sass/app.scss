@@ -274,6 +274,24 @@ h6,
 }
 
 /**
+ * Tipografia dos títulos do SweetAlert2.
+ *
+ * Os diálogos utilizam internamente elementos de cabeçalho, mas estes não
+ * representam títulos editoriais da aplicação e não devem herdar a fonte
+ * decorativa utilizada nos cabeçalhos das páginas.
+ *
+ * @since 2.0.0
+ */
+.swal2-title {
+    font-family:
+        var(
+            --bs-body-font-family
+        );
+
+    text-shadow: none;
+}
+
+/**
  * Avatar reutilizável do utilizador.
  */
 .avatar-utilizador {
@@ -826,4 +844,154 @@ a:not(.btn) {
     &:not(:empty) {
         margin-top: 1rem;
     }
+}
+
+/**
+ * Árvore de comentários.
+ *
+ * As respostas são recolhidas por predefinição e carregadas apenas quando o
+ * utilizador expande o respetivo ramo.
+ *
+ * A hierarquia persistida pode possuir qualquer profundidade. Visualmente, os
+ * dois primeiros níveis de respostas avançam para a direita e, a partir do
+ * terceiro nível, os restantes descendentes mantêm o mesmo alinhamento.
+ *
+ * @since 2.0.0
+ */
+.comentario {
+    --recuo-natural-comentario: 3.5rem;
+    --recuo-reduzido-ramo: 1.5rem;
+    --espaco-linha-ramo: 0.5rem;
+}
+
+.comentario
+    > .d-flex
+    > .flex-grow-1
+    > .respostas-comentario {
+    position: relative;
+    margin-top: 0.5rem;
+}
+
+/**
+ * Ramo expandido.
+ *
+ * O recuo negativo compensa parte do espaço ocupado pelo avatar do comentário
+ * pai, evitando que a árvore se desloque excessivamente para a direita.
+ */
+.comentario
+    > .d-flex
+    > .flex-grow-1
+    > .respostas-comentario:not([hidden]) {
+    padding-left:
+        var(
+            --espaco-linha-ramo
+        );
+
+    margin-left:
+        calc(
+            -1
+            * var(
+                --recuo-reduzido-ramo
+            )
+        );
+
+    border-left:
+        2px solid
+        color.change(
+            $cinzento-borda-claro,
+            $alpha: 0.55,
+        );
+}
+
+/**
+ * Ligação horizontal entre a linha vertical do ramo e cada resposta.
+ */
+.respostas-comentario
+    > .comentario {
+    position: relative;
+}
+
+.respostas-comentario
+    > .comentario::before {
+    position: absolute;
+    top: 1.25rem;
+    left:
+        calc(
+            -1
+            * var(
+                --espaco-linha-ramo
+            )
+        );
+
+    width:
+        var(
+            --espaco-linha-ramo
+        );
+
+    content: "";
+    border-top:
+        2px solid
+        color.change(
+            $cinzento-borda-claro,
+            $alpha: 0.55,
+        );
+}
+
+/**
+ * Terceiro nível visual.
+ *
+ * Quando um comentário que já está no terceiro nível possui descendentes, o
+ * recuo natural introduzido pelo avatar é totalmente compensado. Os níveis
+ * reais seguintes ficam, assim, alinhados com o terceiro nível em vez de
+ * continuarem a deslocar o conteúdo para a direita.
+ */
+.comentario[data-nivel-visual="3"]
+    > .d-flex
+    > .flex-grow-1
+    > .respostas-comentario:not([hidden]) {
+    margin-left:
+        calc(
+            -1
+            * (
+                var(
+                    --recuo-natural-comentario
+                )
+                + var(
+                    --espaco-linha-ramo
+                )
+            )
+        );
+}
+
+/**
+ * Alternador das respostas.
+ */
+[data-acao-comentarios="alternar-respostas"] {
+    font-weight: 600;
+
+    i {
+        transition:
+            transform
+            0.2s
+            ease-in-out;
+    }
+
+    &[aria-expanded="true"] i {
+        transform:
+            rotate(
+                90deg
+            );
+    }
+}
+
+/**
+ * Cartões completos das MetalThursdays.
+ *
+ * O bloco colapsável dos comentários encontra-se depois do rodapé, pelo que
+ * este não é o último filho do cartão e o Bootstrap não lhe aplica os raios
+ * inferiores. O recorte no próprio cartão garante que todos os fundos internos
+ * respeitam sempre os cantos exteriores.
+ */
+.cartao-metal-thursday {
+    overflow: hidden;
 }

@@ -191,6 +191,17 @@ final class ControladorAudicao extends Controller
             'numero_audicoes' => $dadosIndicador['numero_audicoes'],
 
             'conteudo_indicador_html' => $dadosIndicador['conteudo_html'],
+
+            'mensagem' => match (true) {
+                $audivelAtualizado instanceof SeccaoMetalThursday
+                    && $marcadoComoOuvido => 'Secção marcada como ouvida.',
+
+                $audivelAtualizado instanceof SeccaoMetalThursday => 'Secção marcada como não ouvida.',
+
+                $marcadoComoOuvido => 'MetalThursday marcada como ouvida.',
+
+                default => 'MetalThursday marcada como não ouvida.',
+            },
         ]);
     }
 

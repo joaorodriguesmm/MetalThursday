@@ -11,9 +11,10 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 /**
  * Adiciona suporte a comentários polimórficos a um modelo Eloquent.
  *
- * A relação inclui todos os comentários associados à entidade. A hierarquia
- * entre comentários principais e respostas é determinada através do campo
- * `comentario_pai_id` do modelo Comentario.
+ * A relação principal inclui também os marcadores estruturais necessários
+ * para preservar a árvore. A relação `comentariosComConteudo` exclui esses
+ * marcadores e deve ser utilizada quando é necessário contabilizar conteúdo
+ * efetivamente publicado.
  *
  * @mixin Model
  *
@@ -22,7 +23,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 trait TemComentarios
 {
     /**
-     * Obtém os comentários associados ao modelo.
+     * Obtém todos os comentários estruturais associados ao modelo.
      *
      * @return MorphMany<Comentario, $this> Relação com os comentários.
      *
@@ -36,5 +37,25 @@ trait TemComentarios
             'tipo_comentavel',
             'comentavel_id',
         );
+    }
+
+    /**
+     * Obtém apenas comentários cujo conteúdo continua disponível.
+     *
+     * Os tombstones permanecem na relação `comentarios`, porque podem ser
+     * necessários à árvore, mas não devem aumentar o contador apresentado ao
+     * utilizador.
+     *
+     * @return MorphMany<Comentario, $this> Relação filtrada.
+     *
+     * @since 2.0.0
+     */
+    public function comentariosComConteudo(): MorphMany
+    {
+        return $this
+            ->comentarios()
+            ->whereNull(
+                'conteudo_eliminado_em',
+            );
     }
 }

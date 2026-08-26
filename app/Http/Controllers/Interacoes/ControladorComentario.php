@@ -185,26 +185,107 @@ final class ControladorComentario extends Controller
                 'comentario' => $this->serializarComentario(
                     $comentario,
                 ),
+
+                'comentario_html' => $this->renderizarComentario(
+                    $comentario,
+                ),
             ],
             Response::HTTP_CREATED,
         );
     }
 
     /**
+     * Lista as respostas diretas de um comentário.
+     *
+     * Apenas os filhos diretos são devolvidos. Cada filho inclui a quantidade das
+     * próprias respostas, permitindo à interface apresentar um novo controlo de
+     * expansão sem carregar antecipadamente o nível seguinte.
+     *
+     * @param  Comentario  $comentario  Comentário cujas respostas são consultadas.
+     * @return JsonResponse Respostas diretas ordenadas cronologicamente.
+     *
+     * @throws AuthenticationException Quando não existe autenticação válida.
+     *
+     * @since 2.0.0
+     */
+    public function listarRespostas(
+        Comentario $comentario,
+    ): JsonResponse {
+        $utilizador =
+            $this->obterUtilizadorAutenticado();
+
+        $this->authorize(
+            'view',
+            $comentario,
+        );
+
+        /*
+     * Confirma que a entidade à qual a conversa pertence continua disponível.
+     * Um comentário pode permanecer fisicamente na base de dados depois da
+     * eliminação lógica da MetalThursday ou da secção, mas nesse caso não deve
+     * funcionar como ponto de acesso autónomo ao conteúdo da conversa.
+     */
+        $this->obterComentavelDoComentario(
+            $comentario,
+        );
+
+        $identificadorUtilizador =
+            (int) $utilizador->getKey();
+
+        $respostas =
+            $comentario
+                ->respostas()
+                ->comDadosApresentacao(
+                    $identificadorUtilizador,
+                )
+                ->ordenadosCronologicamente()
+                ->get();
+
+        $respostasSerializadas =
+            $respostas
+                ->map(
+                    fn (
+                        Comentario $resposta,
+                    ): array => [
+                        'comentario' => $this->serializarComentario(
+                            $resposta,
+                        ),
+
+                        'comentario_html' => $this->renderizarComentario(
+                            $resposta,
+                        ),
+                    ],
+                )
+                ->values()
+                ->all();
+
+        return response()->json([
+            'comentario_id' => (int) $comentario->getKey(),
+
+            'numero_respostas' => count(
+                $respostasSerializadas,
+            ),
+
+            'respostas' => $respostasSerializadas,
+        ]);
+    }
+
+    /**
      * Publica uma resposta a um comentário.
      *
-     * As respostas a outras respostas são associadas ao comentário principal,
-     * mantendo apenas dois níveis de apresentação.
+     * A resposta fica diretamente associada ao comentário concretamente
+     * respondido. Desta forma é preservada a árvore real da conversa,
+     * independentemente da profundidade visual utilizada pela interface.
      *
-     * O comentário principal é utilizado como sujeito da notificação,
-     * permitindo identificar corretamente o autor da conversa respondida.
+     * A entidade comentada é bloqueada durante a criação para impedir alterações
+     * concorrentes enquanto a nova resposta é associada.
      *
      * @param  GuardarComentarioRequest  $pedido  Pedido validado.
      * @param  Comentario  $comentario  Comentário respondido.
      * @return JsonResponse Resposta criada.
      *
      * @throws AuthenticationException Quando não existe autenticação válida.
-     * @throws NotFoundHttpException Quando a conversa ou a entidade comentada
+     * @throws NotFoundHttpException Quando o comentário ou a entidade comentada
      *                               já não estão disponíveis.
      *
      * @since 1.0.0
@@ -230,7 +311,7 @@ final class ControladorComentario extends Controller
         /**
          * @var array{
          *     resposta: Comentario,
-         *     comentario_principal: Comentario
+         *     comentario_respondido: Comentario
          * } $resultado
          */
         $resultado =
@@ -240,7 +321,7 @@ final class ControladorComentario extends Controller
                     $identificadorUtilizador,
                     $conteudo,
                 ): array {
-                    $comentarioBloqueado =
+                    $comentarioRespondido =
                         Comentario::query()
                             ->whereKey(
                                 $comentario->getKey(),
@@ -248,14 +329,18 @@ final class ControladorComentario extends Controller
                             ->lockForUpdate()
                             ->firstOrFail();
 
-                    $comentarioPrincipal =
-                        $this->obterComentarioPrincipal(
-                            $comentarioBloqueado,
+                    if (
+                        $comentarioRespondido
+                            ->temConteudoEliminado()
+                    ) {
+                        abort(
+                            Response::HTTP_GONE,
                         );
+                    }
 
                     $comentavel =
                         $this->obterComentavelDoComentario(
-                            $comentarioPrincipal,
+                            $comentarioRespondido,
                         );
 
                     $comentavelBloqueado =
@@ -271,13 +356,13 @@ final class ControladorComentario extends Controller
 
                                 'conteudo' => $conteudo,
 
-                                'comentario_pai_id' => (int) $comentarioPrincipal->getKey(),
+                                'comentario_pai_id' => (int) $comentarioRespondido->getKey(),
                             ]);
 
                     return [
                         'resposta' => $resposta,
 
-                        'comentario_principal' => $comentarioPrincipal,
+                        'comentario_respondido' => $comentarioRespondido,
                     ];
                 },
                 self::TENTATIVAS_TRANSACAO,
@@ -286,8 +371,8 @@ final class ControladorComentario extends Controller
         $resposta =
             $resultado['resposta'];
 
-        $comentarioPrincipal =
-            $resultado['comentario_principal'];
+        $comentarioRespondido =
+            $resultado['comentario_respondido'];
 
         $this->carregarComentario(
             $resposta,
@@ -296,7 +381,7 @@ final class ControladorComentario extends Controller
         $this
             ->notificadorInteracoes
             ->notificarOutrosUtilizadores(
-                sujeito: $comentarioPrincipal,
+                sujeito: $comentarioRespondido,
                 causador: $utilizador,
                 acao: self::ACAO_RESPONDEU,
             );
@@ -306,6 +391,10 @@ final class ControladorComentario extends Controller
                 'mensagem' => 'Resposta publicada com sucesso.',
 
                 'comentario' => $this->serializarComentario(
+                    $resposta,
+                ),
+
+                'comentario_html' => $this->renderizarComentario(
                     $resposta,
                 ),
             ],
@@ -354,15 +443,32 @@ final class ControladorComentario extends Controller
                             ->lockForUpdate()
                             ->firstOrFail();
 
+                    if (
+                        $comentarioBloqueado
+                            ->temConteudoEliminado()
+                    ) {
+                        abort(
+                            Response::HTTP_GONE,
+                        );
+                    }
+
                     $this->authorize(
                         'update',
                         $comentarioBloqueado,
                     );
 
-                    if ($comentarioBloqueado->conteudo !== $conteudo) {
-                        $comentarioBloqueado->updateOrFail([
-                            'conteudo' => $conteudo,
-                        ]);
+                    if (
+                        $comentarioBloqueado->conteudo
+                        !== $conteudo
+                    ) {
+                        $comentarioBloqueado->conteudo =
+                            $conteudo;
+
+                        $comentarioBloqueado->editado_em =
+                            now();
+
+                        $comentarioBloqueado
+                            ->saveOrFail();
                     }
 
                     return $comentarioBloqueado;
@@ -384,18 +490,17 @@ final class ControladorComentario extends Controller
     }
 
     /**
-     * Elimina logicamente um comentário.
+     * Elimina um comentário.
      *
-     * A eliminação lógica preserva a estrutura persistida da conversa quando
-     * existem respostas associadas.
+     * Um comentário sem respostas é eliminado logicamente. Quando possui
+     * respostas, mantém-se como marcador estrutural e apenas o respetivo conteúdo
+     * é considerado eliminado.
      *
-     * A autorização é verificada antes de abrir a transação, evitando obter
-     * um bloqueio exclusivo para pedidos que serão rejeitados. Depois da
-     * autorização, o comentário é novamente obtido e bloqueado imediatamente
-     * antes da eliminação.
+     * Depois da remoção efetiva de uma folha, tombstones ancestrais que tenham
+     * ficado sem respostas são também removidos automaticamente.
      *
      * @param  Comentario  $comentario  Comentário eliminado.
-     * @return JsonResponse Resposta sem conteúdo.
+     * @return JsonResponse Resultado da eliminação.
      *
      * @throws AuthenticationException Quando não existe autenticação válida.
      *
@@ -411,25 +516,148 @@ final class ControladorComentario extends Controller
             $comentario,
         );
 
-        DB::transaction(
-            function () use ($comentario): void {
-                $comentarioBloqueado =
-                    Comentario::query()
-                        ->whereKey(
-                            $comentario->getKey(),
-                        )
-                        ->lockForUpdate()
-                        ->firstOrFail();
+        /**
+         * @var array{
+         *     modo: 'marcador'|'remover',
+         *     comentario: Comentario|null,
+         *     comentario_pai_id: int|null,
+         *     comentarios_removidos_ids: list<int>,
+         *     pai_atualizado: array{
+         *         id: int,
+         *         numero_respostas: int
+         *     }|null
+         * } $resultado
+         */
+        $resultado =
+            DB::transaction(
+                function () use (
+                    $comentario,
+                ): array {
+                    $comentarioBloqueado =
+                        Comentario::query()
+                            ->whereKey(
+                                $comentario->getKey(),
+                            )
+                            ->lockForUpdate()
+                            ->firstOrFail();
 
-                $comentarioBloqueado->deleteOrFail();
-            },
-            self::TENTATIVAS_TRANSACAO,
-        );
+                    if (
+                        $comentarioBloqueado
+                            ->temConteudoEliminado()
+                    ) {
+                        abort(
+                            Response::HTTP_GONE,
+                        );
+                    }
 
-        return response()->json(
-            null,
-            Response::HTTP_NO_CONTENT,
-        );
+                    if (
+                        $comentarioBloqueado
+                            ->respostas()
+                            ->exists()
+                    ) {
+                        $comentarioBloqueado
+                            ->conteudo_eliminado_em =
+                            now();
+
+                        $comentarioBloqueado
+                            ->saveOrFail();
+
+                        return [
+                            'modo' => 'marcador',
+
+                            'comentario' => $comentarioBloqueado,
+
+                            'comentario_pai_id' => $comentarioBloqueado
+                                ->comentario_pai_id,
+
+                            'comentarios_removidos_ids' => [],
+
+                            'pai_atualizado' => null,
+                        ];
+                    }
+
+                    $identificadorComentario =
+                        (int) $comentarioBloqueado
+                            ->getKey();
+
+                    $identificadorPai =
+                        $comentarioBloqueado
+                            ->comentario_pai_id;
+
+                    $comentarioBloqueado
+                        ->deleteOrFail();
+
+                    $limpeza =
+                        $this
+                            ->limparMarcadoresSemRespostas(
+                                $identificadorPai,
+                            );
+
+                    return [
+                        'modo' => 'remover',
+
+                        'comentario' => null,
+
+                        'comentario_pai_id' => $identificadorPai,
+
+                        'comentarios_removidos_ids' => [
+                            $identificadorComentario,
+                            ...$limpeza['comentarios_removidos_ids'],
+                        ],
+
+                        'pai_atualizado' => $limpeza['pai_atualizado'],
+                    ];
+                },
+                self::TENTATIVAS_TRANSACAO,
+            );
+
+        $comentarioMantido =
+            $resultado['comentario'];
+
+        if (
+            $comentarioMantido
+            instanceof Comentario
+        ) {
+            $this->carregarComentario(
+                $comentarioMantido,
+            );
+
+            return response()->json([
+                'mensagem' => 'Comentário eliminado com sucesso.',
+
+                'modo_eliminacao' => 'marcador',
+
+                'numero_conteudos_removidos' => 1,
+
+                'comentarios_removidos_ids' => [],
+
+                'pai_atualizado' => null,
+
+                'comentario' => $this->serializarComentario(
+                    $comentarioMantido,
+                ),
+
+                'comentario_html' => $this->renderizarComentario(
+                    $comentarioMantido,
+                ),
+            ]);
+        }
+
+        return response()->json([
+            'mensagem' => 'Comentário eliminado com sucesso.',
+
+            'modo_eliminacao' => 'remover',
+
+            'numero_conteudos_removidos' => 1,
+
+            'comentario_id' => (int) $comentario->getKey(),
+
+            'comentario_pai_id' => $resultado['comentario_pai_id'],
+
+            'comentarios_removidos_ids' => $resultado['comentarios_removidos_ids'],
+
+            'pai_atualizado' => $resultado['pai_atualizado'],
+        ]);
     }
 
     /**
@@ -500,43 +728,6 @@ final class ControladorComentario extends Controller
     }
 
     /**
-     * Obtém o comentário principal de uma conversa.
-     *
-     * Quando o comentário recebido já é principal, o próprio modelo
-     * bloqueado é devolvido.
-     *
-     * @param  Comentario  $comentario  Comentário recebido.
-     * @return Comentario Comentário principal bloqueado.
-     *
-     * @since 2.0.0
-     */
-    private function obterComentarioPrincipal(
-        Comentario $comentario,
-    ): Comentario {
-        $identificadorPai =
-            $comentario->comentario_pai_id;
-
-        if ($identificadorPai === null) {
-            return $comentario;
-        }
-
-        return Comentario::query()
-            ->whereKey(
-                $identificadorPai,
-            )
-            ->where(
-                'tipo_comentavel',
-                $comentario->tipo_comentavel,
-            )
-            ->where(
-                'comentavel_id',
-                $comentario->comentavel_id,
-            )
-            ->lockForUpdate()
-            ->firstOrFail();
-    }
-
-    /**
      * Obtém a entidade associada a um comentário.
      *
      * @param  Comentario  $comentario  Comentário consultado.
@@ -566,7 +757,10 @@ final class ControladorComentario extends Controller
     }
 
     /**
-     * Carrega as relações necessárias para a resposta HTTP.
+     * Carrega os dados necessários para a resposta HTTP e para a renderização
+     * assíncrona do comentário.
+     *
+     * As respostas não são carregadas; apenas a respetiva quantidade é obtida.
      *
      * @param  Comentario  $comentario  Comentário carregado.
      *
@@ -580,18 +774,132 @@ final class ControladorComentario extends Controller
         ]);
 
         $comentario->loadCount([
-            'gostos',
-            'respostas',
+            'gostos as quantidade_gostos',
+            'respostas as quantidade_respostas',
         ]);
+    }
+
+    /**
+     * Remove tombstones ancestrais que deixaram de possuir respostas.
+     *
+     * A limpeza propaga-se para cima até encontrar um comentário com conteúdo,
+     * um tombstone que ainda possua descendentes ou a raiz da conversa.
+     *
+     * O primeiro pai que permanece ativo é devolvido com a quantidade atualizada
+     * das respetivas respostas, permitindo sincronizar a interface sem novo
+     * pedido HTTP.
+     *
+     * @param  int|null  $identificadorPai  Primeiro pai verificado.
+     * @return array{
+     *     comentarios_removidos_ids: list<int>,
+     *     pai_atualizado: array{
+     *         id: int,
+     *         numero_respostas: int
+     *     }|null
+     * } Resultado da limpeza.
+     *
+     * @since 2.0.0
+     */
+    private function limparMarcadoresSemRespostas(
+        ?int $identificadorPai,
+    ): array {
+        $identificadoresRemovidos =
+            [];
+
+        $identificadorAtual =
+            $identificadorPai;
+
+        while ($identificadorAtual !== null) {
+            $comentarioPai =
+                Comentario::query()
+                    ->whereKey(
+                        $identificadorAtual,
+                    )
+                    ->lockForUpdate()
+                    ->first();
+
+            if (! $comentarioPai instanceof Comentario) {
+                return [
+                    'comentarios_removidos_ids' => $identificadoresRemovidos,
+
+                    'pai_atualizado' => null,
+                ];
+            }
+
+            $numeroRespostas =
+                $comentarioPai
+                    ->respostas()
+                    ->count();
+
+            if (
+                ! $comentarioPai
+                    ->temConteudoEliminado()
+                || $numeroRespostas > 0
+            ) {
+                return [
+                    'comentarios_removidos_ids' => $identificadoresRemovidos,
+
+                    'pai_atualizado' => [
+                        'id' => (int) $comentarioPai
+                            ->getKey(),
+
+                        'numero_respostas' => $numeroRespostas,
+                    ],
+                ];
+            }
+
+            $proximoIdentificadorPai =
+                $comentarioPai
+                    ->comentario_pai_id;
+
+            $identificadoresRemovidos[] =
+                (int) $comentarioPai
+                    ->getKey();
+
+            $comentarioPai
+                ->deleteOrFail();
+
+            $identificadorAtual =
+                $proximoIdentificadorPai;
+        }
+
+        return [
+            'comentarios_removidos_ids' => $identificadoresRemovidos,
+
+            'pai_atualizado' => null,
+        ];
+    }
+
+    /**
+     * Renderiza um comentário para inserção assíncrona na interface.
+     *
+     * @param  Comentario  $comentario  Comentário apresentado.
+     * @return string HTML renderizado.
+     *
+     * @since 2.0.0
+     */
+    private function renderizarComentario(
+        Comentario $comentario,
+    ): string {
+        return view(
+            'components.fragmento-comentario',
+            [
+                'comentario' => $comentario,
+            ],
+        )->render();
     }
 
     /**
      * Converte um comentário para o formato da resposta HTTP.
      *
+     * O conteúdo original nunca é exposto quando o comentário se encontra no
+     * estado de conteúdo eliminado.
+     *
      * @param  Comentario  $comentario  Comentário convertido.
      * @return array{
      *     id: int,
      *     conteudo: string,
+     *     conteudo_eliminado: bool,
      *     comentario_pai_id: int|null,
      *     numero_gostos: int,
      *     numero_respostas: int,
@@ -601,7 +909,8 @@ final class ControladorComentario extends Controller
      *         id: int,
      *         nome: string,
      *         fotografia: string|null
-     *     }|null
+     *     }|null,
+     *     editado_em: string|null,
      * } Dados do comentário.
      *
      * @since 2.0.0
@@ -612,20 +921,28 @@ final class ControladorComentario extends Controller
         $utilizador =
             $comentario->utilizador;
 
+        $conteudoEliminado =
+            $comentario
+                ->temConteudoEliminado();
+
         return [
             'id' => (int) $comentario->getKey(),
 
-            'conteudo' => (string) $comentario->conteudo,
+            'conteudo' => $conteudoEliminado
+                ? 'Comentário eliminado'
+                : (string) $comentario->conteudo,
+
+            'conteudo_eliminado' => $conteudoEliminado,
 
             'comentario_pai_id' => $comentario->comentario_pai_id,
 
             'numero_gostos' => (int) (
-                $comentario->gostos_count
+                $comentario->quantidade_gostos
                 ?? 0
             ),
 
             'numero_respostas' => (int) (
-                $comentario->respostas_count
+                $comentario->quantidade_respostas
                 ?? 0
             ),
 
@@ -637,7 +954,12 @@ final class ControladorComentario extends Controller
                 ->updated_at
                 ?->toIso8601String(),
 
-            'utilizador' => $utilizador instanceof Utilizador
+            'editado_em' => $comentario
+                ->editado_em
+                ?->toIso8601String(),
+
+            'utilizador' => ! $conteudoEliminado
+                && $utilizador instanceof Utilizador
                 ? [
                     'id' => (int) $utilizador->getKey(),
 

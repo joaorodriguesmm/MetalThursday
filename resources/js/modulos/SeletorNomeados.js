@@ -1,5 +1,5 @@
 import axios from 'axios';
-import Swal from 'sweetalert2';
+import GestorAlertas from './GestorAlertas';
 
 /**
  * Gere os botões de seleção de utilizadores nomeados.
@@ -167,15 +167,15 @@ class SeletorNomeados {
                         valor
                     ];
 
-                return opcao?.disabled !== true;
+                return opcao?.disabled
+                    !== true;
             });
 
         if (valoresDisponiveis.length === 0) {
-            void this.apresentarAlerta({
-                icon: 'info',
-                title: 'Sem nomeados disponíveis',
-                text: 'Não existem nomeados disponíveis para selecionar.',
-            });
+            void GestorAlertas.mostrarInformacao(
+                'Não existem nomeados disponíveis para selecionar.',
+                'Sem nomeados disponíveis',
+            );
 
             return;
         }
@@ -245,11 +245,11 @@ class SeletorNomeados {
                 )
                 || identificador < 1
             ) {
-                await this.apresentarAlerta({
-                    icon: 'info',
-                    title: 'Nomeado não encontrado',
-                    text: 'Não foi encontrado nenhum utilizador disponível para nomeação.',
-                });
+                await GestorAlertas
+                    .mostrarInformacao(
+                        'Não foi encontrado nenhum utilizador disponível para nomeação.',
+                        'Nomeado não encontrado',
+                    );
 
                 return;
             }
@@ -274,11 +274,10 @@ class SeletorNomeados {
                 || opcao.disabled === true
                 || valor === valorExcluido
             ) {
-                await this.apresentarAlerta({
-                    icon: 'error',
-                    title: 'Nomeado indisponível',
-                    text: 'O utilizador devolvido já não está disponível para seleção.',
-                });
+                await GestorAlertas.mostrarErro(
+                    'O utilizador devolvido já não está disponível para seleção.',
+                    'Nomeado indisponível',
+                );
 
                 return;
             }
@@ -300,15 +299,11 @@ class SeletorNomeados {
                         .trim()
                     : '';
 
-            await this.apresentarAlerta({
-                icon: 'error',
-                title: 'Erro',
-
-                text:
-                    mensagemRecebida !== ''
-                        ? mensagemRecebida
-                        : 'Não foi possível obter o utilizador há mais tempo sem nomeação.',
-            });
+            await GestorAlertas.mostrarErro(
+                mensagemRecebida !== ''
+                    ? mensagemRecebida
+                    : 'Não foi possível obter o utilizador há mais tempo sem nomeação.',
+            );
         } finally {
             this.reporEstadoInteracao(
                 estadoAnterior,
@@ -421,21 +416,6 @@ class SeletorNomeados {
         if (!estado.tomSelectBloqueado) {
             this.tomSelect.unlock();
         }
-    }
-
-    /**
-     * Apresenta uma mensagem através do SweetAlert2.
-     *
-     * @param {object} opcoes Opções transmitidas ao SweetAlert2.
-     *
-     * @returns {Promise<unknown>} Promessa da apresentação da mensagem.
-     *
-     * @since 2.0.0
-     */
-    apresentarAlerta(opcoes) {
-        return Swal.fire(
-            opcoes,
-        );
     }
 
     /**

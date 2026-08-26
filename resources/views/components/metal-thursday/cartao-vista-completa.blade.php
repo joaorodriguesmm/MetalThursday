@@ -177,9 +177,9 @@
                                 ></i>
 
                                 Comentários
-                                ({{
+                                (<span data-quantidade-comentarios>{{
                                     $seccaoPreparada['interacoes']['quantidadeComentarios']
-                                }})
+                                }}</span>)
                             </button>
 
                             <button
@@ -367,9 +367,9 @@
                     ></i>
 
                     Comentários
-                    ({{
+                    (<span data-quantidade-comentarios>{{
                         $interacoesMetalThursday['quantidadeComentarios']
-                    }})
+                    }}</span>)
                 </button>
 
                 <button

@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { Modal } from 'bootstrap';
-import Swal from 'sweetalert2';
+import GestorAlertas from './GestorAlertas';
 
 /**
  * Gere a submissão assíncrona de formulários.
@@ -262,15 +262,11 @@ class TratadorFormularioAjax {
                 ?.trim()
             ?? '';
 
-        void Swal.fire({
-            icon: 'error',
-            title: 'Erro',
-
-            text:
-                mensagemConfigurada !== ''
-                    ? mensagemConfigurada
-                    : 'Ocorreu um erro inesperado. Tenta novamente.',
-        });
+        void GestorAlertas.mostrarErro(
+            mensagemConfigurada !== ''
+                ? mensagemConfigurada
+                : 'Ocorreu um erro inesperado. Tenta novamente.',
+        );
     }
 
     /**
@@ -457,12 +453,10 @@ class TratadorFormularioAjax {
             primeiraMensagemSemCampo
             !== null
         ) {
-            void Swal.fire({
-                icon: 'error',
-                title: 'Dados inválidos',
-                text:
-                    primeiraMensagemSemCampo,
-            });
+            void GestorAlertas.mostrarErro(
+                primeiraMensagemSemCampo,
+                'Dados inválidos',
+            );
         }
     }
 
@@ -854,20 +848,11 @@ class TratadorFormularioAjax {
                 ?.trim()
             ?? '';
 
-        void Swal.fire({
-            toast: true,
-            position: 'top-end',
-            icon: 'success',
-
-            title:
-                mensagemConfigurada !== ''
-                    ? mensagemConfigurada
-                    : 'Ação concluída com sucesso.',
-
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true,
-        });
+        void GestorAlertas.mostrarSucesso(
+            mensagemConfigurada !== ''
+                ? mensagemConfigurada
+                : 'Ação concluída com sucesso.',
+        );
     }
 
     /**
@@ -879,11 +864,10 @@ class TratadorFormularioAjax {
      * @since 2.0.0
      */
     mostrarAvisoAtualizacaoInterface() {
-        void Swal.fire({
-            icon: 'warning',
-            title: 'Operação concluída',
-            text: 'A operação foi concluída, mas não foi possível atualizar a interface. Recarrega a página para veres os dados mais recentes.',
-        });
+        void GestorAlertas.mostrarAviso(
+            'A operação foi concluída, mas não foi possível atualizar a interface. Recarrega a página para veres os dados mais recentes.',
+            'Operação concluída',
+        );
     }
 
     /**

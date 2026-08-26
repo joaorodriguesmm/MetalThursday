@@ -3,6 +3,7 @@ import {
     Modal,
     Tooltip,
 } from 'bootstrap';
+import GestorAlertas from './GestorAlertas';
 
 /**
  * Gere a interatividade da janela modal de avaliação.
@@ -86,6 +87,27 @@ class GestorModalAvaliacao {
         this.pontuacaoApresentada = null;
 
         /**
+         * Estrela que apresenta atualmente o tooltip da pontuação.
+         *
+         * @type {HTMLButtonElement|null}
+         *
+         * @since 2.0.0
+         */
+        this.estrelaTooltipAtiva = null;
+
+        /**
+         * Pontuação apresentada pelo tooltip atual.
+         *
+         * Evita reconstruir o tooltip em todos os eventos `mousemove` quando o
+         * cursor continua sobre a mesma metade da mesma estrela.
+         *
+         * @type {number|null}
+         *
+         * @since 2.0.0
+         */
+        this.pontuacaoTooltipAtiva = null;
+
+        /**
          * Botão que abriu a modal para a avaliação atual.
          *
          * @type {HTMLElement|null}
@@ -111,15 +133,6 @@ class GestorModalAvaliacao {
          * @since 2.0.0
          */
         this.emSubmissao = false;
-
-        /**
-         * Promessa partilhada para o carregamento do SweetAlert2.
-         *
-         * @type {Promise<Function>|null}
-         *
-         * @since 2.0.0
-         */
-        this.promessaSweetAlert = null;
 
         this.formatadorPontuacao =
             new Intl.NumberFormat(
@@ -470,6 +483,10 @@ class GestorModalAvaliacao {
     /**
      * Trata o movimento do rato sobre as estrelas.
      *
+     * A representação visual e o tooltip utilizam exatamente a mesma pontuação,
+     * incluindo os meios valores determinados pela metade da estrela sob o
+     * cursor.
+     *
      * @param {MouseEvent} evento Evento de movimento do rato.
      *
      * @returns {void}
@@ -481,18 +498,39 @@ class GestorModalAvaliacao {
             return;
         }
 
+        const estrela =
+            this.obterEstrelaDoEvento(
+                evento,
+            );
+
+        if (estrela === null) {
+            return;
+        }
+
         const pontuacao =
-            this.obterPontuacaoDoRato(evento);
+            this.obterPontuacaoDoRato(
+                evento,
+            );
 
         if (pontuacao === null) {
             return;
         }
 
-        this.atualizarEstrelas(pontuacao);
+        this.atualizarEstrelas(
+            pontuacao,
+        );
+
+        this.apresentarTooltipPontuacao(
+            estrela,
+            pontuacao,
+        );
     }
 
     /**
      * Repõe visualmente a pontuação selecionada quando o rato sai.
+     *
+     * O tooltip da pré-visualização é também ocultado, porque deixa de existir
+     * uma pontuação sob o cursor.
      *
      * @returns {void}
      *
@@ -503,9 +541,159 @@ class GestorModalAvaliacao {
             return;
         }
 
+        this.ocultarTooltipPontuacao();
+
         this.atualizarEstrelas(
             this.pontuacaoSelecionada,
         );
+    }
+
+    /**
+     * Apresenta a pontuação correspondente à posição atual do cursor.
+     *
+     * Quando o cursor muda entre as duas metades da mesma estrela, o conteúdo
+     * visível do tooltip é atualizado diretamente, evitando reconstruir a
+     * instância Bootstrap e provocar o desaparecimento momentâneo do indicador.
+     *
+     * Quando muda de estrela, o tooltip anterior é ocultado e a nova estrela
+     * passa a apresentar a pontuação correspondente.
+     *
+     * @param {HTMLButtonElement} estrela Estrela sob o cursor.
+     * @param {number} pontuacao Pontuação apresentada.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    apresentarTooltipPontuacao(
+        estrela,
+        pontuacao,
+    ) {
+        const pontuacaoNormalizada =
+            this.normalizarPontuacao(
+                pontuacao,
+            );
+
+        if (
+            this.estrelaTooltipAtiva === estrela
+            && this.pontuacaoTooltipAtiva
+                === pontuacaoNormalizada
+        ) {
+            return;
+        }
+
+        const conteudo =
+            `${this.formatadorPontuacaoMaxima.format(
+                pontuacaoNormalizada,
+            )} em ${this.formatarPontuacaoMaxima()}`;
+
+        /*
+        * A estrela é a mesma e o tooltip já se encontra apresentado.
+        *
+        * Atualizar diretamente o conteúdo preserva a instância, o Popper e a
+        * visibilidade. `Tooltip.setContent()` desmontaria a apresentação atual
+        * e poderia fazê-la desaparecer durante a passagem entre meio valor e
+        * valor inteiro da mesma estrela.
+        */
+        if (
+            this.estrelaTooltipAtiva === estrela
+        ) {
+            const identificadorTooltip =
+                estrela.getAttribute(
+                    'aria-describedby',
+                );
+
+            if (
+                identificadorTooltip !== null
+                && identificadorTooltip.trim() !== ''
+            ) {
+                const tooltip =
+                    document.getElementById(
+                        identificadorTooltip,
+                    );
+
+                const conteudoTooltip =
+                    tooltip?.querySelector(
+                        '.tooltip-inner',
+                    );
+
+                if (
+                    conteudoTooltip
+                    instanceof HTMLElement
+                ) {
+                    conteudoTooltip.textContent =
+                        conteudo;
+
+                    this.pontuacaoTooltipAtiva =
+                        pontuacaoNormalizada;
+
+                    return;
+                }
+            }
+        }
+
+        if (
+            this.estrelaTooltipAtiva !== null
+            && this.estrelaTooltipAtiva !== estrela
+        ) {
+            Tooltip.getInstance(
+                this.estrelaTooltipAtiva,
+            )?.hide();
+        }
+
+        let instancia =
+            Tooltip.getInstance(
+                estrela,
+            );
+
+        if (instancia === null) {
+            instancia = new Tooltip(
+                estrela,
+                {
+                    trigger: 'manual',
+                    placement: 'top',
+                    animation: false,
+                    title: conteudo,
+                },
+            );
+        } else {
+            instancia.setContent({
+                '.tooltip-inner':
+                    conteudo,
+            });
+        }
+
+        instancia.show();
+
+        this.estrelaTooltipAtiva =
+            estrela;
+
+        this.pontuacaoTooltipAtiva =
+            pontuacaoNormalizada;
+    }
+
+    /**
+     * Oculta o tooltip da pontuação atualmente apresentado.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    ocultarTooltipPontuacao() {
+        if (
+            this.estrelaTooltipAtiva
+            instanceof HTMLButtonElement
+        ) {
+            Tooltip.getInstance(
+                this.estrelaTooltipAtiva,
+            )?.hide();
+        }
+
+        this.estrelaTooltipAtiva =
+            null;
+
+        this.pontuacaoTooltipAtiva =
+            null;
     }
 
     /**
@@ -1536,50 +1724,9 @@ class GestorModalAvaliacao {
             return;
         }
 
-        try {
-            const Swal =
-                await this.carregarSweetAlert();
-
-            void Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'success',
-                text: mensagem,
-                showConfirmButton: false,
-                timer: 3000,
-                timerProgressBar: true,
-            });
-        } catch {
-            /*
-             * A avaliação já foi guardada. A mensagem é apenas complementar.
-             */
-        }
-    }
-
-    /**
-     * Carrega o SweetAlert2 apenas quando é necessário apresentar o sucesso.
-     *
-     * @returns {Promise<Function>} API do SweetAlert2.
-     *
-     * @since 2.0.0
-     */
-    carregarSweetAlert() {
-        if (this.promessaSweetAlert === null) {
-            this.promessaSweetAlert = import(
-                'sweetalert2'
-            )
-                .then(
-                    (modulo) =>
-                        modulo.default,
-                )
-                .catch((erro) => {
-                    this.promessaSweetAlert = null;
-
-                    throw erro;
-                });
-        }
-
-        return this.promessaSweetAlert;
+        await GestorAlertas.mostrarSucesso(
+            mensagem,
+        );
     }
 
     /**
@@ -1605,6 +1752,8 @@ class GestorModalAvaliacao {
      * @since 2.0.0
      */
     reporEstado() {
+        this.ocultarTooltipPontuacao();
+
         this.formulario.reset();
 
         this.botaoAcionador = null;

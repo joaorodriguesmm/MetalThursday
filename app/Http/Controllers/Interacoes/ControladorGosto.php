@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use LogicException;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Gere os gostos associados aos comentários.
@@ -138,6 +139,15 @@ final class ControladorGosto extends Controller
                             ->lockForUpdate()
                             ->firstOrFail();
 
+                    if (
+                        $comentarioBloqueado
+                            ->temConteudoEliminado()
+                    ) {
+                        abort(
+                            Response::HTTP_GONE,
+                        );
+                    }
+
                     $gosto =
                         $comentarioBloqueado
                             ->gostos()
@@ -209,8 +219,9 @@ final class ControladorGosto extends Controller
     /**
      * Obtém os utilizadores que gostaram do comentário.
      *
-     * A lista é ordenada pelo nome e pelo identificador do utilizador. Nomes
-     * iguais não são removidos, porque podem pertencer a contas diferentes.
+     * Um comentário cujo conteúdo foi eliminado mantém-se apenas como elemento
+     * estrutural da conversa e deixa de disponibilizar as interações associadas
+     * ao conteúdo original.
      *
      * @param  Comentario  $comentario  Comentário consultado.
      * @return JsonResponse Lista de utilizadores.
@@ -220,6 +231,15 @@ final class ControladorGosto extends Controller
     public function listarUtilizadores(
         Comentario $comentario,
     ): JsonResponse {
+        if (
+            $comentario
+                ->temConteudoEliminado()
+        ) {
+            abort(
+                Response::HTTP_GONE,
+            );
+        }
+
         $dadosIndicador =
             $this->obterDadosIndicador(
                 $comentario,

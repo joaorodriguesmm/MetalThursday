@@ -692,7 +692,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
         return MetalThursday::query()
             ->comNumeroSemanaNaEdicao()
             ->withCount([
-                'comentarios',
+                'comentariosComConteudo as comentarios_count',
                 'avaliacoes',
                 'audicoes',
             ])
@@ -770,7 +770,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
         $metalThursday
             ->carregarNumeroSemanaNaEdicao()
             ->loadCount([
-                'comentarios',
+                'comentariosComConteudo as comentarios_count',
                 'avaliacoes',
                 'audicoes',
             ])
@@ -829,7 +829,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
 
                 $construtor
                     ->withCount([
-                        'comentarios',
+                        'comentariosComConteudo as comentarios_count',
                         'avaliacoes',
                         'audicoes',
                     ])
@@ -1498,12 +1498,12 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
     }
 
     /**
-     * Configura a consulta da árvore de comentários para apresentação.
+     * Configura a consulta dos comentários principais para apresentação.
      *
-     * As respostas a respostas são associadas pelo fluxo de escrita ao
-     * comentário principal, pelo que a interface utiliza apenas dois níveis.
-     * A relação `respostas` é carregada nas respostas para satisfazer o
-     * contrato do componente de comentário.
+     * Apenas os comentários principais são carregados inicialmente e os mais
+     * recentes são apresentados primeiro. A quantidade de respostas diretas
+     * acompanha cada comentário através do escopo de apresentação, mas os
+     * respetivos modelos são obtidos apenas quando o utilizador expande o ramo.
      *
      * @param  Builder<Comentario>  $construtor  Consulta dos comentários.
      * @param  int  $identificadorUtilizador  Utilizador autenticado.
@@ -1519,26 +1519,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
             ->comDadosApresentacao(
                 $identificadorUtilizador,
             )
-            ->ordenadosCronologicamente()
-            ->with([
-                'respostas' => static function (
-                    Relation $relacao,
-                ) use (
-                    $identificadorUtilizador,
-                ): void {
-                    $construtorRespostas =
-                        $relacao->getQuery();
-
-                    $construtorRespostas
-                        ->comDadosApresentacao(
-                            $identificadorUtilizador,
-                        )
-                        ->ordenadosCronologicamente()
-                        ->with(
-                            'respostas',
-                        );
-                },
-            ]);
+            ->ordenadosMaisRecentes();
     }
 
     /**

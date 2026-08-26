@@ -24,8 +24,8 @@ use InvalidArgumentException;
  * Um comentário pode pertencer a uma MetalThursday ou a uma das respetivas
  * secções. Pode também responder a outro comentário da mesma entidade.
  *
- * A aplicação limita a apresentação a dois níveis. As respostas a respostas
- * são associadas ao comentário principal pelo fluxo de escrita.
+ * A hierarquia persistida preserva o comentário concretamente respondido.
+ * A profundidade visual é uma responsabilidade exclusiva da interface.
  *
  * @property int $id
  * @property int|null $utilizador_id
@@ -43,6 +43,9 @@ use InvalidArgumentException;
  * @property-read Comentario|null $comentarioPai
  * @property-read Collection<int, Comentario> $respostas
  * @property-read Collection<int, Gosto> $gostos
+ * @property int $quantidade_respostas
+ * @property CarbonInterface|null $conteudo_eliminado_em
+ * @property CarbonInterface|null $editado_em
  *
  * @since 1.0.0
  */
@@ -114,6 +117,12 @@ class Comentario extends Model
             'quantidade_gostos' => 'integer',
 
             'gostado_pelo_utilizador_autenticado' => 'boolean',
+
+            'quantidade_respostas' => 'integer',
+
+            'conteudo_eliminado_em' => 'datetime',
+
+            'editado_em' => 'datetime',
         ];
     }
 
@@ -342,11 +351,37 @@ class Comentario extends Model
     }
 
     /**
+     * Ordena os comentários dos mais recentes para os mais antigos.
+     *
+     * O identificador é utilizado como segundo critério para manter uma ordem
+     * determinística quando vários comentários possuem a mesma data de criação.
+     *
+     * @param  Builder<Comentario>  $construtor  Consulta dos comentários.
+     * @return Builder<Comentario> Consulta ordenada.
+     *
+     * @since 2.0.0
+     */
+    public function scopeOrdenadosMaisRecentes(
+        Builder $construtor,
+    ): Builder {
+        return $construtor
+            ->orderByDesc(
+                'created_at',
+            )
+            ->orderByDesc(
+                'id',
+            );
+    }
+
+    /**
      * Carrega os dados necessários para apresentar os comentários.
      *
-     * A consulta inclui o utilizador, a quantidade total de gostos e, quando
-     * existe autenticação, a indicação de que o utilizador atual atribuiu
-     * gosto ao comentário.
+     * A consulta inclui o utilizador, as quantidades de gostos e respostas
+     * diretas e, quando existe autenticação, a indicação de que o utilizador
+     * atual atribuiu gosto ao comentário.
+     *
+     * As respostas propriamente ditas não são carregadas. A respetiva consulta é
+     * efetuada apenas quando o utilizador expande um ramo da conversa.
      *
      * @param  Builder<Comentario>  $construtor  Consulta dos comentários.
      * @param  int|null  $identificadorUtilizador  Utilizador autenticado.
@@ -366,6 +401,7 @@ class Comentario extends Model
             ])
             ->withCount([
                 'gostos as quantidade_gostos',
+                'respostas as quantidade_respostas',
             ]);
 
         if ($identificadorUtilizador === null) {
@@ -386,5 +422,21 @@ class Comentario extends Model
                 $identificadorUtilizador,
             ),
         ]);
+    }
+
+    /**
+     * Indica se o conteúdo do comentário foi eliminado.
+     *
+     * O comentário pode continuar ativo na árvore quando possui respostas,
+     * preservando a estrutura da conversa sem voltar a expor o conteúdo
+     * eliminado.
+     *
+     * @return bool Verdadeiro quando o conteúdo foi eliminado.
+     *
+     * @since 2.0.0
+     */
+    public function temConteudoEliminado(): bool
+    {
+        return $this->conteudo_eliminado_em !== null;
     }
 }

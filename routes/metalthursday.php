@@ -429,6 +429,20 @@ Route::middleware([
                 'comentarios.guardar',
             );
 
+        Route::get(
+            'comentarios/{comentario}/respostas',
+            [
+                ControladorComentario::class,
+                'listarRespostas',
+            ],
+        )
+            ->whereNumber(
+                'comentario',
+            )
+            ->name(
+                'comentarios.respostas.indice',
+            );
+
         Route::post(
             'comentarios/{comentario}/respostas',
             [

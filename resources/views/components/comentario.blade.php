@@ -1,9 +1,13 @@
 {{--
-    Apresenta um comentário e as respetivas respostas.
+    Apresenta um comentário e os controlos necessários para carregar as
+    respetivas respostas de forma assíncrona.
 
-    A preparação do comentário, relações, utilizadores, contagens e
-    identificadores principais é efetuada pela classe
-    App\View\Components\Comentario.
+    As respostas não são renderizadas inicialmente. Cada ramo é obtido apenas
+    quando o utilizador o expande.
+
+    Quando o conteúdo foi eliminado, o comentário permanece apenas como nó
+    estrutural da conversa. Nesse estado não são apresentados autor, conteúdo
+    original nem ações de interação.
 
     @since 1.0.0
 --}}
@@ -14,7 +18,7 @@
             ->except([
                 'id',
                 'data-identificador-comentario',
-                'data-identificador-comentario-principal',
+                'data-nivel-visual',
             ])
             ->class([
                 'comentario',
@@ -23,205 +27,230 @@
     }}
     id="comentario-{{ $identificadorComentario }}"
     data-identificador-comentario="{{ $identificadorComentario }}"
-    data-identificador-comentario-principal="{{ $identificadorPrincipal }}"
+    data-nivel-visual="1"
 >
     <div class="d-flex align-items-start">
-        <div class="me-3 flex-shrink-0">
-            <x-avatar
-                :utilizador="$utilizador"
-                :tamanho="40"
-                descricao=""
-            />
-        </div>
+        @if ($comentario->temConteudoEliminado())
+            <div
+                class="me-3 flex-shrink-0 d-flex align-items-center justify-content-center text-muted"
+                style="width: 40px; height: 40px;"
+                aria-hidden="true"
+            >
+                <i class="bi bi-chat-left-dots fs-4"></i>
+            </div>
+        @else
+            <div class="me-3 flex-shrink-0">
+                <x-avatar
+                    :utilizador="$utilizador"
+                    :tamanho="40"
+                    descricao=""
+                />
+            </div>
+        @endif
 
         <div class="flex-grow-1">
-            <div class="p-3 rounded bg-secondary">
-                <header
-                    class="d-flex justify-content-between align-items-start gap-3"
-                >
-                    <p class="mb-0 fw-semibold text-white">
-                        {{ $nomeUtilizador }}
-                    </p>
-
-                    @if ($momentoCriacao !== null)
-                        <time
-                            class="small text-white-50 flex-shrink-0"
-                            datetime="{{ $momentoCriacao->toIso8601String() }}"
-                            title="{{ $momentoCriacao->format('d/m/Y H:i') }}"
-                        >
-                            {{ $momentoCriacao->diffForHumans() }}
-                        </time>
-                    @endif
-                </header>
-
+            @if ($comentario->temConteudoEliminado())
                 <div
-                    class="conteudo-comentario mt-2"
-                    data-conteudo-comentario
+                    class="p-3 rounded bg-secondary"
+                    data-comentario-eliminado
                 >
-                    <p class="mb-0 text-white-50">
-                        {!! nl2br(e($comentario->conteudo)) !!}
+                    <p class="mb-0 text-white-50 fst-italic">
+                        <i
+                            class="bi bi-trash me-1"
+                            aria-hidden="true"
+                        ></i>
+
+                        Comentário eliminado
                     </p>
+                </div>
+            @else
+                <div class="p-3 rounded bg-secondary">
+                    <header
+                        class="d-flex justify-content-between align-items-start gap-3"
+                    >
+                        <p class="mb-0 fw-semibold text-white">
+                            {{ $nomeUtilizador }}
+                        </p>
+
+                        @if ($momentoCriacao !== null)
+                            @php
+                                $comentarioFoiEditado =
+                                    $comentario->editado_em !== null;
+                            @endphp
+
+                            <div
+                                class="small text-white-50 flex-shrink-0 text-end"
+                            >
+                                <time
+                                    datetime="{{ $momentoCriacao->toIso8601String() }}"
+                                    title="{{ $momentoCriacao->format('d/m/Y H:i') }}"
+                                >
+                                    {{ $momentoCriacao->diffForHumans() }}
+                                </time>
+
+                                <span
+                                    data-indicador-comentario-editado
+                                    title="Comentário editado"
+                                    @if (! $comentarioFoiEditado)
+                                        hidden
+                                    @endif
+                                >
+                                    &middot; editado
+                                </span>
+                            </div>
+                        @endif
+                    </header>
+
+                    <div
+                        class="conteudo-comentario mt-2"
+                        data-conteudo-comentario
+                    >
+                        <p class="mb-0 text-white-50">
+                            {!! nl2br(e($comentario->conteudo)) !!}
+                        </p>
+                    </div>
+
+                    <div
+                        id="contentor-edicao-comentario-{{ $identificadorComentario }}"
+                        class="contentor-edicao-comentario mt-2"
+                        aria-hidden="true"
+                        hidden
+                    >
+                        <form
+                            id="formulario-edicao-comentario-{{ $identificadorComentario }}"
+                            class="formulario-edicao-comentario"
+                            method="POST"
+                            action="{{
+                                route(
+                                    'comentarios.atualizar',
+                                    $comentario,
+                                )
+                            }}"
+                            data-formulario-edicao-comentario
+                            data-endereco="{{
+                                route(
+                                    'comentarios.atualizar',
+                                    $comentario,
+                                )
+                            }}"
+                            data-identificador-comentario="{{
+                                $identificadorComentario
+                            }}"
+                            novalidate
+                        >
+                            @csrf
+                            @method('PATCH')
+
+                            <div
+                                class="grupo-campo-formulario"
+                                data-grupo-campo
+                            >
+                                <label
+                                    class="visually-hidden"
+                                    for="conteudo-edicao-comentario-{{ $identificadorComentario }}"
+                                >
+                                    Editar comentário
+                                </label>
+
+                                <textarea
+                                    id="conteudo-edicao-comentario-{{ $identificadorComentario }}"
+                                    class="form-control form-control-sm bg-dark text-white border-secondary"
+                                    name="conteudo"
+                                    rows="3"
+                                    maxlength="2000"
+                                    aria-describedby="erro-edicao-comentario-{{ $identificadorComentario }}"
+                                    data-campo-conteudo-comentario
+                                    required
+                                >{{ $comentario->conteudo }}</textarea>
+
+                                <div
+                                    id="erro-edicao-comentario-{{ $identificadorComentario }}"
+                                    class="invalid-feedback mt-1"
+                                    aria-live="polite"
+                                ></div>
+                            </div>
+
+                            <div class="mt-2 text-end">
+                                <button
+                                    class="btn btn-sm btn-outline-light"
+                                    type="button"
+                                    data-tipo-interacao="cancelar-edicao-comentario"
+                                    aria-controls="contentor-edicao-comentario-{{ $identificadorComentario }}"
+                                >
+                                    Cancelar
+                                </button>
+
+                                <button
+                                    class="btn btn-sm btn-primary"
+                                    type="submit"
+                                >
+                                    Guardar alterações
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
 
                 <div
-                    id="contentor-edicao-comentario-{{ $identificadorComentario }}"
-                    class="contentor-edicao-comentario mt-2"
-                    aria-hidden="true"
-                    hidden
+                    class="acoes-comentario small mt-2 d-flex align-items-center flex-wrap gap-1"
+                    role="group"
+                    aria-label="Ações do comentário"
                 >
-                    <form
-                        id="formulario-edicao-comentario-{{ $identificadorComentario }}"
-                        class="formulario-edicao-comentario"
-                        method="POST"
-                        action="{{
+                    <button
+                        class="btn btn-sm btn-link text-muted text-decoration-none p-0"
+                        type="button"
+                        data-tipo-interacao="alternar-gosto"
+                        data-endereco="{{
                             route(
-                                'comentarios.atualizar',
+                                'gostos.alternar',
                                 $comentario,
                             )
                         }}"
-                        data-formulario-edicao-comentario
-                        data-endereco="{{
+                        data-endereco-utilizadores-gosto="{{
                             route(
-                                'comentarios.atualizar',
+                                'comentarios.utilizadores-gosto',
                                 $comentario,
                             )
                         }}"
                         data-identificador-comentario="{{
                             $identificadorComentario
                         }}"
-                        novalidate
+                        data-bs-toggle="tooltip"
+                        data-bs-html="true"
+                        data-bs-title="A carregar..."
+                        aria-label="{{ $descricaoAcaoGosto }}"
+                        aria-pressed="{{ $temGosto ? 'true' : 'false' }}"
                     >
-                        @csrf
-                        @method('PATCH')
+                        <i
+                            class="bi {{
+                                $temGosto
+                                    ? 'bi-heart-fill text-danger'
+                                    : 'bi-heart'
+                            }}"
+                            data-icone-gosto
+                            aria-hidden="true"
+                        ></i>
 
-                        <div
-                            class="grupo-campo-formulario"
-                            data-grupo-campo
+                        <span data-texto-gosto>
+                            Gosto
+                        </span>
+
+                        <span aria-hidden="true">
+                            (
+                        </span>
+
+                        <span
+                            class="quantidade-gostos"
+                            data-quantidade-gostos
                         >
-                            <label
-                                class="visually-hidden"
-                                for="conteudo-edicao-comentario-{{ $identificadorComentario }}"
-                            >
-                                Editar comentário
-                            </label>
+                            {{ $quantidadeGostos }}
+                        </span>
 
-                            <textarea
-                                id="conteudo-edicao-comentario-{{ $identificadorComentario }}"
-                                class="form-control form-control-sm bg-dark text-white border-secondary"
-                                name="conteudo"
-                                rows="3"
-                                maxlength="2000"
-                                aria-describedby="erro-edicao-comentario-{{ $identificadorComentario }}"
-                                data-campo-conteudo-comentario
-                                required
-                            >{{ $comentario->conteudo }}</textarea>
+                        <span aria-hidden="true">
+                            )
+                        </span>
+                    </button>
 
-                            <div
-                                id="erro-edicao-comentario-{{ $identificadorComentario }}"
-                                class="invalid-feedback mt-1"
-                                aria-live="polite"
-                            ></div>
-                        </div>
-
-                        <div class="mt-2 text-end">
-                            <button
-                                class="btn btn-sm btn-outline-light"
-                                type="button"
-                                data-tipo-interacao="cancelar-edicao-comentario"
-                                aria-controls="contentor-edicao-comentario-{{ $identificadorComentario }}"
-                            >
-                                Cancelar
-                            </button>
-
-                            <button
-                                class="btn btn-sm btn-primary"
-                                type="submit"
-                            >
-                                Guardar alterações
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <div
-                class="acoes-comentario small mt-2 d-flex align-items-center flex-wrap gap-1"
-                role="group"
-                aria-label="Ações do comentário"
-            >
-                <button
-                    class="btn btn-sm btn-link text-muted text-decoration-none p-0"
-                    type="button"
-                    data-tipo-interacao="alternar-gosto"
-                    data-endereco="{{
-                        route(
-                            'gostos.alternar',
-                            $comentario,
-                        )
-                    }}"
-                    data-endereco-utilizadores-gosto="{{
-                        route(
-                            'comentarios.utilizadores-gosto',
-                            $comentario,
-                        )
-                    }}"
-                    data-identificador-comentario="{{
-                        $identificadorComentario
-                    }}"
-                    data-bs-toggle="tooltip"
-                    data-bs-html="true"
-                    data-bs-title="A carregar..."
-                    aria-label="{{ $descricaoAcaoGosto }}"
-                    aria-pressed="{{ $temGosto ? 'true' : 'false' }}"
-                >
-                    <i
-                        class="bi {{
-                            $temGosto
-                                ? 'bi-heart-fill text-danger'
-                                : 'bi-heart'
-                        }}"
-                        data-icone-gosto
-                        aria-hidden="true"
-                    ></i>
-
-                    <span data-texto-gosto>
-                        Gosto
-                    </span>
-
-                    <span aria-hidden="true">
-                        (
-                    </span>
-
-                    <span
-                        class="quantidade-gostos"
-                        data-quantidade-gostos
-                    >
-                        {{ $quantidadeGostos }}
-                    </span>
-
-                    <span aria-hidden="true">
-                        )
-                    </span>
-                </button>
-
-                <span
-                    class="text-muted mx-1"
-                    aria-hidden="true"
-                >
-                    &middot;
-                </span>
-
-                <button
-                    class="btn btn-sm btn-link text-muted text-decoration-none p-0"
-                    type="button"
-                    data-tipo-interacao="alternar-resposta-comentario"
-                    aria-controls="contentor-resposta-comentario-{{ $identificadorComentario }}"
-                    aria-expanded="false"
-                >
-                    Responder
-                </button>
-
-                @can('update', $comentario)
                     <span
                         class="text-muted mx-1"
                         aria-hidden="true"
@@ -232,152 +261,196 @@
                     <button
                         class="btn btn-sm btn-link text-muted text-decoration-none p-0"
                         type="button"
-                        data-tipo-interacao="iniciar-edicao-comentario"
-                        aria-controls="contentor-edicao-comentario-{{ $identificadorComentario }}"
+                        data-tipo-interacao="alternar-resposta-comentario"
+                        aria-controls="contentor-resposta-comentario-{{ $identificadorComentario }}"
                         aria-expanded="false"
                     >
-                        Editar
+                        Responder
                     </button>
-                @endcan
 
-                @can('delete', $comentario)
-                    <span
-                        class="text-muted mx-1"
-                        aria-hidden="true"
-                    >
-                        &middot;
-                    </span>
+                    @can('update', $comentario)
+                        <span
+                            class="text-muted mx-1"
+                            aria-hidden="true"
+                        >
+                            &middot;
+                        </span>
 
-                    <button
-                        class="btn btn-sm btn-link text-danger text-decoration-none p-0"
-                        type="button"
-                        data-tipo-interacao="eliminar"
-                        data-endereco="{{
+                        <button
+                            class="btn btn-sm btn-link text-muted text-decoration-none p-0"
+                            type="button"
+                            data-tipo-interacao="iniciar-edicao-comentario"
+                            aria-controls="contentor-edicao-comentario-{{ $identificadorComentario }}"
+                            aria-expanded="false"
+                        >
+                            Editar
+                        </button>
+                    @endcan
+
+                    @can('delete', $comentario)
+                        <span
+                            class="text-muted mx-1"
+                            aria-hidden="true"
+                        >
+                            &middot;
+                        </span>
+
+                        <button
+                            class="btn btn-sm btn-link text-danger text-decoration-none p-0"
+                            type="button"
+                            data-tipo-interacao="eliminar"
+                            data-endereco="{{
+                                route(
+                                    'comentarios.eliminar',
+                                    $comentario,
+                                )
+                            }}"
+                            data-seletor-elemento-removivel="#comentario-{{
+                                $identificadorComentario
+                            }}"
+                            data-mensagem-confirmacao="Tens a certeza de que pretendes eliminar este comentário?"
+                            data-mensagem-sucesso="Comentário eliminado com sucesso."
+                            data-mensagem-erro="Não foi possível eliminar o comentário."
+                        >
+                            Eliminar
+                        </button>
+                    @endcan
+                </div>
+
+                <div
+                    id="contentor-resposta-comentario-{{ $identificadorComentario }}"
+                    class="contentor-formulario-resposta mt-3"
+                    aria-hidden="true"
+                    hidden
+                >
+                    <form
+                        id="formulario-resposta-comentario-{{ $identificadorComentario }}"
+                        class="formulario-resposta-comentario"
+                        method="POST"
+                        action="{{
                             route(
-                                'comentarios.eliminar',
+                                'comentarios.respostas.guardar',
                                 $comentario,
                             )
                         }}"
-                        data-seletor-elemento-removivel="#comentario-{{
+                        data-formulario-resposta-comentario
+                        data-endereco="{{
+                            route(
+                                'comentarios.respostas.guardar',
+                                $comentario,
+                            )
+                        }}"
+                        data-mensagem-sucesso="Resposta publicada com sucesso."
+                        data-mensagem-erro="Não foi possível publicar a resposta."
+                        data-identificador-comentario-pai="{{
                             $identificadorComentario
                         }}"
-                        data-mensagem-confirmacao="Tens a certeza de que pretendes eliminar este comentário?"
-                        data-mensagem-sucesso="Comentário eliminado com sucesso."
-                        data-mensagem-erro="Não foi possível eliminar o comentário."
+                        novalidate
                     >
-                        Eliminar
-                    </button>
-                @endcan
-            </div>
+                        @csrf
 
-            <div
-                id="contentor-resposta-comentario-{{ $identificadorComentario }}"
-                class="contentor-formulario-resposta mt-3"
-                aria-hidden="true"
-                hidden
-            >
-                <form
-                    id="formulario-resposta-comentario-{{ $identificadorComentario }}"
-                    class="formulario-resposta-comentario"
-                    method="POST"
-                    action="{{
-                        route(
-                            'comentarios.respostas.guardar',
-                            $comentario,
-                        )
-                    }}"
-                    data-formulario-resposta-comentario
-                    data-endereco="{{
-                        route(
-                            'comentarios.respostas.guardar',
-                            $comentario,
-                        )
-                    }}"
-                    data-mensagem-sucesso="Resposta publicada com sucesso."
-                    data-mensagem-erro="Não foi possível publicar a resposta."
-                    data-identificador-comentario-pai="{{
-                        $identificadorComentario
-                    }}"
-                    data-identificador-comentario-principal="{{
-                        $identificadorPrincipal
-                    }}"
-                    novalidate
-                >
-                    @csrf
-
-                    <div class="d-flex align-items-start">
-                        <div class="me-3 flex-shrink-0">
-                            <x-avatar
-                                :utilizador="$utilizadorAutenticado"
-                                :tamanho="30"
-                                descricao=""
-                            />
-                        </div>
-
-                        <div
-                            class="flex-grow-1 grupo-campo-formulario"
-                            data-grupo-campo
-                        >
-                            <label
-                                class="visually-hidden"
-                                for="conteudo-resposta-comentario-{{ $identificadorComentario }}"
-                            >
-                                Resposta
-                            </label>
-
-                            <textarea
-                                id="conteudo-resposta-comentario-{{ $identificadorComentario }}"
-                                class="form-control form-control-sm bg-secondary text-white border-secondary"
-                                name="conteudo"
-                                rows="2"
-                                maxlength="2000"
-                                placeholder="Escreve a tua resposta"
-                                aria-describedby="erro-resposta-comentario-{{ $identificadorComentario }}"
-                                required
-                            ></textarea>
+                        <div class="d-flex align-items-start">
+                            <div class="me-3 flex-shrink-0">
+                                <x-avatar
+                                    :utilizador="$utilizadorAutenticado"
+                                    :tamanho="30"
+                                    descricao=""
+                                />
+                            </div>
 
                             <div
-                                id="erro-resposta-comentario-{{ $identificadorComentario }}"
-                                class="invalid-feedback mt-1"
-                                aria-live="polite"
-                            ></div>
-
-                            <div class="mt-2 text-end">
-                                <button
-                                    class="btn btn-sm btn-outline-light"
-                                    type="button"
-                                    data-tipo-interacao="cancelar-resposta-comentario"
-                                    aria-controls="contentor-resposta-comentario-{{ $identificadorComentario }}"
+                                class="flex-grow-1 grupo-campo-formulario"
+                                data-grupo-campo
+                            >
+                                <label
+                                    class="visually-hidden"
+                                    for="conteudo-resposta-comentario-{{ $identificadorComentario }}"
                                 >
-                                    Cancelar
-                                </button>
+                                    Resposta
+                                </label>
 
-                                <button
-                                    class="btn btn-sm btn-primary"
-                                    type="submit"
-                                >
-                                    Publicar resposta
-                                </button>
+                                <textarea
+                                    id="conteudo-resposta-comentario-{{ $identificadorComentario }}"
+                                    class="form-control form-control-sm bg-secondary text-white border-secondary"
+                                    name="conteudo"
+                                    rows="2"
+                                    maxlength="2000"
+                                    placeholder="Responder a {{ $nomeUtilizador }}"
+                                    aria-describedby="erro-resposta-comentario-{{ $identificadorComentario }}"
+                                    required
+                                ></textarea>
+
+                                <div
+                                    id="erro-resposta-comentario-{{ $identificadorComentario }}"
+                                    class="invalid-feedback mt-1"
+                                    aria-live="polite"
+                                ></div>
+
+                                <div class="mt-2 text-end">
+                                    <button
+                                        class="btn btn-sm btn-outline-light"
+                                        type="button"
+                                        data-tipo-interacao="cancelar-resposta-comentario"
+                                        aria-controls="contentor-resposta-comentario-{{ $identificadorComentario }}"
+                                    >
+                                        Cancelar
+                                    </button>
+
+                                    <button
+                                        class="btn btn-sm btn-primary"
+                                        type="submit"
+                                    >
+                                        Publicar resposta
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </form>
+                    </form>
+                </div>
+            @endif
+
+            <div class="mt-2">
+                <button
+                    class="btn btn-sm btn-link text-muted text-decoration-none p-0"
+                    type="button"
+                    data-acao-comentarios="alternar-respostas"
+                    data-endereco-respostas="{{
+                        route(
+                            'comentarios.respostas.indice',
+                            $comentario,
+                        )
+                    }}"
+                    data-quantidade-respostas="{{ $quantidadeRespostas }}"
+                    aria-controls="respostas-comentario-{{ $identificadorComentario }}"
+                    aria-expanded="false"
+                    @if ($quantidadeRespostas === 0)
+                        hidden
+                    @endif
+                >
+                    <i
+                        class="bi bi-arrow-return-right me-1"
+                        aria-hidden="true"
+                    ></i>
+
+                    <span data-texto-alternador-respostas>
+                        Ver
+                        {{ $quantidadeRespostas }}
+                        {{
+                            $quantidadeRespostas === 1
+                                ? 'resposta'
+                                : 'respostas'
+                        }}
+                    </span>
+                </button>
             </div>
 
             <div
-                class="respostas-comentario ms-4 border-start ps-3 mt-3"
+                id="respostas-comentario-{{ $identificadorComentario }}"
+                class="respostas-comentario"
                 data-respostas-comentario
-                @if ($respostas->isEmpty())
-                    hidden
-                @endif
-            >
-                @foreach ($respostas as $resposta)
-                    <x-comentario
-                        :comentario="$resposta"
-                        :identificador-comentario-principal="$identificadorPrincipal"
-                    />
-                @endforeach
-            </div>
+                data-respostas-carregadas="false"
+                hidden
+            ></div>
         </div>
     </div>
 </article>
