@@ -235,20 +235,10 @@
                             Gosto
                         </span>
 
-                        <span aria-hidden="true">
-                            (
-                        </span>
-
-                        <span
+                        <span aria-hidden="true">(</span><span
                             class="quantidade-gostos"
                             data-quantidade-gostos
-                        >
-                            {{ $quantidadeGostos }}
-                        </span>
-
-                        <span aria-hidden="true">
-                            )
-                        </span>
+                        >{{ $quantidadeGostos }}</span><span aria-hidden="true">)</span>
                     </button>
 
                     <span
