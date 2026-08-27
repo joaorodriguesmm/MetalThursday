@@ -929,6 +929,16 @@ class GestorInteracoes {
                 String(numeroAudicoes);
         }
 
+        if (
+            Number.isInteger(numeroAudicoes)
+            && numeroAudicoes >= 0
+        ) {
+            apresentacaoAudicoes.setAttribute(
+                'aria-label',
+                `Consultar detalhes das audições. Total: ${numeroAudicoes}.`,
+            );
+        }
+
         const conteudo =
             dados.conteudo_indicador_html;
 

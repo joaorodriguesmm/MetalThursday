@@ -228,6 +228,14 @@ final class ControladorAudicaoTest extends TestCase
                 false,
             )
             ->assertJsonPath(
+                'numero_audicoes',
+                0,
+            )
+            ->assertJsonPath(
+                'conteudo_indicador_html',
+                'Ninguém marcou esta MetalThursday como ouvida.',
+            )
+            ->assertJsonPath(
                 'mensagem',
                 'MetalThursday marcada como não ouvida.',
             );
@@ -295,7 +303,7 @@ final class ControladorAudicaoTest extends TestCase
             )
             ->assertJsonPath(
                 'conteudo_indicador_html',
-                'Ninguém marcou como ouvido.',
+                'Ninguém marcou esta secção como ouvida.',
             )
             ->assertJsonPath(
                 'mensagem',

@@ -50,16 +50,6 @@ final class ControladorAudicao extends Controller
         'ouviu';
 
     /**
-     * Conteúdo apresentado quando ainda não existem audições.
-     *
-     * @var string
-     *
-     * @since 2.0.0
-     */
-    private const MENSAGEM_SEM_AUDICOES =
-        'Ninguém marcou como ouvido.';
-
-    /**
      * Cria o controlador.
      *
      * @param  NotificadorInteracoes  $notificadorInteracoes  Serviço
@@ -334,7 +324,9 @@ final class ControladorAudicao extends Controller
             return [
                 'numero_audicoes' => 0,
 
-                'conteudo_html' => self::MENSAGEM_SEM_AUDICOES,
+                'conteudo_html' => $audivel instanceof MetalThursday
+                    ? 'Ninguém marcou esta MetalThursday como ouvida.'
+                    : 'Ninguém marcou esta secção como ouvida.',
             ];
         }
 
