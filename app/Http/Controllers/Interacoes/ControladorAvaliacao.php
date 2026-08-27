@@ -216,6 +216,93 @@ final class ControladorAvaliacao extends Controller
     }
 
     /**
+     * Elimina a avaliação do utilizador autenticado.
+     *
+     * A entidade avaliada é bloqueada durante a transação para serializar a
+     * remoção com eventuais criações ou atualizações concorrentes.
+     *
+     * A operação é idempotente: quando o utilizador já não possui avaliação,
+     * é devolvido o estado atual sem provocar erro.
+     *
+     * A remoção de uma avaliação não gera uma nova notificação de interação.
+     *
+     * @param  string  $tipoAvaliavel  Tipo da entidade avaliada.
+     * @param  int  $identificadorAvaliavel  Identificador da entidade.
+     * @return JsonResponse Estado atualizado das avaliações.
+     *
+     * @throws AuthenticationException Quando não existe autenticação válida.
+     * @throws NotFoundHttpException Quando o tipo ou o identificador não são
+     *                               válidos.
+     *
+     * @since 2.0.0
+     */
+    public function eliminar(
+        string $tipoAvaliavel,
+        int $identificadorAvaliavel,
+    ): JsonResponse {
+        $utilizador =
+            $this->obterUtilizadorAutenticado();
+
+        $identificadorUtilizador =
+            (int) $utilizador->getKey();
+
+        $avaliavel =
+            $this->resolverAvaliavel(
+                $tipoAvaliavel,
+                $identificadorAvaliavel,
+            );
+
+        $avaliavelAtualizado =
+            DB::transaction(
+                function () use (
+                    $avaliavel,
+                    $identificadorUtilizador,
+                ): MetalThursday|SeccaoMetalThursday {
+                    $avaliavelBloqueado =
+                        $this->bloquearAvaliavel(
+                            $avaliavel,
+                        );
+
+                    $avaliacao =
+                        $avaliavelBloqueado
+                            ->avaliacoes()
+                            ->where(
+                                'utilizador_id',
+                                $identificadorUtilizador,
+                            )
+                            ->first();
+
+                    if ($avaliacao instanceof Avaliacao) {
+                        $avaliacao->deleteOrFail();
+                    }
+
+                    return $avaliavelBloqueado;
+                },
+                self::TENTATIVAS_TRANSACAO,
+            );
+
+        $dadosIndicador =
+            $this->obterDadosIndicador(
+                $avaliavelAtualizado,
+            );
+
+        return response()->json([
+            'mensagem' => 'Avaliação limpa com sucesso.',
+
+            'media_avaliacoes' => round(
+                $dadosIndicador['media_avaliacoes'],
+                1,
+            ),
+
+            'numero_avaliacoes' => $dadosIndicador['numero_avaliacoes'],
+
+            'pontuacao_utilizador' => 0.0,
+
+            'conteudo_indicador_html' => $dadosIndicador['conteudo_html'],
+        ]);
+    }
+
+    /**
      * Resolve a entidade que recebe a avaliação.
      *
      * Apenas os tipos definidos na enumeração das entidades de interação podem

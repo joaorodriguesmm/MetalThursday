@@ -543,6 +543,24 @@ Route::middleware([
                 'avaliacoes.guardar',
             );
 
+        Route::delete(
+            'avaliacoes/{tipoAvaliavel}/{identificadorAvaliavel}',
+            [
+                ControladorAvaliacao::class,
+                'eliminar',
+            ],
+        )
+            ->whereIn(
+                'tipoAvaliavel',
+                TipoEntidadeInteracao::obterSlugs(),
+            )
+            ->whereNumber(
+                'identificadorAvaliavel',
+            )
+            ->name(
+                'avaliacoes.eliminar',
+            );
+
         /*
         |--------------------------------------------------------------------------
         | Audições

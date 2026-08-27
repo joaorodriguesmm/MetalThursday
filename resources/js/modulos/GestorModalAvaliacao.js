@@ -61,6 +61,10 @@ class GestorModalAvaliacao {
             'button[type="submit"]',
         ) ?? null;
 
+        this.botaoLimparAvaliacao = this.modal?.querySelector(
+            '[data-limpar-avaliacao]',
+        ) ?? null;
+
         this.estrelas = this.obterEstrelas();
 
         this.pontuacaoMaxima =
@@ -199,6 +203,13 @@ class GestorModalAvaliacao {
             },
         );
 
+        this.botaoLimparAvaliacao.addEventListener(
+            'click',
+            () => {
+                void this.limparAvaliacao();
+            },
+        );
+
         this.selecionarPontuacao(0);
     }
 
@@ -219,6 +230,7 @@ class GestorModalAvaliacao {
             && this.elementoErro instanceof HTMLElement
             && this.elementoNomeAvaliavel instanceof HTMLElement
             && this.botaoSubmissao instanceof HTMLButtonElement
+            && this.botaoLimparAvaliacao instanceof HTMLButtonElement
             && this.estrelas.length > 0
             && this.pontuacaoMaxima > 0;
     }
@@ -319,6 +331,10 @@ class GestorModalAvaliacao {
                 limparErro: true,
             },
         );
+
+        this.atualizarDisponibilidadeLimpeza(
+            configuracao.pontuacaoUtilizador,
+        );
     }
 
     /**
@@ -348,6 +364,8 @@ class GestorModalAvaliacao {
             'elemento selecionado';
 
         this.selecionarPontuacao(0);
+
+        this.atualizarDisponibilidadeLimpeza(0);
     }
 
     /**
@@ -859,6 +877,25 @@ class GestorModalAvaliacao {
     }
 
     /**
+     * Mostra ou oculta a ação de limpeza consoante exista uma avaliação.
+     *
+     * @param {unknown} pontuacao Pontuação atual do utilizador.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    atualizarDisponibilidadeLimpeza(pontuacao) {
+        const pontuacaoNormalizada =
+            this.normalizarPontuacao(
+                pontuacao,
+            );
+
+        this.botaoLimparAvaliacao.hidden =
+            pontuacaoNormalizada <= 0;
+    }
+
+    /**
      * Atualiza a mensagem que descreve a pontuação selecionada.
      *
      * @param {number} pontuacao Pontuação selecionada.
@@ -1197,7 +1234,10 @@ class GestorModalAvaliacao {
             this.enderecoSubmissao;
 
         const estadoSubmissao =
-            this.iniciarEstadoSubmissao();
+            this.iniciarEstadoOperacao(
+                this.botaoSubmissao,
+                'A guardar...',
+            );
 
         this.emSubmissao = true;
 
@@ -1230,7 +1270,7 @@ class GestorModalAvaliacao {
         } catch (erro) {
             this.tratarErroSubmissao(erro);
         } finally {
-            this.restaurarEstadoSubmissao(
+            this.restaurarEstadoOperacao(
                 estadoSubmissao,
             );
 
@@ -1251,17 +1291,161 @@ class GestorModalAvaliacao {
     }
 
     /**
-     * Aplica o estado visual de submissão e guarda os valores anteriores.
+     * Elimina a avaliação atual do utilizador.
+     *
+     * @returns {Promise<void>}
+     *
+     * @since 2.0.0
+     */
+    async limparAvaliacao() {
+        if (
+            this.emSubmissao
+            || !(this.botaoAcionador
+                instanceof HTMLElement)
+            || this.enderecoSubmissao === null
+        ) {
+            return;
+        }
+
+        const pontuacaoAtual =
+            this.normalizarPontuacao(
+                this.botaoAcionador
+                    .dataset
+                    .pontuacaoUtilizador,
+            );
+
+        if (pontuacaoAtual <= 0) {
+            this.atualizarDisponibilidadeLimpeza(
+                0,
+            );
+
+            return;
+        }
+
+        const confirmado =
+            await GestorAlertas.confirmar({
+                titulo:
+                    'Limpar avaliação?',
+
+                mensagem:
+                    'A tua avaliação será removida. Podes voltar a avaliar mais tarde.',
+
+                textoConfirmar:
+                    'Limpar avaliação',
+
+                textoCancelar:
+                    'Cancelar',
+            });
+
+        if (!confirmado) {
+            return;
+        }
+
+        const botaoAcionador =
+            this.botaoAcionador;
+
+        const endereco =
+            this.enderecoSubmissao;
+
+        const estadoOperacao =
+            this.iniciarEstadoOperacao(
+                this.botaoLimparAvaliacao,
+                'A limpar...',
+            );
+
+        this.emSubmissao = true;
+
+        let dadosResposta = null;
+
+        try {
+            const resposta =
+                await axios.delete(
+                    endereco,
+                );
+
+            if (
+                Number(
+                    resposta
+                        .data
+                        ?.pontuacao_utilizador,
+                ) !== 0
+                || !this.atualizarResultado(
+                    botaoAcionador,
+                    resposta.data,
+                )
+            ) {
+                throw new Error(
+                    'A resposta da limpeza da avaliação é inválida.',
+                );
+            }
+
+            dadosResposta =
+                resposta.data;
+        } catch (erro) {
+            const mensagemResposta =
+                axios.isAxiosError(erro)
+                && typeof erro.response
+                    ?.data
+                    ?.mensagem === 'string'
+                    ? erro.response
+                        .data
+                        .mensagem
+                        .trim()
+                    : '';
+
+            await GestorAlertas.mostrarErro(
+                mensagemResposta
+                || 'Não foi possível limpar a avaliação.',
+                'Erro ao limpar avaliação',
+            );
+        } finally {
+            this.restaurarEstadoOperacao(
+                estadoOperacao,
+            );
+
+            this.emSubmissao = false;
+        }
+
+        if (dadosResposta === null) {
+            return;
+        }
+
+        Modal
+            .getOrCreateInstance(
+                this.modal,
+            )
+            .hide();
+
+        const mensagemSucesso =
+            typeof dadosResposta.mensagem === 'string'
+                ? dadosResposta.mensagem.trim()
+                : '';
+
+        void GestorAlertas.mostrarSucesso(
+            mensagemSucesso
+            || 'Avaliação limpa com sucesso.',
+        );
+    }
+
+    /**
+     * Aplica o estado visual de uma operação e guarda os valores anteriores.
+     *
+     * @param {HTMLButtonElement} botaoOperacao Botão associado à operação.
+     * @param {string} textoProgresso Texto apresentado durante a operação.
      *
      * @returns {{
      *     ariaBusy: string|null,
-     *     conteudoBotaoSubmissao: string,
+     *     botaoOperacao: HTMLButtonElement,
+     *     conteudoBotaoOperacao: string,
      *     estadosBotoes: Map<HTMLButtonElement, boolean>
      * }} Estado anterior da interface.
      *
      * @since 2.0.0
      */
-    iniciarEstadoSubmissao() {
+    iniciarEstadoOperacao(
+        botaoOperacao,
+        textoProgresso,
+    ) {
         const estadosBotoes = new Map();
 
         this.modal.querySelectorAll('button')
@@ -1287,8 +1471,10 @@ class GestorModalAvaliacao {
                     'aria-busy',
                 ),
 
-            conteudoBotaoSubmissao:
-                this.botaoSubmissao.innerHTML,
+            botaoOperacao,
+
+            conteudoBotaoOperacao:
+                botaoOperacao.innerHTML,
 
             estadosBotoes,
         };
@@ -1298,21 +1484,22 @@ class GestorModalAvaliacao {
             'true',
         );
 
-        this.botaoSubmissao.innerHTML = [
+        botaoOperacao.innerHTML = [
             '<span class="spinner-border spinner-border-sm"',
             'role="status" aria-hidden="true"></span>',
-            '<span>A guardar...</span>',
+            `<span>${textoProgresso}</span>`,
         ].join(' ');
 
         return estado;
     }
 
     /**
-     * Repõe a interface depois de uma tentativa de submissão.
+     * Repõe a interface depois de uma operação.
      *
      * @param {{
      *     ariaBusy: string|null,
-     *     conteudoBotaoSubmissao: string,
+     *     botaoOperacao: HTMLButtonElement,
+     *     conteudoBotaoOperacao: string,
      *     estadosBotoes: Map<HTMLButtonElement, boolean>
      * }} estado Estado anterior.
      *
@@ -1320,15 +1507,15 @@ class GestorModalAvaliacao {
      *
      * @since 2.0.0
      */
-    restaurarEstadoSubmissao(estado) {
+    restaurarEstadoOperacao(estado) {
         estado.estadosBotoes.forEach(
             (desativado, botao) => {
                 botao.disabled = desativado;
             },
         );
 
-        this.botaoSubmissao.innerHTML =
-            estado.conteudoBotaoSubmissao;
+        estado.botaoOperacao.innerHTML =
+            estado.conteudoBotaoOperacao;
 
         if (estado.ariaBusy === null) {
             this.formulario.removeAttribute(
@@ -1479,7 +1666,7 @@ class GestorModalAvaliacao {
             !Number.isFinite(
                 pontuacaoUtilizador,
             )
-            || pontuacaoUtilizador <= 0
+            || pontuacaoUtilizador < 0
             || pontuacaoUtilizador
                 > this.pontuacaoMaxima
             || !Number.isFinite(
@@ -1496,6 +1683,20 @@ class GestorModalAvaliacao {
             return false;
         }
 
+        const textoSemAvaliacao =
+            botaoAcionador
+                .dataset
+                .textoSemAvaliacao
+                ?.trim()
+            ?? '';
+
+        if (
+            pontuacaoUtilizador === 0
+            && textoSemAvaliacao === ''
+        ) {
+            return false;
+        }
+
         const textoBotao =
             botaoAcionador.querySelector(
                 '[data-texto-avaliacao]',
@@ -1503,17 +1704,23 @@ class GestorModalAvaliacao {
 
         if (textoBotao instanceof HTMLElement) {
             textoBotao.textContent =
-                `A tua avaliação: ${
-                    this.formatarPontuacao(
-                        pontuacaoUtilizador,
-                    )
-                }`;
+                pontuacaoUtilizador > 0
+                    ? `A tua avaliação: ${
+                        this.formatarPontuacao(
+                            pontuacaoUtilizador,
+                        )
+                    }`
+                    : textoSemAvaliacao;
         }
 
         botaoAcionador
             .dataset
             .pontuacaoUtilizador =
                 String(pontuacaoUtilizador);
+
+        this.atualizarDisponibilidadeLimpeza(
+            pontuacaoUtilizador,
+        );
 
         const contentorInteracoes =
             botaoAcionador.closest(
@@ -1558,6 +1765,15 @@ class GestorModalAvaliacao {
         quantidade,
         conteudoIndicador,
     ) {
+        apresentacao.setAttribute(
+            'aria-label',
+            `Consultar detalhes das avaliações. Média: ${
+                this.formatarPontuacao(
+                    media,
+                )
+            }. Total: ${quantidade}.`,
+        );
+
         const elementoMedia =
             apresentacao.querySelector(
                 '.media-avaliacoes',
@@ -1782,6 +1998,8 @@ class GestorModalAvaliacao {
                 limparErro: true,
             },
         );
+
+        this.atualizarDisponibilidadeLimpeza(0);
     }
 }
 

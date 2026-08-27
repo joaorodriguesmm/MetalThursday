@@ -104,6 +104,20 @@
 
                 <div class="modal-footer border-secondary">
                     <button
+                        class="btn btn-danger me-auto"
+                        type="button"
+                        data-limpar-avaliacao
+                        hidden
+                    >
+                        <i
+                            class="bi bi-trash"
+                            aria-hidden="true"
+                        ></i>
+
+                        Limpar avaliação
+                    </button>
+
+                    <button
                         class="btn btn-secondary"
                         type="button"
                         data-bs-dismiss="modal"

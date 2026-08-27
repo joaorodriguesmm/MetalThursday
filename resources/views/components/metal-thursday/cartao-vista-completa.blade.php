@@ -199,6 +199,7 @@
                                 data-pontuacao-utilizador="{{
                                     $seccaoPreparada['interacoes']['pontuacaoUtilizador']
                                 }}"
+                                data-texto-sem-avaliacao="Avaliar"
                                 data-endereco-avaliacao="{{
                                     route(
                                         'avaliacoes.guardar',
@@ -385,6 +386,7 @@
                     data-pontuacao-utilizador="{{
                         $interacoesMetalThursday['pontuacaoUtilizador']
                     }}"
+                    data-texto-sem-avaliacao="Avaliar MetalThursday"
                     data-endereco-avaliacao="{{
                         route(
                             'avaliacoes.guardar',

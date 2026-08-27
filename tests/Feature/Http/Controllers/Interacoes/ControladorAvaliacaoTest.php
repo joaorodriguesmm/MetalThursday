@@ -297,4 +297,256 @@ final class ControladorAvaliacaoTest extends TestCase
 
         Notification::assertNothingSent();
     }
+
+    /**
+     * Confirma que limpar uma avaliação preserva as avaliações dos restantes
+     * utilizadores e recalcula o indicador.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function limpa_avaliacao_existente_de_uma_seccao(): void
+    {
+        Notification::fake();
+
+        $utilizador =
+            Utilizador::factory()
+                ->create([
+                    'nome' => 'Avaliador',
+                ]);
+
+        $outroUtilizador =
+            Utilizador::factory()
+                ->create([
+                    'nome' => 'Outro avaliador',
+                ]);
+
+        $seccao =
+            SeccaoMetalThursday::factory()
+                ->create();
+
+        $seccao
+            ->avaliacoes()
+            ->createMany([
+                [
+                    'utilizador_id' => $utilizador->getKey(),
+
+                    'pontuacao' => 8.5,
+                ],
+                [
+                    'utilizador_id' => $outroUtilizador->getKey(),
+
+                    'pontuacao' => 6.5,
+                ],
+            ]);
+
+        $this
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
+            ->deleteJson(
+                route(
+                    'avaliacoes.eliminar',
+                    [
+                        'tipoAvaliavel' => TipoEntidadeInteracao::SeccaoMetalThursday->value,
+
+                        'identificadorAvaliavel' => $seccao->getKey(),
+                    ],
+                ),
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'mensagem',
+                'Avaliação limpa com sucesso.',
+            )
+            ->assertJsonPath(
+                'media_avaliacoes',
+                6.5,
+            )
+            ->assertJsonPath(
+                'numero_avaliacoes',
+                1,
+            )
+            ->assertJsonPath(
+                'pontuacao_utilizador',
+                0,
+            )
+            ->assertJsonPath(
+                'conteudo_indicador_html',
+                'Outro avaliador: 6,5',
+            );
+
+        $this->assertDatabaseMissing(
+            'avaliacoes',
+            [
+                'utilizador_id' => $utilizador->getKey(),
+
+                'tipo_avaliavel' => $seccao->getMorphClass(),
+
+                'avaliavel_id' => $seccao->getKey(),
+            ],
+        );
+
+        $this->assertDatabaseHas(
+            'avaliacoes',
+            [
+                'utilizador_id' => $outroUtilizador->getKey(),
+
+                'tipo_avaliavel' => $seccao->getMorphClass(),
+
+                'avaliavel_id' => $seccao->getKey(),
+
+                'pontuacao' => 6.5,
+            ],
+        );
+
+        Notification::assertNothingSent();
+    }
+
+    /**
+     * Confirma que limpar a última avaliação devolve o estado vazio.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function limpa_ultima_avaliacao_de_uma_metal_thursday(): void
+    {
+        Notification::fake();
+
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $metalThursday =
+            MetalThursday::factory()
+                ->create();
+
+        $metalThursday
+            ->avaliacoes()
+            ->create([
+                'utilizador_id' => $utilizador->getKey(),
+
+                'pontuacao' => 8.5,
+            ]);
+
+        $this
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
+            ->deleteJson(
+                route(
+                    'avaliacoes.eliminar',
+                    [
+                        'tipoAvaliavel' => TipoEntidadeInteracao::MetalThursday->value,
+
+                        'identificadorAvaliavel' => $metalThursday->getKey(),
+                    ],
+                ),
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'mensagem',
+                'Avaliação limpa com sucesso.',
+            )
+            ->assertJsonPath(
+                'media_avaliacoes',
+                0,
+            )
+            ->assertJsonPath(
+                'numero_avaliacoes',
+                0,
+            )
+            ->assertJsonPath(
+                'pontuacao_utilizador',
+                0,
+            )
+            ->assertJsonPath(
+                'conteudo_indicador_html',
+                'Ainda sem avaliações.',
+            );
+
+        $this->assertDatabaseCount(
+            'avaliacoes',
+            0,
+        );
+
+        Notification::assertNothingSent();
+    }
+
+    /**
+     * Confirma que limpar uma avaliação inexistente é uma operação idempotente.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function limpar_avaliacao_inexistente_e_idempotente(): void
+    {
+        Notification::fake();
+
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $outroUtilizador =
+            Utilizador::factory()
+                ->create([
+                    'nome' => 'Outro avaliador',
+                ]);
+
+        $metalThursday =
+            MetalThursday::factory()
+                ->create();
+
+        $metalThursday
+            ->avaliacoes()
+            ->create([
+                'utilizador_id' => $outroUtilizador->getKey(),
+
+                'pontuacao' => 7.0,
+            ]);
+
+        for ($tentativa = 0; $tentativa < 2; $tentativa++) {
+            $this
+                ->actingAs(
+                    $utilizador,
+                    'sessao',
+                )
+                ->deleteJson(
+                    route(
+                        'avaliacoes.eliminar',
+                        [
+                            'tipoAvaliavel' => TipoEntidadeInteracao::MetalThursday->value,
+
+                            'identificadorAvaliavel' => $metalThursday->getKey(),
+                        ],
+                    ),
+                )
+                ->assertOk()
+                ->assertJsonPath(
+                    'media_avaliacoes',
+                    7,
+                )
+                ->assertJsonPath(
+                    'numero_avaliacoes',
+                    1,
+                )
+                ->assertJsonPath(
+                    'pontuacao_utilizador',
+                    0,
+                )
+                ->assertJsonPath(
+                    'conteudo_indicador_html',
+                    'Outro avaliador: 7,0',
+                );
+        }
+
+        $this->assertDatabaseCount(
+            'avaliacoes',
+            1,
+        );
+
+        Notification::assertNothingSent();
+    }
 }
