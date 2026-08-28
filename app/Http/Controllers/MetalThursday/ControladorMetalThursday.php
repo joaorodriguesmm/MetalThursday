@@ -1539,6 +1539,8 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
      *             chaveDados: string|null
      *         }>
      *     }>,
+     *     nomeParametroPesquisa: string,
+     *     pesquisaAtual: string,
      *     opcoesPorPagina: array<int, int>,
      *     porPagina: int,
      *     nomeParametroVista: string,
@@ -1569,6 +1571,16 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
         string $tipoVista,
         int $porPagina,
     ): array {
+        $pesquisaRecebida = $pedido->query(
+            FiltrosMetalThursday::PARAMETRO_PESQUISA,
+        );
+
+        $pesquisaAtual = is_string(
+            $pesquisaRecebida,
+        )
+            ? $pesquisaRecebida
+            : '';
+
         $ordenacao =
             OrdenacaoMetalThursday::tentarCriar(
                 $pedido->query(
@@ -1592,6 +1604,10 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
 
         return [
             'gruposFiltrosDisponiveis' => $this->obterGruposFiltrosDisponiveis(),
+
+            'nomeParametroPesquisa' => FiltrosMetalThursday::PARAMETRO_PESQUISA,
+
+            'pesquisaAtual' => $pesquisaAtual,
 
             'opcoesPorPagina' => self::OPCOES_POR_PAGINA,
 

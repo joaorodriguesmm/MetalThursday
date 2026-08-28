@@ -30,6 +30,26 @@ use Throwable;
 final class FiltrosMetalThursday
 {
     /**
+     * Nome público do parâmetro utilizado pela pesquisa textual.
+     *
+     * @var string
+     *
+     * @since 2.0.0
+     */
+    public const PARAMETRO_PESQUISA =
+        'pesquisa';
+
+    /**
+     * Carácter utilizado para escapar os metacaracteres do operador LIKE.
+     *
+     * @var string
+     *
+     * @since 2.0.0
+     */
+    private const CARACTERE_ESCAPE_PESQUISA =
+        '!';
+
+    /**
      * Mapa dos parâmetros de filtro para os respetivos métodos.
      *
      * A lista impede que parâmetros arbitrários do pedido possam invocar
@@ -134,10 +154,11 @@ final class FiltrosMetalThursday
     }
 
     /**
-     * Aplica os filtros e a ordenação à consulta.
+     * Aplica a pesquisa textual, os filtros e a ordenação à consulta.
      *
      * @param  Builder<Model>  $construtor  Construtor da consulta.
-     * @return Builder<Model> Consulta com filtros e ordenação aplicados.
+     * @return Builder<Model> Consulta com pesquisa, filtros e ordenação
+     *                        aplicados.
      *
      * @since 1.0.0
      */
@@ -151,10 +172,298 @@ final class FiltrosMetalThursday
             ->getModel()::class;
 
         $this->garantirModeloSuportado();
+        $this->aplicarPesquisaTextual();
         $this->aplicarFiltros();
         $this->aplicarOrdenacao();
 
         return $this->construtor;
+    }
+
+    /**
+     * Aplica a pesquisa textual à consulta atual.
+     *
+     * Na vista completa, uma MetalThursday corresponde quando o termo existe
+     * no respetivo nome ou numa das suas secções. Na vista simplificada, a
+     * correspondência é feita diretamente sobre a secção e sobre o nome da
+     * MetalThursday relacionada.
+     *
+     * @since 2.0.0
+     */
+    private function aplicarPesquisaTextual(): void
+    {
+        $pesquisa = $this->normalizarPesquisa(
+            $this->pedido->query(
+                self::PARAMETRO_PESQUISA,
+            ),
+        );
+
+        if ($pesquisa === null) {
+            return;
+        }
+
+        $padrao = $this->criarPadraoPesquisa(
+            $pesquisa,
+        );
+
+        if ($this->eConsultaDeMetalThursdays()) {
+            $this->construtor->where(
+                function (
+                    Builder $construtor,
+                ) use (
+                    $padrao,
+                ): void {
+                    $this->adicionarCorrespondenciaPesquisa(
+                        $construtor,
+                        $construtor
+                            ->getModel()
+                            ->qualifyColumn(
+                                'nome',
+                            ),
+                        $padrao,
+                    );
+
+                    $construtor->orWhereHas(
+                        'seccoes',
+                        function (
+                            Builder $construtorSeccoes,
+                        ) use (
+                            $padrao,
+                        ): void {
+                            $this->aplicarPesquisaNaSeccao(
+                                $construtorSeccoes,
+                                $padrao,
+                            );
+                        },
+                    );
+                },
+            );
+
+            return;
+        }
+
+        $this->construtor->where(
+            function (
+                Builder $construtor,
+            ) use (
+                $padrao,
+            ): void {
+                $this->aplicarPesquisaNaSeccao(
+                    $construtor,
+                    $padrao,
+                );
+
+                $construtor->orWhereHas(
+                    'metalThursday',
+                    function (
+                        Builder $construtorMetalThursday,
+                    ) use (
+                        $padrao,
+                    ): void {
+                        $this->adicionarCorrespondenciaPesquisa(
+                            $construtorMetalThursday,
+                            $construtorMetalThursday
+                                ->getModel()
+                                ->qualifyColumn(
+                                    'nome',
+                                ),
+                            $padrao,
+                        );
+                    },
+                );
+            },
+        );
+    }
+
+    /**
+     * Aplica as correspondências textuais disponíveis numa secção.
+     *
+     * O agrupamento explícito impede que os operadores OR interfiram com as
+     * restrições introduzidas pelas relações Eloquent ou pelos global scopes.
+     *
+     * @param  Builder<Model>  $construtor  Consulta das secções.
+     * @param  string  $padrao  Padrão LIKE preparado.
+     *
+     * @since 2.0.0
+     */
+    private function aplicarPesquisaNaSeccao(
+        Builder $construtor,
+        string $padrao,
+    ): void {
+        $construtor->where(
+            function (
+                Builder $construtorPesquisa,
+            ) use (
+                $padrao,
+            ): void {
+                $modelo =
+                    $construtorPesquisa->getModel();
+
+                $this->adicionarCorrespondenciaPesquisa(
+                    $construtorPesquisa,
+                    $modelo->qualifyColumn(
+                        'titulo',
+                    ),
+                    $padrao,
+                );
+
+                $this->adicionarCorrespondenciaPesquisa(
+                    $construtorPesquisa,
+                    $modelo->qualifyColumn(
+                        'descricao',
+                    ),
+                    $padrao,
+                    true,
+                );
+
+                $construtorPesquisa->orWhereHas(
+                    'banda',
+                    function (
+                        Builder $construtorBanda,
+                    ) use (
+                        $padrao,
+                    ): void {
+                        $this->adicionarCorrespondenciaPesquisa(
+                            $construtorBanda,
+                            $construtorBanda
+                                ->getModel()
+                                ->qualifyColumn(
+                                    'nome',
+                                ),
+                            $padrao,
+                        );
+                    },
+                );
+            },
+        );
+    }
+
+    /**
+     * Adiciona uma correspondência LIKE utilizando parâmetros vinculados.
+     *
+     * O nome da coluna é sempre obtido internamente através dos modelos
+     * suportados. O valor pesquisado nunca é interpolado diretamente no SQL.
+     *
+     * @param  Builder<Model>  $construtor  Consulta modificada.
+     * @param  string  $coluna  Coluna qualificada.
+     * @param  string  $padrao  Padrão LIKE preparado.
+     * @param  bool  $usarOu  Indica se deve ser utilizado OR.
+     *
+     * @since 2.0.0
+     */
+    private function adicionarCorrespondenciaPesquisa(
+        Builder $construtor,
+        string $coluna,
+        string $padrao,
+        bool $usarOu = false,
+    ): void {
+        $expressao = sprintf(
+            "%s LIKE ? ESCAPE '%s'",
+            $coluna,
+            self::CARACTERE_ESCAPE_PESQUISA,
+        );
+
+        if ($usarOu) {
+            $construtor->orWhereRaw(
+                $expressao,
+                [
+                    $padrao,
+                ],
+            );
+
+            return;
+        }
+
+        $construtor->whereRaw(
+            $expressao,
+            [
+                $padrao,
+            ],
+        );
+    }
+
+    /**
+     * Normaliza o termo recebido para pesquisa.
+     *
+     * Valores estruturados, texto UTF-8 inválido e pesquisas vazias são
+     * ignorados. Espaços consecutivos são reduzidos a um único espaço.
+     *
+     * @param  mixed  $valor  Valor recebido no pedido.
+     * @return string|null Pesquisa normalizada ou nulo.
+     *
+     * @since 2.0.0
+     */
+    private function normalizarPesquisa(
+        mixed $valor,
+    ): ?string {
+        if (
+            ! is_string($valor)
+            || preg_match(
+                '//u',
+                $valor,
+            ) !== 1
+        ) {
+            return null;
+        }
+
+        $valor = trim(
+            $valor,
+        );
+
+        if ($valor === '') {
+            return null;
+        }
+
+        $valorNormalizado = preg_replace(
+            '/\s+/u',
+            ' ',
+            $valor,
+        );
+
+        if (! is_string($valorNormalizado)) {
+            return null;
+        }
+
+        $valorNormalizado = trim(
+            $valorNormalizado,
+        );
+
+        return $valorNormalizado !== ''
+            ? $valorNormalizado
+            : null;
+    }
+
+    /**
+     * Cria o padrão utilizado pelo operador LIKE.
+     *
+     * O próprio carácter de escape é tratado antes de `%` e `_`, impedindo
+     * que valores fornecidos pelo utilizador alterem a semântica da pesquisa.
+     *
+     * @param  string  $pesquisa  Pesquisa normalizada.
+     * @return string Padrão para correspondência parcial.
+     *
+     * @since 2.0.0
+     */
+    private function criarPadraoPesquisa(
+        string $pesquisa,
+    ): string {
+        $caractereEscape =
+            self::CARACTERE_ESCAPE_PESQUISA;
+
+        $pesquisaEscapada = str_replace(
+            [
+                $caractereEscape,
+                '%',
+                '_',
+            ],
+            [
+                $caractereEscape.$caractereEscape,
+                $caractereEscape.'%',
+                $caractereEscape.'_',
+            ],
+            $pesquisa,
+        );
+
+        return '%'.$pesquisaEscapada.'%';
     }
 
     /**

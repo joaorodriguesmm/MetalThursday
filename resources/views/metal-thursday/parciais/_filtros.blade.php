@@ -1,6 +1,6 @@
 {{--
-    Apresenta os controlos de filtragem, ordenação, paginação e alternância
-    da vista da listagem de MetalThursdays.
+    Apresenta os controlos de pesquisa, filtragem, ordenação, paginação e
+    alternância da vista da listagem de MetalThursdays.
 
     Os grupos de filtros e os parâmetros dos controlos são preparados pelo
     App\Http\Controllers\MetalThursday\ControladorMetalThursday.
@@ -17,7 +17,7 @@
             id="titulo-filtros-ordenacao"
             class="h5 card-title mb-3 text-white"
         >
-            Filtrar e ordenar
+            Pesquisar, filtrar e ordenar
         </h2>
 
         <form
@@ -31,6 +31,26 @@
                 name="{{ $nomeParametroVista }}"
                 value="{{ $vistaAtual }}"
             >
+
+            <div class="row g-3 mb-3">
+                <div class="col-12">
+                    <label
+                        class="form-label small text-muted"
+                        for="campo-pesquisa-arquivo"
+                    >
+                        Pesquisar no arquivo
+                    </label>
+
+                    <input
+                        id="campo-pesquisa-arquivo"
+                        class="form-control bg-secondary text-white border-secondary"
+                        type="search"
+                        name="{{ $nomeParametroPesquisa }}"
+                        value="{{ $pesquisaAtual }}"
+                        placeholder="Nome da MetalThursday, título, descrição ou banda"
+                    >
+                </div>
+            </div>
 
             <div class="row g-3 align-items-end">
                 <div class="col-12 col-md-3">
@@ -167,14 +187,14 @@
                         class="btn btn-primary"
                         type="submit"
                     >
-                        Aplicar filtros
+                        Aplicar
                     </button>
 
                     <a
                         class="btn btn-secondary"
                         href="{{ $ligacaoLimparFiltros }}"
                     >
-                        Limpar filtros
+                        Limpar tudo
                     </a>
                 </div>
             </div>
