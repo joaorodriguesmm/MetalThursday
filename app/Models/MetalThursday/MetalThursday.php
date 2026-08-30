@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use LogicException;
 
 /**
  * Representa uma MetalThursday.
@@ -39,6 +40,7 @@ use InvalidArgumentException;
  * @property int $id
  * @property string|null $nome
  * @property CarbonImmutable $data
+ * @property CarbonImmutable|null $publicacao_notificada_em
  * @property int $edicao_id
  * @property int|null $autor_id
  * @property int|null $proximo_nomeado_id
@@ -89,6 +91,16 @@ class MetalThursday extends Model
         'numero_semana_na_edicao';
 
     /**
+     * Coluna que regista quando a publicação foi notificada.
+     *
+     * Um valor nulo indica que a publicação ainda necessita de processamento.
+     *
+     * @since 2.0.0
+     */
+    public const COLUNA_PUBLICACAO_NOTIFICADA_EM =
+        'publicacao_notificada_em';
+
+    /**
      * Alias utilizado pela subconsulta que calcula a posição na edição.
      *
      * @since 2.0.0
@@ -137,6 +149,8 @@ class MetalThursday extends Model
     {
         return [
             'data' => 'immutable_date',
+
+            self::COLUNA_PUBLICACAO_NOTIFICADA_EM => 'immutable_datetime',
 
             self::COLUNA_NUMERO_SEMANA_NA_EDICAO => 'integer',
 
@@ -334,6 +348,177 @@ class MetalThursday extends Model
             ->orderBy(
                 'id',
             );
+    }
+
+    /**
+     * Limita a consulta às MetalThursdays já publicadas.
+     *
+     * A publicação é derivada exclusivamente da data da MetalThursday. No
+     * próprio dia, a MetalThursday considera-se publicada desde as 00:00 no
+     * fuso horário configurado pela aplicação.
+     *
+     * @param  Builder<MetalThursday>  $construtor  Consulta das
+     *                                              MetalThursdays.
+     * @param  CarbonInterface|null  $referencia  Instante utilizado como
+     *                                            referência opcional.
+     * @return Builder<MetalThursday> Consulta limitada às publicadas.
+     *
+     * @since 2.0.0
+     */
+    public function scopePublicadas(
+        Builder $construtor,
+        ?CarbonInterface $referencia = null,
+    ): Builder {
+        return $construtor->where(
+            $construtor
+                ->getModel()
+                ->qualifyColumn(
+                    'data',
+                ),
+            '<=',
+            self::obterDataReferenciaPublicacao(
+                $referencia,
+            ),
+        );
+    }
+
+    /**
+     * Limita a consulta às MetalThursdays preparadas mas ainda não publicadas.
+     *
+     * @param  Builder<MetalThursday>  $construtor  Consulta das
+     *                                              MetalThursdays.
+     * @param  CarbonInterface|null  $referencia  Instante utilizado como
+     *                                            referência opcional.
+     * @return Builder<MetalThursday> Consulta limitada às preparadas.
+     *
+     * @since 2.0.0
+     */
+    public function scopePreparadasPorPublicar(
+        Builder $construtor,
+        ?CarbonInterface $referencia = null,
+    ): Builder {
+        return $construtor->where(
+            $construtor
+                ->getModel()
+                ->qualifyColumn(
+                    'data',
+                ),
+            '>',
+            self::obterDataReferenciaPublicacao(
+                $referencia,
+            ),
+        );
+    }
+
+    /**
+     * Restringe a consulta às MetalThursdays já publicadas cuja notificação de
+     * publicação ainda não foi processada.
+     *
+     * Registos eliminados logicamente continuam excluídos pelo comportamento
+     * normal do modelo.
+     *
+     * @param  Builder<MetalThursday>  $construtor  Consulta modificada.
+     * @return Builder<MetalThursday> Consulta das publicações por notificar.
+     *
+     * @since 2.0.0
+     */
+    public function scopePublicadasPorNotificar(
+        Builder $construtor,
+    ): Builder {
+        return $construtor
+            ->publicadas()
+            ->whereNull(
+                $construtor
+                    ->getModel()
+                    ->qualifyColumn(
+                        self::COLUNA_PUBLICACAO_NOTIFICADA_EM,
+                    ),
+            );
+    }
+
+    /**
+     * Indica se esta MetalThursday já se encontra publicada.
+     *
+     * @param  CarbonInterface|null  $referencia  Instante utilizado como
+     *                                            referência opcional.
+     * @return bool Verdadeiro quando a data já chegou.
+     *
+     * @throws LogicException Quando o modelo não possui uma data válida.
+     *
+     * @since 2.0.0
+     */
+    public function estaPublicada(
+        ?CarbonInterface $referencia = null,
+    ): bool {
+        $data =
+            $this->data;
+
+        if (! $data instanceof CarbonInterface) {
+            throw new LogicException(
+                'A MetalThursday não possui uma data válida.',
+            );
+        }
+
+        return $data->format(
+            'Y-m-d',
+        ) <= self::obterDataReferenciaPublicacao(
+            $referencia,
+        );
+    }
+
+    /**
+     * Indica se esta MetalThursday está preparada para publicação futura.
+     *
+     * @param  CarbonInterface|null  $referencia  Instante utilizado como
+     *                                            referência opcional.
+     * @return bool Verdadeiro quando a data ainda não chegou.
+     *
+     * @throws LogicException Quando o modelo não possui uma data válida.
+     *
+     * @since 2.0.0
+     */
+    public function estaPreparada(
+        ?CarbonInterface $referencia = null,
+    ): bool {
+        return ! $this->estaPublicada(
+            $referencia,
+        );
+    }
+
+    /**
+     * Obtém a data local utilizada na decisão de publicação.
+     *
+     * Um instante explícito é convertido para o fuso horário da aplicação antes
+     * da comparação. Sem referência, é utilizado o instante atual nesse mesmo
+     * fuso horário.
+     *
+     * @param  CarbonInterface|null  $referencia  Instante de referência.
+     * @return string Data no formato AAAA-MM-DD.
+     *
+     * @since 2.0.0
+     */
+    private static function obterDataReferenciaPublicacao(
+        ?CarbonInterface $referencia = null,
+    ): string {
+        $fusoHorario =
+            config(
+                'app.timezone',
+            );
+
+        $instante =
+            $referencia instanceof CarbonInterface
+            ? CarbonImmutable::instance(
+                $referencia,
+            )->setTimezone(
+                $fusoHorario,
+            )
+            : CarbonImmutable::now(
+                $fusoHorario,
+            );
+
+        return $instante->format(
+            'Y-m-d',
+        );
     }
 
     /**

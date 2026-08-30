@@ -6,7 +6,10 @@ namespace Tests\Feature\Http\Controllers\Interacoes;
 
 use App\Models\Autenticacao\Utilizador;
 use App\Models\Interacoes\Comentario;
+use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
+use App\Models\MetalThursday\SeccaoMetalThursday;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -386,5 +389,174 @@ final class ControladorGostoTest extends TestCase
             ->assertStatus(
                 410,
             );
+    }
+
+    /**
+     * Confirma que não é possível alterar gostos de um comentário antes da
+     * publicação da respetiva MetalThursday.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_alterna_gosto_em_comentario_de_metal_thursday_preparada(): void
+    {
+        Notification::fake();
+
+        $autor =
+            Utilizador::factory()
+                ->create();
+
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $dataFutura =
+            CarbonImmutable::now(
+                config(
+                    'app.timezone',
+                ),
+            )->addWeek();
+
+        $edicao =
+            Edicao::factory()
+                ->comPeriodo(
+                    $dataFutura->startOfMonth(),
+                    $dataFutura->endOfMonth(),
+                )
+                ->create();
+
+        $metalThursday =
+            MetalThursday::factory()
+                ->comData(
+                    $dataFutura,
+                )
+                ->comEdicao(
+                    $edicao,
+                )
+                ->create();
+
+        $comentario =
+            $metalThursday
+                ->comentarios()
+                ->create([
+                    'utilizador_id' => $autor->getKey(),
+
+                    'conteudo' => 'Comentário futuro.',
+
+                    'comentario_pai_id' => null,
+                ]);
+
+        $this
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
+            ->postJson(
+                route(
+                    'gostos.alternar',
+                    $comentario,
+                ),
+            )
+            ->assertNotFound();
+
+        $this->assertDatabaseMissing(
+            'gostos',
+            [
+                'comentario_id' => $comentario->getKey(),
+
+                'utilizador_id' => $utilizador->getKey(),
+            ],
+        );
+
+        Notification::assertNothingSent();
+    }
+
+    /**
+     * Confirma que os utilizadores que gostaram de um comentário pertencente a
+     * uma secção futura não são expostos antes da publicação.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_lista_gostos_de_comentario_de_seccao_de_metal_thursday_preparada(): void
+    {
+        $autor =
+            Utilizador::factory()
+                ->create();
+
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $dataFutura =
+            CarbonImmutable::now(
+                config(
+                    'app.timezone',
+                ),
+            )->addWeek();
+
+        $edicao =
+            Edicao::factory()
+                ->comPeriodo(
+                    $dataFutura->startOfMonth(),
+                    $dataFutura->endOfMonth(),
+                )
+                ->create();
+
+        $metalThursday =
+            MetalThursday::factory()
+                ->comData(
+                    $dataFutura,
+                )
+                ->comEdicao(
+                    $edicao,
+                )
+                ->create();
+
+        $seccao =
+            SeccaoMetalThursday::factory()
+                ->paraMetalThursday(
+                    $metalThursday,
+                )
+                ->create();
+
+        $comentario =
+            $seccao
+                ->comentarios()
+                ->create([
+                    'utilizador_id' => $autor->getKey(),
+
+                    'conteudo' => 'Comentário futuro da secção.',
+
+                    'comentario_pai_id' => null,
+                ]);
+
+        $comentario
+            ->gostos()
+            ->create([
+                'utilizador_id' => $utilizador->getKey(),
+            ]);
+
+        $this
+            ->actingAs(
+                $autor,
+                'sessao',
+            )
+            ->getJson(
+                route(
+                    'comentarios.utilizadores-gosto',
+                    $comentario,
+                ),
+            )
+            ->assertNotFound();
+
+        $this->assertDatabaseHas(
+            'gostos',
+            [
+                'comentario_id' => $comentario->getKey(),
+
+                'utilizador_id' => $utilizador->getKey(),
+            ],
+        );
     }
 }

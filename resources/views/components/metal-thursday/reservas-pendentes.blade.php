@@ -1,41 +1,41 @@
 {{--
-    Apresenta as reservas de MetalThursday que ainda se encontram pendentes.
+    Apresenta as MetalThursdays que ainda exigem acompanhamento operacional.
 
-    As reservas são independentes dos filtros e da paginação das MetalThursdays
-    publicadas. Apenas o responsável da reserva recebe a ação para preparar a
-    respetiva publicação.
+    São distinguidos os estados Por preparar, Rascunho e Preparada. Uma
+    MetalThursday preparada apenas surge quando o utilizador autenticado possui
+    autorização para a alterar e nunca expõe aqui o respetivo conteúdo.
 
     @since 2.0.0
 --}}
 
-@if ($reservasPreparadas !== [])
+@if ($itensPorPublicar !== [])
     <section
         {{
             $attributes->class([
                 'mb-4',
             ])
         }}
-        aria-labelledby="titulo-reservas-metal-thursday-pendentes"
+        aria-labelledby="titulo-metal-thursdays-por-publicar"
     >
         <div
             class="d-flex justify-content-between align-items-center gap-3 mb-3"
         >
             <h2
-                id="titulo-reservas-metal-thursday-pendentes"
+                id="titulo-metal-thursdays-por-publicar"
                 class="h5 mb-0"
             >
                 MetalThursdays por publicar
             </h2>
 
             <span class="badge text-bg-secondary">
-                {{ count($reservasPreparadas) }}
+                {{ count($itensPorPublicar) }}
             </span>
         </div>
 
         <div class="vstack gap-3">
-            @foreach ($reservasPreparadas as $reservaPreparada)
+            @foreach ($itensPorPublicar as $itemPorPublicar)
                 <article
-                    id="reserva-metal-thursday-{{ $reservaPreparada['identificador'] }}"
+                    id="{{ $itemPorPublicar['idElemento'] }}"
                     class="card shadow-sm"
                 >
                     <header class="card-header bg-dark text-white">
@@ -44,22 +44,30 @@
                         >
                             <h3 class="h6 mb-0">
                                 MetalThursday de
-                                {{ $reservaPreparada['data'] }}
+                                {{ $itemPorPublicar['data'] }}
                             </h3>
 
-                            <span
-                                class="badge {{
-                                    $reservaPreparada['emAtraso']
-                                        ? 'text-bg-danger'
-                                        : 'text-bg-secondary'
-                                }}"
+                            <div
+                                class="d-flex flex-wrap justify-content-end gap-2"
                             >
-                                {{
-                                    $reservaPreparada['emAtraso']
-                                        ? 'Em atraso'
-                                        : 'Por publicar'
-                                }}
-                            </span>
+                                @if ($itemPorPublicar['emAtraso'])
+                                    <span class="badge text-bg-danger">
+                                        Em atraso
+                                    </span>
+                                @endif
+
+                                <span
+                                    class="badge {{
+                                        match ($itemPorPublicar['estado']) {
+                                            'Preparada' => 'text-bg-success',
+                                            'Rascunho' => 'text-bg-warning',
+                                            default => 'text-bg-secondary',
+                                        }
+                                    }}"
+                                >
+                                    {{ $itemPorPublicar['estado'] }}
+                                </span>
+                            </div>
                         </div>
                     </header>
 
@@ -69,25 +77,20 @@
                                 Responsável:
                             </strong>
 
-                            {{ $reservaPreparada['nomeResponsavel'] }}
+                            {{ $itemPorPublicar['nomeResponsavel'] }}
                         </p>
 
-                        @if ($reservaPreparada['podePreparar'])
+                        @if ($itemPorPublicar['rotaAcao'] !== null)
                             <a
                                 class="btn btn-primary mt-3"
-                                href="{{
-                                    route(
-                                        'metal-thursday.reservas.preparar',
-                                        $reservaPreparada['identificador'],
-                                    )
-                                }}"
+                                href="{{ $itemPorPublicar['rotaAcao'] }}"
                             >
                                 <i
                                     class="bi bi-pencil-square me-2"
                                     aria-hidden="true"
                                 ></i>
 
-                                Preparar MetalThursday
+                                {{ $itemPorPublicar['textoAcao'] }}
                             </a>
                         @endif
                     </div>

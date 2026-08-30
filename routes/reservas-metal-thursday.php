@@ -48,6 +48,17 @@ Route::middleware([
                             );
 
                         Route::post(
+                            '{reservaMetalThursday}/rascunho',
+                            'guardarRascunhoReserva',
+                        )
+                            ->whereNumber(
+                                'reservaMetalThursday',
+                            )
+                            ->name(
+                                'rascunho.guardar',
+                            );
+
+                        Route::post(
                             '{reservaMetalThursday}',
                             'guardarReserva',
                         )

@@ -295,6 +295,12 @@ final class ControladorBanda extends Controller
                     $tabelaSeccoes.'.banda_id',
                     $banda->getKey(),
                 )
+                ->whereHas(
+                    'metalThursday',
+                    static fn (
+                        Builder $construtor,
+                    ): Builder => $construtor->publicadas(),
+                )
                 ->with([
                     'metalThursday:id,autor_id,data,deleted_at',
                     'metalThursday.autor:id,nome',

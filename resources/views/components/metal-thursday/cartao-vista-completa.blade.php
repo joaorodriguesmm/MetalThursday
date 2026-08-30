@@ -150,187 +150,189 @@
                         </div>
                     @endif
 
-                    <div
-                        class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3 mt-3"
-                        data-contentor-interacoes
-                    >
+                    @if ($interacoesDisponiveis)
                         <div
-                            class="d-flex align-items-center flex-wrap gap-2"
-                            role="group"
-                            aria-label="Interações da secção"
+                            class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3 mt-3"
+                            data-contentor-interacoes
                         >
-                            <button
-                                class="btn btn-sm btn-primary"
-                                type="button"
-                                data-bs-toggle="collapse"
-                                data-bs-target="#{{
-                                    $seccaoPreparada['identificadorComentarios']
-                                }}"
-                                aria-controls="{{
-                                    $seccaoPreparada['identificadorComentarios']
-                                }}"
-                                aria-expanded="false"
+                            <div
+                                class="d-flex align-items-center flex-wrap gap-2"
+                                role="group"
+                                aria-label="Interações da secção"
                             >
-                                <i
-                                    class="bi bi-chat-dots"
-                                    aria-hidden="true"
-                                ></i>
+                                <button
+                                    class="btn btn-sm btn-primary"
+                                    type="button"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#{{
+                                        $seccaoPreparada['identificadorComentarios']
+                                    }}"
+                                    aria-controls="{{
+                                        $seccaoPreparada['identificadorComentarios']
+                                    }}"
+                                    aria-expanded="false"
+                                >
+                                    <i
+                                        class="bi bi-chat-dots"
+                                        aria-hidden="true"
+                                    ></i>
 
-                                Comentários
-                                (<span data-quantidade-comentarios>{{
-                                    $seccaoPreparada['interacoes']['quantidadeComentarios']
-                                }}</span>)
-                            </button>
+                                    Comentários
+                                    (<span data-quantidade-comentarios>{{
+                                        $seccaoPreparada['interacoes']['quantidadeComentarios']
+                                    }}</span>)
+                                </button>
 
-                            <button
-                                class="btn btn-sm btn-warning"
-                                type="button"
-                                data-bs-toggle="modal"
-                                data-bs-target="#modal-avaliacao"
-                                data-tipo-avaliavel="{{
-                                    $seccaoPreparada['tipoInteracao']
-                                }}"
-                                data-identificador-avaliavel="{{
-                                    $seccaoPreparada['identificador']
-                                }}"
-                                data-nome-avaliavel="{{
-                                    $seccaoPreparada['nomeAvaliavel']
-                                }}"
-                                data-pontuacao-utilizador="{{
-                                    $seccaoPreparada['interacoes']['pontuacaoUtilizador']
-                                }}"
-                                data-texto-sem-avaliacao="Avaliar"
-                                data-endereco-avaliacao="{{
-                                    route(
-                                        'avaliacoes.guardar',
-                                        [
-                                            'tipoAvaliavel' =>
-                                                $seccaoPreparada['tipoInteracao'],
+                                <button
+                                    class="btn btn-sm btn-warning"
+                                    type="button"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modal-avaliacao"
+                                    data-tipo-avaliavel="{{
+                                        $seccaoPreparada['tipoInteracao']
+                                    }}"
+                                    data-identificador-avaliavel="{{
+                                        $seccaoPreparada['identificador']
+                                    }}"
+                                    data-nome-avaliavel="{{
+                                        $seccaoPreparada['nomeAvaliavel']
+                                    }}"
+                                    data-pontuacao-utilizador="{{
+                                        $seccaoPreparada['interacoes']['pontuacaoUtilizador']
+                                    }}"
+                                    data-texto-sem-avaliacao="Avaliar"
+                                    data-endereco-avaliacao="{{
+                                        route(
+                                            'avaliacoes.guardar',
+                                            [
+                                                'tipoAvaliavel' =>
+                                                    $seccaoPreparada['tipoInteracao'],
 
-                                            'identificadorAvaliavel' =>
-                                                $seccaoPreparada['identificador'],
-                                        ],
-                                    )
-                                }}"
+                                                'identificadorAvaliavel' =>
+                                                    $seccaoPreparada['identificador'],
+                                            ],
+                                        )
+                                    }}"
+                                >
+                                    <i
+                                        class="bi bi-star-fill"
+                                        aria-hidden="true"
+                                    ></i>
+
+                                    <span data-texto-avaliacao>
+                                        {{
+                                            $seccaoPreparada['interacoes']['textoAvaliacao']
+                                        }}
+                                    </span>
+                                </button>
+
+                                <button
+                                    class="btn btn-sm btn-success"
+                                    type="button"
+                                    data-tipo-interacao="alternar-audicao"
+                                    data-tipo-audivel="{{
+                                        $seccaoPreparada['tipoInteracao']
+                                    }}"
+                                    data-endereco="{{
+                                        route(
+                                            'audicoes.alternar',
+                                            [
+                                                'tipoAudivel' =>
+                                                    $seccaoPreparada['tipoInteracao'],
+
+                                                'identificadorAudivel' =>
+                                                    $seccaoPreparada['identificador'],
+                                            ],
+                                        )
+                                    }}"
+                                >
+                                    <i
+                                        class="bi bi-headphones"
+                                        aria-hidden="true"
+                                    ></i>
+
+                                    <span data-texto-interacao>
+                                        {{
+                                            $seccaoPreparada['interacoes']['textoAudicao']
+                                        }}
+                                    </span>
+                                </button>
+                            </div>
+
+                            <div
+                                class="d-flex align-items-center gap-3 text-muted small"
+                                role="group"
+                                aria-label="Resumo das interações da secção"
                             >
-                                <i
-                                    class="bi bi-star-fill"
-                                    aria-hidden="true"
-                                ></i>
-
-                                <span data-texto-avaliacao>
-                                    {{
-                                        $seccaoPreparada['interacoes']['textoAvaliacao']
-                                    }}
-                                </span>
-                            </button>
-
-                            <button
-                                class="btn btn-sm btn-success"
-                                type="button"
-                                data-tipo-interacao="alternar-audicao"
-                                data-tipo-audivel="{{
-                                    $seccaoPreparada['tipoInteracao']
-                                }}"
-                                data-endereco="{{
-                                    route(
-                                        'audicoes.alternar',
-                                        [
-                                            'tipoAudivel' =>
-                                                $seccaoPreparada['tipoInteracao'],
-
-                                            'identificadorAudivel' =>
-                                                $seccaoPreparada['identificador'],
-                                        ],
-                                    )
-                                }}"
-                            >
-                                <i
-                                    class="bi bi-headphones"
-                                    aria-hidden="true"
-                                ></i>
-
-                                <span data-texto-interacao>
-                                    {{
-                                        $seccaoPreparada['interacoes']['textoAudicao']
-                                    }}
-                                </span>
-                            </button>
-                        </div>
-
-                        <div
-                            class="d-flex align-items-center gap-3 text-muted small"
-                            role="group"
-                            aria-label="Resumo das interações da secção"
-                        >
-                            <button
-                                class="apresentacao-audicoes border-0 bg-transparent text-muted p-0"
-                                type="button"
-                                data-bs-toggle="tooltip"
-                                data-bs-html="true"
-                                data-bs-title="{!!
-                                    $seccaoPreparada['interacoes']['descricaoAudicoes']
-                                        ->toHtml()
-                                !!}"
-                                aria-label="Consultar detalhes das audições. Total: {{
-                                    $seccaoPreparada['interacoes']['quantidadeAudicoes']
-                                }}."
-                            >
-                                <i
-                                    class="bi bi-headphones"
-                                    aria-hidden="true"
-                                ></i>
-
-                                <span class="quantidade-audicoes">
-                                    {{
+                                <button
+                                    class="apresentacao-audicoes border-0 bg-transparent text-muted p-0"
+                                    type="button"
+                                    data-bs-toggle="tooltip"
+                                    data-bs-html="true"
+                                    data-bs-title="{!!
+                                        $seccaoPreparada['interacoes']['descricaoAudicoes']
+                                            ->toHtml()
+                                    !!}"
+                                    aria-label="Consultar detalhes das audições. Total: {{
                                         $seccaoPreparada['interacoes']['quantidadeAudicoes']
-                                    }}
-                                </span>
-                            </button>
+                                    }}."
+                                >
+                                    <i
+                                        class="bi bi-headphones"
+                                        aria-hidden="true"
+                                    ></i>
 
-                            <button
-                                class="apresentacao-avaliacoes border-0 bg-transparent text-muted p-0"
-                                type="button"
-                                data-bs-toggle="tooltip"
-                                data-bs-html="true"
-                                data-bs-title="{!!
-                                    $seccaoPreparada['interacoes']['descricaoAvaliacoes']
-                                        ->toHtml()
-                                !!}"
-                                aria-label="Consultar detalhes das avaliações. Média: {{
-                                    $seccaoPreparada['interacoes']['mediaAvaliacoes']
-                                }}. Total: {{
-                                    $seccaoPreparada['interacoes']['quantidadeAvaliacoes']
-                                }}."
-                            >
-                                <i
-                                    class="bi bi-star-fill text-warning"
-                                    aria-hidden="true"
-                                ></i>
+                                    <span class="quantidade-audicoes">
+                                        {{
+                                            $seccaoPreparada['interacoes']['quantidadeAudicoes']
+                                        }}
+                                    </span>
+                                </button>
 
-                                <strong class="media-avaliacoes">
-                                    {{
+                                <button
+                                    class="apresentacao-avaliacoes border-0 bg-transparent text-muted p-0"
+                                    type="button"
+                                    data-bs-toggle="tooltip"
+                                    data-bs-html="true"
+                                    data-bs-title="{!!
+                                        $seccaoPreparada['interacoes']['descricaoAvaliacoes']
+                                            ->toHtml()
+                                    !!}"
+                                    aria-label="Consultar detalhes das avaliações. Média: {{
                                         $seccaoPreparada['interacoes']['mediaAvaliacoes']
-                                    }}
-                                </strong>
+                                    }}. Total: {{
+                                        $seccaoPreparada['interacoes']['quantidadeAvaliacoes']
+                                    }}."
+                                >
+                                    <i
+                                        class="bi bi-star-fill text-warning"
+                                        aria-hidden="true"
+                                    ></i>
 
-                                (<span class="quantidade-avaliacoes">{{
-                                    $seccaoPreparada['interacoes']['quantidadeAvaliacoes']
-                                }}</span>)
-                            </button>
+                                    <strong class="media-avaliacoes">
+                                        {{
+                                            $seccaoPreparada['interacoes']['mediaAvaliacoes']
+                                        }}
+                                    </strong>
+
+                                    (<span class="quantidade-avaliacoes">{{
+                                        $seccaoPreparada['interacoes']['quantidadeAvaliacoes']
+                                    }}</span>)
+                                </button>
+                            </div>
                         </div>
-                    </div>
 
-                    <div
-                        id="{{
-                            $seccaoPreparada['identificadorComentarios']
-                        }}"
-                        class="collapse mt-3"
-                    >
-                        <x-seccao-comentarios
-                            :comentavel="$seccaoPreparada['modelo']"
-                        />
-                    </div>
+                        <div
+                            id="{{
+                                $seccaoPreparada['identificadorComentarios']
+                            }}"
+                            class="collapse mt-3"
+                        >
+                            <x-seccao-comentarios
+                                :comentavel="$seccaoPreparada['modelo']"
+                            />
+                        </div>
+                    @endif
                 @endif
 
                 @if (! $loop->last)
@@ -344,165 +346,167 @@
         @endforelse
     </div>
 
-    <footer class="card-footer bg-dark text-muted">
+    @if ($interacoesDisponiveis)
+        <footer class="card-footer bg-dark text-muted">
+            <div
+                class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3"
+                data-contentor-interacoes
+            >
+                <div
+                    class="d-flex align-items-center flex-wrap gap-2"
+                    role="group"
+                    aria-label="Interações da MetalThursday"
+                >
+                    <button
+                        class="btn btn-sm btn-primary"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#{{ $identificadorComentariosMetalThursday }}"
+                        aria-controls="{{ $identificadorComentariosMetalThursday }}"
+                        aria-expanded="false"
+                    >
+                        <i
+                            class="bi bi-chat-dots"
+                            aria-hidden="true"
+                        ></i>
+
+                        Comentários
+                        (<span data-quantidade-comentarios>{{
+                            $interacoesMetalThursday['quantidadeComentarios']
+                        }}</span>)
+                    </button>
+
+                    <button
+                        class="btn btn-sm btn-warning"
+                        type="button"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modal-avaliacao"
+                        data-tipo-avaliavel="{{ $tipoInteracaoMetalThursday }}"
+                        data-identificador-avaliavel="{{
+                            $identificadorMetalThursday
+                        }}"
+                        data-nome-avaliavel="{{ $nomeAvaliavelMetalThursday }}"
+                        data-pontuacao-utilizador="{{
+                            $interacoesMetalThursday['pontuacaoUtilizador']
+                        }}"
+                        data-texto-sem-avaliacao="Avaliar MetalThursday"
+                        data-endereco-avaliacao="{{
+                            route(
+                                'avaliacoes.guardar',
+                                [
+                                    'tipoAvaliavel' =>
+                                        $tipoInteracaoMetalThursday,
+
+                                    'identificadorAvaliavel' =>
+                                        $identificadorMetalThursday,
+                                ],
+                            )
+                        }}"
+                    >
+                        <i
+                            class="bi bi-star-fill"
+                            aria-hidden="true"
+                        ></i>
+
+                        <span data-texto-avaliacao>
+                            {{ $interacoesMetalThursday['textoAvaliacao'] }}
+                        </span>
+                    </button>
+
+                    <button
+                        class="btn btn-sm btn-success"
+                        type="button"
+                        data-tipo-interacao="alternar-audicao"
+                        data-tipo-audivel="{{ $tipoInteracaoMetalThursday }}"
+                        data-endereco="{{
+                            route(
+                                'audicoes.alternar',
+                                [
+                                    'tipoAudivel' =>
+                                        $tipoInteracaoMetalThursday,
+
+                                    'identificadorAudivel' =>
+                                        $identificadorMetalThursday,
+                                ],
+                            )
+                        }}"
+                    >
+                        <i
+                            class="bi bi-headphones"
+                            aria-hidden="true"
+                        ></i>
+
+                        <span data-texto-interacao>
+                            {{ $interacoesMetalThursday['textoAudicao'] }}
+                        </span>
+                    </button>
+                </div>
+
+                <div
+                    class="d-flex align-items-center gap-3 text-muted small"
+                    role="group"
+                    aria-label="Resumo das interações da MetalThursday"
+                >
+                    <button
+                        class="apresentacao-audicoes border-0 bg-transparent text-muted p-0"
+                        type="button"
+                        data-bs-toggle="tooltip"
+                        data-bs-html="true"
+                        data-bs-title="{!!
+                            $interacoesMetalThursday['descricaoAudicoes']->toHtml()
+                        !!}"
+                        aria-label="Consultar detalhes das audições. Total: {{
+                            $interacoesMetalThursday['quantidadeAudicoes']
+                        }}."
+                    >
+                        <i
+                            class="bi bi-headphones"
+                            aria-hidden="true"
+                        ></i>
+
+                        <span class="quantidade-audicoes">
+                            {{ $interacoesMetalThursday['quantidadeAudicoes'] }}
+                        </span>
+                    </button>
+
+                    <button
+                        class="apresentacao-avaliacoes border-0 bg-transparent text-muted p-0"
+                        type="button"
+                        data-bs-toggle="tooltip"
+                        data-bs-html="true"
+                        data-bs-title="{!!
+                            $interacoesMetalThursday['descricaoAvaliacoes']->toHtml()
+                        !!}"
+                        aria-label="Consultar detalhes das avaliações. Média: {{
+                            $interacoesMetalThursday['mediaAvaliacoes']
+                        }}. Total: {{
+                            $interacoesMetalThursday['quantidadeAvaliacoes']
+                        }}."
+                    >
+                        <i
+                            class="bi bi-star-fill text-warning"
+                            aria-hidden="true"
+                        ></i>
+
+                        <strong class="media-avaliacoes">
+                            {{ $interacoesMetalThursday['mediaAvaliacoes'] }}
+                        </strong>
+
+                        (<span class="quantidade-avaliacoes">{{
+                            $interacoesMetalThursday['quantidadeAvaliacoes']
+                        }}</span>)
+                    </button>
+                </div>
+            </div>
+        </footer>
+
         <div
-            class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3"
-            data-contentor-interacoes
+            id="{{ $identificadorComentariosMetalThursday }}"
+            class="collapse p-3"
         >
-            <div
-                class="d-flex align-items-center flex-wrap gap-2"
-                role="group"
-                aria-label="Interações da MetalThursday"
-            >
-                <button
-                    class="btn btn-sm btn-primary"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#{{ $identificadorComentariosMetalThursday }}"
-                    aria-controls="{{ $identificadorComentariosMetalThursday }}"
-                    aria-expanded="false"
-                >
-                    <i
-                        class="bi bi-chat-dots"
-                        aria-hidden="true"
-                    ></i>
-
-                    Comentários
-                    (<span data-quantidade-comentarios>{{
-                        $interacoesMetalThursday['quantidadeComentarios']
-                    }}</span>)
-                </button>
-
-                <button
-                    class="btn btn-sm btn-warning"
-                    type="button"
-                    data-bs-toggle="modal"
-                    data-bs-target="#modal-avaliacao"
-                    data-tipo-avaliavel="{{ $tipoInteracaoMetalThursday }}"
-                    data-identificador-avaliavel="{{
-                        $identificadorMetalThursday
-                    }}"
-                    data-nome-avaliavel="{{ $nomeAvaliavelMetalThursday }}"
-                    data-pontuacao-utilizador="{{
-                        $interacoesMetalThursday['pontuacaoUtilizador']
-                    }}"
-                    data-texto-sem-avaliacao="Avaliar MetalThursday"
-                    data-endereco-avaliacao="{{
-                        route(
-                            'avaliacoes.guardar',
-                            [
-                                'tipoAvaliavel' =>
-                                    $tipoInteracaoMetalThursday,
-
-                                'identificadorAvaliavel' =>
-                                    $identificadorMetalThursday,
-                            ],
-                        )
-                    }}"
-                >
-                    <i
-                        class="bi bi-star-fill"
-                        aria-hidden="true"
-                    ></i>
-
-                    <span data-texto-avaliacao>
-                        {{ $interacoesMetalThursday['textoAvaliacao'] }}
-                    </span>
-                </button>
-
-                <button
-                    class="btn btn-sm btn-success"
-                    type="button"
-                    data-tipo-interacao="alternar-audicao"
-                    data-tipo-audivel="{{ $tipoInteracaoMetalThursday }}"
-                    data-endereco="{{
-                        route(
-                            'audicoes.alternar',
-                            [
-                                'tipoAudivel' =>
-                                    $tipoInteracaoMetalThursday,
-
-                                'identificadorAudivel' =>
-                                    $identificadorMetalThursday,
-                            ],
-                        )
-                    }}"
-                >
-                    <i
-                        class="bi bi-headphones"
-                        aria-hidden="true"
-                    ></i>
-
-                    <span data-texto-interacao>
-                        {{ $interacoesMetalThursday['textoAudicao'] }}
-                    </span>
-                </button>
-            </div>
-
-            <div
-                class="d-flex align-items-center gap-3 text-muted small"
-                role="group"
-                aria-label="Resumo das interações da MetalThursday"
-            >
-                <button
-                    class="apresentacao-audicoes border-0 bg-transparent text-muted p-0"
-                    type="button"
-                    data-bs-toggle="tooltip"
-                    data-bs-html="true"
-                    data-bs-title="{!!
-                        $interacoesMetalThursday['descricaoAudicoes']->toHtml()
-                    !!}"
-                    aria-label="Consultar detalhes das audições. Total: {{
-                        $interacoesMetalThursday['quantidadeAudicoes']
-                    }}."
-                >
-                    <i
-                        class="bi bi-headphones"
-                        aria-hidden="true"
-                    ></i>
-
-                    <span class="quantidade-audicoes">
-                        {{ $interacoesMetalThursday['quantidadeAudicoes'] }}
-                    </span>
-                </button>
-
-                <button
-                    class="apresentacao-avaliacoes border-0 bg-transparent text-muted p-0"
-                    type="button"
-                    data-bs-toggle="tooltip"
-                    data-bs-html="true"
-                    data-bs-title="{!!
-                        $interacoesMetalThursday['descricaoAvaliacoes']->toHtml()
-                    !!}"
-                    aria-label="Consultar detalhes das avaliações. Média: {{
-                        $interacoesMetalThursday['mediaAvaliacoes']
-                    }}. Total: {{
-                        $interacoesMetalThursday['quantidadeAvaliacoes']
-                    }}."
-                >
-                    <i
-                        class="bi bi-star-fill text-warning"
-                        aria-hidden="true"
-                    ></i>
-
-                    <strong class="media-avaliacoes">
-                        {{ $interacoesMetalThursday['mediaAvaliacoes'] }}
-                    </strong>
-
-                    (<span class="quantidade-avaliacoes">{{
-                        $interacoesMetalThursday['quantidadeAvaliacoes']
-                    }}</span>)
-                </button>
-            </div>
+            <x-seccao-comentarios
+                :comentavel="$registoMetalThursday"
+            />
         </div>
-    </footer>
-
-    <div
-        id="{{ $identificadorComentariosMetalThursday }}"
-        class="collapse p-3"
-    >
-        <x-seccao-comentarios
-            :comentavel="$registoMetalThursday"
-        />
-    </div>
+    @endif
 </article>

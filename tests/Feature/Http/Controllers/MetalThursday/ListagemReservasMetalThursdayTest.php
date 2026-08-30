@@ -7,6 +7,7 @@ namespace Tests\Feature\Http\Controllers\MetalThursday;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
+use App\Models\MetalThursday\RascunhoMetalThursday;
 use App\Models\MetalThursday\ReservaMetalThursday;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -102,10 +103,11 @@ final class ListagemReservasMetalThursdayTest extends TestCase
                 'MetalThursday de',
                 '20/08/2026',
                 'Em atraso',
+                'Por preparar',
                 'Responsável Primeiro',
                 'MetalThursday de',
                 '27/08/2026',
-                'Por publicar',
+                'Por preparar',
                 'Responsável Segundo',
             ]);
 
@@ -279,6 +281,254 @@ final class ListagemReservasMetalThursdayTest extends TestCase
             )
             ->assertSeeHtml(
                 'id="reserva-metal-thursday-'.$reservaPendente->getKey().'"',
+            );
+    }
+
+    /**
+     * Confirma que uma reserva com rascunho apresenta o estado e a ação de
+     * continuação da preparação.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function listagem_identifica_reserva_como_rascunho(): void
+    {
+        $responsavel =
+            Utilizador::factory()
+                ->create([
+                    'nome' => 'Responsável do Rascunho',
+                ]);
+
+        $reserva =
+            ReservaMetalThursday::factory()
+                ->comData(
+                    CarbonImmutable::parse(
+                        '2026-08-27',
+                    ),
+                )
+                ->comResponsavel(
+                    $responsavel,
+                )
+                ->create();
+
+        RascunhoMetalThursday::factory()
+            ->comReserva(
+                $reserva,
+            )
+            ->create();
+
+        $this->travelTo(
+            CarbonImmutable::parse(
+                '2026-08-21 12:00:00',
+                'Europe/Lisbon',
+            ),
+        );
+
+        $this
+            ->actingAs(
+                $responsavel,
+                'sessao',
+            )
+            ->get(
+                route(
+                    'inicio',
+                ),
+            )
+            ->assertOk()
+            ->assertSeeHtml(
+                'id="reserva-metal-thursday-'.$reserva->getKey().'"',
+            )
+            ->assertSee(
+                'Rascunho',
+            )
+            ->assertSee(
+                'Continuar preparação',
+            )
+            ->assertSeeHtml(
+                'href="'.
+                    route(
+                        'metal-thursday.reservas.preparar',
+                        $reserva,
+                    ).
+                    '"',
+            );
+    }
+
+    /**
+     * Confirma que uma MetalThursday futura finalizada continua na área
+     * operacional para o respetivo autor.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function autor_ve_metal_thursday_preparada_com_acao_de_edicao(): void
+    {
+        $autor =
+            Utilizador::factory()
+                ->create([
+                    'nome' => 'Autor da Preparada',
+                ]);
+
+        $data =
+            CarbonImmutable::parse(
+                '2026-08-27',
+            );
+
+        $edicao =
+            Edicao::factory()
+                ->comPeriodo(
+                    $data->startOfMonth(),
+                    $data->endOfMonth(),
+                )
+                ->create();
+
+        $metalThursday =
+            MetalThursday::factory()
+                ->comData(
+                    $data,
+                )
+                ->comEdicao(
+                    $edicao,
+                )
+                ->comAutor(
+                    $autor,
+                )
+                ->create();
+
+        $reserva =
+            ReservaMetalThursday::factory()
+                ->comData(
+                    $data,
+                )
+                ->comResponsavel(
+                    $autor,
+                )
+                ->comMetalThursday(
+                    $metalThursday,
+                )
+                ->create();
+
+        $this->travelTo(
+            CarbonImmutable::parse(
+                '2026-08-21 12:00:00',
+                'Europe/Lisbon',
+            ),
+        );
+
+        $this
+            ->actingAs(
+                $autor,
+                'sessao',
+            )
+            ->get(
+                route(
+                    'inicio',
+                ),
+            )
+            ->assertOk()
+            ->assertDontSeeHtml(
+                'id="reserva-metal-thursday-'.$reserva->getKey().'"',
+            )
+            ->assertSeeHtml(
+                'id="metal-thursday-preparada-'.$metalThursday->getKey().'"',
+            )
+            ->assertSee(
+                'Preparada',
+            )
+            ->assertSee(
+                'Autor da Preparada',
+            )
+            ->assertSee(
+                'Editar preparação',
+            )
+            ->assertSeeHtml(
+                'href="'.
+                    route(
+                        'metal-thursday.editar',
+                        $metalThursday,
+                    ).
+                    '"',
+            );
+    }
+
+    /**
+     * Confirma que uma MetalThursday preparada não é exposta por esta área
+     * operacional a um utilizador sem autorização para a alterar.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function utilizador_sem_permissao_nao_ve_metal_thursday_preparada(): void
+    {
+        $autor =
+            Utilizador::factory()
+                ->create();
+
+        $outroUtilizador =
+            Utilizador::factory()
+                ->create();
+
+        $data =
+            CarbonImmutable::parse(
+                '2026-08-27',
+            );
+
+        $edicao =
+            Edicao::factory()
+                ->comPeriodo(
+                    $data->startOfMonth(),
+                    $data->endOfMonth(),
+                )
+                ->create();
+
+        $metalThursday =
+            MetalThursday::factory()
+                ->comData(
+                    $data,
+                )
+                ->comEdicao(
+                    $edicao,
+                )
+                ->comAutor(
+                    $autor,
+                )
+                ->create();
+
+        ReservaMetalThursday::factory()
+            ->comData(
+                $data,
+            )
+            ->comResponsavel(
+                $autor,
+            )
+            ->comMetalThursday(
+                $metalThursday,
+            )
+            ->create();
+
+        $this->travelTo(
+            CarbonImmutable::parse(
+                '2026-08-21 12:00:00',
+                'Europe/Lisbon',
+            ),
+        );
+
+        $this
+            ->actingAs(
+                $outroUtilizador,
+                'sessao',
+            )
+            ->get(
+                route(
+                    'inicio',
+                ),
+            )
+            ->assertOk()
+            ->assertDontSeeHtml(
+                'id="metal-thursday-preparada-'.$metalThursday->getKey().'"',
+            )
+            ->assertDontSee(
+                'Editar preparação',
             );
     }
 }

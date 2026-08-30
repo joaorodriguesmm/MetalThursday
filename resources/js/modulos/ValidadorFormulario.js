@@ -526,6 +526,14 @@ class ValidadorFormulario {
      * @since 1.0.0
      */
     manipularSubmissao(evento) {
+        if (
+            evento instanceof SubmitEvent
+            && evento.submitter instanceof HTMLElement
+            && evento.submitter.hasAttribute('formnovalidate')
+        ) {
+            return;
+        }
+
         this.tentouSubmeter = true;
 
         const validacaoEstatica = this.validarTudo({

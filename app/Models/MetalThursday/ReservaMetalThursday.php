@@ -11,6 +11,7 @@ use Database\Factories\MetalThursday\ReservaMetalThursdayFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use InvalidArgumentException;
 
 /**
@@ -28,6 +29,7 @@ use InvalidArgumentException;
  * @property CarbonInterface|null $updated_at
  * @property-read Utilizador|null $responsavel
  * @property-read MetalThursday|null $metalThursday
+ * @property-read RascunhoMetalThursday|null $rascunho
  *
  * @since 2.0.0
  */
@@ -140,6 +142,24 @@ class ReservaMetalThursday extends Model
                 'metal_thursday_id',
             )
             ->withTrashed();
+    }
+
+    /**
+     * Obtém o rascunho associado à reserva.
+     *
+     * Uma reserva pode possuir, no máximo, um rascunho enquanto permanece em
+     * preparação. A unicidade é também garantida pela base de dados.
+     *
+     * @return HasOne<RascunhoMetalThursday, $this> Relação com o rascunho.
+     *
+     * @since 2.0.0
+     */
+    public function rascunho(): HasOne
+    {
+        return $this->hasOne(
+            RascunhoMetalThursday::class,
+            'reserva_metal_thursday_id',
+        );
     }
 
     /**

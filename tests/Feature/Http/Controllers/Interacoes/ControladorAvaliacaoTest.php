@@ -6,8 +6,10 @@ namespace Tests\Feature\Http\Controllers\Interacoes;
 
 use App\Enumeracoes\Interacoes\TipoEntidadeInteracao;
 use App\Models\Autenticacao\Utilizador;
+use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -545,6 +547,171 @@ final class ControladorAvaliacaoTest extends TestCase
         $this->assertDatabaseCount(
             'avaliacoes',
             1,
+        );
+
+        Notification::assertNothingSent();
+    }
+
+    /**
+     * Confirma que nem o autor pode avaliar uma MetalThursday antes da respetiva
+     * publicação.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function autor_nao_pode_avaliar_metal_thursday_preparada(): void
+    {
+        Notification::fake();
+
+        $autor =
+            Utilizador::factory()
+                ->create();
+
+        $dataFutura =
+            CarbonImmutable::now(
+                config(
+                    'app.timezone',
+                ),
+            )->addWeek();
+
+        $edicao =
+            Edicao::factory()
+                ->comPeriodo(
+                    $dataFutura->startOfMonth(),
+                    $dataFutura->endOfMonth(),
+                )
+                ->create();
+
+        $metalThursday =
+            MetalThursday::factory()
+                ->comData(
+                    $dataFutura,
+                )
+                ->comEdicao(
+                    $edicao,
+                )
+                ->comAutor(
+                    $autor,
+                )
+                ->create();
+
+        $this
+            ->actingAs(
+                $autor,
+                'sessao',
+            )
+            ->postJson(
+                route(
+                    'avaliacoes.guardar',
+                    [
+                        'tipoAvaliavel' => TipoEntidadeInteracao::MetalThursday->value,
+
+                        'identificadorAvaliavel' => $metalThursday->getKey(),
+                    ],
+                ),
+                [
+                    'pontuacao' => '8,5',
+                ],
+            )
+            ->assertNotFound();
+
+        $this->assertDatabaseMissing(
+            'avaliacoes',
+            [
+                'utilizador_id' => $autor->getKey(),
+
+                'tipo_avaliavel' => $metalThursday->getMorphClass(),
+
+                'avaliavel_id' => $metalThursday->getKey(),
+            ],
+        );
+
+        Notification::assertNothingSent();
+    }
+
+    /**
+     * Confirma que uma avaliação existente numa secção de uma MetalThursday
+     * preparada não pode ser removida antes da publicação.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_pode_limpar_avaliacao_de_seccao_de_metal_thursday_preparada(): void
+    {
+        Notification::fake();
+
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $dataFutura =
+            CarbonImmutable::now(
+                config(
+                    'app.timezone',
+                ),
+            )->addWeek();
+
+        $edicao =
+            Edicao::factory()
+                ->comPeriodo(
+                    $dataFutura->startOfMonth(),
+                    $dataFutura->endOfMonth(),
+                )
+                ->create();
+
+        $metalThursday =
+            MetalThursday::factory()
+                ->comData(
+                    $dataFutura,
+                )
+                ->comEdicao(
+                    $edicao,
+                )
+                ->create();
+
+        $seccao =
+            SeccaoMetalThursday::factory()
+                ->paraMetalThursday(
+                    $metalThursday,
+                )
+                ->create();
+
+        $seccao
+            ->avaliacoes()
+            ->create([
+                'utilizador_id' => $utilizador->getKey(),
+
+                'pontuacao' => 7.5,
+            ]);
+
+        $this
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
+            ->deleteJson(
+                route(
+                    'avaliacoes.eliminar',
+                    [
+                        'tipoAvaliavel' => TipoEntidadeInteracao::SeccaoMetalThursday->value,
+
+                        'identificadorAvaliavel' => $seccao->getKey(),
+                    ],
+                ),
+            )
+            ->assertNotFound();
+
+        $this->assertDatabaseHas(
+            'avaliacoes',
+            [
+                'utilizador_id' => $utilizador->getKey(),
+
+                'tipo_avaliavel' => $seccao->getMorphClass(),
+
+                'avaliavel_id' => $seccao->getKey(),
+
+                'pontuacao' => 7.5,
+            ],
         );
 
         Notification::assertNothingSent();

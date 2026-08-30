@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Servicos\Agendamentos\ExecutarLembreteAtrasosMetalThursday;
 use App\Servicos\Agendamentos\ExecutarLembreteTarefasMetalThursday;
+use App\Servicos\Agendamentos\ExecutarPublicacoesMetalThursday;
 use App\Servicos\Agendamentos\ExecutarReservaSemanalMetalThursday;
 use Illuminate\Support\Facades\Schedule;
 
@@ -16,6 +17,20 @@ $fusoHorario =
     (string) config(
         'app.timezone',
     );
+
+Schedule::call(
+    new ExecutarPublicacoesMetalThursday,
+)
+    ->name(
+        'publicacoes-metal-thursday:notificar',
+    )
+    ->dailyAt(
+        '00:00',
+    )
+    ->timezone(
+        $fusoHorario,
+    )
+    ->withoutOverlapping();
 
 Schedule::call(
     new ExecutarReservaSemanalMetalThursday,

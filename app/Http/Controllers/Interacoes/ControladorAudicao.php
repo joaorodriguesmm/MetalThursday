@@ -10,6 +10,7 @@ use App\Models\Autenticacao\Utilizador;
 use App\Models\Interacoes\Audicao;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
+use App\Servicos\Interacoes\ServicoDisponibilidadeInteracoes;
 use App\Servicos\Notificacoes\NotificadorInteracoes;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
@@ -56,11 +57,15 @@ final class ControladorAudicao extends Controller
      *                                                        responsável
      *                                                        pelas
      *                                                        notificações.
+     * @param  ServicoDisponibilidadeInteracoes  $servicoDisponibilidadeInteracoes  Serviço responsável
+     *                                                                              pela disponibilidade
+     *                                                                              temporal.
      *
      * @since 2.0.0
      */
     public function __construct(
         private readonly NotificadorInteracoes $notificadorInteracoes,
+        private readonly ServicoDisponibilidadeInteracoes $servicoDisponibilidadeInteracoes,
     ) {}
 
     /**
@@ -115,6 +120,11 @@ final class ControladorAudicao extends Controller
                     $audivel,
                     $identificadorUtilizador,
                 ): array {
+                    $this->servicoDisponibilidadeInteracoes
+                        ->obterMetalThursdayPublicadaComBloqueio(
+                            $audivel,
+                        );
+
                     $audivelBloqueado =
                         $this->bloquearAudivel(
                             $audivel,

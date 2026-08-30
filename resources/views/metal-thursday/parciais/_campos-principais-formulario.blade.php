@@ -212,7 +212,16 @@
             class="form-control @error('nome') is-invalid @enderror"
             type="text"
             name="nome"
-            value="{{ old('nome', $metalThursday?->nome) }}"
+            value="{{
+                old(
+                    'nome',
+                    data_get(
+                        $dadosRascunhoFormulario ?? [],
+                        'nome',
+                        $metalThursday?->nome,
+                    ),
+                )
+            }}"
             placeholder="Exemplo: Especial de Natal"
             maxlength="{{ App\Models\MetalThursday\MetalThursday::COMPRIMENTO_MAXIMO_NOME }}"
             aria-describedby="erro-nome-metal-thursday"
@@ -466,6 +475,10 @@
                             @selected(
                                 (string) old(
                                     'proximo_nomeado_id',
+                                    data_get(
+                                        $dadosRascunhoFormulario ?? [],
+                                        'proximo_nomeado_id',
+                                    ),
                                 )
                                 === (string) $utilizador->getKey()
                             )

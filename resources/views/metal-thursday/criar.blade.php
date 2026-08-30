@@ -131,12 +131,35 @@
                         Cancelar
                     </a>
 
-                    <button
-                        class="btn btn-primary btn-lg"
-                        type="submit"
-                    >
-                        {{ $tituloFormulario }}
-                    </button>
+                    @if ($modoPreparacaoReserva)
+                        <button
+                            class="btn btn-primary btn-lg"
+                            type="submit"
+                        >
+                            Marcar como preparada
+                        </button>
+
+                        <button
+                            class="btn btn-secondary btn-lg"
+                            type="submit"
+                            formaction="{{
+                                route(
+                                    'metal-thursday.reservas.rascunho.guardar',
+                                    $reservaPendente,
+                                )
+                            }}"
+                            formnovalidate
+                        >
+                            Guardar rascunho
+                        </button>
+                    @else
+                        <button
+                            class="btn btn-primary btn-lg"
+                            type="submit"
+                        >
+                            {{ $tituloFormulario }}
+                        </button>
+                    @endif
                 </div>
             </form>
         </div>

@@ -1104,7 +1104,7 @@ final class ControladorMetalThursdayTest extends TestCase
             )
             ->assertSessionHas(
                 'sucesso',
-                'MetalThursday criada com sucesso.',
+                'MetalThursday publicada com sucesso.',
             );
 
         $this->assertDatabaseHas(

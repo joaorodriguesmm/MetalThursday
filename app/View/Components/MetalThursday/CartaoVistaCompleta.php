@@ -91,6 +91,13 @@ final class CartaoVistaCompleta extends Component
     public readonly string $nomeProximoNomeado;
 
     /**
+     * Indica se as interações sociais podem ser apresentadas.
+     *
+     * @since 2.0.0
+     */
+    public readonly bool $interacoesDisponiveis;
+
+    /**
      * Dados das interações da MetalThursday.
      *
      * @var array{
@@ -172,6 +179,9 @@ final class CartaoVistaCompleta extends Component
         $this->registoMetalThursday =
             $registoMetalThursday;
 
+        $this->interacoesDisponiveis =
+            $registoMetalThursday->estaPublicada();
+
         $this->identificadorMetalThursday =
             $this->obterIdentificador(
                 $registoMetalThursday,
@@ -219,14 +229,16 @@ final class CartaoVistaCompleta extends Component
             );
 
         $this->interacoesMetalThursday =
-            $this->prepararInteracoes(
+            $this->interacoesDisponiveis
+            ? $this->prepararInteracoes(
                 $registoMetalThursday,
                 'Ninguém marcou esta MetalThursday como ouvida.',
                 'Esta MetalThursday ainda não tem avaliações.',
                 'Avaliar MetalThursday',
                 'Ouvida',
                 'Marcar como ouvida',
-            );
+            )
+            : [];
 
         $this->identificadorComentariosMetalThursday =
             "comentarios-metal-thursday-{$this->identificadorMetalThursday}";
@@ -240,10 +252,12 @@ final class CartaoVistaCompleta extends Component
                 'seccoes',
             );
 
-        $this->obterColecaoCarregada(
-            $registoMetalThursday,
-            'comentarios',
-        );
+        if ($this->interacoesDisponiveis) {
+            $this->obterColecaoCarregada(
+                $registoMetalThursday,
+                'comentarios',
+            );
+        }
 
         $this->seccoesPreparadas =
             $this->prepararSeccoes(
@@ -323,12 +337,16 @@ final class CartaoVistaCompleta extends Component
             $temDetalhes =
                 (bool) $tipoSeccao->exige_detalhes;
 
-            $this->obterColecaoCarregada(
-                $seccao,
-                'comentarios',
-            );
+            if ($this->interacoesDisponiveis) {
+                $this->obterColecaoCarregada(
+                    $seccao,
+                    'comentarios',
+                );
+            }
 
-            $interacoes = $temDetalhes
+            $interacoes =
+                $temDetalhes
+                && $this->interacoesDisponiveis
                 ? $this->prepararInteracoes(
                     $seccao,
                     'Ninguém marcou esta secção como ouvida.',

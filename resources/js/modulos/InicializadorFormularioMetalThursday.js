@@ -737,7 +737,15 @@ function configurarValidacaoTempoRealSeccoes(
 
     formulario.addEventListener(
         'submit',
-        () => {
+        (evento) => {
+            if (
+                evento instanceof SubmitEvent
+                && evento.submitter instanceof HTMLElement
+                && evento.submitter.hasAttribute('formnovalidate')
+            ) {
+                return;
+            }
+
             validacaoAtiva = true;
         },
     );

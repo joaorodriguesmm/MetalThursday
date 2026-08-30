@@ -192,6 +192,188 @@ final class MetalThursdayTest extends TestCase
     }
 
     /**
+     * Confirma a fronteira temporal entre preparada e publicada.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function distingue_estado_temporal_pela_data(): void
+    {
+        $edicao = $this->criarEdicao(
+            'Edição Temporal',
+            '2026-08-01',
+            '2026-09-30',
+        );
+
+        $passada = $this->criarMetalThursday(
+            $edicao,
+            '2026-08-27',
+        );
+
+        $atual = $this->criarMetalThursday(
+            $edicao,
+            '2026-08-28',
+        );
+
+        $futura = $this->criarMetalThursday(
+            $edicao,
+            '2026-09-03',
+        );
+
+        $referencia =
+            CarbonImmutable::parse(
+                '2026-08-28 12:00:00',
+                'Europe/Lisbon',
+            );
+
+        self::assertTrue(
+            $passada->estaPublicada(
+                $referencia,
+            ),
+        );
+
+        self::assertTrue(
+            $atual->estaPublicada(
+                $referencia,
+            ),
+        );
+
+        self::assertFalse(
+            $futura->estaPublicada(
+                $referencia,
+            ),
+        );
+
+        self::assertFalse(
+            $passada->estaPreparada(
+                $referencia,
+            ),
+        );
+
+        self::assertFalse(
+            $atual->estaPreparada(
+                $referencia,
+            ),
+        );
+
+        self::assertTrue(
+            $futura->estaPreparada(
+                $referencia,
+            ),
+        );
+    }
+
+    /**
+     * Confirma que os scopes temporais separam registos publicados e
+     * preparados sem depender de uma coluna de estado.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function scopes_separam_publicadas_e_preparadas(): void
+    {
+        $edicao = $this->criarEdicao(
+            'Edição dos Scopes',
+            '2026-08-01',
+            '2026-09-30',
+        );
+
+        $passada = $this->criarMetalThursday(
+            $edicao,
+            '2026-08-27',
+        );
+
+        $atual = $this->criarMetalThursday(
+            $edicao,
+            '2026-08-28',
+        );
+
+        $futura = $this->criarMetalThursday(
+            $edicao,
+            '2026-09-03',
+        );
+
+        $referencia =
+            CarbonImmutable::parse(
+                '2026-08-28 12:00:00',
+                'Europe/Lisbon',
+            );
+
+        self::assertSame(
+            [
+                (int) $passada->getKey(),
+                (int) $atual->getKey(),
+            ],
+            MetalThursday::query()
+                ->publicadas(
+                    $referencia,
+                )
+                ->orderBy(
+                    'data',
+                )
+                ->get()
+                ->modelKeys(),
+        );
+
+        self::assertSame(
+            [
+                (int) $futura->getKey(),
+            ],
+            MetalThursday::query()
+                ->preparadasPorPublicar(
+                    $referencia,
+                )
+                ->orderBy(
+                    'data',
+                )
+                ->get()
+                ->modelKeys(),
+        );
+    }
+
+    /**
+     * Confirma que a mudança de dia utiliza o fuso horário da aplicação.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function publicacao_respeita_fuso_horario_da_aplicacao(): void
+    {
+        config([
+            'app.timezone' => 'Europe/Lisbon',
+        ]);
+
+        $edicao = $this->criarEdicao(
+            'Edição de Fuso Horário',
+            '2026-08-01',
+            '2026-08-31',
+        );
+
+        $metalThursday = $this->criarMetalThursday(
+            $edicao,
+            '2026-08-29',
+        );
+
+        $referenciaUtc =
+            CarbonImmutable::parse(
+                '2026-08-28 23:30:00',
+                'UTC',
+            );
+
+        self::assertTrue(
+            $metalThursday->estaPublicada(
+                $referenciaUtc,
+            ),
+        );
+
+        self::assertFalse(
+            $metalThursday->estaPreparada(
+                $referenciaUtc,
+            ),
+        );
+    }
+
+    /**
      * Cria uma edição persistida com o período indicado.
      *
      * @param  string  $nome  Nome da edição.

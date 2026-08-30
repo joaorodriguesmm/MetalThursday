@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\Interacoes\Comentario;
 use App\Models\Interacoes\Gosto;
+use App\Servicos\Interacoes\ServicoDisponibilidadeInteracoes;
 use App\Servicos\Notificacoes\NotificadorInteracoes;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
@@ -82,11 +83,15 @@ final class ControladorGosto extends Controller
      *
      * @param  NotificadorInteracoes  $notificadorInteracoes  Serviço de
      *                                                        notificações.
+     * @param  ServicoDisponibilidadeInteracoes  $servicoDisponibilidadeInteracoes  Serviço responsável
+     *                                                                              pela disponibilidade
+     *                                                                              temporal.
      *
      * @since 2.0.0
      */
     public function __construct(
         private readonly NotificadorInteracoes $notificadorInteracoes,
+        private readonly ServicoDisponibilidadeInteracoes $servicoDisponibilidadeInteracoes,
     ) {}
 
     /**
@@ -127,7 +132,7 @@ final class ControladorGosto extends Controller
          */
         $resultado =
             DB::transaction(
-                static function () use (
+                function () use (
                     $comentario,
                     $identificadorUtilizador,
                 ): array {
@@ -147,6 +152,11 @@ final class ControladorGosto extends Controller
                             Response::HTTP_GONE,
                         );
                     }
+
+                    $this->servicoDisponibilidadeInteracoes
+                        ->obterMetalThursdayPublicadaComBloqueio(
+                            $comentarioBloqueado,
+                        );
 
                     $gosto =
                         $comentarioBloqueado
@@ -239,6 +249,11 @@ final class ControladorGosto extends Controller
                 Response::HTTP_GONE,
             );
         }
+
+        $this->servicoDisponibilidadeInteracoes
+            ->obterMetalThursdayPublicada(
+                $comentario,
+            );
 
         $dadosIndicador =
             $this->obterDadosIndicador(

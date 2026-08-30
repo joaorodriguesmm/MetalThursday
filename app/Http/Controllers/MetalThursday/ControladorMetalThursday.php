@@ -10,20 +10,24 @@ use App\Filtros\FiltrosMetalThursday;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\MetalThursday\ExigirCriacaoAdministrativaMetalThursday;
 use App\Http\Requests\MetalThursday\GuardarMetalThursdayRequest;
+use App\Http\Requests\MetalThursday\GuardarRascunhoMetalThursdayRequest;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\Geografia\OrigemGeografica;
 use App\Models\Interacoes\Comentario;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
+use App\Models\MetalThursday\RascunhoMetalThursday;
 use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
 use App\Models\Musica\Banda;
 use App\Models\Musica\Genero;
-use App\Notifications\NotificacaoMetalThursdayCriada;
 use App\Notifications\NotificacaoUtilizadorNomeado;
+use App\Resultados\MetalThursday\MetalThursdayCriada;
 use App\Servicos\Incorporacoes\RenderizadorIncorporacoes;
+use App\Servicos\MetalThursday\ServicoNotificacaoPublicacaoMetalThursday;
 use App\Servicos\MetalThursday\ServicoPersistenciaMetalThursday;
+use App\Servicos\MetalThursday\ServicoPreparacaoMetalThursday;
 use App\Servicos\MetalThursday\ServicoReservasMetalThursday;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -40,7 +44,7 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 use LogicException;
 use Symfony\Component\HttpFoundation\Response;
@@ -169,15 +173,6 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
     private const ULTIMA_ESTRELA_AVALIACAO = 10;
 
     /**
-     * Número de utilizadores processados por bloco nas notificações.
-     *
-     * @var int
-     *
-     * @since 2.0.0
-     */
-    private const UTILIZADORES_POR_BLOCO = 100;
-
-    /**
      * Número máximo de tentativas perante conflitos transitórios.
      *
      * @var int
@@ -197,7 +192,16 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
      *                                                                responsável
      *                                                                pelas
      *                                                                incorporações.
-     * @param  ServicoReservasMetalThursday  $servicoReservas  Serviço responsável pelas reservas.
+     * @param  ServicoReservasMetalThursday  $servicoReservas  Serviço responsável
+     *                                                         pelas reservas.
+     * @param  ServicoPreparacaoMetalThursday  $servicoPreparacao  Serviço
+     *                                                             responsável pela
+     *                                                             preparação.
+     * @param  ServicoNotificacaoPublicacaoMetalThursday  $servicoNotificacaoPublicacao
+     *                                                                                   Serviço
+     *                                                                                   responsável
+     *                                                                                   pela notificação
+     *                                                                                   da publicação.
      *
      * @since 2.0.0
      */
@@ -205,6 +209,8 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
         private readonly ServicoPersistenciaMetalThursday $servicoPersistencia,
         private readonly RenderizadorIncorporacoes $renderizadorIncorporacoes,
         private readonly ServicoReservasMetalThursday $servicoReservas,
+        private readonly ServicoPreparacaoMetalThursday $servicoPreparacao,
+        private readonly ServicoNotificacaoPublicacaoMetalThursday $servicoNotificacaoPublicacao,
     ) {}
 
     /**
@@ -328,6 +334,10 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
      * A reserva torna-se a fonte autoritativa para a data e para o autor,
      * mesmo quando o respetivo responsável possui privilégios administrativos.
      *
+     * Quando existe um rascunho persistido, os respetivos dados editáveis são
+     * utilizados como valores iniciais do formulário. Dados antigos da sessão,
+     * resultantes de uma submissão inválida, mantêm sempre precedência.
+     *
      * @param  Request  $pedido  Pedido HTTP atual.
      * @param  ReservaMetalThursday  $reservaMetalThursday  Reserva preparada.
      * @return View Página de preparação.
@@ -359,6 +369,19 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
             );
         }
 
+        $rascunho =
+            $reservaMetalThursday
+                ->rascunho()
+                ->first();
+
+        $dadosRascunho =
+            $rascunho instanceof RascunhoMetalThursday
+            && is_array(
+                $rascunho->dados,
+            )
+            ? $rascunho->dados
+            : [];
+
         return view(
             'metal-thursday.criar',
             [
@@ -369,8 +392,11 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
 
                 'modoPreparacaoReserva' => true,
 
-                'seccoesFormulario' => $this->obterSeccoesAnteriores(
+                'dadosRascunhoFormulario' => $dadosRascunho,
+
+                'seccoesFormulario' => $this->obterSeccoesPreparacaoReserva(
                     $pedido,
+                    $dadosRascunho,
                 ),
 
                 'configuracaoFormularioMetalThursday' => $this->obterConfiguracaoFormulario(),
@@ -379,16 +405,61 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
     }
 
     /**
-     * Guarda uma MetalThursday através de uma reserva explícita.
+     * Guarda o rascunho associado a uma reserva pendente.
      *
-     * O middleware da rota já confirmou o responsável da reserva e substituiu
-     * a data e o autor recebidos pelos valores autoritativos da própria
-     * reserva. A criação continua a utilizar a mesma persistência
-     * transacional do fluxo geral.
+     * O pedido contém apenas os dados editáveis do formulário. A reserva
+     * continua pendente e nenhuma MetalThursday definitiva é criada nesta
+     * operação.
+     *
+     * @param  GuardarRascunhoMetalThursdayRequest  $pedido  Pedido validado.
+     * @param  ReservaMetalThursday  $reservaMetalThursday  Reserva preparada.
+     * @return RedirectResponse Redirecionamento para a preparação.
+     *
+     * @throws AuthenticationException Quando não existe autenticação válida.
+     *
+     * @since 2.0.0
+     */
+    public function guardarRascunhoReserva(
+        GuardarRascunhoMetalThursdayRequest $pedido,
+        ReservaMetalThursday $reservaMetalThursday,
+    ): RedirectResponse {
+        $rascunho =
+            $this->servicoPreparacao
+                ->guardarRascunho(
+                    $reservaMetalThursday,
+                    $this->obterUtilizadorAutenticado(),
+                    $pedido->validated(),
+                );
+
+        if (! $rascunho instanceof RascunhoMetalThursday) {
+            abort(
+                Response::HTTP_FORBIDDEN,
+            );
+        }
+
+        return redirect()
+            ->route(
+                'metal-thursday.reservas.preparar',
+                $reservaMetalThursday,
+            )
+            ->with(
+                'sucesso',
+                'Rascunho guardado com sucesso.',
+            );
+    }
+
+    /**
+     * Finaliza uma MetalThursday através de uma reserva explícita.
+     *
+     * O middleware e o pedido validado mantêm a reserva como fonte autoritativa
+     * da data e do autor. A preparação é finalizada atomicamente e o eventual
+     * rascunho só é eliminado depois da persistência definitiva.
      *
      * @param  GuardarMetalThursdayRequest  $pedido  Pedido validado.
      * @param  ReservaMetalThursday  $reservaMetalThursday  Reserva preparada.
      * @return JsonResponse|RedirectResponse Resposta da operação.
+     *
+     * @throws AuthenticationException Quando não existe autenticação válida.
      *
      * @since 2.0.0
      */
@@ -396,14 +467,29 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
         GuardarMetalThursdayRequest $pedido,
         ReservaMetalThursday $reservaMetalThursday,
     ): JsonResponse|RedirectResponse {
-        if (! $reservaMetalThursday->estaPendente()) {
+        $responsavel =
+            $this->obterUtilizadorAutenticado();
+
+        $resultadoCriacao =
+            $this->servicoPreparacao
+                ->finalizar(
+                    $reservaMetalThursday,
+                    $responsavel,
+                    $pedido->validated(),
+                );
+
+        if (! $resultadoCriacao instanceof MetalThursdayCriada) {
             abort(
                 Response::HTTP_FORBIDDEN,
             );
         }
 
-        return $this->guardar(
+        return $this->responderCriacao(
             $pedido,
+            $resultadoCriacao,
+            $this->obterMensagemSucessoFinalizacao(
+                $resultadoCriacao,
+            ),
         );
     }
 
@@ -425,31 +511,100 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
             MetalThursday::class,
         );
 
-        $identificadorCriador =
-            $this->obterIdentificadorUtilizadorAutenticado();
-
         $resultadoCriacao =
             $this->servicoPersistencia
                 ->criarComResultado(
                     $pedido->validated(),
                 );
 
+        return $this->responderCriacao(
+            $pedido,
+            $resultadoCriacao,
+            'MetalThursday criada com sucesso.',
+        );
+    }
+
+    /**
+     * Obtém a mensagem correspondente ao estado temporal após a finalização.
+     *
+     * Uma MetalThursday cuja data ainda não chegou fica preparada. Quando a data
+     * corresponde ao dia atual ou já passou, a publicação é imediata.
+     *
+     * @param  MetalThursdayCriada  $resultadoCriacao  Resultado persistido.
+     * @return string Mensagem de sucesso.
+     *
+     * @throws LogicException Quando a MetalThursday não possui uma data válida.
+     *
+     * @since 2.0.0
+     */
+    private function obterMensagemSucessoFinalizacao(
+        MetalThursdayCriada $resultadoCriacao,
+    ): string {
+        $data =
+            $resultadoCriacao
+                ->obterMetalThursday()
+                ->data;
+
+        if (! $data instanceof CarbonInterface) {
+            throw new LogicException(
+                'A MetalThursday criada não possui uma data válida.',
+            );
+        }
+
+        $hoje =
+            CarbonImmutable::now(
+                config(
+                    'app.timezone',
+                ),
+            )->format(
+                'Y-m-d',
+            );
+
+        return $data->format(
+            'Y-m-d',
+        ) <= $hoje
+            ? 'MetalThursday publicada com sucesso.'
+            : 'MetalThursday marcada como preparada com sucesso.';
+    }
+
+    /**
+     * Constrói a resposta comum após a criação de uma MetalThursday.
+     *
+     * A eventual nomeação seguinte é comunicada imediatamente. A notificação
+     * geral da publicação é delegada ao serviço temporal, que apenas a processa
+     * quando a data da MetalThursday já tiver chegado.
+     *
+     * @param  GuardarMetalThursdayRequest  $pedido  Pedido original.
+     * @param  MetalThursdayCriada  $resultadoCriacao  Resultado persistido.
+     * @param  string  $mensagemSucesso  Mensagem apresentada.
+     * @return JsonResponse|RedirectResponse Resposta HTTP.
+     *
+     * @since 2.0.0
+     */
+    private function responderCriacao(
+        GuardarMetalThursdayRequest $pedido,
+        MetalThursdayCriada $resultadoCriacao,
+        string $mensagemSucesso,
+    ): JsonResponse|RedirectResponse {
         $metalThursday =
             $resultadoCriacao->obterMetalThursday();
 
         $reservaSeguinte =
             $resultadoCriacao->obterReservaSeguinte();
 
-        $this->notificarCriacao(
+        $this->notificarNomeacaoSeguinte(
             $metalThursday,
-            $identificadorCriador,
             $reservaSeguinte,
+        );
+
+        $this->notificarPublicacao(
+            $metalThursday,
         );
 
         if ($pedido->expectsJson()) {
             return response()->json(
                 [
-                    'mensagem' => 'MetalThursday criada com sucesso.',
+                    'mensagem' => $mensagemSucesso,
 
                     'metal_thursday' => $this->serializarMetalThursday(
                         $metalThursday,
@@ -463,7 +618,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
             'inicio',
         )->with(
             'sucesso',
-            'MetalThursday criada com sucesso.',
+            $mensagemSucesso,
         );
     }
 
@@ -478,10 +633,21 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
     public function detalhes(
         MetalThursday $metalThursday,
     ): View {
-        $this->authorize(
-            'view',
-            $metalThursday,
-        );
+        $utilizador =
+            $this->obterUtilizadorAutenticado();
+
+        if (
+            ! Gate::forUser(
+                $utilizador,
+            )->allows(
+                'view',
+                $metalThursday,
+            )
+        ) {
+            abort(
+                Response::HTTP_NOT_FOUND,
+            );
+        }
 
         $this->carregarDetalhes(
             $metalThursday,
@@ -690,6 +856,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
         int $identificadorUtilizador,
     ): Builder {
         return MetalThursday::query()
+            ->publicadas()
             ->comNumeroSemanaNaEdicao()
             ->withCount([
                 'comentariosComConteudo as comentarios_count',
@@ -710,6 +877,9 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
     /**
      * Cria a consulta da vista simplificada.
      *
+     * Apenas são consideradas secções pertencentes a MetalThursdays já
+     * publicadas.
+     *
      * @return Builder<SeccaoMetalThursday> Consulta preparada.
      *
      * @since 2.0.0
@@ -717,6 +887,12 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
     private function criarConsultaSimplificada(): Builder
     {
         return SeccaoMetalThursday::query()
+            ->whereHas(
+                'metalThursday',
+                static fn (
+                    Builder $construtor,
+                ): Builder => $construtor->publicadas(),
+            )
             ->select([
                 'id',
                 'metal_thursday_id',
@@ -758,6 +934,10 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
     /**
      * Carrega as relações necessárias para a página de detalhes.
      *
+     * As MetalThursdays preparadas carregam apenas os dados necessários à
+     * apresentação do respetivo conteúdo. As interações sociais só são
+     * consultadas depois da publicação.
+     *
      * @param  MetalThursday  $metalThursday  MetalThursday carregada.
      * @param  int  $identificadorUtilizador  Utilizador autenticado.
      *
@@ -768,7 +948,17 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
         int $identificadorUtilizador,
     ): void {
         $metalThursday
-            ->carregarNumeroSemanaNaEdicao()
+            ->carregarNumeroSemanaNaEdicao();
+
+        if (! $metalThursday->estaPublicada()) {
+            $metalThursday->load(
+                $this->obterRelacoesApresentacaoPreparada(),
+            );
+
+            return;
+        }
+
+        $metalThursday
             ->loadCount([
                 'comentariosComConteudo as comentarios_count',
                 'avaliacoes',
@@ -783,6 +973,34 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                     $identificadorUtilizador,
                 ),
             );
+    }
+
+    /**
+     * Obtém as relações necessárias para apresentar uma MetalThursday ainda
+     * preparada sem consultar dados de interação.
+     *
+     * @return array<int|string, mixed> Relações necessárias à apresentação.
+     *
+     * @since 2.0.0
+     */
+    private function obterRelacoesApresentacaoPreparada(): array
+    {
+        return [
+            'edicao:id,nome',
+            'autor:id,nome',
+            'proximoNomeado:id,nome',
+
+            'seccoes' => static function (
+                Relation $relacao,
+            ): void {
+                $relacao
+                    ->getQuery()
+                    ->with([
+                        'tipoSeccao:id,nome,exige_detalhes',
+                        'banda:id,nome',
+                    ]);
+            },
+        ];
     }
 
     /**
@@ -1389,106 +1607,72 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
     }
 
     /**
-     * Envia as notificações relativas à criação.
+     * Notifica o responsável pela reserva seguinte criada durante a finalização.
      *
-     * Uma falha no envio não transforma uma criação já persistida numa
-     * resposta de erro.
+     * A nomeação é um acontecimento operacional independente da publicação. Pode,
+     * por isso, ser comunicada mesmo quando a MetalThursday acabada de preparar
+     * ainda possui uma data futura.
      *
-     * As relações necessárias às notificações são carregadas antes do envio.
-     * As permissões de e-mail dos destinatários são obtidas uma vez por bloco,
-     * evitando consultas individuais durante a determinação dos canais.
-     *
-     * A notificação geral utiliza um retrato escalar e é criada uma única vez,
-     * sendo reutilizada em todos os blocos de destinatários.
+     * Uma falha no envio não transforma uma criação já persistida numa resposta
+     * de erro.
      *
      * @param  MetalThursday  $metalThursday  MetalThursday criada.
-     * @param  int  $identificadorCriador  Criador autenticado.
      * @param  ReservaMetalThursday|null  $reservaSeguinte  Reserva seguinte
-     *                                                      criada nesta
-     *                                                      publicação.
+     *                                                      eventualmente criada.
      *
      * @since 2.0.0
      */
-    private function notificarCriacao(
+    private function notificarNomeacaoSeguinte(
         MetalThursday $metalThursday,
-        int $identificadorCriador,
         ?ReservaMetalThursday $reservaSeguinte,
     ): void {
-        $metalThursday->load([
-            'edicao',
-            'autor',
-            'criadoPor',
-        ]);
-
-        if ($reservaSeguinte instanceof ReservaMetalThursday) {
-            $reservaSeguinte->loadMissing([
-                'responsavel.permissoesEmail',
-            ]);
+        if (! $reservaSeguinte instanceof ReservaMetalThursday) {
+            return;
         }
 
-        $nomeado =
-            $reservaSeguinte instanceof ReservaMetalThursday
-            ? $reservaSeguinte->responsavel
-            : null;
+        $reservaSeguinte->loadMissing([
+            'responsavel.permissoesEmail',
+        ]);
 
-        if ($nomeado instanceof Utilizador) {
-            try {
-                $nomeado->notify(
-                    new NotificacaoUtilizadorNomeado(
-                        $reservaSeguinte,
-                        $metalThursday,
-                    ),
-                );
-            } catch (Throwable $excecao) {
-                report(
-                    $excecao,
-                );
-            }
+        $nomeado =
+            $reservaSeguinte->responsavel;
+
+        if (! $nomeado instanceof Utilizador) {
+            return;
         }
 
         try {
-            $notificacaoCriacao =
-                new NotificacaoMetalThursdayCriada(
+            $nomeado->notify(
+                new NotificacaoUtilizadorNomeado(
+                    $reservaSeguinte,
                     $metalThursday,
-                );
+                ),
+            );
+        } catch (Throwable $excecao) {
+            report(
+                $excecao,
+            );
+        }
+    }
 
-            $construtor = Utilizador::query()
-                ->with([
-                    'permissoesEmail',
-                ])
-                ->selecionaveis()
-                ->where(
-                    'utilizadores.id',
-                    '!=',
-                    $identificadorCriador,
-                );
-
-            if ($nomeado instanceof Utilizador) {
-                $construtor->where(
-                    'utilizadores.id',
-                    '!=',
-                    $nomeado->getKey(),
-                );
-            }
-
-            $construtor
-                ->reorder(
-                    'utilizadores.id',
-                )
-                ->chunkById(
-                    self::UTILIZADORES_POR_BLOCO,
-                    static function (
-                        Collection $destinatarios,
-                    ) use (
-                        $notificacaoCriacao,
-                    ): void {
-                        Notification::send(
-                            $destinatarios,
-                            $notificacaoCriacao,
-                        );
-                    },
-                    'utilizadores.id',
-                    'id',
+    /**
+     * Processa a notificação geral quando a MetalThursday já está publicada.
+     *
+     * MetalThursdays preparadas com data futura permanecem pendentes para o
+     * processamento temporal posterior. Uma falha na notificação não transforma
+     * a criação já persistida numa resposta de erro.
+     *
+     * @param  MetalThursday  $metalThursday  MetalThursday criada.
+     *
+     * @since 2.0.0
+     */
+    private function notificarPublicacao(
+        MetalThursday $metalThursday,
+    ): void {
+        try {
+            $this->servicoNotificacaoPublicacao
+                ->processar(
+                    $metalThursday,
                 );
         } catch (Throwable $excecao) {
             report(
@@ -1864,6 +2048,41 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                 'seccoes',
                 [],
             ),
+        );
+    }
+
+    /**
+     * Obtém as secções utilizadas durante a preparação de uma reserva.
+     *
+     * Uma submissão anterior inválida possui precedência sobre o rascunho
+     * persistido. Na ausência de dados antigos, são utilizadas as secções do
+     * rascunho. Sem qualquer uma das fontes, o formulário inicia-se vazio.
+     *
+     * @param  Request  $pedido  Pedido HTTP atual.
+     * @param  array<string, mixed>  $dadosRascunho  Dados persistidos.
+     * @return array<int, array<string, mixed>> Secções normalizadas.
+     *
+     * @since 2.0.0
+     */
+    private function obterSeccoesPreparacaoReserva(
+        Request $pedido,
+        array $dadosRascunho,
+    ): array {
+        if (
+            $pedido
+                ->session()
+                ->exists(
+                    '_old_input.seccoes',
+                )
+        ) {
+            return $this->obterSeccoesAnteriores(
+                $pedido,
+            );
+        }
+
+        return $this->normalizarSeccoesSubmetidas(
+            $dadosRascunho['seccoes']
+                ?? [],
         );
     }
 

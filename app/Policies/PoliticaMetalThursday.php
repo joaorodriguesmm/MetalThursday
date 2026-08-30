@@ -64,12 +64,16 @@ final class PoliticaMetalThursday
     /**
      * Determina se o utilizador pode consultar uma MetalThursday.
      *
+     * MetalThursdays já publicadas podem ser consultadas por qualquer utilizador
+     * autenticado. Antes da publicação, o acesso fica limitado ao autor, ao
+     * criador e a utilizadores com privilégios administrativos.
+     *
      * O nome permanece em inglês por corresponder à capacidade convencional
      * utilizada pelo Laravel.
      *
      * @param  Utilizador  $utilizador  Utilizador autenticado.
      * @param  MetalThursday  $metalThursday  MetalThursday consultada.
-     * @return bool Verdadeiro para qualquer utilizador autenticado.
+     * @return bool Verdadeiro quando a consulta é permitida.
      *
      * @since 2.0.0
      */
@@ -77,7 +81,19 @@ final class PoliticaMetalThursday
         Utilizador $utilizador,
         MetalThursday $metalThursday,
     ): bool {
-        return true;
+        if ($metalThursday->estaPublicada()) {
+            return true;
+        }
+
+        return $utilizador->possuiPrivilegiosAdministrativos()
+            || $this->utilizadorEAutor(
+                $utilizador,
+                $metalThursday,
+            )
+            || $this->utilizadorECriador(
+                $utilizador,
+                $metalThursday,
+            );
     }
 
     /**

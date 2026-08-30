@@ -12,6 +12,7 @@ use App\Models\Autenticacao\Utilizador;
 use App\Models\Interacoes\Comentario;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
+use App\Servicos\Interacoes\ServicoDisponibilidadeInteracoes;
 use App\Servicos\Notificacoes\NotificadorInteracoes;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -72,11 +73,15 @@ final class ControladorComentario extends Controller
      *
      * @param  NotificadorInteracoes  $notificadorInteracoes  Serviço responsável
      *                                                        pelas notificações.
+     * @param  ServicoDisponibilidadeInteracoes  $servicoDisponibilidadeInteracoes  Serviço responsável
+     *                                                                              pela disponibilidade
+     *                                                                              temporal.
      *
      * @since 2.0.0
      */
     public function __construct(
         private readonly NotificadorInteracoes $notificadorInteracoes,
+        private readonly ServicoDisponibilidadeInteracoes $servicoDisponibilidadeInteracoes,
     ) {}
 
     /**
@@ -135,6 +140,11 @@ final class ControladorComentario extends Controller
                     $identificadorUtilizador,
                     $conteudo,
                 ): array {
+                    $this->servicoDisponibilidadeInteracoes
+                        ->obterMetalThursdayPublicadaComBloqueio(
+                            $comentavel,
+                        );
+
                     $comentavelBloqueado =
                         $this->bloquearComentavel(
                             $comentavel,
@@ -220,14 +230,20 @@ final class ControladorComentario extends Controller
         );
 
         /*
-     * Confirma que a entidade à qual a conversa pertence continua disponível.
-     * Um comentário pode permanecer fisicamente na base de dados depois da
-     * eliminação lógica da MetalThursday ou da secção, mas nesse caso não deve
-     * funcionar como ponto de acesso autónomo ao conteúdo da conversa.
-     */
-        $this->obterComentavelDoComentario(
-            $comentario,
-        );
+        * Confirma que a entidade à qual a conversa pertence continua disponível.
+        * Um comentário pode permanecer fisicamente na base de dados depois da
+        * eliminação lógica da MetalThursday ou da secção, mas nesse caso não deve
+        * funcionar como ponto de acesso autónomo ao conteúdo da conversa.
+        */
+        $comentavel =
+            $this->obterComentavelDoComentario(
+                $comentario,
+            );
+
+        $this->servicoDisponibilidadeInteracoes
+            ->obterMetalThursdayPublicada(
+                $comentavel,
+            );
 
         $identificadorUtilizador =
             (int) $utilizador->getKey();
@@ -343,6 +359,11 @@ final class ControladorComentario extends Controller
                             $comentarioRespondido,
                         );
 
+                    $this->servicoDisponibilidadeInteracoes
+                        ->obterMetalThursdayPublicadaComBloqueio(
+                            $comentavel,
+                        );
+
                     $comentavelBloqueado =
                         $this->bloquearComentavel(
                             $comentavel,
@@ -452,6 +473,11 @@ final class ControladorComentario extends Controller
                         );
                     }
 
+                    $this->servicoDisponibilidadeInteracoes
+                        ->obterMetalThursdayPublicadaComBloqueio(
+                            $comentarioBloqueado,
+                        );
+
                     $this->authorize(
                         'update',
                         $comentarioBloqueado,
@@ -549,6 +575,11 @@ final class ControladorComentario extends Controller
                             Response::HTTP_GONE,
                         );
                     }
+
+                    $this->servicoDisponibilidadeInteracoes
+                        ->obterMetalThursdayPublicadaComBloqueio(
+                            $comentarioBloqueado,
+                        );
 
                     if (
                         $comentarioBloqueado

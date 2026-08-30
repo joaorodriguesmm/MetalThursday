@@ -22,7 +22,7 @@ use ReflectionMethod;
 use Tests\TestCase;
 
 /**
- * Testa o carregamento dos destinatários das notificações de criação.
+ * Testa o carregamento dos destinatários das notificações após a criação.
  *
  * @since 2.0.0
  */
@@ -31,16 +31,29 @@ final class NotificacoesCriacaoMetalThursdayTest extends TestCase
     use RefreshDatabase;
 
     /**
+     * Prepara cada teste com uma referência temporal determinística.
+     *
+     * @since 2.0.0
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->travelTo(
+            CarbonImmutable::parse(
+                '2026-08-27 12:00:00',
+                'Europe/Lisbon',
+            ),
+        );
+    }
+
+    /**
      * Confirma que as permissões são carregadas por conjunto e que a
      * determinação dos canais não executa consultas por destinatário.
      *
-     * O utilizador efetivamente nomeado origina uma consulta de carregamento
-     * antecipado. Os restantes destinatários do bloco originam uma segunda
-     * consulta, independentemente da quantidade de utilizadores notificados.
-     *
-     * A facade de notificações é substituída pelo fake oficial do Laravel,
-     * garantindo a interceção tanto de `notify()` como de
-     * `Notification::send()`.
+     * A nomeação da reserva criada e a notificação geral da publicação são
+     * responsabilidades distintas. Cada fluxo carrega antecipadamente as
+     * permissões necessárias, independentemente da quantidade de destinatários.
      *
      * @since 2.0.0
      */
@@ -55,9 +68,6 @@ final class NotificacoesCriacaoMetalThursdayTest extends TestCase
         $nomeadoEfetivo =
             $this->criarUtilizadorSelecionavel();
 
-        $nomeadoLegado =
-            $this->criarUtilizadorSelecionavel();
-
         $primeiroDestinatario =
             $this->criarUtilizadorSelecionavel();
 
@@ -65,11 +75,16 @@ final class NotificacoesCriacaoMetalThursdayTest extends TestCase
             $this->criarUtilizadorSelecionavel();
 
         $metalThursday = MetalThursday::factory()
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-08-27',
+                ),
+            )
             ->comAutor(
                 $criador,
             )
             ->comProximoNomeado(
-                $nomeadoLegado,
+                $nomeadoEfetivo,
             )
             ->create([
                 'criado_por_id' => $criador->getKey(),
@@ -78,7 +93,7 @@ final class NotificacoesCriacaoMetalThursdayTest extends TestCase
         $reservaSeguinte = ReservaMetalThursday::factory()
             ->comData(
                 CarbonImmutable::parse(
-                    '2026-08-27',
+                    '2026-09-03',
                 ),
             )
             ->comResponsavel(
@@ -106,27 +121,32 @@ final class NotificacoesCriacaoMetalThursdayTest extends TestCase
                 ControladorMetalThursday::class,
             );
 
-        $metodo =
+        $metodoNomeacao =
             new ReflectionMethod(
                 $controlador,
-                'notificarCriacao',
+                'notificarNomeacaoSeguinte',
             );
 
-        $metodo->invoke(
+        $metodoPublicacao =
+            new ReflectionMethod(
+                $controlador,
+                'notificarPublicacao',
+            );
+
+        $metodoNomeacao->invoke(
             $controlador,
             $metalThursday,
-            (int) $criador->getKey(),
             $reservaSeguinte,
+        );
+
+        $metodoPublicacao->invoke(
+            $controlador,
+            $metalThursday,
         );
 
         $this->confirmarNotificacaoComPermissoesCarregadas(
             $nomeadoEfetivo,
             NotificacaoUtilizadorNomeado::class,
-        );
-
-        $this->confirmarNotificacaoComPermissoesCarregadas(
-            $nomeadoLegado,
-            NotificacaoMetalThursdayCriada::class,
         );
 
         $this->confirmarNotificacaoComPermissoesCarregadas(
@@ -154,11 +174,6 @@ final class NotificacoesCriacaoMetalThursdayTest extends TestCase
             NotificacaoMetalThursdayCriada::class,
         );
 
-        Notification::assertNotSentTo(
-            $nomeadoLegado,
-            NotificacaoUtilizadorNomeado::class,
-        );
-
         $consultasPermissoes =
             array_values(
                 array_filter(
@@ -179,35 +194,38 @@ final class NotificacoesCriacaoMetalThursdayTest extends TestCase
     }
 
     /**
-     * Confirma que uma proposta de nomeação sem reserva efetivamente criada não
-     * origina uma notificação de nomeação nem exclui o utilizador da notificação
-     * geral.
+     * Confirma que a ausência de uma nova reserva não origina uma notificação
+     * de nomeação nem impede a notificação geral da publicação.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function ignora_nomeado_legado_quando_nao_existe_nova_reserva(): void
+    public function sem_nova_reserva_nao_notifica_nomeacao_e_mantem_publicacao_geral(): void
     {
         Notification::fake();
 
         $criador =
             $this->criarUtilizadorSelecionavel();
 
-        $propostaTardia =
+        $primeiroDestinatario =
             $this->criarUtilizadorSelecionavel();
 
-        $outroDestinatario =
+        $segundoDestinatario =
             $this->criarUtilizadorSelecionavel();
 
         $metalThursday = MetalThursday::factory()
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-08-27',
+                ),
+            )
             ->comAutor(
                 $criador,
             )
-            ->comProximoNomeado(
-                $propostaTardia,
-            )
             ->create([
                 'criado_por_id' => $criador->getKey(),
+
+                'proximo_nomeado_id' => null,
             ]);
 
         $controlador =
@@ -215,31 +233,51 @@ final class NotificacoesCriacaoMetalThursdayTest extends TestCase
                 ControladorMetalThursday::class,
             );
 
-        $metodo =
+        $metodoNomeacao =
             new ReflectionMethod(
                 $controlador,
-                'notificarCriacao',
+                'notificarNomeacaoSeguinte',
             );
 
-        $metodo->invoke(
+        $metodoPublicacao =
+            new ReflectionMethod(
+                $controlador,
+                'notificarPublicacao',
+            );
+
+        $metodoNomeacao->invoke(
             $controlador,
             $metalThursday,
-            (int) $criador->getKey(),
             null,
         );
 
+        $metodoPublicacao->invoke(
+            $controlador,
+            $metalThursday,
+        );
+
         Notification::assertNotSentTo(
-            $propostaTardia,
+            $criador,
+            NotificacaoUtilizadorNomeado::class,
+        );
+
+        Notification::assertNotSentTo(
+            $primeiroDestinatario,
+            NotificacaoUtilizadorNomeado::class,
+        );
+
+        Notification::assertNotSentTo(
+            $segundoDestinatario,
             NotificacaoUtilizadorNomeado::class,
         );
 
         Notification::assertSentTo(
-            $propostaTardia,
+            $primeiroDestinatario,
             NotificacaoMetalThursdayCriada::class,
         );
 
         Notification::assertSentTo(
-            $outroDestinatario,
+            $segundoDestinatario,
             NotificacaoMetalThursdayCriada::class,
         );
 

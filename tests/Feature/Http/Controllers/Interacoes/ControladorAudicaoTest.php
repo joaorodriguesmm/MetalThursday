@@ -6,8 +6,10 @@ namespace Tests\Feature\Http\Controllers\Interacoes;
 
 use App\Enumeracoes\Interacoes\TipoEntidadeInteracao;
 use App\Models\Autenticacao\Utilizador;
+use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -309,6 +311,154 @@ final class ControladorAudicaoTest extends TestCase
                 'mensagem',
                 'Secção marcada como não ouvida.',
             );
+
+        $this->assertDatabaseMissing(
+            'audicoes',
+            [
+                'utilizador_id' => $utilizador->getKey(),
+
+                'tipo_audivel' => $seccao->getMorphClass(),
+
+                'audivel_id' => $seccao->getKey(),
+            ],
+        );
+    }
+
+    /**
+     * Confirma que nem o autor pode registar uma audição antes da publicação da
+     * MetalThursday.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function autor_nao_pode_alternar_audicao_de_metal_thursday_preparada(): void
+    {
+        Notification::fake();
+
+        $autor =
+            Utilizador::factory()
+                ->create();
+
+        $dataFutura =
+            CarbonImmutable::now(
+                config(
+                    'app.timezone',
+                ),
+            )->addWeek();
+
+        $edicao =
+            Edicao::factory()
+                ->comPeriodo(
+                    $dataFutura->startOfMonth(),
+                    $dataFutura->endOfMonth(),
+                )
+                ->create();
+
+        $metalThursday =
+            MetalThursday::factory()
+                ->comData(
+                    $dataFutura,
+                )
+                ->comEdicao(
+                    $edicao,
+                )
+                ->comAutor(
+                    $autor,
+                )
+                ->create();
+
+        $this
+            ->actingAs(
+                $autor,
+                'sessao',
+            )
+            ->postJson(
+                route(
+                    'audicoes.alternar',
+                    [
+                        'tipoAudivel' => TipoEntidadeInteracao::MetalThursday->value,
+
+                        'identificadorAudivel' => $metalThursday->getKey(),
+                    ],
+                ),
+            )
+            ->assertNotFound();
+
+        $this->assertDatabaseMissing(
+            'audicoes',
+            [
+                'utilizador_id' => $autor->getKey(),
+
+                'tipo_audivel' => $metalThursday->getMorphClass(),
+
+                'audivel_id' => $metalThursday->getKey(),
+            ],
+        );
+    }
+
+    /**
+     * Confirma que uma secção de uma MetalThursday preparada também permanece
+     * indisponível para audições.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_pode_alternar_audicao_de_seccao_de_metal_thursday_preparada(): void
+    {
+        Notification::fake();
+
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $dataFutura =
+            CarbonImmutable::now(
+                config(
+                    'app.timezone',
+                ),
+            )->addWeek();
+
+        $edicao =
+            Edicao::factory()
+                ->comPeriodo(
+                    $dataFutura->startOfMonth(),
+                    $dataFutura->endOfMonth(),
+                )
+                ->create();
+
+        $metalThursday =
+            MetalThursday::factory()
+                ->comData(
+                    $dataFutura,
+                )
+                ->comEdicao(
+                    $edicao,
+                )
+                ->create();
+
+        $seccao =
+            SeccaoMetalThursday::factory()
+                ->paraMetalThursday(
+                    $metalThursday,
+                )
+                ->create();
+
+        $this
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
+            ->postJson(
+                route(
+                    'audicoes.alternar',
+                    [
+                        'tipoAudivel' => TipoEntidadeInteracao::SeccaoMetalThursday->value,
+
+                        'identificadorAudivel' => $seccao->getKey(),
+                    ],
+                ),
+            )
+            ->assertNotFound();
 
         $this->assertDatabaseMissing(
             'audicoes',

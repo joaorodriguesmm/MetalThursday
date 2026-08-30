@@ -11,6 +11,7 @@ use App\Models\Autenticacao\Utilizador;
 use App\Models\Interacoes\Avaliacao;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
+use App\Servicos\Interacoes\ServicoDisponibilidadeInteracoes;
 use App\Servicos\Notificacoes\NotificadorInteracoes;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
@@ -65,11 +66,15 @@ final class ControladorAvaliacao extends Controller
      *
      * @param  NotificadorInteracoes  $notificadorInteracoes  Serviço responsável
      *                                                        pelas notificações.
+     * @param  ServicoDisponibilidadeInteracoes  $servicoDisponibilidadeInteracoes  Serviço responsável
+     *                                                                              pela disponibilidade
+     *                                                                              temporal.
      *
      * @since 2.0.0
      */
     public function __construct(
         private readonly NotificadorInteracoes $notificadorInteracoes,
+        private readonly ServicoDisponibilidadeInteracoes $servicoDisponibilidadeInteracoes,
     ) {}
 
     /**
@@ -129,6 +134,11 @@ final class ControladorAvaliacao extends Controller
                     $identificadorUtilizador,
                     $pontuacao,
                 ): array {
+                    $this->servicoDisponibilidadeInteracoes
+                        ->obterMetalThursdayPublicadaComBloqueio(
+                            $avaliavel,
+                        );
+
                     $avaliavelBloqueado =
                         $this->bloquearAvaliavel(
                             $avaliavel,
@@ -258,6 +268,11 @@ final class ControladorAvaliacao extends Controller
                     $avaliavel,
                     $identificadorUtilizador,
                 ): MetalThursday|SeccaoMetalThursday {
+                    $this->servicoDisponibilidadeInteracoes
+                        ->obterMetalThursdayPublicadaComBloqueio(
+                            $avaliavel,
+                        );
+
                     $avaliavelBloqueado =
                         $this->bloquearAvaliavel(
                             $avaliavel,

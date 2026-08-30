@@ -7,8 +7,10 @@ namespace Tests\Feature\Http\Controllers\Interacoes;
 use App\Enumeracoes\Interacoes\TipoEntidadeInteracao;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\Interacoes\Comentario;
+use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -1342,5 +1344,405 @@ final class ControladorComentarioTest extends TestCase
             ->assertSeeText(
                 'editado',
             );
+    }
+
+    /**
+     * Confirma que nem o autor pode publicar um comentário antes da publicação da
+     * MetalThursday.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function autor_nao_pode_comentar_metal_thursday_preparada(): void
+    {
+        Notification::fake();
+
+        $autor =
+            Utilizador::factory()
+                ->create();
+
+        $dataFutura =
+            CarbonImmutable::now(
+                config(
+                    'app.timezone',
+                ),
+            )->addWeek();
+
+        $edicao =
+            Edicao::factory()
+                ->comPeriodo(
+                    $dataFutura->startOfMonth(),
+                    $dataFutura->endOfMonth(),
+                )
+                ->create();
+
+        $metalThursday =
+            MetalThursday::factory()
+                ->comData(
+                    $dataFutura,
+                )
+                ->comEdicao(
+                    $edicao,
+                )
+                ->comAutor(
+                    $autor,
+                )
+                ->create();
+
+        $this
+            ->actingAs(
+                $autor,
+                'sessao',
+            )
+            ->postJson(
+                route(
+                    'comentarios.guardar',
+                    [
+                        'tipoComentavel' => TipoEntidadeInteracao::MetalThursday->value,
+
+                        'identificadorComentavel' => $metalThursday->getKey(),
+                    ],
+                ),
+                [
+                    'conteudo' => 'Comentário prematuro.',
+                ],
+            )
+            ->assertNotFound();
+
+        $this->assertDatabaseMissing(
+            'comentarios',
+            [
+                'tipo_comentavel' => $metalThursday->getMorphClass(),
+
+                'comentavel_id' => $metalThursday->getKey(),
+
+                'conteudo' => 'Comentário prematuro.',
+            ],
+        );
+
+        Notification::assertNothingSent();
+    }
+
+    /**
+     * Confirma que um comentário já persistido numa MetalThursday preparada não
+     * pode receber novas respostas antes da publicação.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_pode_responder_a_comentario_de_metal_thursday_preparada(): void
+    {
+        Notification::fake();
+
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $dataFutura =
+            CarbonImmutable::now(
+                config(
+                    'app.timezone',
+                ),
+            )->addWeek();
+
+        $edicao =
+            Edicao::factory()
+                ->comPeriodo(
+                    $dataFutura->startOfMonth(),
+                    $dataFutura->endOfMonth(),
+                )
+                ->create();
+
+        $metalThursday =
+            MetalThursday::factory()
+                ->comData(
+                    $dataFutura,
+                )
+                ->comEdicao(
+                    $edicao,
+                )
+                ->create();
+
+        $comentario =
+            $metalThursday
+                ->comentarios()
+                ->create([
+                    'utilizador_id' => $utilizador->getKey(),
+
+                    'conteudo' => 'Comentário existente.',
+
+                    'comentario_pai_id' => null,
+                ]);
+
+        $this
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
+            ->postJson(
+                route(
+                    'comentarios.respostas.guardar',
+                    $comentario,
+                ),
+                [
+                    'conteudo' => 'Resposta prematura.',
+                ],
+            )
+            ->assertNotFound();
+
+        $this->assertDatabaseMissing(
+            'comentarios',
+            [
+                'comentario_pai_id' => $comentario->getKey(),
+
+                'conteudo' => 'Resposta prematura.',
+            ],
+        );
+
+        Notification::assertNothingSent();
+    }
+
+    /**
+     * Confirma que as respostas de uma conversa pertencente a uma MetalThursday
+     * preparada não podem ser consultadas antes da publicação.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_lista_respostas_de_comentario_de_metal_thursday_preparada(): void
+    {
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $dataFutura =
+            CarbonImmutable::now(
+                config(
+                    'app.timezone',
+                ),
+            )->addWeek();
+
+        $edicao =
+            Edicao::factory()
+                ->comPeriodo(
+                    $dataFutura->startOfMonth(),
+                    $dataFutura->endOfMonth(),
+                )
+                ->create();
+
+        $metalThursday =
+            MetalThursday::factory()
+                ->comData(
+                    $dataFutura,
+                )
+                ->comEdicao(
+                    $edicao,
+                )
+                ->create();
+
+        $comentario =
+            $metalThursday
+                ->comentarios()
+                ->create([
+                    'utilizador_id' => $utilizador->getKey(),
+
+                    'conteudo' => 'Comentário futuro.',
+
+                    'comentario_pai_id' => null,
+                ]);
+
+        $metalThursday
+            ->comentarios()
+            ->create([
+                'utilizador_id' => $utilizador->getKey(),
+
+                'conteudo' => 'Resposta futura.',
+
+                'comentario_pai_id' => $comentario->getKey(),
+            ]);
+
+        $this
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
+            ->getJson(
+                route(
+                    'comentarios.respostas.indice',
+                    $comentario,
+                ),
+            )
+            ->assertNotFound();
+    }
+
+    /**
+     * Confirma que o autor não pode editar um comentário pertencente a uma
+     * secção de uma MetalThursday preparada.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function autor_nao_pode_atualizar_comentario_de_seccao_de_metal_thursday_preparada(): void
+    {
+        $autor =
+            Utilizador::factory()
+                ->create();
+
+        $dataFutura =
+            CarbonImmutable::now(
+                config(
+                    'app.timezone',
+                ),
+            )->addWeek();
+
+        $edicao =
+            Edicao::factory()
+                ->comPeriodo(
+                    $dataFutura->startOfMonth(),
+                    $dataFutura->endOfMonth(),
+                )
+                ->create();
+
+        $metalThursday =
+            MetalThursday::factory()
+                ->comData(
+                    $dataFutura,
+                )
+                ->comEdicao(
+                    $edicao,
+                )
+                ->comAutor(
+                    $autor,
+                )
+                ->create();
+
+        $seccao =
+            SeccaoMetalThursday::factory()
+                ->paraMetalThursday(
+                    $metalThursday,
+                )
+                ->create();
+
+        $comentario =
+            $seccao
+                ->comentarios()
+                ->create([
+                    'utilizador_id' => $autor->getKey(),
+
+                    'conteudo' => 'Comentário original futuro.',
+
+                    'comentario_pai_id' => null,
+                ]);
+
+        $this
+            ->actingAs(
+                $autor,
+                'sessao',
+            )
+            ->patchJson(
+                route(
+                    'comentarios.atualizar',
+                    $comentario,
+                ),
+                [
+                    'conteudo' => 'Alteração prematura.',
+                ],
+            )
+            ->assertNotFound();
+
+        $this->assertDatabaseHas(
+            'comentarios',
+            [
+                'id' => $comentario->getKey(),
+
+                'conteudo' => 'Comentário original futuro.',
+
+                'editado_em' => null,
+            ],
+        );
+    }
+
+    /**
+     * Confirma que o autor não pode eliminar um comentário pertencente a uma
+     * MetalThursday preparada.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function autor_nao_pode_eliminar_comentario_de_metal_thursday_preparada(): void
+    {
+        $autor =
+            Utilizador::factory()
+                ->create();
+
+        $dataFutura =
+            CarbonImmutable::now(
+                config(
+                    'app.timezone',
+                ),
+            )->addWeek();
+
+        $edicao =
+            Edicao::factory()
+                ->comPeriodo(
+                    $dataFutura->startOfMonth(),
+                    $dataFutura->endOfMonth(),
+                )
+                ->create();
+
+        $metalThursday =
+            MetalThursday::factory()
+                ->comData(
+                    $dataFutura,
+                )
+                ->comEdicao(
+                    $edicao,
+                )
+                ->comAutor(
+                    $autor,
+                )
+                ->create();
+
+        $comentario =
+            $metalThursday
+                ->comentarios()
+                ->create([
+                    'utilizador_id' => $autor->getKey(),
+
+                    'conteudo' => 'Comentário futuro preservado.',
+
+                    'comentario_pai_id' => null,
+                ]);
+
+        $this
+            ->actingAs(
+                $autor,
+                'sessao',
+            )
+            ->deleteJson(
+                route(
+                    'comentarios.eliminar',
+                    $comentario,
+                ),
+            )
+            ->assertNotFound();
+
+        $this->assertNotSoftDeleted(
+            'comentarios',
+            [
+                'id' => $comentario->getKey(),
+            ],
+        );
+
+        $this->assertDatabaseHas(
+            'comentarios',
+            [
+                'id' => $comentario->getKey(),
+
+                'conteudo' => 'Comentário futuro preservado.',
+
+                'conteudo_eliminado_em' => null,
+            ],
+        );
     }
 }
