@@ -71,15 +71,24 @@ abstract class PedidoArtistaRequest extends FormRequest
      */
     public function rules(): array
     {
+        $regrasNome = [
+            'bail',
+            'required',
+            'string',
+            $this->criarRegraNome(),
+            'max:'.Artista::COMPRIMENTO_MAXIMO_NOME,
+        ];
+
+        $regraUnicidadeNome =
+            $this->obterRegraUnicidadeNome();
+
+        if ($regraUnicidadeNome instanceof Unique) {
+            $regrasNome[] =
+                $regraUnicidadeNome;
+        }
+
         return [
-            'nome' => [
-                'bail',
-                'required',
-                'string',
-                $this->criarRegraNome(),
-                'max:'.Artista::COMPRIMENTO_MAXIMO_NOME,
-                $this->obterRegraUnicidadeNome(),
-            ],
+            'nome' => $regrasNome,
 
             'origem_geografica_id' => [
                 'bail',
@@ -182,16 +191,16 @@ abstract class PedidoArtistaRequest extends FormRequest
     }
 
     /**
-     * Obtém a regra de unicidade aplicável ao nome.
+     * Obtém a regra de unicidade aplicável ao nome, quando necessária.
      *
-     * A criação e a atualização diferem apenas no artista que deve ser
-     * ignorado pela regra.
+     * A criação permite nomes repetidos mediante confirmação explícita. A
+     * atualização conserva, por enquanto, a restrição de unicidade existente.
      *
-     * @return Unique Regra de unicidade.
+     * @return Unique|null Regra de unicidade ou nulo quando não é aplicável.
      *
      * @since 2.0.0
      */
-    abstract protected function obterRegraUnicidadeNome(): Unique;
+    abstract protected function obterRegraUnicidadeNome(): ?Unique;
 
     /**
      * Cria a regra adicional de validação do nome.

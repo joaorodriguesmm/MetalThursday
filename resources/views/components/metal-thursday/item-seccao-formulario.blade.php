@@ -172,7 +172,7 @@
                                 === (string) $artista->getKey()
                             )
                         >
-                            {{ $artista->nome }}
+                            {{ $artista->obterRotuloSelecao() }}
                         </option>
                     @endforeach
                 </select>

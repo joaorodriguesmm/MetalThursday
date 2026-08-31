@@ -15,6 +15,9 @@ class TratadorFormularioAjax {
      * @param {string} url Endereço utilizado na submissão.
      * @param {((dados: unknown) => void|Promise<void>)|null} aoSucesso
      *     Função executada após uma submissão bem-sucedida.
+     * @param {((erro: unknown) => boolean|Promise<boolean>)|null} aoErro
+     *     Função opcional executada perante um erro de submissão. Deve devolver
+     *     verdadeiro quando o erro tiver sido tratado pelo consumidor.
      *
      * @throws {TypeError} Quando algum argumento é inválido.
      *
@@ -24,6 +27,7 @@ class TratadorFormularioAjax {
         idFormulario,
         url,
         aoSucesso = null,
+        aoErro = null,
     ) {
         if (
             typeof idFormulario !== 'string'
@@ -52,6 +56,15 @@ class TratadorFormularioAjax {
             );
         }
 
+        if (
+            aoErro !== null
+            && typeof aoErro !== 'function'
+        ) {
+            throw new TypeError(
+                'A função de erro indicada é inválida.',
+            );
+        }
+
         const identificadorFormulario =
             idFormulario.trim();
 
@@ -65,6 +78,9 @@ class TratadorFormularioAjax {
 
         this.aoSucesso =
             aoSucesso;
+
+        this.aoErro =
+            aoErro;
 
         this.emSubmissao =
             false;
@@ -125,9 +141,16 @@ class TratadorFormularioAjax {
                         ),
                     );
             } catch (erro) {
-                this.tratarErroSubmissao(
-                    erro,
-                );
+                const erroTratado =
+                    await this.executarAcaoErro(
+                        erro,
+                    );
+
+                if (!erroTratado) {
+                    this.tratarErroSubmissao(
+                        erro,
+                    );
+                }
 
                 return;
             }
@@ -222,6 +245,38 @@ class TratadorFormularioAjax {
             );
 
             return true;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Executa a ação específica configurada para um erro de submissão.
+     *
+     * O consumidor deve devolver verdadeiro apenas quando assumir integralmente
+     * o tratamento do erro. Se não existir ação configurada, se esta devolver
+     * outro valor ou se ocorrer uma exceção, mantém-se o tratamento genérico.
+     *
+     * @param {unknown} erro Erro capturado durante a submissão.
+     *
+     * @returns {Promise<boolean>}
+     *     Verdadeiro quando o erro foi tratado pelo consumidor.
+     *
+     * @since 2.0.0
+     */
+    async executarAcaoErro(
+        erro,
+    ) {
+        if (this.aoErro === null) {
+            return false;
+        }
+
+        try {
+            return (
+                await this.aoErro(
+                    erro,
+                )
+            ) === true;
         } catch {
             return false;
         }

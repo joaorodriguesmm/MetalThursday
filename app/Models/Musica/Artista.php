@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use LogicException;
 
 /**
  * Representa um artista musical.
@@ -185,6 +186,64 @@ class Artista extends Model
                 return $nomeNormalizado;
             },
         );
+    }
+
+    /**
+     * Obtém o rótulo contextual utilizado na seleção do artista.
+     *
+     * O nome é complementado pela origem geográfica e pelos géneros para que
+     * artistas homónimos permaneçam distinguíveis sem alterar o respetivo nome
+     * canónico.
+     *
+     * @return string Rótulo contextual do artista.
+     *
+     * @throws LogicException Quando as relações carregadas contêm dados
+     *                        persistidos inválidos.
+     *
+     * @since 2.0.0
+     */
+    public function obterRotuloSelecao(): string
+    {
+        $origemGeografica =
+            $this->origemGeografica;
+
+        if (! $origemGeografica instanceof OrigemGeografica) {
+            throw new LogicException(
+                'O artista não possui uma origem geográfica válida.',
+            );
+        }
+
+        $nomesGeneros = [];
+
+        foreach ($this->generos as $genero) {
+            if (! $genero instanceof Genero) {
+                throw new LogicException(
+                    'O artista possui um género persistido inválido.',
+                );
+            }
+
+            $nomesGeneros[] =
+                $genero->nome;
+        }
+
+        $partesContexto = [
+            $origemGeografica->nome,
+        ];
+
+        if ($nomesGeneros !== []) {
+            $partesContexto[] =
+                implode(
+                    ', ',
+                    $nomesGeneros,
+                );
+        }
+
+        return $this->nome
+            .' — '
+            .implode(
+                ' · ',
+                $partesContexto,
+            );
     }
 
     /**

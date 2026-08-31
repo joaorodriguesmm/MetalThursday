@@ -6,10 +6,13 @@ namespace Tests\Feature\Http\Controllers\MetalThursday;
 
 use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\Utilizador;
+use App\Models\Geografia\OrigemGeografica;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
+use App\Models\Musica\Artista;
+use App\Models\Musica\Genero;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -1802,6 +1805,152 @@ final class ControladorMetalThursdayTest extends TestCase
                 'id' => $metalThursday->getKey(),
             ],
         );
+    }
+
+    /**
+     * Confirma que o modal de criação rápida de artistas possui a estrutura
+     * necessária para apresentar e confirmar possíveis homónimos.
+     *
+     * O sinal de confirmação deve começar desativado para não ser enviado na
+     * primeira submissão. Apenas a interação posterior do utilizador poderá
+     * ativá-lo.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function formulario_criacao_inclui_estrutura_para_confirmar_artista_homonimo_no_modal(): void
+    {
+        $administrador = Utilizador::factory()
+            ->comPapel(
+                PapelUtilizador::Administrador,
+            )
+            ->create();
+
+        $resposta = $this
+            ->actingAs(
+                $administrador,
+                'sessao',
+            )
+            ->get(
+                route(
+                    'metal-thursday.criar',
+                ),
+            );
+
+        $resposta
+            ->assertOk()
+            ->assertSeeHtml(
+                'id="modal-criar-artista"',
+            )
+            ->assertSeeHtml(
+                'data-confirmacao-nome-repetido',
+            )
+            ->assertSeeHtml(
+                'data-mensagem-confirmacao-nome-repetido',
+            )
+            ->assertSeeHtml(
+                'data-lista-artistas-homonimos',
+            );
+
+        $conteudo =
+            $resposta->getContent();
+
+        self::assertMatchesRegularExpression(
+            '/<input\s+[^>]*type="hidden"[^>]*name="confirmar_nome_repetido"[^>]*value="1"[^>]*disabled[^>]*>/s',
+            $conteudo,
+        );
+    }
+
+    /**
+     * Confirma que artistas com o mesmo nome são distinguíveis nas opções do
+     * formulário através da origem geográfica e dos géneros musicais.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function formulario_criacao_distingue_artistas_homonimos_nas_opcoes(): void
+    {
+        $administrador = Utilizador::factory()
+            ->comPapel(
+                PapelUtilizador::Administrador,
+            )
+            ->create();
+
+        $suecia = OrigemGeografica::factory()
+            ->comDados(
+                'Suécia',
+                'SE',
+            )
+            ->create();
+
+        $estadosUnidos = OrigemGeografica::factory()
+            ->comDados(
+                'Estados Unidos',
+                'US',
+            )
+            ->create();
+
+        $heavyMetal = Genero::factory()
+            ->comNome(
+                'Heavy Metal',
+            )
+            ->create();
+
+        $doomMetal = Genero::factory()
+            ->comNome(
+                'Doom Metal',
+            )
+            ->create();
+
+        $ghostSuecia = Artista::factory()
+            ->comNome(
+                'Ghost',
+            )
+            ->deOrigemGeografica(
+                $suecia,
+            )
+            ->create();
+
+        $ghostSuecia
+            ->generos()
+            ->sync([
+                $heavyMetal->getKey(),
+            ]);
+
+        $ghostEstadosUnidos = Artista::factory()
+            ->comNome(
+                'Ghost',
+            )
+            ->deOrigemGeografica(
+                $estadosUnidos,
+            )
+            ->create();
+
+        $ghostEstadosUnidos
+            ->generos()
+            ->sync([
+                $doomMetal->getKey(),
+            ]);
+
+        $resposta = $this
+            ->actingAs(
+                $administrador,
+                'sessao',
+            )
+            ->get(
+                route(
+                    'metal-thursday.criar',
+                ),
+            );
+
+        $resposta
+            ->assertOk()
+            ->assertSee(
+                'Ghost — Suécia · Heavy Metal',
+            )
+            ->assertSee(
+                'Ghost — Estados Unidos · Doom Metal',
+            );
     }
 
     /**

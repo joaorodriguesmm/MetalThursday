@@ -20,6 +20,7 @@ class GestorFormulariosModais {
      * - `regrasValidacao`: regras opcionais de validação;
      * - `mensagensValidacao`: mensagens opcionais de validação;
      * - `aoSucesso`: função opcional executada após o sucesso.
+     * - `aoErro`: função opcional executada perante um erro de submissão.
      *
      * @param {Array<object>} configuracoesModais
      *     Configurações dos formulários.
@@ -85,6 +86,7 @@ class GestorFormulariosModais {
             configuracao.idFormulario,
             configuracao.url,
             configuracao.aoSucesso,
+            configuracao.aoErro,
         );
 
         new ValidadorFormulario(
@@ -111,7 +113,8 @@ class GestorFormulariosModais {
      *     url: string,
      *     regrasValidacao: object,
      *     mensagensValidacao: object,
-     *     aoSucesso: Function|null
+     *     aoSucesso: Function|null,
+     *     aoErro: Function|null
      * }} Configuração normalizada.
      *
      * @throws {TypeError} Quando a configuração é inválida.
@@ -170,6 +173,18 @@ class GestorFormulariosModais {
             );
         }
 
+        const aoErro =
+            configuracao.aoErro ?? null;
+
+        if (
+            aoErro !== null
+            && typeof aoErro !== 'function'
+        ) {
+            throw new TypeError(
+                'A função de erro do formulário modal é inválida.',
+            );
+        }
+
         return {
             idFormulario:
                 configuracao.idFormulario.trim(),
@@ -179,6 +194,7 @@ class GestorFormulariosModais {
             regrasValidacao,
             mensagensValidacao,
             aoSucesso,
+            aoErro,
         };
     }
 

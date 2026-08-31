@@ -159,6 +159,10 @@ final class ControladorArtista extends Controller
     /**
      * Guarda um novo artista e sincroniza os respetivos géneros.
      *
+     * Quando existem artistas ativos com o mesmo nome, a criação fica suspensa
+     * até que o utilizador confirme explicitamente que pretende criar outro
+     * artista homónimo.
+     *
      * @param  CriarArtistaRequest  $pedido  Pedido validado.
      * @return JsonResponse|RedirectResponse Resposta da operação.
      *
@@ -176,11 +180,70 @@ final class ControladorArtista extends Controller
          * @var array{
          *     nome: string,
          *     origem_geografica_id: int,
-         *     generos: list<int>
+         *     generos: list<int>,
+         *     confirmar_nome_repetido?: mixed
          * } $dados
          */
         $dados =
             $pedido->validated();
+
+        $artistasHomonimos =
+            Artista::query()
+                ->select([
+                    'id',
+                    'nome',
+                    'origem_geografica_id',
+                ])
+                ->with([
+                    'origemGeografica:id,nome',
+                ])
+                ->where(
+                    'nome',
+                    $dados['nome'],
+                )
+                ->orderBy(
+                    'id',
+                )
+                ->get();
+
+        if (
+            $artistasHomonimos->isNotEmpty()
+            && ! array_key_exists(
+                'confirmar_nome_repetido',
+                $dados,
+            )
+        ) {
+            $artistasHomonimosSerializados = [];
+
+            foreach ($artistasHomonimos as $artistaHomonimo) {
+                $artistasHomonimosSerializados[] =
+                    $this->serializarArtistaHomonimo(
+                        $artistaHomonimo,
+                    );
+            }
+
+            $dadosConfirmacao = [
+                'codigo' => 'confirmacao_nome_repetido_necessaria',
+
+                'mensagem' => 'Já existem artistas com este nome. Confirma se pretendes criar um novo artista.',
+
+                'artistas_homonimos' => $artistasHomonimosSerializados,
+            ];
+
+            if ($pedido->expectsJson()) {
+                return response()->json(
+                    $dadosConfirmacao,
+                    Response::HTTP_CONFLICT,
+                );
+            }
+
+            return back()
+                ->withInput()
+                ->with(
+                    'confirmacao_nome_repetido',
+                    $dadosConfirmacao,
+                );
+        }
 
         $artista =
             DB::transaction(
@@ -676,16 +739,60 @@ final class ControladorArtista extends Controller
     }
 
     /**
-     * Converte um artista para o formato da resposta HTTP.
+     * Converte um artista homónimo para o formato utilizado na confirmação.
      *
      * @param  Artista  $artista  Artista convertido.
      * @return array{
      *     id: int,
      *     nome: string,
-     *     origem_geografica_id: int,
-     *     origem_geografica: array{id: int, nome: string},
-     *     generos: list<array{id: int, nome: string}>
-     * } Dados do artista.
+     *     origem_geografica: array{
+     *         id: int,
+     *         nome: string
+     *     }
+     * } Dados necessários para identificar o homónimo.
+     *
+     * @throws LogicException Quando a origem geográfica do artista não está
+     *                        disponível.
+     *
+     * @since 2.0.0
+     */
+    private function serializarArtistaHomonimo(
+        Artista $artista,
+    ): array {
+        $origemGeografica =
+            $artista->origemGeografica;
+
+        if (! $origemGeografica instanceof OrigemGeografica) {
+            throw new LogicException(
+                'O artista não possui uma origem geográfica válida.',
+            );
+        }
+
+        return [
+            'id' => (int) $artista->getKey(),
+
+            'nome' => $artista->nome,
+
+            'origem_geografica' => [
+                'id' => (int) $origemGeografica->getKey(),
+
+                'nome' => $origemGeografica->nome,
+            ],
+        ];
+    }
+
+    /**
+     * Converte um artista para o formato da resposta HTTP.
+     *
+     * @param  Artista  $artista  Artista convertido.
+     *                            * @return array{
+     *                            id: int,
+     *                            nome: string,
+     *                            rotulo_selecao: string,
+     *                            origem_geografica_id: int,
+     *                            origem_geografica: array{id: int, nome: string},
+     *                            generos: list<array{id: int, nome: string}>
+     *                            } Dados do artista.
      *
      * @throws LogicException Quando a origem geográfica do artista não está
      *                        disponível.
@@ -724,6 +831,8 @@ final class ControladorArtista extends Controller
             'id' => (int) $artista->getKey(),
 
             'nome' => $artista->nome,
+
+            'rotulo_selecao' => $artista->obterRotuloSelecao(),
 
             'origem_geografica_id' => (int) $origemGeografica->getKey(),
 

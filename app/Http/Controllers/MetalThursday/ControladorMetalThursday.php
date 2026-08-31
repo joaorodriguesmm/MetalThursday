@@ -1377,6 +1377,9 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
     /**
      * Obtém os artistas disponíveis para seleção.
      *
+     * A origem geográfica e os géneros são carregados antecipadamente porque
+     * integram o rótulo contextual apresentado nas opções.
+     *
      * @return Collection<int, Artista> Artistas.
      *
      * @since 2.0.0
@@ -1388,6 +1391,10 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                 'id',
                 'nome',
                 'origem_geografica_id',
+            ])
+            ->with([
+                'origemGeografica:id,nome',
+                'generos:id,nome',
             ])
             ->orderBy(
                 'nome',

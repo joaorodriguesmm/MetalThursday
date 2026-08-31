@@ -6,7 +6,6 @@ namespace App\Http\Requests\Musica;
 
 use App\Models\Autenticacao\Utilizador;
 use App\Models\Musica\Artista;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Unique;
 
 /**
@@ -39,25 +38,58 @@ final class CriarArtistaRequest extends PedidoArtistaRequest
     }
 
     /**
-     * Obtém a regra de unicidade aplicável ao nome.
+     * Obtém as regras de validação aplicáveis à criação.
      *
-     * Os artistas eliminados logicamente não impedem a reutilização do
-     * respetivo nome.
+     * O sinal de confirmação é opcional. Quando enviado, deve representar
+     * explicitamente uma confirmação aceite pela validação.
      *
-     * Esta restrição será substituída pelo mecanismo de confirmação de
-     * possíveis duplicados.
-     *
-     * @return Unique Regra de unicidade.
+     * @return array<string, list<mixed>> Regras de validação.
      *
      * @since 2.0.0
      */
-    protected function obterRegraUnicidadeNome(): Unique
+    public function rules(): array
     {
-        return Rule::unique(
-            Artista::class,
-            'nome',
-        )->whereNull(
-            'deleted_at',
-        );
+        $regras =
+            parent::rules();
+
+        $regras['confirmar_nome_repetido'] = [
+            'sometimes',
+            'accepted',
+        ];
+
+        return $regras;
+    }
+
+    /**
+     * Obtém as mensagens de validação aplicáveis à criação.
+     *
+     * @return array<string, string> Mensagens de validação.
+     *
+     * @since 2.0.0
+     */
+    public function messages(): array
+    {
+        $mensagens =
+            parent::messages();
+
+        $mensagens['confirmar_nome_repetido.accepted'] =
+            'A confirmação da criação de um artista com nome repetido não é válida.';
+
+        return $mensagens;
+    }
+
+    /**
+     * Indica que a criação não possui uma regra de unicidade do nome.
+     *
+     * A existência de artistas ativos com o mesmo nome é tratada como uma
+     * situação que exige confirmação explícita e não como erro de validação.
+     *
+     * @return null A criação não aplica unicidade ao nome.
+     *
+     * @since 2.0.0
+     */
+    protected function obterRegraUnicidadeNome(): ?Unique
+    {
+        return null;
     }
 }

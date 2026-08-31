@@ -851,14 +851,14 @@ function inicializarNovaSeccao(
     ) {
         artistasCriados.forEach(
             (
-                nome,
+                rotulo,
                 identificador,
             ) => {
                 adicionarOpcaoTomSelect(
                     selecaoArtista.tomselect
                     ?? null,
                     identificador,
-                    nome,
+                    rotulo,
                 );
             },
         );
@@ -872,6 +872,470 @@ function inicializarNovaSeccao(
     inicializarTooltipsSeccao(
         seccao,
         inicializadorTooltips,
+    );
+}
+
+/**
+ * Obtém e valida os dados de uma confirmação de nome de artista repetido.
+ *
+ * Apenas é reconhecido o contrato HTTP específico utilizado pela criação de
+ * artistas. Qualquer outro erro continua disponível para o tratamento
+ * genérico do formulário AJAX.
+ *
+ * @param {unknown} erro Erro recebido durante a submissão.
+ *
+ * @returns {{
+ *     mensagem: string,
+ *     artistasHomonimos: Array<{
+ *         identificador: number,
+ *         nome: string,
+ *         origemGeografica: {
+ *             identificador: number,
+ *             nome: string
+ *         }
+ *     }>
+ * }|null} Dados normalizados ou nulo quando o erro não corresponde ao
+ *     contrato esperado.
+ *
+ * @since 2.0.0
+ */
+function obterDadosConfirmacaoNomeRepetidoArtista(
+    erro,
+) {
+    if (
+        !eObjeto(erro)
+        || !eObjeto(
+            erro.response,
+        )
+        || erro.response.status !== 409
+        || !eObjeto(
+            erro.response.data,
+        )
+    ) {
+        return null;
+    }
+
+    const dados =
+        erro.response.data;
+
+    if (
+        dados.codigo
+            !== 'confirmacao_nome_repetido_necessaria'
+        || typeof dados.mensagem !== 'string'
+        || dados.mensagem.trim() === ''
+        || !Array.isArray(
+            dados.artistas_homonimos,
+        )
+        || dados.artistas_homonimos.length === 0
+    ) {
+        return null;
+    }
+
+    const artistasHomonimos = [];
+
+    for (
+        const artista
+        of dados.artistas_homonimos
+    ) {
+        if (
+            !eObjeto(artista)
+            || !Number.isInteger(
+                artista.id,
+            )
+            || artista.id <= 0
+            || typeof artista.nome !== 'string'
+            || artista.nome.trim() === ''
+            || !eObjeto(
+                artista.origem_geografica,
+            )
+            || !Number.isInteger(
+                artista.origem_geografica.id,
+            )
+            || artista.origem_geografica.id <= 0
+            || typeof artista.origem_geografica.nome
+                !== 'string'
+            || artista.origem_geografica.nome.trim()
+                === ''
+        ) {
+            return null;
+        }
+
+        artistasHomonimos.push(
+            {
+                identificador:
+                    artista.id,
+
+                nome:
+                    artista.nome.trim(),
+
+                origemGeografica: {
+                    identificador:
+                        artista.origem_geografica.id,
+
+                    nome:
+                        artista.origem_geografica.nome
+                            .trim(),
+                },
+            },
+        );
+    }
+
+    return {
+        mensagem:
+            dados.mensagem.trim(),
+
+        artistasHomonimos,
+    };
+}
+
+/**
+ * Cria a apresentação de um artista homónimo dentro do aviso do modal.
+ *
+ * Os valores recebidos são inseridos através de `textContent` para não
+ * interpretar conteúdo proveniente da resposta como HTML.
+ *
+ * @param {object} artista Artista homónimo normalizado.
+ *
+ * @returns {HTMLElement} Elemento criado.
+ *
+ * @since 2.0.0
+ */
+function criarElementoArtistaHomonimo(
+    artista,
+) {
+    const contentor =
+        document.createElement(
+            'div',
+        );
+
+    contentor.className =
+        'artista-homonimo';
+
+    const nome =
+        document.createElement(
+            'strong',
+        );
+
+    nome.className =
+        'artista-homonimo__nome';
+
+    nome.textContent =
+        artista.nome;
+
+    const detalhes =
+        document.createElement(
+            'div',
+        );
+
+    detalhes.className =
+        'artista-homonimo__detalhes';
+
+    const origem =
+        document.createElement(
+            'span',
+        );
+
+    origem.textContent =
+        artista.origemGeografica.nome;
+
+    const separador =
+        document.createElement(
+            'span',
+        );
+
+    separador.textContent =
+        '·';
+
+    separador.setAttribute(
+        'aria-hidden',
+        'true',
+    );
+
+    const ano =
+        document.createElement(
+            'span',
+        );
+
+    ano.textContent =
+        'Ano de início desconhecido';
+
+    detalhes.append(
+        origem,
+        separador,
+        ano,
+    );
+
+    contentor.append(
+        nome,
+        detalhes,
+    );
+
+    return contentor;
+}
+
+/**
+ * Define se a próxima submissão confirma explicitamente um nome repetido.
+ *
+ * O campo permanece desativado até o servidor indicar que existem artistas
+ * homónimos. Desta forma, uma criação normal nunca envia a confirmação.
+ *
+ * @param {HTMLFormElement} formulario Formulário de criação do artista.
+ * @param {boolean} confirmar Indica se a confirmação deve ser enviada.
+ *
+ * @returns {boolean}
+ *     Verdadeiro quando o campo de confirmação existe e foi atualizado.
+ *
+ * @since 2.0.0
+ */
+function definirConfirmacaoNomeRepetidoArtista(
+    formulario,
+    confirmar,
+) {
+    const campoConfirmacao =
+        formulario.elements.namedItem(
+            'confirmar_nome_repetido',
+        );
+
+    if (
+        !(campoConfirmacao
+            instanceof HTMLInputElement)
+    ) {
+        return false;
+    }
+
+    campoConfirmacao.disabled =
+        !confirmar;
+
+    return true;
+}
+
+/**
+ * Apresenta no modal os artistas com o mesmo nome devolvidos pelo servidor.
+ *
+ * Depois de apresentar o conflito, ativa a confirmação que será enviada
+ * apenas se o utilizador submeter novamente o mesmo formulário.
+ *
+ * @param {object} dados Dados de confirmação normalizados.
+ *
+ * @returns {boolean}
+ *     Verdadeiro quando a interface foi atualizada com sucesso.
+ *
+ * @since 2.0.0
+ */
+function apresentarConfirmacaoNomeRepetidoArtista(
+    dados,
+) {
+    const formulario =
+        document.getElementById(
+            'formulario-criar-artista',
+        );
+
+    if (
+        !(formulario
+            instanceof HTMLFormElement)
+    ) {
+        return false;
+    }
+
+    const contentorConfirmacao =
+        formulario.querySelector(
+            '[data-confirmacao-nome-repetido]',
+        );
+
+    const elementoMensagem =
+        formulario.querySelector(
+            '[data-mensagem-confirmacao-nome-repetido]',
+        );
+
+    const listaArtistas =
+        formulario.querySelector(
+            '[data-lista-artistas-homonimos]',
+        );
+
+    if (
+        !(contentorConfirmacao
+            instanceof HTMLElement)
+        || !(elementoMensagem
+            instanceof HTMLElement)
+        || !(listaArtistas
+            instanceof HTMLElement)
+        || !definirConfirmacaoNomeRepetidoArtista(
+            formulario,
+            true,
+        )
+    ) {
+        return false;
+    }
+
+    elementoMensagem.textContent =
+        dados.mensagem;
+
+    const elementosArtistas =
+        dados.artistasHomonimos.map(
+            (artista) =>
+                criarElementoArtistaHomonimo(
+                    artista,
+                ),
+        );
+
+    listaArtistas.replaceChildren(
+        ...elementosArtistas,
+    );
+
+    contentorConfirmacao.hidden =
+        false;
+
+    return true;
+}
+
+/**
+ * Remove qualquer confirmação pendente de criação de artista homónimo.
+ *
+ * O aviso é também limpo para garantir que os candidatos apresentados nunca
+ * ficam associados visualmente a um nome diferente.
+ *
+ * @param {HTMLFormElement} formulario Formulário de criação do artista.
+ *
+ * @returns {void}
+ *
+ * @since 2.0.0
+ */
+function reporConfirmacaoNomeRepetidoArtista(
+    formulario,
+) {
+    definirConfirmacaoNomeRepetidoArtista(
+        formulario,
+        false,
+    );
+
+    const contentorConfirmacao =
+        formulario.querySelector(
+            '[data-confirmacao-nome-repetido]',
+        );
+
+    const elementoMensagem =
+        formulario.querySelector(
+            '[data-mensagem-confirmacao-nome-repetido]',
+        );
+
+    const listaArtistas =
+        formulario.querySelector(
+            '[data-lista-artistas-homonimos]',
+        );
+
+    if (
+        contentorConfirmacao
+        instanceof HTMLElement
+    ) {
+        contentorConfirmacao.hidden =
+            true;
+    }
+
+    if (
+        elementoMensagem
+        instanceof HTMLElement
+    ) {
+        elementoMensagem.textContent =
+            '';
+    }
+
+    if (
+        listaArtistas
+        instanceof HTMLElement
+    ) {
+        listaArtistas.replaceChildren();
+    }
+}
+
+/**
+ * Trata especificamente o conflito de nome repetido na criação de artistas.
+ *
+ * @param {unknown} erro Erro recebido durante a submissão AJAX.
+ *
+ * @returns {boolean}
+ *     Verdadeiro apenas quando o conflito foi reconhecido e apresentado.
+ *
+ * @since 2.0.0
+ */
+function tratarErroCriacaoArtista(
+    erro,
+) {
+    const dados =
+        obterDadosConfirmacaoNomeRepetidoArtista(
+            erro,
+        );
+
+    if (dados === null) {
+        return false;
+    }
+
+    return apresentarConfirmacaoNomeRepetidoArtista(
+        dados,
+    );
+}
+
+/**
+ * Gere o ciclo de vida da confirmação de nomes repetidos no modal de artista.
+ *
+ * Uma confirmação só é válida enquanto o nome que originou o conflito não for
+ * alterado e enquanto o utilizador mantiver aberto o modal atual.
+ *
+ * @returns {void}
+ *
+ * @since 2.0.0
+ */
+function configurarConfirmacaoNomeRepetidoArtista() {
+    const formulario =
+        document.getElementById(
+            'formulario-criar-artista',
+        );
+
+    const modal =
+        document.getElementById(
+            'modal-criar-artista',
+        );
+
+    if (
+        !(formulario
+            instanceof HTMLFormElement)
+        || !(modal
+            instanceof HTMLElement)
+    ) {
+        return;
+    }
+
+    const campoNome =
+        formulario.elements.namedItem(
+            'nome',
+        );
+
+    if (
+        !(campoNome
+            instanceof HTMLInputElement)
+    ) {
+        return;
+    }
+
+    reporConfirmacaoNomeRepetidoArtista(
+        formulario,
+    );
+
+    campoNome.addEventListener(
+        'input',
+        () => {
+            reporConfirmacaoNomeRepetidoArtista(
+                formulario,
+            );
+        },
+    );
+
+    modal.addEventListener(
+        'hidden.bs.modal',
+        () => {
+            reporConfirmacaoNomeRepetidoArtista(
+                formulario,
+            );
+        },
     );
 }
 
@@ -1027,13 +1491,16 @@ function criarConfiguracoesModais(
                 },
             },
 
+            aoErro:
+                tratarErroCriacaoArtista,
+
             aoSucesso: (
                 dadosResposta,
             ) => {
                 const opcao = obterOpcaoResposta(
                     dadosResposta,
                     'artista',
-                    'nome',
+                    'rotulo_selecao',
                 );
 
                 if (opcao === null) {
@@ -1548,6 +2015,8 @@ function inicializarFormularioMetalThursday(
     configurarRetornoCriacaoGeneroParaArtista(
         contextoCriacaoRapida,
     );
+
+    configurarConfirmacaoNomeRepetidoArtista();
 
     new GestorFormulariosModais(
         criarConfiguracoesModais(

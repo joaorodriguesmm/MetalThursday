@@ -17,6 +17,7 @@ $fundo-escuro: #282424;
 $cinzento-secundario: #444;
 $cinzento-borda: #767676;
 $branco: #fff;
+$amarelo-aviso: #d6ad60;
 
 /**
  * Cores de texto e de estado com contraste reforçado sobre os fundos escuros.
@@ -994,4 +995,137 @@ a:not(.btn) {
  */
 .cartao-metal-thursday {
     overflow: hidden;
+}
+
+/**
+ * Aviso de possível artista homónimo.
+ *
+ * Mantém a informação de confirmação integrada no tema escuro sem recorrer
+ * ao fundo amarelo intenso dos alertas Bootstrap.
+ *
+ * @since 2.0.0
+ */
+.aviso-artista-homonimo {
+    padding: 1rem;
+    margin-bottom: 1.25rem;
+    color: $branco;
+    background-color:
+        color.change(
+            $amarelo-aviso,
+            $alpha: 0.08,
+        );
+
+    border:
+        1px solid
+        color.change(
+            $amarelo-aviso,
+            $alpha: 0.35,
+        );
+
+    border-left:
+        4px solid
+        $amarelo-aviso;
+
+    border-radius:
+        var(--bs-border-radius);
+}
+
+.aviso-artista-homonimo__cabecalho {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+}
+
+.aviso-artista-homonimo__icone {
+    flex: 0 0 auto;
+    margin-top: 0.15rem;
+    color: $amarelo-aviso;
+    font-size: 1.1rem;
+}
+
+.aviso-artista-homonimo__titulo {
+    margin-bottom: 0.15rem;
+    color: $branco;
+    font-weight: 700;
+}
+
+.aviso-artista-homonimo__mensagem {
+    margin: 0;
+    color: $cinzento-texto-suave;
+    font-size: 0.925rem;
+}
+
+.aviso-artista-homonimo__lista {
+    margin-top: 0.85rem;
+    overflow: hidden;
+    border:
+        1px solid
+        color.change(
+            $branco,
+            $alpha: 0.12,
+        );
+
+    border-radius:
+        var(--bs-border-radius);
+}
+
+.artista-homonimo {
+    display: flex;
+    gap: 1rem;
+    align-items: baseline;
+    justify-content: space-between;
+    padding:
+        0.65rem
+        0.75rem;
+
+    background-color:
+        color.change(
+            $branco,
+            $alpha: 0.025,
+        );
+}
+
+.artista-homonimo
+    + .artista-homonimo {
+    border-top:
+        1px solid
+        color.change(
+            $branco,
+            $alpha: 0.1,
+        );
+}
+
+.artista-homonimo__nome {
+    color: $branco;
+}
+
+.artista-homonimo__detalhes {
+    display: flex;
+    gap: 0.4rem;
+    color: $cinzento-texto-suave;
+    font-size: 0.875rem;
+    text-align: right;
+}
+
+.aviso-artista-homonimo__nota {
+    margin:
+        0.75rem
+        0
+        0;
+
+    color: $cinzento-texto-suave;
+    font-size: 0.875rem;
+}
+
+@media (max-width: 575.98px) {
+    .artista-homonimo {
+        flex-direction: column;
+        gap: 0.15rem;
+        align-items: flex-start;
+    }
+
+    .artista-homonimo__detalhes {
+        flex-wrap: wrap;
+        text-align: left;
+    }
 }

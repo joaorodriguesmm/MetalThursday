@@ -20,6 +20,17 @@
         @method('PATCH')
     @endif
 
+    @if (
+        ! $emEdicao
+        && ($exigeConfirmacaoNomeRepetido ?? false)
+    )
+        <input
+            type="hidden"
+            name="confirmar_nome_repetido"
+            value="1"
+        >
+    @endif
+
     <div class="grupo-campo-formulario mb-3">
         <label
             class="form-label"
@@ -85,6 +96,7 @@
             placeholder="Seleciona uma origem geográfica"
             aria-describedby="erro-origem-geografica-artista"
             autocomplete="off"
+            data-ordenar-alfabeticamente
             required
             @error('origem_geografica_id')
                 aria-invalid="true"
@@ -231,7 +243,14 @@
             class="btn btn-primary"
             type="submit"
         >
-            {{ $textoBotaoSubmissao }}
+            @if (
+                ! $emEdicao
+                && ($exigeConfirmacaoNomeRepetido ?? false)
+            )
+                Criar artista mesmo assim
+            @else
+                {{ $textoBotaoSubmissao }}
+            @endif
         </button>
     </div>
 </form>

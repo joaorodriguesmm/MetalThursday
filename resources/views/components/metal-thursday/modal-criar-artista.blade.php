@@ -38,6 +38,13 @@
                 >
                     @csrf
 
+                    <input
+                        type="hidden"
+                        name="confirmar_nome_repetido"
+                        value="1"
+                        disabled
+                    >
+
                     <div class="modal-header border-secondary">
                         <h2
                             id="titulo-modal-criar-artista"
@@ -55,6 +62,41 @@
                     </div>
 
                     <div class="modal-body">
+                        <div
+                            class="aviso-artista-homonimo"
+                            role="alert"
+                            aria-live="polite"
+                            data-confirmacao-nome-repetido
+                            hidden
+                        >
+                            <div class="aviso-artista-homonimo__cabecalho">
+                                <i
+                                    class="bi bi-exclamation-triangle-fill aviso-artista-homonimo__icone"
+                                    aria-hidden="true"
+                                ></i>
+
+                                <div>
+                                    <div class="aviso-artista-homonimo__titulo">
+                                        Artista com o mesmo nome
+                                    </div>
+
+                                    <p
+                                        class="aviso-artista-homonimo__mensagem"
+                                        data-mensagem-confirmacao-nome-repetido
+                                    ></p>
+                                </div>
+                            </div>
+
+                            <div
+                                class="aviso-artista-homonimo__lista"
+                                data-lista-artistas-homonimos
+                            ></div>
+
+                            <p class="aviso-artista-homonimo__nota">
+                                Se for um artista diferente, volta a confirmar a criação.
+                            </p>
+                        </div>
+
                         <div
                             class="grupo-campo-formulario mb-3"
                             data-grupo-campo
@@ -117,6 +159,7 @@
                                 name="origem_geografica_id"
                                 placeholder="Seleciona uma origem geográfica"
                                 aria-describedby="erro-origem-geografica-novo-artista"
+                                data-ordenar-alfabeticamente
                                 required
                             >
                                 <option value="">
