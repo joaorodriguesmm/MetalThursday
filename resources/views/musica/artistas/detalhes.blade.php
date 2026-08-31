@@ -1,34 +1,34 @@
 {{--
-    Apresenta os detalhes de uma banda e as respetivas aparições em
+    Apresenta os detalhes de um artista e as respetivas aparições em
     MetalThursdays.
 
     Os dados do cabeçalho são preparados pelo
-    App\Http\Controllers\Musica\ControladorBanda.
+    App\Http\Controllers\Musica\ControladorArtista.
 
-    Cada aparição é apresentada pelo componente
-    App\View\Components\Musica\Bandas\CartaoAparicaoMetalThursday.
+    O componente das aparições conserva temporariamente a nomenclatura
+    anterior durante a migração estrutural.
 
     @since 1.0.0
 --}}
 
 <x-layout-aplicacao>
     <x-slot name="titulo">
-        {{ $banda->nome }}
+        {{ $artista->nome }}
     </x-slot>
 
     <x-slot name="cabecalho">
         <div>
             <h1 class="h4 mb-1 fw-bold">
-                {{ $banda->nome }}
+                {{ $artista->nome }}
 
                 <span class="h5">
-                    ({{ $nomeOrigemGeograficaBanda }})
+                    ({{ $nomeOrigemGeograficaArtista }})
                 </span>
             </h1>
 
-            @if ($nomesGenerosBanda !== null)
+            @if ($nomesGenerosArtista !== null)
                 <p class="mb-0 text-muted">
-                    {{ $nomesGenerosBanda }}
+                    {{ $nomesGenerosArtista }}
                 </p>
             @endif
         </div>
@@ -46,30 +46,30 @@
 
         <a
             class="btn btn-sm btn-secondary"
-            href="{{ route('bandas.indice') }}"
+            href="{{ route('artistas.indice') }}"
         >
-            Voltar às bandas
+            Voltar aos artistas
         </a>
     </div>
 
     @forelse ($seccoes as $seccao)
-        <x-musica.bandas.cartao-aparicao-metal-thursday
+        <x-musica.artistas.cartao-aparicao-metal-thursday
             :seccao="$seccao"
-            :nome-banda="$banda->nome"
+            :nome-artista="$artista->nome"
         />
     @empty
         <div
             class="alert alert-info"
             role="status"
         >
-            Esta banda ainda não apareceu em nenhuma secção.
+            Este artista ainda não apareceu em nenhuma secção.
         </div>
     @endforelse
 
     @if ($seccoes->hasPages())
         <nav
             class="mt-4"
-            aria-label="Paginação das aparições da banda"
+            aria-label="Paginação das aparições do artista"
         >
             {{
                 $seccoes->links(

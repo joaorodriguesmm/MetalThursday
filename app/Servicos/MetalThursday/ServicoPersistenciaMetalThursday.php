@@ -11,7 +11,7 @@ use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use App\Resultados\MetalThursday\MetalThursdayCriada;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -135,7 +135,7 @@ final class ServicoPersistenciaMetalThursday
                     $dadosNormalizados['seccoes'],
                 );
 
-                $this->bloquearBandasUtilizadas(
+                $this->bloquearArtistasUtilizados(
                     $dadosNormalizados['seccoes'],
                     $tiposSeccao,
                 );
@@ -273,7 +273,7 @@ final class ServicoPersistenciaMetalThursday
                     $dadosNormalizados['seccoes'],
                 );
 
-                $this->bloquearBandasUtilizadas(
+                $this->bloquearArtistasUtilizados(
                     $dadosNormalizados['seccoes'],
                     $tiposSeccao,
                 );
@@ -368,7 +368,7 @@ final class ServicoPersistenciaMetalThursday
      *     seccoes: list<array{
      *         id: int|null,
      *         tipo_seccao_id: int,
-     *         banda_id: int|null,
+     *         artista_id: int|null,
      *         titulo: string|null,
      *         ligacao: string|null,
      *         tipo_incorporacao: TipoIncorporacao|null,
@@ -433,10 +433,10 @@ final class ServicoPersistenciaMetalThursday
                         ?? null,
                     $prefixoCampo.'.tipo_seccao_id',
                 ),
-                'banda_id' => $this->normalizarIdentificadorOpcional(
-                    $dadosSeccao['banda_id']
+                'artista_id' => $this->normalizarIdentificadorOpcional(
+                    $dadosSeccao['artista_id']
                         ?? null,
-                    $prefixoCampo.'.banda_id',
+                    $prefixoCampo.'.artista_id',
                 ),
                 'titulo' => $this->normalizarTextoLinhaOpcional(
                     $dadosSeccao['titulo']
@@ -623,7 +623,7 @@ final class ServicoPersistenciaMetalThursday
             );
 
             $seccao
-                ->banda()
+                ->artista()
                 ->dissociate();
 
             $seccao->titulo = null;
@@ -642,9 +642,9 @@ final class ServicoPersistenciaMetalThursday
         );
 
         $seccao
-            ->banda()
+            ->artista()
             ->associate(
-                $dados['banda_id'],
+                $dados['artista_id'],
             );
 
         $seccao->titulo =
@@ -852,7 +852,7 @@ final class ServicoPersistenciaMetalThursday
     ): void {
         $camposObrigatorios = [
             'titulo' => 'O título é obrigatório numa secção detalhada.',
-            'banda_id' => 'A banda é obrigatória numa secção detalhada.',
+            'artista_id' => 'O artista é obrigatório numa secção detalhada.',
             'ligacao' => 'A ligação é obrigatória numa secção detalhada.',
             'tipo_incorporacao' => 'O tipo de incorporação é obrigatório numa secção detalhada.',
             'ano' => 'O ano é obrigatório numa secção detalhada.',
@@ -884,7 +884,7 @@ final class ServicoPersistenciaMetalThursday
         foreach (
             [
                 'titulo',
-                'banda_id',
+                'artista_id',
                 'ligacao',
                 'tipo_incorporacao',
                 'ano',
@@ -989,20 +989,20 @@ final class ServicoPersistenciaMetalThursday
     }
 
     /**
-     * Bloqueia e confirma a existência das bandas relevantes.
+     * Bloqueia e confirma a existência dos artistas relevantes.
      *
-     * Apenas são consideradas bandas de secções cujo tipo exige detalhes. Os
+     * Apenas são considerados artistas de secções cujo tipo exige detalhes. Os
      * contratos dos restantes campos são verificados antes da persistência.
      *
      * @param  list<array<string, mixed>>  $seccoes  Secções normalizadas.
      * @param  ColecaoEloquent<int, TipoSeccao>  $tiposSeccao  Tipos
      *                                                         carregados.
      *
-     * @throws InvalidArgumentException Quando alguma banda não existe.
+     * @throws InvalidArgumentException Quando algum artista não existe.
      *
      * @since 2.0.0
      */
-    private function bloquearBandasUtilizadas(
+    private function bloquearArtistasUtilizados(
         array $seccoes,
         ColecaoEloquent $tiposSeccao,
     ): void {
@@ -1016,13 +1016,13 @@ final class ServicoPersistenciaMetalThursday
 
             if (
                 ! $tipoSeccao->exige_detalhes
-                || $seccao['banda_id'] === null
+                || $seccao['artista_id'] === null
             ) {
                 continue;
             }
 
             $identificadores[] =
-                $seccao['banda_id'];
+                $seccao['artista_id'];
         }
 
         $identificadores = array_values(
@@ -1040,7 +1040,7 @@ final class ServicoPersistenciaMetalThursday
             SORT_NUMERIC,
         );
 
-        $identificadoresExistentes = Banda::query()
+        $identificadoresExistentes = Artista::query()
             ->whereKey(
                 $identificadores,
             )
@@ -1063,7 +1063,7 @@ final class ServicoPersistenciaMetalThursday
             !== $identificadores
         ) {
             throw new InvalidArgumentException(
-                'Foi indicada uma banda inexistente ou indisponível.',
+                'Foi indicado um artista inexistente ou indisponível.',
             );
         }
     }

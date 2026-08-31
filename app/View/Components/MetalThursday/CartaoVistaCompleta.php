@@ -10,7 +10,7 @@ use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
@@ -313,8 +313,8 @@ final class CartaoVistaCompleta extends Component
                     $seccao,
                 );
 
-            $banda =
-                $this->obterBanda(
+            $artista =
+                $this->obterArtista(
                     $seccao,
                 );
 
@@ -328,11 +328,11 @@ final class CartaoVistaCompleta extends Component
                     $seccao->descricao,
                 );
 
-            $nomeBanda =
+            $nomeArtista =
                 $this->normalizarTexto(
-                    $banda?->nome,
+                    $artista?->nome,
                 )
-                ?? 'Banda indisponível';
+                ?? 'Artista indisponível';
 
             $temDetalhes =
                 (bool) $tipoSeccao->exige_detalhes;
@@ -374,13 +374,13 @@ final class CartaoVistaCompleta extends Component
 
                 'tituloApresentacao' => $this->criarTituloSeccao(
                     $seccao,
-                    $nomeBanda,
+                    $nomeArtista,
                     $titulo,
                 ),
 
                 'nomeAvaliavel' => $titulo !== null
-                    ? "{$nomeBanda} — {$titulo}"
-                    : $nomeBanda,
+                    ? "{$nomeArtista} — {$titulo}"
+                    : $nomeArtista,
 
                 'temLigacao' => $this->normalizarTexto(
                     $seccao->ligacao,
@@ -583,7 +583,7 @@ final class CartaoVistaCompleta extends Component
      * Cria o título de apresentação de uma secção.
      *
      * @param  SeccaoMetalThursday  $seccao  Secção apresentada.
-     * @param  string  $nomeBanda  Nome da banda.
+     * @param  string  $nomeArtista  Nome do artista.
      * @param  string|null  $titulo  Título opcional.
      * @return string Título preparado.
      *
@@ -591,13 +591,13 @@ final class CartaoVistaCompleta extends Component
      */
     private function criarTituloSeccao(
         SeccaoMetalThursday $seccao,
-        string $nomeBanda,
+        string $nomeArtista,
         ?string $titulo,
     ): string {
         $tituloApresentacao =
             $titulo !== null
-            ? "{$nomeBanda} — {$titulo}"
-            : $nomeBanda;
+            ? "{$nomeArtista} — {$titulo}"
+            : $nomeArtista;
 
         $ano =
             $this->normalizarInteiroPositivo(
@@ -781,39 +781,39 @@ final class CartaoVistaCompleta extends Component
     }
 
     /**
-     * Obtém a banda previamente carregada.
+     * Obtém o artista previamente carregado.
      *
      * @param  SeccaoMetalThursday  $seccao  Secção consultada.
-     * @return Banda|null Banda relacionada.
+     * @return Artista|null Artista relacionado.
      *
      * @throws LogicException Quando a relação possui um tipo inesperado.
      *
      * @since 2.0.0
      */
-    private function obterBanda(
+    private function obterArtista(
         SeccaoMetalThursday $seccao,
-    ): ?Banda {
-        if (! $seccao->relationLoaded('banda')) {
+    ): ?Artista {
+        if (! $seccao->relationLoaded('artista')) {
             throw new LogicException(
-                'A relação "banda" deve estar carregada.',
+                'A relação "artista" deve estar carregada.',
             );
         }
 
-        $banda =
+        $artista =
             $seccao->getRelation(
-                'banda',
+                'artista',
             );
 
         if (
-            $banda !== null
-            && ! $banda instanceof Banda
+            $artista !== null
+            && ! $artista instanceof Artista
         ) {
             throw new LogicException(
-                'A relação "banda" possui um tipo inesperado.',
+                'A relação "artista" possui um tipo inesperado.',
             );
         }
 
-        return $banda;
+        return $artista;
     }
 
     /**

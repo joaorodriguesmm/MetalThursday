@@ -9,9 +9,9 @@ use App\Models\Autenticacao\Utilizador;
 use App\Models\Interacoes\Comentario;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use App\Models\Musica\Genero;
-use App\Policies\PoliticaBanda;
+use App\Policies\PoliticaArtista;
 use App\Policies\PoliticaComentario;
 use App\Policies\PoliticaConvite;
 use App\Policies\PoliticaEdicao;
@@ -45,7 +45,7 @@ final class AuthServiceProvider extends ServiceProvider
 
         Convite::class => PoliticaConvite::class,
 
-        Banda::class => PoliticaBanda::class,
+        Artista::class => PoliticaArtista::class,
 
         Comentario::class => PoliticaComentario::class,
 

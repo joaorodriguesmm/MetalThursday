@@ -20,7 +20,7 @@ use App\Models\MetalThursday\RascunhoMetalThursday;
 use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use App\Models\Musica\Genero;
 use App\Notifications\NotificacaoUtilizadorNomeado;
 use App\Resultados\MetalThursday\MetalThursdayCriada;
@@ -124,7 +124,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
     private const CHAVES_DADOS_FILTROS = [
         'edicoes',
         'utilizadores',
-        'bandas',
+        'artistas',
         'generos',
     ];
 
@@ -897,7 +897,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                 'id',
                 'metal_thursday_id',
                 'tipo_seccao_id',
-                'banda_id',
+                'artista_id',
                 'titulo',
                 'ligacao',
                 'ano',
@@ -913,9 +913,9 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
             ->with([
                 'metalThursday:id,autor_id,data',
                 'metalThursday.autor:id,nome',
-                'banda:id,nome,origem_geografica_id',
-                'banda.origemGeografica:id,nome',
-                'banda.generos:id,nome',
+                'artista:id,nome,origem_geografica_id',
+                'artista.origemGeografica:id,nome',
+                'artista.generos:id,nome',
                 'tipoSeccao:id,nome',
                 'avaliacoes.utilizador:id,nome',
                 'audicoes.utilizador:id,nome',
@@ -997,7 +997,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                     ->getQuery()
                     ->with([
                         'tipoSeccao:id,nome,exige_detalhes',
-                        'banda:id,nome',
+                        'artista:id,nome',
                     ]);
             },
         ];
@@ -1057,7 +1057,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                     )
                     ->with([
                         'tipoSeccao:id,nome,exige_detalhes',
-                        'banda:id,nome',
+                        'artista:id,nome',
                         'avaliacoes.utilizador:id,nome',
                         'audicoes.utilizador:id,nome',
                         'avaliacaoUtilizadorAutenticado',
@@ -1166,7 +1166,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                 )
                 ->get(),
 
-            'bandas' => $this->obterBandasParaSelecao(),
+            'artistas' => $this->obterArtistasParaSelecao(),
 
             'origensGeograficas' => OrigemGeografica::query()
                 ->select([
@@ -1375,15 +1375,15 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
     }
 
     /**
-     * Obtém as bandas disponíveis para seleção.
+     * Obtém os artistas disponíveis para seleção.
      *
-     * @return Collection<int, Banda> Bandas.
+     * @return Collection<int, Artista> Artistas.
      *
      * @since 2.0.0
      */
-    private function obterBandasParaSelecao(): Collection
+    private function obterArtistasParaSelecao(): Collection
     {
-        return Banda::query()
+        return Artista::query()
             ->select([
                 'id',
                 'nome',
@@ -2184,7 +2184,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
      * @return array{
      *     enderecos: array{
      *         guardarEdicao: string,
-     *         guardarBanda: string,
+     *         guardarArtista: string,
      *         guardarGenero: string,
      *         obterUtilizadorHaMaisTempoSemNomeacao: string
      *     },
@@ -2205,8 +2205,8 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                     'edicoes.guardar',
                 ),
 
-                'guardarBanda' => route(
-                    'bandas.guardar',
+                'guardarArtista' => route(
+                    'artistas.guardar',
                 ),
 
                 'guardarGenero' => route(
@@ -2247,7 +2247,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
      *             identificador: int,
      *             nome: string
      *         }>,
-     *         bandas: array<int, array{
+     *         artistas: array<int, array{
      *             identificador: int,
      *             nome: string
      *         }>,
@@ -2293,8 +2293,8 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                     $this->obterUtilizadoresParaSelecao(),
                 ),
 
-                'bandas' => $this->serializarOpcoesSelecao(
-                    $this->obterBandasParaSelecao(),
+                'artistas' => $this->serializarOpcoesSelecao(
+                    $this->obterArtistasParaSelecao(),
                 ),
 
                 'generos' => $this->serializarOpcoesSelecao(

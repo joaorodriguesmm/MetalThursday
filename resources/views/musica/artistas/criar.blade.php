@@ -1,20 +1,20 @@
 {{--
-    Apresenta o formulário de criação de uma banda.
+    Apresenta o formulário de criação de um artista.
 
     Os dados e os valores iniciais do formulário são preparados pelo
-    App\Http\Controllers\Musica\ControladorBanda.
+    App\Http\Controllers\Musica\ControladorArtista.
 
     @since 1.0.0
 --}}
 
 <x-layout-aplicacao>
     <x-slot name="titulo">
-        Criar banda
+        Criar artista
     </x-slot>
 
     <x-slot name="cabecalho">
         <h1 class="h4 mb-0 fw-bold">
-            Criar nova banda
+            Criar novo artista
         </h1>
     </x-slot>
 
@@ -23,7 +23,7 @@
     <div class="card shadow-sm">
         <div class="card-body p-4">
             @include(
-                'musica.bandas._formulario'
+                'musica.artistas._formulario'
             )
         </div>
     </div>

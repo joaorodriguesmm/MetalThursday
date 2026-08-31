@@ -7,26 +7,26 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Cria a tabela intermédia entre bandas e géneros musicais.
+ * Cria a tabela intermédia entre artistas e géneros musicais.
  *
- * Cada associação entre uma banda e um género pode existir apenas uma vez.
+ * Cada associação entre um artista e um género pode existir apenas uma vez.
  *
  * @since 2.0.0
  */
 return new class extends Migration
 {
     /**
-     * Cria a tabela intermédia entre bandas e géneros.
+     * Cria a tabela intermédia entre artistas e géneros.
      *
      * @since 2.0.0
      */
     public function up(): void
     {
         Schema::create(
-            'banda_genero',
+            'artista_genero',
             static function (Blueprint $tabela): void {
                 $tabela->foreignId(
-                    'banda_id',
+                    'artista_id',
                 );
 
                 $tabela->foreignId(
@@ -35,30 +35,31 @@ return new class extends Migration
 
                 $tabela->primary(
                     [
-                        'banda_id',
+                        'artista_id',
                         'genero_id',
                     ],
-                    'banda_genero_primaria',
+                    'artista_genero_primaria',
                 );
 
                 /*
-                 * A chave primária começa por banda_id. Este índice adicional
-                 * otimiza a obtenção das bandas associadas a um género.
+                 * A chave primária começa por artista_id. Este índice
+                 * adicional otimiza a obtenção dos artistas associados a um
+                 * género.
                  */
                 $tabela->index(
                     'genero_id',
-                    'banda_genero_genero_indice',
+                    'artista_genero_genero_indice',
                 );
 
                 $tabela
                     ->foreign(
-                        'banda_id',
+                        'artista_id',
                     )
                     ->references(
                         'id',
                     )
                     ->on(
-                        'bandas',
+                        'artistas',
                     )
                     ->cascadeOnDelete();
 
@@ -78,14 +79,14 @@ return new class extends Migration
     }
 
     /**
-     * Elimina a tabela intermédia entre bandas e géneros.
+     * Elimina a tabela intermédia entre artistas e géneros.
      *
      * @since 2.0.0
      */
     public function down(): void
     {
         Schema::dropIfExists(
-            'banda_genero',
+            'artista_genero',
         );
     }
 };

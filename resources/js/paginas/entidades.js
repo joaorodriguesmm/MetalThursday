@@ -11,8 +11,8 @@ import ValidadorFormulario
  * Script específico das páginas de gestão de entidades.
  *
  * Inicializa os campos Tom Select quando existem, configura a validação de
- * apoio dos formulários de bandas, géneros e edições e permite criar géneros
- * sem abandonar o formulário de bandas.
+ * apoio dos formulários de artistas, géneros e edições e permite criar géneros
+ * sem abandonar o formulário de artistas.
  *
  * @since 1.0.0
  */
@@ -38,8 +38,8 @@ const IDENTIFICADORES_CRIACAO_GENERO = Object.freeze({
     formulario:
         'formulario-criar-genero',
 
-    generosBanda:
-        'generos-banda',
+    generosArtista:
+        'generos-artista',
 
     generosPais:
         'generos-pai-novo-genero',
@@ -58,7 +58,7 @@ const IDENTIFICADORES_CRIACAO_GENERO = Object.freeze({
 const CONFIGURACOES_FORMULARIOS = Object.freeze([
     {
         identificadorFormulario:
-            'formulario-banda',
+            'formulario-artista',
 
         regras: {
             nome: [
@@ -78,15 +78,15 @@ const CONFIGURACOES_FORMULARIOS = Object.freeze([
         mensagens: {
             nome: {
                 obrigatorio:
-                    'Por favor, insere o nome da banda.',
+                    'Por favor, insere o nome do artista.',
 
                 maximo:
-                    'O nome da banda é demasiado longo.',
+                    'O nome do artista é demasiado longo.',
             },
 
             origem_geografica_id: {
                 obrigatorio:
-                    'Por favor, seleciona a origem geográfica da banda.',
+                    'Por favor, seleciona a origem geográfica do artista.',
 
                 inteiro:
                     'A origem geográfica selecionada não é válida.',
@@ -298,10 +298,10 @@ async function iniciarTomSelectSeNecessario() {
 }
 
 /**
- * Inicia a criação rápida de géneros no formulário de bandas.
+ * Inicia a criação rápida de géneros no formulário de artistas.
  *
- * Após a criação, o novo género é acrescentado e selecionado no campo da
- * banda. É também acrescentado à lista de possíveis géneros pais para uma
+ * Após a criação, o novo género é acrescentado e selecionado no campo do
+ * artista. É também acrescentado à lista de possíveis géneros pais para uma
  * eventual criação seguinte sem recarregar a página.
  *
  * @param {object|null} inicializadorTomSelect Inicializador Tom Select.
@@ -382,23 +382,23 @@ function iniciarCriacaoRapidaGenero(
                     );
                 }
 
-                const selecaoGenerosBanda =
+                const selecaoGenerosArtista =
                     inicializadorTomSelect
                         .obterInstancia(
                             IDENTIFICADORES_CRIACAO_GENERO
-                                .generosBanda,
+                                .generosArtista,
                         );
 
                 if (
                     !adicionarOpcaoTomSelect(
-                        selecaoGenerosBanda,
+                        selecaoGenerosArtista,
                         genero.identificador,
                         genero.nome,
                         true,
                     )
                 ) {
                     throw new TypeError(
-                        'Não foi possível atualizar a seleção de géneros da banda.',
+                        'Não foi possível atualizar a seleção de géneros do artista.',
                     );
                 }
 

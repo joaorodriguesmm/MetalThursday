@@ -1,14 +1,14 @@
 {{--
-    Apresenta uma aparição de uma banda numa MetalThursday.
+    Apresenta uma aparição de um artista numa MetalThursday.
 
     Todos os valores são preparados pela classe
-    App\View\Components\Musica\Bandas\CartaoAparicaoMetalThursday.
+    App\View\Components\Musica\Artistas\CartaoAparicaoMetalThursday.
 
     @since 2.0.0
 --}}
 
 <article
-    id="aparicao-banda-{{ $dados['identificador'] }}"
+    id="aparicao-artista-{{ $dados['identificador'] }}"
     {{
         $attributes
             ->except([

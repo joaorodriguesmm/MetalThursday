@@ -8,7 +8,7 @@ use App\Enumeracoes\TipoIncorporacao;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
@@ -106,7 +106,7 @@ final class FactoriesSeccoesMetalThursdayTest extends TestCase
             ->comDetalhes()
             ->create();
 
-        $banda = Banda::factory()
+        $artista = Artista::factory()
             ->create();
 
         $seccao = SeccaoMetalThursday::factory()
@@ -116,8 +116,8 @@ final class FactoriesSeccoesMetalThursdayTest extends TestCase
             ->doTipo(
                 $tipoSeccao,
             )
-            ->comBanda(
-                $banda,
+            ->comArtista(
+                $artista,
             )
             ->naOrdem(
                 3,
@@ -145,8 +145,8 @@ final class FactoriesSeccoesMetalThursdayTest extends TestCase
         );
 
         self::assertSame(
-            $banda->getKey(),
-            $seccao->banda_id,
+            $artista->getKey(),
+            $seccao->artista_id,
         );
 
         self::assertSame(
@@ -194,7 +194,7 @@ final class FactoriesSeccoesMetalThursdayTest extends TestCase
         $metalThursday = MetalThursday::factory()
             ->create();
 
-        $banda = Banda::factory()
+        $artista = Artista::factory()
             ->create();
 
         $seccao = SeccaoMetalThursday::factory()
@@ -202,13 +202,13 @@ final class FactoriesSeccoesMetalThursdayTest extends TestCase
                 $metalThursday,
             )
             ->comDetalhes(
-                $banda,
+                $artista,
             )
             ->create();
 
         self::assertSame(
-            $banda->getKey(),
-            $seccao->banda_id,
+            $artista->getKey(),
+            $seccao->artista_id,
         );
 
         self::assertNotNull(

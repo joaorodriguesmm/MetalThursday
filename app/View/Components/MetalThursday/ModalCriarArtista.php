@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\View\Components\MetalThursday;
 
 use App\Models\Geografia\OrigemGeografica;
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use App\Models\Musica\Genero;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
@@ -15,7 +15,7 @@ use Illuminate\View\Component;
 use LogicException;
 
 /**
- * Prepara o modal utilizado para criar uma banda.
+ * Prepara o modal utilizado para criar um artista.
  *
  * O componente valida e prepara as opções de origens geográficas e géneros
  * recebidas do controlador, bem como o endereço e os limites utilizados pelo
@@ -23,7 +23,7 @@ use LogicException;
  *
  * @since 1.0.0
  */
-final class ModalCriarBanda extends Component
+final class ModalCriarArtista extends Component
 {
     /**
      * Origens geográficas disponíveis para seleção.
@@ -50,14 +50,14 @@ final class ModalCriarBanda extends Component
     public readonly array $generos;
 
     /**
-     * Endereço utilizado para guardar uma banda.
+     * Endereço utilizado para guardar um artista.
      *
      * @since 2.0.0
      */
-    public readonly string $enderecoGuardarBanda;
+    public readonly string $enderecoGuardarArtista;
 
     /**
-     * Comprimento máximo permitido para o nome da banda.
+     * Comprimento máximo permitido para o nome do artista.
      *
      * @since 2.0.0
      */
@@ -90,12 +90,12 @@ final class ModalCriarBanda extends Component
             'géneros',
         );
 
-        $this->enderecoGuardarBanda = route(
-            'bandas.guardar',
+        $this->enderecoGuardarArtista = route(
+            'artistas.guardar',
         );
 
         $this->comprimentoMaximoNome =
-            Banda::COMPRIMENTO_MAXIMO_NOME;
+            Artista::COMPRIMENTO_MAXIMO_NOME;
     }
 
     /**
@@ -108,7 +108,7 @@ final class ModalCriarBanda extends Component
     public function render(): View
     {
         return view(
-            'components.metal-thursday.modal-criar-banda',
+            'components.metal-thursday.modal-criar-artista',
         );
     }
 

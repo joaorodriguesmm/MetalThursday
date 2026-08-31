@@ -8,7 +8,7 @@ use App\Enumeracoes\TipoIncorporacao;
 use App\Models\Interacoes\Audicao;
 use App\Models\Interacoes\Avaliacao;
 use App\Models\Interacoes\Comentario;
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use App\Traits\Auditoria\RegistaAutoria;
 use App\Traits\Interacoes\TemAudicoes;
 use App\Traits\Interacoes\TemAvaliacoes;
@@ -28,7 +28,7 @@ use InvalidArgumentException;
  * Representa uma secção pertencente a uma MetalThursday.
  *
  * Cada secção possui um tipo, uma posição e uma descrição obrigatória. Pode
- * ainda incluir uma banda, um título, uma ligação externa, um tipo de
+ * ainda incluir um artista, um título, uma ligação externa, um tipo de
  * incorporação e um ano.
  *
  * As secções suportam comentários, avaliações e registos de audição através
@@ -44,7 +44,7 @@ use InvalidArgumentException;
  * @property int|null $ordem_ativa
  * @property string|null $titulo
  * @property string $descricao
- * @property int|null $banda_id
+ * @property int|null $artista_id
  * @property string|null $ligacao
  * @property TipoIncorporacao|null $tipo_incorporacao
  * @property int|null $ano
@@ -55,7 +55,7 @@ use InvalidArgumentException;
  * @property CarbonInterface|null $deleted_at
  * @property-read MetalThursday $metalThursday
  * @property-read TipoSeccao $tipoSeccao
- * @property-read Banda|null $banda
+ * @property-read Artista|null $artista
  * @property-read Collection<int, Comentario> $comentarios
  * @property-read Collection<int, Avaliacao> $avaliacoes
  * @property-read Collection<int, Audicao> $audicoes
@@ -141,7 +141,7 @@ class SeccaoMetalThursday extends Model
     /**
      * Atributos permitidos em operações de atribuição em massa.
      *
-     * A MetalThursday, o tipo de secção e a banda devem ser associados
+     * A MetalThursday, o tipo de secção e o artista devem ser associados
      * explicitamente pelo serviço responsável pela persistência.
      *
      * Os identificadores de auditoria são preenchidos automaticamente pelo
@@ -204,7 +204,7 @@ class SeccaoMetalThursday extends Model
 
             'ordem_ativa' => 'integer',
 
-            'banda_id' => 'integer',
+            'artista_id' => 'integer',
 
             'tipo_incorporacao' => TipoIncorporacao::class,
 
@@ -643,24 +643,24 @@ class SeccaoMetalThursday extends Model
     }
 
     /**
-     * Obtém a banda associada à secção.
+     * Obtém o artista associado à secção.
      *
-     * A banda continua acessível quando foi eliminada logicamente,
+     * O artista continua acessível quando foi eliminado logicamente,
      * preservando o conteúdo histórico da secção.
      *
-     * A relação pode ser nula quando a secção não possui uma banda ou quando
-     * a banda foi eliminada fisicamente.
+     * A relação pode ser nula quando a secção não possui um artista ou quando
+     * o artista foi eliminado fisicamente.
      *
-     * @return BelongsTo<Banda, $this> Relação com a banda.
+     * @return BelongsTo<Artista, $this> Relação com o artista.
      *
      * @since 1.0.0
      */
-    public function banda(): BelongsTo
+    public function artista(): BelongsTo
     {
         return $this
             ->belongsTo(
-                Banda::class,
-                'banda_id',
+                Artista::class,
+                'artista_id',
             )
             ->withTrashed();
     }

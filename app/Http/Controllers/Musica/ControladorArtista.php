@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Musica;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Musica\AtualizarBandaRequest;
-use App\Http\Requests\Musica\CriarBandaRequest;
+use App\Http\Requests\Musica\AtualizarArtistaRequest;
+use App\Http\Requests\Musica\CriarArtistaRequest;
 use App\Models\Geografia\OrigemGeografica;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use App\Models\Musica\Genero;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -24,15 +24,15 @@ use LogicException;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Gere a consulta, criação, atualização e eliminação de bandas.
+ * Gere a consulta, criação, atualização e eliminação de artistas.
  *
  * A persistência dos dados principais e a sincronização dos géneros são
- * executadas atomicamente. As operações sobre bandas existentes voltam a
+ * executadas atomicamente. As operações sobre artistas existentes voltam a
  * obter e a bloquear o registo dentro da transação.
  *
  * @since 1.0.0
  */
-final class ControladorBanda extends Controller
+final class ControladorArtista extends Controller
 {
     use AuthorizesRequests;
 
@@ -67,10 +67,10 @@ final class ControladorBanda extends Controller
         3;
 
     /**
-     * Apresenta a lista paginada de bandas.
+     * Apresenta a lista paginada de artistas.
      *
      * @param  Request  $pedido  Pedido HTTP.
-     * @return View Listagem de bandas.
+     * @return View Listagem de artistas.
      *
      * @since 1.0.0
      */
@@ -79,7 +79,7 @@ final class ControladorBanda extends Controller
     ): View {
         $this->authorize(
             'viewAny',
-            Banda::class,
+            Artista::class,
         );
 
         $pesquisa =
@@ -89,8 +89,8 @@ final class ControladorBanda extends Controller
                 ),
             );
 
-        $bandas =
-            Banda::query()
+        $artistas =
+            Artista::query()
                 ->select([
                     'id',
                     'nome',
@@ -123,9 +123,9 @@ final class ControladorBanda extends Controller
                 ->withQueryString();
 
         return view(
-            'musica.bandas.indice',
+            'musica.artistas.indice',
             [
-                'bandas' => $bandas,
+                'artistas' => $artistas,
 
                 'pesquisaAtual' => $pesquisa,
             ],
@@ -133,7 +133,7 @@ final class ControladorBanda extends Controller
     }
 
     /**
-     * Apresenta o formulário de criação de uma banda.
+     * Apresenta o formulário de criação de um artista.
      *
      * @param  Request  $pedido  Pedido HTTP atual.
      * @return View Formulário de criação.
@@ -145,11 +145,11 @@ final class ControladorBanda extends Controller
     ): View {
         $this->authorize(
             'create',
-            Banda::class,
+            Artista::class,
         );
 
         return view(
-            'musica.bandas.criar',
+            'musica.artistas.criar',
             $this->obterDadosFormulario(
                 $pedido,
             ),
@@ -157,19 +157,19 @@ final class ControladorBanda extends Controller
     }
 
     /**
-     * Guarda uma nova banda e sincroniza os respetivos géneros.
+     * Guarda um novo artista e sincroniza os respetivos géneros.
      *
-     * @param  CriarBandaRequest  $pedido  Pedido validado.
+     * @param  CriarArtistaRequest  $pedido  Pedido validado.
      * @return JsonResponse|RedirectResponse Resposta da operação.
      *
      * @since 1.0.0
      */
     public function guardar(
-        CriarBandaRequest $pedido,
+        CriarArtistaRequest $pedido,
     ): JsonResponse|RedirectResponse {
         $this->authorize(
             'create',
-            Banda::class,
+            Artista::class,
         );
 
         /**
@@ -182,46 +182,46 @@ final class ControladorBanda extends Controller
         $dados =
             $pedido->validated();
 
-        $banda =
+        $artista =
             DB::transaction(
                 static function () use (
                     $dados,
-                ): Banda {
-                    $banda = new Banda([
+                ): Artista {
+                    $artista = new Artista([
                         'nome' => $dados['nome'],
                     ]);
 
-                    $banda
+                    $artista
                         ->origemGeografica()
                         ->associate(
                             $dados['origem_geografica_id'],
                         );
 
-                    $banda->saveOrFail();
+                    $artista->saveOrFail();
 
-                    $banda
+                    $artista
                         ->generos()
                         ->sync(
                             $dados['generos'],
                         );
 
-                    return $banda;
+                    return $artista;
                 },
                 self::TENTATIVAS_TRANSACAO,
             );
 
         if ($pedido->expectsJson()) {
-            $banda->load([
+            $artista->load([
                 'origemGeografica:id,nome',
                 'generos:id,nome',
             ]);
 
             return response()->json(
                 [
-                    'mensagem' => 'Banda criada com sucesso.',
+                    'mensagem' => 'Artista criado com sucesso.',
 
-                    'banda' => $this->serializarBanda(
-                        $banda,
+                    'artista' => $this->serializarArtista(
+                        $artista,
                     ),
                 ],
                 Response::HTTP_CREATED,
@@ -229,30 +229,30 @@ final class ControladorBanda extends Controller
         }
 
         return to_route(
-            'bandas.indice',
+            'artistas.indice',
         )->with(
             'sucesso',
-            'Banda criada com sucesso.',
+            'Artista criado com sucesso.',
         );
     }
 
     /**
-     * Apresenta os detalhes de uma banda.
+     * Apresenta os detalhes de um artista.
      *
-     * @param  Banda  $banda  Banda apresentada.
+     * @param  Artista  $artista  Artista apresentado.
      * @return View Página de detalhes.
      *
      * @since 1.0.0
      */
     public function detalhes(
-        Banda $banda,
+        Artista $artista,
     ): View {
         $this->authorize(
             'view',
-            $banda,
+            $artista,
         );
 
-        $banda->loadMissing([
+        $artista->loadMissing([
             'origemGeografica:id,nome',
             'generos:id,nome',
         ]);
@@ -292,8 +292,8 @@ final class ControladorBanda extends Controller
                     $tabelaSeccoes.'.metal_thursday_id',
                 )
                 ->where(
-                    $tabelaSeccoes.'.banda_id',
-                    $banda->getKey(),
+                    $tabelaSeccoes.'.artista_id',
+                    $artista->getKey(),
                 )
                 ->whereHas(
                     'metalThursday',
@@ -318,70 +318,70 @@ final class ControladorBanda extends Controller
                 ->withQueryString();
 
         return view(
-            'musica.bandas.detalhes',
+            'musica.artistas.detalhes',
             [
-                'banda' => $banda,
+                'artista' => $artista,
 
                 'seccoes' => $seccoes,
 
                 ...$this->obterDadosCabecalho(
-                    $banda,
+                    $artista,
                 ),
             ],
         );
     }
 
     /**
-     * Apresenta o formulário de edição de uma banda.
+     * Apresenta o formulário de edição de um artista.
      *
      * @param  Request  $pedido  Pedido HTTP atual.
-     * @param  Banda  $banda  Banda editada.
+     * @param  Artista  $artista  Artista editado.
      * @return View Formulário de edição.
      *
      * @since 1.0.0
      */
     public function editar(
         Request $pedido,
-        Banda $banda,
+        Artista $artista,
     ): View {
         $this->authorize(
             'update',
-            $banda,
+            $artista,
         );
 
         return view(
-            'musica.bandas.editar',
+            'musica.artistas.editar',
             $this->obterDadosFormulario(
                 $pedido,
-                $banda,
+                $artista,
             ),
         );
     }
 
     /**
-     * Atualiza uma banda e sincroniza os respetivos géneros.
+     * Atualiza um artista e sincroniza os respetivos géneros.
      *
      * O registo é novamente obtido e bloqueado dentro da transação. A
      * autorização é verificada antes de iniciar a operação.
      *
-     * A banda só é persistida quando os atributos ou a relação de géneros
+     * O artista só é persistido quando os atributos ou a relação de géneros
      * sofrem uma alteração efetiva. Desta forma, os dados de auditoria não são
      * atualizados por uma submissão idêntica, mas continuam a refletir uma
      * alteração que afecte apenas os géneros.
      *
-     * @param  AtualizarBandaRequest  $pedido  Pedido validado.
-     * @param  Banda  $banda  Banda atualizada.
+     * @param  AtualizarArtistaRequest  $pedido  Pedido validado.
+     * @param  Artista  $artista  Artista atualizado.
      * @return JsonResponse|RedirectResponse Resposta da operação.
      *
      * @since 1.0.0
      */
     public function atualizar(
-        AtualizarBandaRequest $pedido,
-        Banda $banda,
+        AtualizarArtistaRequest $pedido,
+        Artista $artista,
     ): JsonResponse|RedirectResponse {
         $this->authorize(
             'update',
-            $banda,
+            $artista,
         );
 
         /**
@@ -394,106 +394,106 @@ final class ControladorBanda extends Controller
         $dados =
             $pedido->validated();
 
-        $bandaAtualizada =
+        $artistaAtualizado =
             DB::transaction(
                 function () use (
-                    $banda,
+                    $artista,
                     $dados,
-                ): Banda {
-                    $bandaBloqueada =
-                        Banda::query()
+                ): Artista {
+                    $artistaBloqueado =
+                        Artista::query()
                             ->whereKey(
-                                $banda->getKey(),
+                                $artista->getKey(),
                             )
                             ->lockForUpdate()
                             ->firstOrFail();
 
-                    $bandaBloqueada->nome =
+                    $artistaBloqueado->nome =
                         $dados['nome'];
 
-                    $bandaBloqueada
+                    $artistaBloqueado
                         ->origemGeografica()
                         ->associate(
                             $dados['origem_geografica_id'],
                         );
 
                     $alteracoesGeneros =
-                        $bandaBloqueada
+                        $artistaBloqueado
                             ->generos()
                             ->sync(
                                 $dados['generos'],
                             );
 
                     if (
-                        $bandaBloqueada->isDirty()
+                        $artistaBloqueado->isDirty()
                         || $alteracoesGeneros['attached'] !== []
                         || $alteracoesGeneros['detached'] !== []
                         || $alteracoesGeneros['updated'] !== []
                     ) {
-                        $bandaBloqueada->saveOrFail();
+                        $artistaBloqueado->saveOrFail();
                     }
 
-                    return $bandaBloqueada;
+                    return $artistaBloqueado;
                 },
                 self::TENTATIVAS_TRANSACAO,
             );
 
         if ($pedido->expectsJson()) {
-            $bandaAtualizada->load([
+            $artistaAtualizado->load([
                 'origemGeografica:id,nome',
                 'generos:id,nome',
             ]);
 
             return response()->json([
-                'mensagem' => 'Banda atualizada com sucesso.',
+                'mensagem' => 'Artista atualizado com sucesso.',
 
-                'banda' => $this->serializarBanda(
-                    $bandaAtualizada,
+                'artista' => $this->serializarArtista(
+                    $artistaAtualizado,
                 ),
             ]);
         }
 
         return to_route(
-            'bandas.indice',
+            'artistas.indice',
         )->with(
             'sucesso',
-            'Banda atualizada com sucesso.',
+            'Artista atualizado com sucesso.',
         );
     }
 
     /**
-     * Elimina logicamente uma banda.
+     * Elimina logicamente um artista.
      *
      * A autorização é verificada antes de bloquear e eliminar o registo.
      *
      * @param  Request  $pedido  Pedido HTTP.
-     * @param  Banda  $banda  Banda eliminada.
+     * @param  Artista  $artista  Artista eliminado.
      * @return JsonResponse|RedirectResponse Resposta da operação.
      *
      * @since 1.0.0
      */
     public function eliminar(
         Request $pedido,
-        Banda $banda,
+        Artista $artista,
     ): JsonResponse|RedirectResponse {
         $this->authorize(
             'delete',
-            $banda,
+            $artista,
         );
 
         DB::transaction(
             function () use (
-                $banda,
+                $artista,
             ): void {
-                $bandaBloqueada =
-                    Banda::query()
+                $artistaBloqueado =
+                    Artista::query()
                         ->whereKey(
-                            $banda->getKey(),
+                            $artista->getKey(),
                         )
                         ->lockForUpdate()
                         ->firstOrFail();
 
-                $bandaBloqueada->deleteOrFail();
+                $artistaBloqueado->deleteOrFail();
             },
             self::TENTATIVAS_TRANSACAO,
         );
@@ -506,25 +506,25 @@ final class ControladorBanda extends Controller
         }
 
         return to_route(
-            'bandas.indice',
+            'artistas.indice',
         )->with(
             'sucesso',
-            'Banda eliminada com sucesso.',
+            'Artista eliminado com sucesso.',
         );
     }
 
     /**
-     * Obtém os dados utilizados pelo formulário de bandas.
+     * Obtém os dados utilizados pelo formulário de artistas.
      *
      * @param  Request  $pedido  Pedido HTTP atual.
-     * @param  Banda|null  $banda  Banda editada ou nula durante a criação.
+     * @param  Artista|null  $artista  Artista editado ou nulo durante a criação.
      * @return array{
-     *     banda: Banda|null,
+     *     artista: Artista|null,
      *     origensGeograficas: Collection<int, OrigemGeografica>,
      *     generos: Collection<int, Genero>,
      *     emEdicao: bool,
      *     enderecoFormulario: string,
-     *     nomeBanda: string,
+     *     nomeArtista: string,
      *     identificadorOrigemGeograficaSelecionada: string,
      *     identificadoresGenerosSelecionados: list<string>,
      *     textoBotaoSubmissao: string
@@ -534,30 +534,30 @@ final class ControladorBanda extends Controller
      */
     private function obterDadosFormulario(
         Request $pedido,
-        ?Banda $banda = null,
+        ?Artista $artista = null,
     ): array {
         $emEdicao =
-            $banda instanceof Banda;
+            $artista instanceof Artista;
 
         if ($emEdicao) {
-            $banda->loadMissing(
+            $artista->loadMissing(
                 'generos:id,nome',
             );
 
             $enderecoFormulario =
                 route(
-                    'bandas.atualizar',
-                    $banda,
+                    'artistas.atualizar',
+                    $artista,
                 );
 
             $identificadoresGenerosModelo =
-                $banda
+                $artista
                     ->generos
                     ->modelKeys();
         } else {
             $enderecoFormulario =
                 route(
-                    'bandas.guardar',
+                    'artistas.guardar',
                 );
 
             $identificadoresGenerosModelo =
@@ -565,7 +565,7 @@ final class ControladorBanda extends Controller
         }
 
         return [
-            'banda' => $banda,
+            'artista' => $artista,
 
             'origensGeograficas' => OrigemGeografica::query()
                 ->select([
@@ -597,17 +597,17 @@ final class ControladorBanda extends Controller
 
             'enderecoFormulario' => $enderecoFormulario,
 
-            'nomeBanda' => $this->normalizarTextoFormulario(
+            'nomeArtista' => $this->normalizarTextoFormulario(
                 $pedido->old(
                     'nome',
-                    $banda?->nome,
+                    $artista?->nome,
                 ),
             ),
 
             'identificadorOrigemGeograficaSelecionada' => $this->normalizarIdentificadorFormulario(
                 $pedido->old(
                     'origem_geografica_id',
-                    $banda?->origem_geografica_id,
+                    $artista?->origem_geografica_id,
                 ),
             ),
 
@@ -620,42 +620,42 @@ final class ControladorBanda extends Controller
 
             'textoBotaoSubmissao' => $emEdicao
                 ? 'Guardar alterações'
-                : 'Criar banda',
+                : 'Criar artista',
         ];
     }
 
     /**
-     * Prepara os dados do cabeçalho da página de detalhes da banda.
+     * Prepara os dados do cabeçalho da página de detalhes do artista.
      *
-     * @param  Banda  $banda  Banda apresentada.
+     * @param  Artista  $artista  Artista apresentado.
      * @return array{
-     *     nomeOrigemGeograficaBanda: string,
-     *     nomesGenerosBanda: string|null
+     *     nomeOrigemGeograficaArtista: string,
+     *     nomesGenerosArtista: string|null
      * } Dados preparados.
      *
-     * @throws LogicException Quando a origem geográfica da banda não está
+     * @throws LogicException Quando a origem geográfica do artista não está
      *                        disponível.
      *
      * @since 2.0.0
      */
     private function obterDadosCabecalho(
-        Banda $banda,
+        Artista $artista,
     ): array {
         $origemGeografica =
-            $banda->origemGeografica;
+            $artista->origemGeografica;
 
         if (! $origemGeografica instanceof OrigemGeografica) {
             throw new LogicException(
-                'A banda não possui uma origem geográfica válida.',
+                'O artista não possui uma origem geográfica válida.',
             );
         }
 
         $nomesGeneros = [];
 
-        foreach ($banda->generos as $genero) {
+        foreach ($artista->generos as $genero) {
             if (! $genero instanceof Genero) {
                 throw new LogicException(
-                    'A banda possui um género persistido inválido.',
+                    'O artista possui um género persistido inválido.',
                 );
             }
 
@@ -664,9 +664,9 @@ final class ControladorBanda extends Controller
         }
 
         return [
-            'nomeOrigemGeograficaBanda' => $origemGeografica->nome,
+            'nomeOrigemGeograficaArtista' => $origemGeografica->nome,
 
-            'nomesGenerosBanda' => $nomesGeneros !== []
+            'nomesGenerosArtista' => $nomesGeneros !== []
                 ? implode(
                     ', ',
                     $nomesGeneros,
@@ -676,40 +676,40 @@ final class ControladorBanda extends Controller
     }
 
     /**
-     * Converte uma banda para o formato da resposta HTTP.
+     * Converte um artista para o formato da resposta HTTP.
      *
-     * @param  Banda  $banda  Banda convertida.
+     * @param  Artista  $artista  Artista convertido.
      * @return array{
      *     id: int,
      *     nome: string,
      *     origem_geografica_id: int,
      *     origem_geografica: array{id: int, nome: string},
      *     generos: list<array{id: int, nome: string}>
-     * } Dados da banda.
+     * } Dados do artista.
      *
-     * @throws LogicException Quando a origem geográfica da banda não está
+     * @throws LogicException Quando a origem geográfica do artista não está
      *                        disponível.
      *
      * @since 2.0.0
      */
-    private function serializarBanda(
-        Banda $banda,
+    private function serializarArtista(
+        Artista $artista,
     ): array {
         $origemGeografica =
-            $banda->origemGeografica;
+            $artista->origemGeografica;
 
         if (! $origemGeografica instanceof OrigemGeografica) {
             throw new LogicException(
-                'A banda não possui uma origem geográfica válida.',
+                'O artista não possui uma origem geográfica válida.',
             );
         }
 
         $generos = [];
 
-        foreach ($banda->generos as $genero) {
+        foreach ($artista->generos as $genero) {
             if (! $genero instanceof Genero) {
                 throw new LogicException(
-                    'A banda possui um género persistido inválido.',
+                    'O artista possui um género persistido inválido.',
                 );
             }
 
@@ -721,9 +721,9 @@ final class ControladorBanda extends Controller
         }
 
         return [
-            'id' => (int) $banda->getKey(),
+            'id' => (int) $artista->getKey(),
 
-            'nome' => $banda->nome,
+            'nome' => $artista->nome,
 
             'origem_geografica_id' => (int) $origemGeografica->getKey(),
 

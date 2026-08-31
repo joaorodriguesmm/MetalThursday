@@ -23,7 +23,7 @@ class GestorSeccoes {
      * @since 2.0.0
      */
     static SELETOR_CAMPOS_DETALHES_OBRIGATORIOS = [
-        'select[name$="[banda_id]"]',
+        'select[name$="[artista_id]"]',
         'input[name$="[titulo]"]',
         'input[name$="[ligacao]"]',
         'input[name$="[ano]"]',

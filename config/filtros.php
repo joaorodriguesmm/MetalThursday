@@ -42,15 +42,15 @@ return [
                     'chaveDados' => 'utilizadores',
                 ],
                 [
-                    'chave' => 'banda',
+                    'chave' => 'artista',
 
-                    'rotulo' => 'Banda',
+                    'rotulo' => 'Artista',
 
-                    'parametro' => 'banda',
+                    'parametro' => 'artista',
 
                     'tipo' => 'selecao',
 
-                    'chaveDados' => 'bandas',
+                    'chaveDados' => 'artistas',
                 ],
                 [
                     'chave' => 'data_ate',

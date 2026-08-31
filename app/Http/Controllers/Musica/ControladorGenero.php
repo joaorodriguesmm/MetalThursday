@@ -8,7 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Musica\AtualizarGeneroRequest;
 use App\Http\Requests\Musica\CriarGeneroRequest;
 use App\Models\Geografia\OrigemGeografica;
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use App\Models\Musica\Genero;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -265,37 +265,37 @@ final class ControladorGenero extends Controller
             'generosFilhos:id,nome',
         ]);
 
-        $bandas =
+        $artistas =
             $genero
-                ->bandas()
+                ->artistas()
                 ->select([
-                    'bandas.id',
-                    'bandas.nome',
-                    'bandas.origem_geografica_id',
+                    'artistas.id',
+                    'artistas.nome',
+                    'artistas.origem_geografica_id',
                 ])
                 ->with([
                     'origemGeografica:id,nome',
                     'generos:id,nome',
                 ])
                 ->orderBy(
-                    'bandas.nome',
+                    'artistas.nome',
                 )
                 ->orderBy(
-                    'bandas.id',
+                    'artistas.id',
                 )
                 ->paginate(
                     self::REGISTOS_POR_PAGINA,
                 )
                 ->withQueryString();
 
-        $bandas->setCollection(
-            $bandas
+        $artistas->setCollection(
+            $artistas
                 ->getCollection()
                 ->map(
                     fn (
-                        Banda $banda,
-                    ): array => $this->prepararBandaAssociada(
-                        $banda,
+                        Artista $artista,
+                    ): array => $this->prepararArtistaAssociado(
+                        $artista,
                         $genero,
                     ),
                 ),
@@ -306,7 +306,7 @@ final class ControladorGenero extends Controller
             [
                 'genero' => $genero,
 
-                'bandas' => $bandas,
+                'artistas' => $artistas,
 
                 ...$this->obterDadosCabecalhoGenero(
                     $genero,
@@ -766,33 +766,33 @@ final class ControladorGenero extends Controller
     }
 
     /**
-     * Prepara uma banda associada para apresentação.
+     * Prepara um artista associado para apresentação.
      *
-     * @param  Banda  $banda  Banda apresentada.
+     * @param  Artista  $artista  Artista apresentado.
      * @param  Genero  $generoAtual  Género da página atual.
      * @return array{
-     *     modelo: Banda,
+     *     modelo: Artista,
      *     identificador: int,
      *     nome: string,
      *     nomeOrigemGeografica: string,
      *     nomesOutrosGeneros: string|null
      * } Dados preparados.
      *
-     * @throws LogicException Quando a banda contém dados persistidos
+     * @throws LogicException Quando o artista contém dados persistidos
      *                        inválidos.
      *
      * @since 2.0.0
      */
-    private function prepararBandaAssociada(
-        Banda $banda,
+    private function prepararArtistaAssociado(
+        Artista $artista,
         Genero $generoAtual,
     ): array {
         $origemGeografica =
-            $banda->origemGeografica;
+            $artista->origemGeografica;
 
         if (! $origemGeografica instanceof OrigemGeografica) {
             throw new LogicException(
-                'A banda associada não possui uma origem geográfica válida.',
+                'O artista associado não possui uma origem geográfica válida.',
             );
         }
 
@@ -800,7 +800,7 @@ final class ControladorGenero extends Controller
             (int) $generoAtual->getKey();
 
         $outrosGeneros =
-            $banda
+            $artista
                 ->generos
                 ->filter(
                     static fn (
@@ -811,11 +811,11 @@ final class ControladorGenero extends Controller
                 ->values();
 
         return [
-            'modelo' => $banda,
+            'modelo' => $artista,
 
-            'identificador' => (int) $banda->getKey(),
+            'identificador' => (int) $artista->getKey(),
 
-            'nome' => $banda->nome,
+            'nome' => $artista->nome,
 
             'nomeOrigemGeografica' => $origemGeografica->nome,
 

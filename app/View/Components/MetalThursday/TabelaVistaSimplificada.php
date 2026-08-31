@@ -9,7 +9,7 @@ use App\Models\Geografia\OrigemGeografica;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use App\Models\Musica\Genero;
 use DateTimeInterface;
 use Illuminate\Contracts\View\View;
@@ -47,7 +47,7 @@ final class TabelaVistaSimplificada extends Component
      *     dataIso: string|null,
      *     dataApresentacao: string,
      *     nomeAutor: string,
-     *     nomeBanda: string,
+     *     nomeArtista: string,
      *     nomeOrigemGeografica: string,
      *     titulo: string,
      *     nomeTipoSeccao: string|null,
@@ -173,12 +173,12 @@ final class TabelaVistaSimplificada extends Component
                 Utilizador::class,
             );
 
-        /** @var Banda|null $banda */
-        $banda =
+        /** @var Artista|null $artista */
+        $artista =
             $this->obterModeloRelacionado(
                 $seccao,
-                'banda',
-                Banda::class,
+                'artista',
+                Artista::class,
             );
 
         /** @var TipoSeccao $tipoSeccao */
@@ -194,10 +194,10 @@ final class TabelaVistaSimplificada extends Component
         $origemGeografica = null;
         $generos = new Collection;
 
-        if ($banda instanceof Banda) {
+        if ($artista instanceof Artista) {
             $origemGeografica =
                 $this->obterModeloRelacionado(
-                    $banda,
+                    $artista,
                     'origemGeografica',
                     OrigemGeografica::class,
                     true,
@@ -205,7 +205,7 @@ final class TabelaVistaSimplificada extends Component
 
             $generos =
                 $this->obterColecaoRelacionada(
-                    $banda,
+                    $artista,
                     'generos',
                 );
         }
@@ -259,10 +259,10 @@ final class TabelaVistaSimplificada extends Component
             )
                 ?? 'Utilizador removido',
 
-            'nomeBanda' => $this->normalizarTexto(
-                $banda?->nome,
+            'nomeArtista' => $this->normalizarTexto(
+                $artista?->nome,
             )
-                ?? 'Banda indisponível',
+                ?? 'Artista indisponível',
 
             'nomeOrigemGeografica' => $this->normalizarTexto(
                 $origemGeografica?->nome,
@@ -363,7 +363,7 @@ final class TabelaVistaSimplificada extends Component
     }
 
     /**
-     * Prepara os nomes dos géneros de uma banda.
+     * Prepara os nomes dos géneros de um artista.
      *
      * @param  Collection<int, Model>  $generos  Géneros carregados.
      * @return string Nomes separados por vírgulas ou travessão.

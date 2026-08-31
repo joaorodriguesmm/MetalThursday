@@ -61,7 +61,7 @@ final class FiltrosMetalThursday
      */
     private const MAPA_FILTROS = [
         'filtro_autor' => 'filtrarPorAutor',
-        'filtro_banda' => 'filtrarPorBanda',
+        'filtro_artista' => 'filtrarPorArtista',
         'filtro_autoria_utilizador' => 'filtrarPorAutoriaDoUtilizador',
         'filtro_data_ate' => 'filtrarPorDataAte',
         'filtro_data_desde' => 'filtrarPorDataDesde',
@@ -316,15 +316,15 @@ final class FiltrosMetalThursday
                 );
 
                 $construtorPesquisa->orWhereHas(
-                    'banda',
+                    'artista',
                     function (
-                        Builder $construtorBanda,
+                        Builder $construtorArtista,
                     ) use (
                         $padrao,
                     ): void {
                         $this->adicionarCorrespondenciaPesquisa(
-                            $construtorBanda,
-                            $construtorBanda
+                            $construtorArtista,
+                            $construtorArtista
                                 ->getModel()
                                 ->qualifyColumn(
                                     'nome',
@@ -731,21 +731,21 @@ final class FiltrosMetalThursday
     }
 
     /**
-     * Filtra os registos por banda.
+     * Filtra os registos por artista.
      *
      * @param  mixed  $valor  Identificador recebido.
      *
      * @since 1.0.0
      */
-    private function filtrarPorBanda(
+    private function filtrarPorArtista(
         mixed $valor,
     ): void {
-        $identificadorBanda =
+        $identificadorArtista =
             $this->converterParaIdentificador(
                 $valor,
             );
 
-        if ($identificadorBanda === null) {
+        if ($identificadorArtista === null) {
             return;
         }
 
@@ -755,8 +755,8 @@ final class FiltrosMetalThursday
                 static fn (
                     Builder $construtor,
                 ): Builder => $construtor->where(
-                    'banda_id',
-                    $identificadorBanda,
+                    'artista_id',
+                    $identificadorArtista,
                 ),
             );
 
@@ -764,8 +764,8 @@ final class FiltrosMetalThursday
         }
 
         $this->construtor->where(
-            'banda_id',
-            $identificadorBanda,
+            'artista_id',
+            $identificadorArtista,
         );
     }
 
@@ -985,7 +985,7 @@ final class FiltrosMetalThursday
 
         if ($this->eConsultaDeMetalThursdays()) {
             $this->construtor->whereHas(
-                'seccoes.banda.generos',
+                'seccoes.artista.generos',
                 static fn (
                     Builder $construtor,
                 ): Builder => $construtor->whereKey(
@@ -997,7 +997,7 @@ final class FiltrosMetalThursday
         }
 
         $this->construtor->whereHas(
-            'banda.generos',
+            'artista.generos',
             static fn (
                 Builder $construtor,
             ): Builder => $construtor->whereKey(

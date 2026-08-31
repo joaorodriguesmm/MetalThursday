@@ -9,7 +9,7 @@ use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -315,8 +315,8 @@ final class VisibilidadeArquivoMetalThursdayTest extends TestCase
     private function criarSeccaoDetalhada(
         MetalThursday $metalThursday,
     ): SeccaoMetalThursday {
-        $banda =
-            Banda::factory()
+        $artista =
+            Artista::factory()
                 ->create();
 
         $tipoSeccao =
@@ -329,7 +329,7 @@ final class VisibilidadeArquivoMetalThursdayTest extends TestCase
                 $metalThursday,
             )
             ->comDetalhes(
-                $banda,
+                $artista,
             )
             ->doTipo(
                 $tipoSeccao,

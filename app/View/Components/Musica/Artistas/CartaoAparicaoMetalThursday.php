@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\View\Components\Musica\Bandas;
+namespace App\View\Components\Musica\Artistas;
 
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\MetalThursday;
@@ -15,7 +15,7 @@ use Illuminate\View\Component;
 use LogicException;
 
 /**
- * Prepara uma aparição de uma banda numa MetalThursday.
+ * Prepara uma aparição de um artista numa MetalThursday.
  *
  * O componente utiliza exclusivamente relações previamente carregadas,
  * evitando consultas adicionais durante a apresentação.
@@ -48,7 +48,7 @@ final class CartaoAparicaoMetalThursday extends Component
      * Cria uma nova instância do componente.
      *
      * @param  SeccaoMetalThursday  $seccao  Secção apresentada.
-     * @param  string  $nomeBanda  Nome da banda usado como título alternativo.
+     * @param  string  $nomeArtista  Nome do artista usado como título alternativo.
      *
      * @throws LogicException Quando uma relação necessária não está carregada
      *                        ou possui um tipo inesperado.
@@ -57,7 +57,7 @@ final class CartaoAparicaoMetalThursday extends Component
      */
     public function __construct(
         SeccaoMetalThursday $seccao,
-        string $nomeBanda,
+        string $nomeArtista,
     ) {
         $metalThursday =
             $this->obterMetalThursday(
@@ -83,9 +83,9 @@ final class CartaoAparicaoMetalThursday extends Component
                 $seccao->titulo,
             )
             ?? $this->normalizarTexto(
-                $nomeBanda,
+                $nomeArtista,
             )
-            ?? 'Banda indisponível';
+            ?? 'Artista indisponível';
 
         $descricao =
             $this->normalizarTexto(
@@ -153,7 +153,7 @@ final class CartaoAparicaoMetalThursday extends Component
     public function render(): View
     {
         return view(
-            'components.musica.bandas.cartao-aparicao-metal-thursday',
+            'components.musica.artistas.cartao-aparicao-metal-thursday',
         );
     }
 

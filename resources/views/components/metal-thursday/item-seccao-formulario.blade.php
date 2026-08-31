@@ -119,10 +119,10 @@
         <div class="col-md-6 grupo-campo-formulario mb-3">
             <label
                 class="form-label"
-                for="{{ $identificadores['banda'] }}"
+                for="{{ $identificadores['artista'] }}"
             >
                 <strong>
-                    Banda
+                    Artista
 
                     <span
                         class="text-danger"
@@ -137,8 +137,8 @@
                 class="btn border-0 bg-transparent text-muted p-0 align-baseline"
                 type="button"
                 data-bs-toggle="tooltip"
-                data-bs-title="Banda associada ao álbum ou à música."
-                aria-label="Ajuda sobre a banda"
+                data-bs-title="Artista associado ao álbum ou à música."
+                aria-label="Ajuda sobre o artista"
             >
                 <i
                     class="bi bi-info-circle"
@@ -148,46 +148,46 @@
 
             <div class="input-group has-validation">
                 <select
-                    id="{{ $identificadores['banda'] }}"
-                    class="form-select tom-select-unico tom-select-bandas @error($chavesErro['banda']) is-invalid @enderror"
-                    name="{{ $nomeBaseCampo }}[banda_id]"
-                    placeholder="Seleciona uma banda"
-                    aria-describedby="erro-{{ $identificadores['banda'] }}"
+                    id="{{ $identificadores['artista'] }}"
+                    class="form-select tom-select-unico tom-select-artistas @error($chavesErro['artista']) is-invalid @enderror"
+                    name="{{ $nomeBaseCampo }}[artista_id]"
+                    placeholder="Seleciona um artista"
+                    aria-describedby="erro-{{ $identificadores['artista'] }}"
                     @if ($exigeDetalhes)
                         required
                     @endif
-                    @error($chavesErro['banda'])
+                    @error($chavesErro['artista'])
                         aria-invalid="true"
                     @enderror
                 >
                     <option value="">
-                        Seleciona uma banda
+                        Seleciona um artista
                     </option>
 
-                    @foreach ($bandas as $banda)
+                    @foreach ($artistas as $artista)
                         <option
-                            value="{{ $banda->getKey() }}"
+                            value="{{ $artista->getKey() }}"
                             @selected(
-                                $valores['banda']
-                                === (string) $banda->getKey()
+                                $valores['artista']
+                                === (string) $artista->getKey()
                             )
                         >
-                            {{ $banda->nome }}
+                            {{ $artista->nome }}
                         </option>
                     @endforeach
                 </select>
 
                 @can(
                     'create',
-                    App\Models\Musica\Banda::class
+                    App\Models\Musica\Artista::class
                 )
                     <button
                         class="btn btn-secondary"
                         type="button"
                         data-bs-toggle="modal"
-                        data-bs-target="#modal-criar-banda"
-                        aria-label="Criar nova banda"
-                        title="Criar nova banda"
+                        data-bs-target="#modal-criar-artista"
+                        aria-label="Criar novo artista"
+                        title="Criar novo artista"
                     >
                         <i
                             class="bi bi-plus-lg"
@@ -198,12 +198,12 @@
             </div>
 
             <div
-                id="erro-{{ $identificadores['banda'] }}"
-                class="invalid-feedback @error($chavesErro['banda']) d-block @enderror"
+                id="erro-{{ $identificadores['artista'] }}"
+                class="invalid-feedback @error($chavesErro['artista']) d-block @enderror"
                 aria-live="polite"
                 aria-atomic="true"
             >
-                @error($chavesErro['banda'])
+                @error($chavesErro['artista'])
                     {{ $message }}
                 @enderror
             </div>

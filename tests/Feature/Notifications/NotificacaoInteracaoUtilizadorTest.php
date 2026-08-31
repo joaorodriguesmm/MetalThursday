@@ -9,7 +9,7 @@ use App\Models\Interacoes\Comentario;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use App\Notifications\NotificacaoInteracaoUtilizador;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -61,9 +61,9 @@ final class NotificacaoInteracaoUtilizadorTest extends TestCase
             )
             ->create();
 
-        $banda = Banda::factory()
+        $artista = Artista::factory()
             ->comNome(
-                'Banda original',
+                'Artista original',
             )
             ->create();
 
@@ -74,8 +74,8 @@ final class NotificacaoInteracaoUtilizadorTest extends TestCase
             ->doTipo(
                 $tipoSeccao,
             )
-            ->comBanda(
-                $banda,
+            ->comArtista(
+                $artista,
             )
             ->comConteudo(
                 'Descrição original.',
@@ -112,8 +112,8 @@ final class NotificacaoInteracaoUtilizadorTest extends TestCase
             'nome' => 'Tipo alterado',
         ]);
 
-        $banda->updateOrFail([
-            'nome' => 'Banda alterada',
+        $artista->updateOrFail([
+            'nome' => 'Artista alterado',
         ]);
 
         $seccao->updateOrFail([
@@ -139,7 +139,7 @@ final class NotificacaoInteracaoUtilizadorTest extends TestCase
         );
 
         self::assertSame(
-            'Causador original avaliou a secção Álbum de Banda original — «Título original».',
+            'Causador original avaliou a secção Álbum de Artista original — «Título original».',
             $dados['mensagem'],
         );
 

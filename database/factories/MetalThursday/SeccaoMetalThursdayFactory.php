@@ -8,7 +8,7 @@ use App\Enumeracoes\TipoIncorporacao;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Model;
@@ -40,7 +40,7 @@ final class SeccaoMetalThursdayFactory extends Factory
      * Define os atributos predefinidos de uma secção.
      *
      * Por predefinição, é criado um tipo de secção que não exige detalhes
-     * adicionais e não é associada qualquer banda ou incorporação.
+     * adicionais e não é associado qualquer artista ou incorporação.
      *
      * O nome `definition` permanece em inglês por corresponder ao método
      * convencional das factories do Laravel.
@@ -65,7 +65,7 @@ final class SeccaoMetalThursdayFactory extends Factory
                 ->faker
                 ->paragraph(),
 
-            'banda_id' => null,
+            'artista_id' => null,
 
             'ligacao' => null,
 
@@ -125,32 +125,32 @@ final class SeccaoMetalThursdayFactory extends Factory
     }
 
     /**
-     * Associa uma banda à secção.
+     * Associa um artista à secção.
      *
-     * Quando nenhuma banda é indicada, é criada uma através da respetiva
+     * Quando nenhum artista é indicado, é criado um através da respetiva
      * factory.
      *
-     * @param  Banda|null  $banda  Banda pretendida.
+     * @param  Artista|null  $artista  Artista pretendido.
      * @return static Factory configurada.
      *
-     * @throws InvalidArgumentException Quando a banda indicada não está
-     *                                  persistida.
+     * @throws InvalidArgumentException Quando o artista indicado não está
+     *                                  persistido.
      *
      * @since 2.0.0
      */
-    public function comBanda(
-        ?Banda $banda = null,
+    public function comArtista(
+        ?Artista $artista = null,
     ): static {
-        if ($banda !== null) {
+        if ($artista !== null) {
             $this->validarModeloPersistido(
-                $banda,
-                'A banda associada à secção deve estar persistida.',
+                $artista,
+                'O artista associado à secção deve estar persistido.',
             );
         }
 
         return $this->for(
-            $banda ?? Banda::factory(),
-            'banda',
+            $artista ?? Artista::factory(),
+            'artista',
         );
     }
 
@@ -258,27 +258,27 @@ final class SeccaoMetalThursdayFactory extends Factory
     /**
      * Cria uma secção com informação musical detalhada.
      *
-     * É criado um tipo que exige detalhes. Quando nenhuma banda é fornecida,
-     * é criada uma através da respetiva factory.
+     * É criado um tipo que exige detalhes. Quando nenhum artista é fornecido,
+     * é criado um através da respetiva factory.
      *
      * O estado preenche todos os campos exigidos pelo contrato das secções
-     * detalhadas: título, banda, ligação, tipo de incorporação e ano.
+     * detalhadas: título, artista, ligação, tipo de incorporação e ano.
      *
-     * @param  Banda|null  $banda  Banda pretendida.
+     * @param  Artista|null  $artista  Artista pretendido.
      * @return static Factory configurada.
      *
-     * @throws InvalidArgumentException Quando a banda indicada não está
-     *                                  persistida.
+     * @throws InvalidArgumentException Quando o artista indicado não está
+     *                                  persistido.
      *
      * @since 2.0.0
      */
     public function comDetalhes(
-        ?Banda $banda = null,
+        ?Artista $artista = null,
     ): static {
-        if ($banda !== null) {
+        if ($artista !== null) {
             $this->validarModeloPersistido(
-                $banda,
-                'A banda associada à secção detalhada deve estar persistida.',
+                $artista,
+                'O artista associado à secção detalhada deve estar persistido.',
             );
         }
 
@@ -323,8 +323,8 @@ final class SeccaoMetalThursdayFactory extends Factory
                 'tipoSeccao',
             )
             ->for(
-                $banda ?? Banda::factory(),
-                'banda',
+                $artista ?? Artista::factory(),
+                'artista',
             )
             ->state([
                 'titulo' => $titulo,

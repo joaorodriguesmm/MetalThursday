@@ -36,7 +36,7 @@
                     </th>
 
                     <th scope="col">
-                        Banda
+                        Artista
                     </th>
 
                     <th scope="col">
@@ -98,7 +98,7 @@
                         </td>
 
                         <td>
-                            {{ $linha['nomeBanda'] }}
+                            {{ $linha['nomeArtista'] }}
                         </td>
 
                         <td>

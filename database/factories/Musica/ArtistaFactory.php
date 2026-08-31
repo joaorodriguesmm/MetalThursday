@@ -5,39 +5,39 @@ declare(strict_types=1);
 namespace Database\Factories\Musica;
 
 use App\Models\Geografia\OrigemGeografica;
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 /**
- * Cria dados de teste para bandas.
+ * Cria dados de teste para artistas.
  *
  * O nome `Factory` permanece em inglês por corresponder à convenção de
  * descoberta automática das factories do Laravel.
  *
- * @extends Factory<Banda>
+ * @extends Factory<Artista>
  *
  * @since 2.0.0
  */
-final class BandaFactory extends Factory
+final class ArtistaFactory extends Factory
 {
     /**
      * Modelo associado à factory.
      *
-     * @var class-string<Banda>
+     * @var class-string<Artista>
      *
      * @since 2.0.0
      */
-    protected $model = Banda::class;
+    protected $model = Artista::class;
 
     /**
-     * Define os atributos predefinidos de uma banda.
+     * Define os atributos predefinidos de um artista.
      *
      * O nome `definition` permanece em inglês por corresponder ao método
      * convencional das factories do Laravel.
      *
-     * @return array<string, mixed> Atributos da banda.
+     * @return array<string, mixed> Atributos do artista.
      *
      * @since 2.0.0
      */
@@ -61,12 +61,12 @@ final class BandaFactory extends Factory
     }
 
     /**
-     * Define um nome conhecido para a banda.
+     * Define um nome conhecido para o artista.
      *
      * A normalização e a validação são delegadas ao contrato definitivo do
      * modelo.
      *
-     * @param  string  $nome  Nome da banda.
+     * @param  string  $nome  Nome do artista.
      * @return static Factory configurada.
      *
      * @throws InvalidArgumentException Quando o nome não é válido.
@@ -76,20 +76,20 @@ final class BandaFactory extends Factory
     public function comNome(
         string $nome,
     ): static {
-        $banda = new Banda;
+        $artista = new Artista;
 
-        $banda->nome =
+        $artista->nome =
             $nome;
 
         return $this->state([
-            'nome' => $banda->nome,
+            'nome' => $artista->nome,
         ]);
     }
 
     /**
-     * Associa a banda a uma origem geográfica existente.
+     * Associa o artista a uma origem geográfica existente.
      *
-     * @param  OrigemGeografica  $origemGeografica  Origem da banda.
+     * @param  OrigemGeografica  $origemGeografica  Origem do artista.
      * @return static Factory configurada.
      *
      * @throws InvalidArgumentException Quando a origem geográfica não está
@@ -105,7 +105,7 @@ final class BandaFactory extends Factory
             || $origemGeografica->getKey() === null
         ) {
             throw new InvalidArgumentException(
-                'A origem geográfica associada à banda deve estar persistida.',
+                'A origem geográfica associada ao artista deve estar persistida.',
             );
         }
 

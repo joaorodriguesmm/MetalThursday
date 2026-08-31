@@ -28,7 +28,7 @@ import ValidadorFormulario from './ValidadorFormulario';
  */
 const CHAVES_ENDERECOS = Object.freeze([
     'guardarEdicao',
-    'guardarBanda',
+    'guardarArtista',
     'guardarGenero',
     'obterUtilizadorHaMaisTempoSemNomeacao',
 ]);
@@ -503,8 +503,8 @@ function validarSeccao(
         return seccaoValida;
     }
 
-    const banda = seccao.querySelector(
-        '[name$="[banda_id]"]',
+    const artista = seccao.querySelector(
+        '[name$="[artista_id]"]',
     );
 
     const titulo = seccao.querySelector(
@@ -526,17 +526,17 @@ function validarSeccao(
     const validacoes = [
         validarCampoSeccao(
             validador,
-            banda,
+            artista,
             [
                 'obrigatorio',
                 'inteiro',
             ],
             {
                 obrigatorio:
-                    'Por favor, seleciona a banda.',
+                    'Por favor, seleciona o artista.',
 
                 inteiro:
-                    'A banda selecionada não é válida.',
+                    'O artista selecionado não é válido.',
             },
         ),
 
@@ -824,7 +824,7 @@ function inicializarTooltipsSeccao(
  *     tooltips.
  * @param {Array<object>} fornecedoresIncorporacao Definições das
  *     incorporações.
- * @param {Map<number, string>} bandasCriadas Bandas criadas na página.
+ * @param {Map<number, string>} artistasCriados Artistas criados na página.
  *
  * @returns {void}
  *
@@ -835,27 +835,27 @@ function inicializarNovaSeccao(
     inicializadorTomSelect,
     inicializadorTooltips,
     fornecedoresIncorporacao,
-    bandasCriadas,
+    artistasCriados,
 ) {
     inicializadorTomSelect.iniciarTodos(
         seccao,
     );
 
-    const selecaoBanda = seccao.querySelector(
-        '.tom-select-bandas',
+    const selecaoArtista = seccao.querySelector(
+        '.tom-select-artistas',
     );
 
     if (
-        selecaoBanda
+        selecaoArtista
         instanceof HTMLSelectElement
     ) {
-        bandasCriadas.forEach(
+        artistasCriados.forEach(
             (
                 nome,
                 identificador,
             ) => {
                 adicionarOpcaoTomSelect(
-                    selecaoBanda.tomselect
+                    selecaoArtista.tomselect
                     ?? null,
                     identificador,
                     nome,
@@ -881,7 +881,7 @@ function inicializarNovaSeccao(
  * @param {InicializadorTomSelect} inicializadorTomSelect Inicializador dos
  *     campos Tom Select.
  * @param {Readonly<Record<string, string>>} enderecos Endereços validados.
- * @param {Map<number, string>} bandasCriadas Bandas criadas na página.
+ * @param {Map<number, string>} artistasCriados Artistas criados na página.
  * @param {GestorEdicaoMetalThursday} gestorEdicao Gestor da edição por data.
  * @param {object} contextoCriacaoRapida Contexto dos campos que originaram
  *     as criações rápidas.
@@ -893,7 +893,7 @@ function inicializarNovaSeccao(
 function criarConfiguracoesModais(
     inicializadorTomSelect,
     enderecos,
-    bandasCriadas,
+    artistasCriados,
     gestorEdicao,
     contextoCriacaoRapida,
 ) {
@@ -902,8 +902,8 @@ function criarConfiguracoesModais(
         255,
     );
 
-    const maximoNomeBanda = obterComprimentoMaximo(
-        'nome-nova-banda',
+    const maximoNomeArtista = obterComprimentoMaximo(
+        'nome-novo-artista',
         255,
     );
 
@@ -982,15 +982,15 @@ function criarConfiguracoesModais(
         },
         {
             idFormulario:
-                'formulario-criar-banda',
+                'formulario-criar-artista',
 
             url:
-                enderecos.guardarBanda,
+                enderecos.guardarArtista,
 
             regrasValidacao: {
                 nome: [
                     'obrigatorio',
-                    `maximo:${maximoNomeBanda}`,
+                    `maximo:${maximoNomeArtista}`,
                 ],
 
                 origem_geografica_id: [
@@ -1007,10 +1007,10 @@ function criarConfiguracoesModais(
             mensagensValidacao: {
                 nome: {
                     obrigatorio:
-                        'Por favor, insere o nome da banda.',
+                        'Por favor, insere o nome do artista.',
 
                     maximo:
-                        `O nome da banda não pode ter mais de ${maximoNomeBanda} caracteres.`,
+                        `O nome do artista não pode ter mais de ${maximoNomeArtista} caracteres.`,
                 },
 
                 origem_geografica_id: {
@@ -1032,7 +1032,7 @@ function criarConfiguracoesModais(
             ) => {
                 const opcao = obterOpcaoResposta(
                     dadosResposta,
-                    'banda',
+                    'artista',
                     'nome',
                 );
 
@@ -1040,14 +1040,14 @@ function criarConfiguracoesModais(
                     return;
                 }
 
-                bandasCriadas.set(
+                artistasCriados.set(
                     opcao.identificador,
                     opcao.nome,
                 );
 
                 document
                     .querySelectorAll(
-                        '.tom-select-bandas',
+                        '.tom-select-artistas',
                     )
                     .forEach(
                         (selecao) => {
@@ -1062,14 +1062,14 @@ function criarConfiguracoesModais(
                                     opcao.nome,
                                     selecao
                                     === contextoCriacaoRapida
-                                        .selecaoBandaDestino,
+                                        .selecaoArtistaDestino,
                                 );
                             }
                         },
                     );
 
                 contextoCriacaoRapida
-                    .selecaoBandaDestino =
+                    .selecaoArtistaDestino =
                     null;
             },
         },
@@ -1111,7 +1111,7 @@ function criarConfiguracoesModais(
                 }
 
                 [
-                    'generos-nova-banda',
+                    'generos-novo-artista',
                     'generos-pai-novo-genero',
                 ].forEach(
                     (
@@ -1125,9 +1125,9 @@ function criarConfiguracoesModais(
                             opcao.identificador,
                             opcao.nome,
                             identificadorCampo
-                                === 'generos-nova-banda'
+                                === 'generos-novo-artista'
                             && contextoCriacaoRapida
-                                .generoParaBanda,
+                                .generoParaArtista,
                         );
                     },
                 );
@@ -1137,10 +1137,10 @@ function criarConfiguracoesModais(
 }
 
 /**
- * Guarda o campo de Banda que originou a abertura do modal de criação.
+ * Guarda o campo de artista que originou a abertura do modal de criação.
  *
- * A referência é preservada quando o modal da Banda é reaberto
- * programaticamente depois da criação de um Género.
+ * A referência é preservada quando o modal do artista é reaberto
+ * programaticamente depois da criação de um género.
  *
  * @param {object} contextoCriacaoRapida Contexto partilhado das criações.
  *
@@ -1148,19 +1148,19 @@ function criarConfiguracoesModais(
  *
  * @since 2.0.0
  */
-function configurarDestinoCriacaoBanda(
+function configurarDestinoCriacaoArtista(
     contextoCriacaoRapida,
 ) {
-    const modalBanda =
+    const modalArtista =
         document.getElementById(
-            'modal-criar-banda',
+            'modal-criar-artista',
         );
 
-    if (!(modalBanda instanceof HTMLElement)) {
+    if (!(modalArtista instanceof HTMLElement)) {
         return;
     }
 
-    modalBanda.addEventListener(
+    modalArtista.addEventListener(
         'show.bs.modal',
         (evento) => {
             const acionador =
@@ -1171,7 +1171,7 @@ function configurarDestinoCriacaoBanda(
             }
 
             contextoCriacaoRapida
-                .selecaoBandaDestino =
+                .selecaoArtistaDestino =
                 null;
 
             const seccao =
@@ -1183,26 +1183,26 @@ function configurarDestinoCriacaoBanda(
                 return;
             }
 
-            const selecaoBanda =
+            const selecaoArtista =
                 seccao.querySelector(
-                    '.tom-select-bandas',
+                    '.tom-select-artistas',
                 );
 
             if (
-                selecaoBanda
+                selecaoArtista
                 instanceof HTMLSelectElement
             ) {
                 contextoCriacaoRapida
-                    .selecaoBandaDestino =
-                    selecaoBanda;
+                    .selecaoArtistaDestino =
+                    selecaoArtista;
             }
         },
     );
 }
 
 /**
- * Mantém o formulário da banda ao criar um género a partir do respetivo
- * modal e regressa à banda quando o modal do género é fechado.
+ * Mantém o formulário do artista ao criar um género a partir do respetivo
+ * modal e reabre o modal do artista quando o modal do género é fechado.
  *
  * @param {object} contextoCriacaoRapida Contexto partilhado das criações.
  *
@@ -1210,12 +1210,12 @@ function configurarDestinoCriacaoBanda(
  *
  * @since 2.0.0
  */
-function configurarRetornoCriacaoGeneroParaBanda(
+function configurarRetornoCriacaoGeneroParaArtista(
     contextoCriacaoRapida,
 ) {
-    const modalBanda =
+    const modalArtista =
         document.getElementById(
-            'modal-criar-banda',
+            'modal-criar-artista',
         );
 
     const modalGenero =
@@ -1224,13 +1224,13 @@ function configurarRetornoCriacaoGeneroParaBanda(
         );
 
     if (
-        !(modalBanda instanceof HTMLElement)
+        !(modalArtista instanceof HTMLElement)
         || !(modalGenero instanceof HTMLElement)
     ) {
         return;
     }
 
-    let regressarAoModalBanda =
+    let regressarAoModalArtista =
         false;
 
     modalGenero.addEventListener(
@@ -1239,21 +1239,21 @@ function configurarRetornoCriacaoGeneroParaBanda(
             const acionador =
                 evento.relatedTarget;
 
-            regressarAoModalBanda =
+            regressarAoModalArtista =
                 acionador instanceof Element
                 && acionador.closest(
-                    '#modal-criar-banda',
-                ) === modalBanda;
+                    '#modal-criar-artista',
+                ) === modalArtista;
 
             contextoCriacaoRapida
-                .generoParaBanda =
-                regressarAoModalBanda;
+                .generoParaArtista =
+                regressarAoModalArtista;
 
-            if (!regressarAoModalBanda) {
+            if (!regressarAoModalArtista) {
                 return;
             }
 
-            modalBanda.setAttribute(
+            modalArtista.setAttribute(
                 'data-preservar-formularios-ao-fechar',
                 '',
             );
@@ -1263,20 +1263,20 @@ function configurarRetornoCriacaoGeneroParaBanda(
     modalGenero.addEventListener(
         'hidden.bs.modal',
         () => {
-            if (!regressarAoModalBanda) {
+            if (!regressarAoModalArtista) {
                 return;
             }
 
-            regressarAoModalBanda =
+            regressarAoModalArtista =
                 false;
 
             contextoCriacaoRapida
-                .generoParaBanda =
+                .generoParaArtista =
                 false;
 
             Modal
                 .getOrCreateInstance(
-                    modalBanda,
+                    modalArtista,
                 )
                 .show();
         },
@@ -1340,11 +1340,11 @@ function inicializarFormularioMetalThursday(
         'o elemento de erro das secções',
     );
 
-    const bandasCriadas = new Map();
+    const artistasCriados = new Map();
 
     const contextoCriacaoRapida = {
-        selecaoBandaDestino: null,
-        generoParaBanda: false,
+        selecaoArtistaDestino: null,
+        generoParaArtista: false,
     };
 
     /*
@@ -1401,7 +1401,7 @@ function inicializarFormularioMetalThursday(
                 inicializadorTooltips,
                 configuracao
                     .fornecedoresIncorporacao,
-                bandasCriadas,
+                artistasCriados,
             );
 
             atualizarErroSeccoes(
@@ -1541,11 +1541,11 @@ function inicializarFormularioMetalThursday(
         validadorFormulario,
     );
 
-    configurarDestinoCriacaoBanda(
+    configurarDestinoCriacaoArtista(
         contextoCriacaoRapida,
     );
 
-    configurarRetornoCriacaoGeneroParaBanda(
+    configurarRetornoCriacaoGeneroParaArtista(
         contextoCriacaoRapida,
     );
 
@@ -1553,7 +1553,7 @@ function inicializarFormularioMetalThursday(
         criarConfiguracoesModais(
             inicializadorTomSelect,
             configuracao.enderecos,
-            bandasCriadas,
+            artistasCriados,
             gestorEdicao,
             contextoCriacaoRapida,
         ),

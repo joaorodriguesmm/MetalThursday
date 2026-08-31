@@ -220,7 +220,7 @@ final class SeccaoMetalThursdayTest extends TestCase
 
             'descricao' => 'Descrição válida.',
 
-            'banda_id' => null,
+            'artista_id' => null,
 
             'ligacao' => null,
 

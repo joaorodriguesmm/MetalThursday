@@ -9,7 +9,7 @@ use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use App\Resultados\MetalThursday\MetalThursdayCriada;
 use App\Servicos\MetalThursday\ServicoPersistenciaMetalThursday;
 use App\Servicos\MetalThursday\ServicoReservasMetalThursday;
@@ -53,7 +53,7 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
             ->comDetalhes()
             ->create();
 
-        $banda = Banda::factory()
+        $artista = Artista::factory()
             ->create();
 
         $metalThursday = $this
@@ -79,7 +79,7 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
 
                         'descricao' => 'Descrição conhecida da secção.',
 
-                        'banda_id' => (int) $banda->getKey(),
+                        'artista_id' => (int) $artista->getKey(),
 
                         'ligacao' => 'https://example.com/faixa',
 
@@ -102,7 +102,7 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
 
                 'tipo_seccao_id' => $tipoSeccao->getKey(),
 
-                'banda_id' => $banda->getKey(),
+                'artista_id' => $artista->getKey(),
 
                 'ordem' => 1,
 
@@ -876,7 +876,7 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
 
             'descricao' => $descricao,
 
-            'banda_id' => null,
+            'artista_id' => null,
 
             'ligacao' => null,
 

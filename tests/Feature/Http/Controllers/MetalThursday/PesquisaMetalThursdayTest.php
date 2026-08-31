@@ -9,7 +9,7 @@ use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -196,25 +196,25 @@ final class PesquisaMetalThursdayTest extends TestCase
     }
 
     /**
-     * Confirma que a pesquisa encontra uma MetalThursday pelo nome parcial da
-     * banda associada a uma secção.
+     * Confirma que a pesquisa encontra uma MetalThursday pelo nome parcial do
+     * artista associado a uma secção.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function pesquisa_por_nome_da_banda(): void
+    public function pesquisa_por_nome_do_artista(): void
     {
         $utilizador = $this->autenticarUtilizador();
 
         $edicao = $this->criarEdicao();
 
-        $ironMaiden = Banda::factory()
+        $ironMaiden = Artista::factory()
             ->comNome(
                 'Iron Maiden',
             )
             ->create();
 
-        $judasPriest = Banda::factory()
+        $judasPriest = Artista::factory()
             ->comNome(
                 'Judas Priest',
             )
@@ -878,7 +878,7 @@ final class PesquisaMetalThursdayTest extends TestCase
      * @param  MetalThursday  $metalThursday  MetalThursday associada.
      * @param  string  $titulo  Título da secção.
      * @param  string  $descricao  Descrição da secção.
-     * @param  Banda|null  $banda  Banda existente ou nula.
+     * @param  Artista|null  $artista  Artista existente ou nulo.
      * @return SeccaoMetalThursday Secção criada.
      *
      * @since 2.0.0
@@ -887,9 +887,9 @@ final class PesquisaMetalThursdayTest extends TestCase
         MetalThursday $metalThursday,
         string $titulo,
         string $descricao,
-        ?Banda $banda = null,
+        ?Artista $artista = null,
     ): SeccaoMetalThursday {
-        $banda ??= Banda::factory()
+        $artista ??= Artista::factory()
             ->create();
 
         $tipoSeccao = TipoSeccao::factory()
@@ -914,7 +914,7 @@ final class PesquisaMetalThursdayTest extends TestCase
                 $metalThursday,
             )
             ->comDetalhes(
-                $banda,
+                $artista,
             )
             ->doTipo(
                 $tipoSeccao,

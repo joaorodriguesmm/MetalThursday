@@ -7,7 +7,7 @@ namespace App\View\Components\MetalThursday;
 use App\Enumeracoes\TipoIncorporacao;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
@@ -45,13 +45,13 @@ final class ItemSeccaoFormulario extends Component
     public readonly Collection $tiposSeccao;
 
     /**
-     * Bandas disponíveis.
+     * Artistas disponíveis.
      *
-     * @var Collection<int, Banda>
+     * @var Collection<int, Artista>
      *
      * @since 2.0.0
      */
-    public readonly Collection $bandas;
+    public readonly Collection $artistas;
 
     /**
      * Prefixo utilizado pelas chaves de validação.
@@ -73,7 +73,7 @@ final class ItemSeccaoFormulario extends Component
      * @var array{
      *     identificador: string,
      *     tipoSeccao: string,
-     *     banda: string,
+     *     artista: string,
      *     titulo: string,
      *     ligacao: string,
      *     tipoIncorporacao: string,
@@ -90,7 +90,7 @@ final class ItemSeccaoFormulario extends Component
      *
      * @var array{
      *     tipoSeccao: string,
-     *     banda: string,
+     *     artista: string,
      *     titulo: string,
      *     ligacao: string,
      *     tipoIncorporacao: string,
@@ -112,7 +112,7 @@ final class ItemSeccaoFormulario extends Component
      *
      * @var array{
      *     tipoSeccao: string,
-     *     banda: string,
+     *     artista: string,
      *     titulo: string,
      *     ligacao: string,
      *     tipoIncorporacao: string,
@@ -185,7 +185,7 @@ final class ItemSeccaoFormulario extends Component
      * @param  Request  $pedido  Pedido HTTP atual.
      * @param  int|string  $indice  Índice do item.
      * @param  Collection<int, TipoSeccao>  $tiposSeccao  Tipos disponíveis.
-     * @param  Collection<int, Banda>  $bandas  Bandas disponíveis.
+     * @param  Collection<int, Artista>  $artistas  Artistas disponíveis.
      * @param  SeccaoMetalThursday|array<string, mixed>|null  $seccao  Secção
      *                                                                 existente
      *                                                                 ou dados
@@ -199,7 +199,7 @@ final class ItemSeccaoFormulario extends Component
         Request $pedido,
         int|string $indice,
         Collection $tiposSeccao,
-        Collection $bandas,
+        Collection $artistas,
         SeccaoMetalThursday|array|null $seccao = null,
     ) {
         $this->indice = $this->normalizarIndice(
@@ -210,12 +210,12 @@ final class ItemSeccaoFormulario extends Component
             $tiposSeccao,
         );
 
-        $this->validarBandas(
-            $bandas,
+        $this->validarArtistas(
+            $artistas,
         );
 
         $this->tiposSeccao = $tiposSeccao;
-        $this->bandas = $bandas;
+        $this->artistas = $artistas;
 
         $this->prefixoCampo =
             "seccoes.{$this->indice}";
@@ -226,7 +226,7 @@ final class ItemSeccaoFormulario extends Component
         $this->identificadores = [
             'tipoSeccao' => "seccoes-{$this->indice}-tipo-seccao",
 
-            'banda' => "seccoes-{$this->indice}-banda",
+            'artista' => "seccoes-{$this->indice}-artista",
 
             'titulo' => "seccoes-{$this->indice}-titulo",
 
@@ -252,7 +252,7 @@ final class ItemSeccaoFormulario extends Component
         $this->chavesErro = [
             'tipoSeccao' => "{$this->prefixoCampo}.tipo_seccao_id",
 
-            'banda' => "{$this->prefixoCampo}.banda_id",
+            'artista' => "{$this->prefixoCampo}.artista_id",
 
             'titulo' => "{$this->prefixoCampo}.titulo",
 
@@ -292,11 +292,11 @@ final class ItemSeccaoFormulario extends Component
                 ),
             ),
 
-            'banda' => $this->normalizarTexto(
+            'artista' => $this->normalizarTexto(
                 $this->obterValorCampo(
                     $pedido,
                     $seccao,
-                    'banda_id',
+                    'artista_id',
                 ),
             ),
 
@@ -561,21 +561,21 @@ final class ItemSeccaoFormulario extends Component
     }
 
     /**
-     * Valida a coleção de bandas.
+     * Valida a coleção de artistas.
      *
-     * @param  Collection<int, Banda>  $bandas  Bandas recebidas.
+     * @param  Collection<int, Artista>  $artistas  Artistas recebidos.
      *
      * @throws LogicException Quando existe um modelo inesperado.
      *
      * @since 2.0.0
      */
-    private function validarBandas(
-        Collection $bandas,
+    private function validarArtistas(
+        Collection $artistas,
     ): void {
-        foreach ($bandas as $banda) {
-            if (! $banda instanceof Banda) {
+        foreach ($artistas as $artista) {
+            if (! $artista instanceof Artista) {
                 throw new LogicException(
-                    'A coleção de bandas contém um modelo inesperado.',
+                    'A coleção de artistas contém um modelo inesperado.',
                 );
             }
         }

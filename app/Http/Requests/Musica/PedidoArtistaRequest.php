@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Musica;
 
 use App\Models\Geografia\OrigemGeografica;
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use App\Models\Musica\Genero;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
@@ -14,7 +14,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Unique;
 
 /**
- * Define a validação comum dos pedidos de criação e atualização de bandas.
+ * Define a validação comum dos pedidos de criação e atualização de artistas.
  *
  * A origem geográfica e os géneros são recebidos através dos respetivos
  * identificadores. Os limites persistidos pertencem aos modelos
@@ -22,7 +22,7 @@ use Illuminate\Validation\Rules\Unique;
  *
  * @since 2.0.0
  */
-abstract class PedidoBandaRequest extends FormRequest
+abstract class PedidoArtistaRequest extends FormRequest
 {
     /**
      * Normaliza os dados antes da validação.
@@ -62,7 +62,7 @@ abstract class PedidoBandaRequest extends FormRequest
     /**
      * Obtém as regras de validação.
      *
-     * As bandas e os géneros eliminados logicamente não participam nos
+     * Os artistas e os géneros eliminados logicamente não participam nos
      * contratos de unicidade e existência dos registos ativos.
      *
      * @return array<string, list<mixed>> Regras de validação.
@@ -77,7 +77,7 @@ abstract class PedidoBandaRequest extends FormRequest
                 'required',
                 'string',
                 $this->criarRegraNome(),
-                'max:'.Banda::COMPRIMENTO_MAXIMO_NOME,
+                'max:'.Artista::COMPRIMENTO_MAXIMO_NOME,
                 $this->obterRegraUnicidadeNome(),
             ],
 
@@ -126,18 +126,18 @@ abstract class PedidoBandaRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'nome.required' => 'Por favor, insere o nome da banda.',
+            'nome.required' => 'Por favor, insere o nome do artista.',
 
-            'nome.string' => 'O nome da banda deve ser uma sequência de caracteres.',
+            'nome.string' => 'O nome do artista deve ser uma sequência de caracteres.',
 
             'nome.max' => sprintf(
-                'O nome da banda não pode ter mais de %d caracteres.',
-                Banda::COMPRIMENTO_MAXIMO_NOME,
+                'O nome do artista não pode ter mais de %d caracteres.',
+                Artista::COMPRIMENTO_MAXIMO_NOME,
             ),
 
-            'nome.unique' => 'Já existe uma banda com esse nome.',
+            'nome.unique' => 'Já existe um artista com esse nome.',
 
-            'origem_geografica_id.required' => 'Por favor, seleciona a origem geográfica da banda.',
+            'origem_geografica_id.required' => 'Por favor, seleciona a origem geográfica do artista.',
 
             'origem_geografica_id.integer' => 'A origem geográfica selecionada não é válida.',
 
@@ -171,7 +171,7 @@ abstract class PedidoBandaRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'nome' => 'nome da banda',
+            'nome' => 'nome do artista',
 
             'origem_geografica_id' => 'origem geográfica',
 
@@ -184,8 +184,8 @@ abstract class PedidoBandaRequest extends FormRequest
     /**
      * Obtém a regra de unicidade aplicável ao nome.
      *
-     * A criação e a atualização diferem apenas na banda que deve ser ignorada
-     * pela regra.
+     * A criação e a atualização diferem apenas no artista que deve ser
+     * ignorado pela regra.
      *
      * @return Unique Regra de unicidade.
      *
@@ -221,7 +221,7 @@ abstract class PedidoBandaRequest extends FormRequest
                 ) !== 1
             ) {
                 $falhar(
-                    'O nome da banda contém texto inválido.',
+                    'O nome do artista contém texto inválido.',
                 );
 
                 return;
@@ -234,18 +234,18 @@ abstract class PedidoBandaRequest extends FormRequest
                 ) === 1
             ) {
                 $falhar(
-                    'O nome da banda contém caracteres inválidos.',
+                    'O nome do artista contém caracteres inválidos.',
                 );
             }
         };
     }
 
     /**
-     * Normaliza o nome da banda.
+     * Normaliza o nome do artista.
      *
      * Texto UTF-8 inválido ou com caracteres de controlo permanece inalterado
      * para ser rejeitado pelas regras de validação. Nos restantes casos é
-     * aplicada a mesma normalização utilizada pelo modelo {@see Banda}.
+     * aplicada a mesma normalização utilizada pelo modelo {@see Artista}.
      *
      * Valores que não sejam strings permanecem igualmente inalterados para
      * que as regras de tipo produzam a respetiva mensagem.

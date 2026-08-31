@@ -22,7 +22,7 @@ use LogicException;
  * Representa um género musical e a respetiva posição hierárquica.
  *
  * Um género pode possuir vários géneros pais, vários géneros filhos e estar
- * associado a várias bandas.
+ * associado a vários artistas.
  *
  * A coluna gerada `nome_ativo` garante a unicidade do nome entre géneros não
  * eliminados logicamente e não constitui um atributo editável da aplicação.
@@ -41,7 +41,7 @@ use LogicException;
  * @property CarbonInterface|null $deleted_at
  * @property-read Collection<int, Genero> $generosPais
  * @property-read Collection<int, Genero> $generosFilhos
- * @property-read Collection<int, Banda> $bandas
+ * @property-read Collection<int, Artista> $artistas
  *
  * @since 1.0.0
  */
@@ -71,12 +71,12 @@ class Genero extends Model
         'hierarquia_generos';
 
     /**
-     * Nome da tabela intermédia entre bandas e géneros.
+     * Nome da tabela intermédia entre artistas e géneros.
      *
      * @since 2.0.0
      */
-    private const TABELA_BANDA_GENERO =
-        'banda_genero';
+    private const TABELA_ARTISTA_GENERO =
+        'artista_genero';
 
     /**
      * Nome físico da tabela associada ao modelo.
@@ -270,29 +270,29 @@ class Genero extends Model
     }
 
     /**
-     * Obtém as bandas associadas ao género.
+     * Obtém os artistas associados ao género.
      *
-     * As bandas eliminadas logicamente não são incluídas. As restantes são
-     * devolvidas por ordem alfabética.
+     * Os artistas eliminados logicamente não são incluídos. Os restantes são
+     * devolvidos por ordem alfabética.
      *
-     * @return BelongsToMany<Banda, $this> Relação com as bandas.
+     * @return BelongsToMany<Artista, $this> Relação com os artistas.
      *
      * @since 1.0.0
      */
-    public function bandas(): BelongsToMany
+    public function artistas(): BelongsToMany
     {
         return $this
             ->belongsToMany(
-                Banda::class,
-                self::TABELA_BANDA_GENERO,
+                Artista::class,
+                self::TABELA_ARTISTA_GENERO,
                 'genero_id',
-                'banda_id',
+                'artista_id',
             )
             ->orderBy(
-                'bandas.nome',
+                'artistas.nome',
             )
             ->orderBy(
-                'bandas.id',
+                'artistas.id',
             );
     }
 

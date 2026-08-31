@@ -5,28 +5,31 @@ declare(strict_types=1);
 namespace Tests\Feature\Models\Musica;
 
 use App\Models\Geografia\OrigemGeografica;
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 /**
- * Testa os contratos persistidos do modelo das bandas.
+ * Testa os contratos persistidos do modelo dos artistas.
  *
  * @since 2.0.0
  */
-final class BandaTest extends TestCase
+final class ArtistaTest extends TestCase
 {
     use RefreshDatabase;
 
     /**
-     * Confirma que a coluna gerada de unicidade permanece interna.
+     * Confirma que artistas ativos distintos podem possuir o mesmo nome.
+     *
+     * A identidade do artista é determinada pelo respetivo identificador e não
+     * pelo nome apresentado.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function omite_nome_ativo_da_serializacao(): void
+    public function permite_artistas_ativos_com_o_mesmo_nome(): void
     {
         $origemGeografica = OrigemGeografica::factory()
             ->create([
@@ -35,7 +38,7 @@ final class BandaTest extends TestCase
                 'codigo' => 'PT',
             ]);
 
-        $banda = Banda::factory()
+        $primeiroArtista = Artista::factory()
             ->comNome(
                 'Moonspell',
             )
@@ -44,19 +47,28 @@ final class BandaTest extends TestCase
             )
             ->create();
 
-        $bandaPersistida = Banda::query()
-            ->findOrFail(
-                $banda->getKey(),
-            );
+        $segundoArtista = Artista::factory()
+            ->comNome(
+                'Moonspell',
+            )
+            ->deOrigemGeografica(
+                $origemGeografica,
+            )
+            ->create();
 
-        self::assertSame(
-            'Moonspell',
-            $bandaPersistida->nome_ativo,
+        self::assertNotSame(
+            $primeiroArtista->getKey(),
+            $segundoArtista->getKey(),
         );
 
-        self::assertArrayNotHasKey(
-            'nome_ativo',
-            $bandaPersistida->toArray(),
+        self::assertSame(
+            2,
+            Artista::query()
+                ->where(
+                    'nome',
+                    'Moonspell',
+                )
+                ->count(),
         );
     }
 
@@ -72,9 +84,9 @@ final class BandaTest extends TestCase
             InvalidArgumentException::class,
         );
 
-        $banda = new Banda;
+        $artista = new Artista;
 
-        $banda->nome = 123;
+        $artista->nome = 123;
     }
 
     /**
@@ -89,8 +101,8 @@ final class BandaTest extends TestCase
             InvalidArgumentException::class,
         );
 
-        $banda = new Banda;
+        $artista = new Artista;
 
-        $banda->nome = "Banda\nInválida";
+        $artista->nome = "Artista\nInválido";
     }
 }

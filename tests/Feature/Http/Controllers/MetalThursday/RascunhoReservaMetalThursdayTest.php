@@ -201,7 +201,7 @@ final class RascunhoReservaMetalThursdayTest extends TestCase
 
                     'descricao' => null,
 
-                    'banda_id' => null,
+                    'artista_id' => null,
 
                     'ligacao' => 'https://',
 
@@ -515,7 +515,7 @@ final class RascunhoReservaMetalThursdayTest extends TestCase
 
                         'descricao' => 'Descrição guardada no rascunho.',
 
-                        'banda_id' => null,
+                        'artista_id' => null,
 
                         'ligacao' => 'https://exemplo.test',
 
@@ -607,7 +607,7 @@ final class RascunhoReservaMetalThursdayTest extends TestCase
 
                         'descricao' => null,
 
-                        'banda_id' => null,
+                        'artista_id' => null,
 
                         'ligacao' => null,
 
@@ -638,7 +638,7 @@ final class RascunhoReservaMetalThursdayTest extends TestCase
 
                             'descricao' => 'Descrição submetida.',
 
-                            'banda_id' => null,
+                            'artista_id' => null,
 
                             'ligacao' => null,
 

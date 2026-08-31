@@ -47,7 +47,7 @@
                         type="search"
                         name="{{ $nomeParametroPesquisa }}"
                         value="{{ $pesquisaAtual }}"
-                        placeholder="Nome da MetalThursday, título, descrição ou banda"
+                        placeholder="Nome da MetalThursday, título, descrição ou artista"
                     >
                 </div>
             </div>

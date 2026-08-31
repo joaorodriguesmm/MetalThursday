@@ -9,7 +9,7 @@ use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -17,15 +17,15 @@ use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 /**
- * Testa a visibilidade temporal do histórico de uma banda.
+ * Testa a visibilidade temporal do histórico de um artista.
  *
  * Apenas secções pertencentes a MetalThursdays já publicadas podem surgir no
- * histórico público da banda. Conteúdo preparado para datas futuras permanece
+ * histórico público do artista. Conteúdo preparado para datas futuras permanece
  * oculto até à respetiva publicação.
  *
  * @since 2.0.0
  */
-final class VisibilidadeHistoricoBandaTest extends TestCase
+final class VisibilidadeHistoricoArtistaTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -49,7 +49,7 @@ final class VisibilidadeHistoricoBandaTest extends TestCase
     }
 
     /**
-     * Confirma que o histórico da banda apresenta passado e dia atual, mas
+     * Confirma que o histórico do artista apresenta passado e dia atual, mas
      * exclui secções pertencentes a uma MetalThursday preparada futura.
      *
      * @since 2.0.0
@@ -66,8 +66,8 @@ final class VisibilidadeHistoricoBandaTest extends TestCase
             'sessao',
         );
 
-        $banda =
-            Banda::factory()
+        $artista =
+            Artista::factory()
                 ->create();
 
         $edicao =
@@ -112,7 +112,7 @@ final class VisibilidadeHistoricoBandaTest extends TestCase
             $this->criarSeccao(
                 $publicadaPassada,
                 $tipoSeccao,
-                $banda,
+                $artista,
                 'Secção histórica passada',
             );
 
@@ -120,7 +120,7 @@ final class VisibilidadeHistoricoBandaTest extends TestCase
             $this->criarSeccao(
                 $publicadaHoje,
                 $tipoSeccao,
-                $banda,
+                $artista,
                 'Secção histórica atual',
             );
 
@@ -128,15 +128,15 @@ final class VisibilidadeHistoricoBandaTest extends TestCase
             $this->criarSeccao(
                 $preparadaFutura,
                 $tipoSeccao,
-                $banda,
+                $artista,
                 'Secção futura privada',
             );
 
         $resposta =
             $this->get(
                 route(
-                    'bandas.detalhes',
-                    $banda,
+                    'artistas.detalhes',
+                    $artista,
                 ),
             );
 
@@ -204,11 +204,11 @@ final class VisibilidadeHistoricoBandaTest extends TestCase
     }
 
     /**
-     * Cria uma secção associada à banda e à MetalThursday indicadas.
+     * Cria uma secção associada ao artista e à MetalThursday indicados.
      *
      * @param  MetalThursday  $metalThursday  MetalThursday associada.
      * @param  TipoSeccao  $tipoSeccao  Tipo da secção.
-     * @param  Banda  $banda  Banda associada.
+     * @param  Artista  $artista  Artista associado.
      * @param  string  $titulo  Título identificável.
      * @return SeccaoMetalThursday Secção criada.
      *
@@ -217,7 +217,7 @@ final class VisibilidadeHistoricoBandaTest extends TestCase
     private function criarSeccao(
         MetalThursday $metalThursday,
         TipoSeccao $tipoSeccao,
-        Banda $banda,
+        Artista $artista,
         string $titulo,
     ): SeccaoMetalThursday {
         return SeccaoMetalThursday::factory()
@@ -228,7 +228,7 @@ final class VisibilidadeHistoricoBandaTest extends TestCase
                 $tipoSeccao,
             )
             ->comDetalhes(
-                $banda,
+                $artista,
             )
             ->comConteudo(
                 'Descrição de teste.',

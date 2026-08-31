@@ -10,7 +10,7 @@ use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -155,7 +155,7 @@ final class GuardarRascunhoMetalThursdayRequest extends FormRequest
 
             'seccoes.*' => [
                 'bail',
-                'array:id,tipo_seccao_id,titulo,descricao,banda_id,ligacao,tipo_incorporacao,ano',
+                'array:id,tipo_seccao_id,titulo,descricao,artista_id,ligacao,tipo_incorporacao,ano',
             ],
 
             'seccoes.*.id' => [
@@ -195,12 +195,12 @@ final class GuardarRascunhoMetalThursdayRequest extends FormRequest
                 'max:'.SeccaoMetalThursday::COMPRIMENTO_MAXIMO_DESCRICAO,
             ],
 
-            'seccoes.*.banda_id' => [
+            'seccoes.*.artista_id' => [
                 'bail',
                 'nullable',
                 'integer',
                 Rule::exists(
-                    Banda::class,
+                    Artista::class,
                     'id',
                 )->whereNull(
                     'deleted_at',
@@ -287,9 +287,9 @@ final class GuardarRascunhoMetalThursdayRequest extends FormRequest
                 SeccaoMetalThursday::COMPRIMENTO_MAXIMO_DESCRICAO,
             ),
 
-            'seccoes.*.banda_id.integer' => 'A banda selecionada não é válida.',
+            'seccoes.*.artista_id.integer' => 'O artista selecionado não é válido.',
 
-            'seccoes.*.banda_id.exists' => 'A banda selecionada não existe ou não está disponível.',
+            'seccoes.*.artista_id.exists' => 'O artista selecionado não existe ou não está disponível.',
 
             'seccoes.*.ligacao.string' => 'A ligação da secção não é válida.',
 
@@ -352,8 +352,8 @@ final class GuardarRascunhoMetalThursdayRequest extends FormRequest
                     ?? null,
             );
 
-            $seccao['banda_id'] = $this->normalizarIdentificador(
-                $seccao['banda_id']
+            $seccao['artista_id'] = $this->normalizarIdentificador(
+                $seccao['artista_id']
                     ?? null,
             );
 

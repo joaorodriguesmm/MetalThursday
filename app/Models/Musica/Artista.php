@@ -7,7 +7,7 @@ namespace App\Models\Musica;
 use App\Models\Geografia\OrigemGeografica;
 use App\Traits\Auditoria\RegistaAutoria;
 use Carbon\CarbonInterface;
-use Database\Factories\Musica\BandaFactory;
+use Database\Factories\Musica\ArtistaFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,17 +19,16 @@ use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 /**
- * Representa uma banda musical.
+ * Representa um artista musical.
  *
- * Cada banda pertence a uma origem geográfica e pode estar associada a vários
- * géneros musicais.
+ * Cada artista pertence a uma origem geográfica e pode estar associado a
+ * vários géneros musicais.
  *
- * A coluna gerada `nome_ativo` garante a unicidade do nome entre bandas não
- * eliminadas logicamente e não constitui um atributo editável da aplicação.
+ * O nome não identifica univocamente o artista. Artistas distintos podem
+ * possuir o mesmo nome.
  *
  * @property int $id
  * @property string $nome
- * @property string|null $nome_ativo
  * @property int $origem_geografica_id
  * @property int|null $criado_por_id
  * @property int|null $atualizado_por_id
@@ -41,9 +40,9 @@ use InvalidArgumentException;
  *
  * @since 1.0.0
  */
-class Banda extends Model
+class Artista extends Model
 {
-    /** @use HasFactory<BandaFactory> */
+    /** @use HasFactory<ArtistaFactory> */
     use HasFactory;
 
     use RegistaAutoria;
@@ -57,12 +56,12 @@ class Banda extends Model
     public const COMPRIMENTO_MAXIMO_NOME = 255;
 
     /**
-     * Nome da tabela intermédia entre bandas e géneros.
+     * Nome da tabela intermédia entre artistas e géneros.
      *
      * @since 2.0.0
      */
-    private const TABELA_BANDA_GENERO =
-        'banda_genero';
+    private const TABELA_ARTISTA_GENERO =
+        'artista_genero';
 
     /**
      * Nome físico da tabela associada ao modelo.
@@ -71,14 +70,13 @@ class Banda extends Model
      *
      * @since 1.0.0
      */
-    protected $table = 'bandas';
+    protected $table = 'artistas';
 
     /**
      * Atributos permitidos em operações de atribuição em massa.
      *
      * A origem geográfica deve ser associada explicitamente através da
-     * relação Eloquent `origemGeografica`. A coluna `nome_ativo` é gerada pela
-     * base de dados e não pode ser atribuída pela aplicação.
+     * relação Eloquent `origemGeografica`.
      *
      * @var list<string>
      *
@@ -86,17 +84,6 @@ class Banda extends Model
      */
     protected $fillable = [
         'nome',
-    ];
-
-    /**
-     * Atributos internos omitidos das representações serializadas.
-     *
-     * @var list<string>
-     *
-     * @since 2.0.0
-     */
-    protected $hidden = [
-        'nome_ativo',
     ];
 
     /**
@@ -120,17 +107,17 @@ class Banda extends Model
     /**
      * Cria a factory associada ao modelo.
      *
-     * @return BandaFactory Factory das bandas.
+     * @return ArtistaFactory Factory dos artistas.
      *
      * @since 2.0.0
      */
-    protected static function newFactory(): BandaFactory
+    protected static function newFactory(): ArtistaFactory
     {
-        return BandaFactory::new();
+        return ArtistaFactory::new();
     }
 
     /**
-     * Normaliza e valida o nome da banda.
+     * Normaliza e valida o nome do artista.
      *
      * @return Attribute<string, string> Atributo do nome.
      *
@@ -146,7 +133,7 @@ class Banda extends Model
             ): string {
                 if (! is_string($valor)) {
                     throw new InvalidArgumentException(
-                        'O nome da banda deve ser uma sequência de caracteres.',
+                        'O nome do artista deve ser uma sequência de caracteres.',
                     );
                 }
 
@@ -157,7 +144,7 @@ class Banda extends Model
                     ) !== 1
                 ) {
                     throw new InvalidArgumentException(
-                        'O nome da banda contém texto inválido.',
+                        'O nome do artista contém texto inválido.',
                     );
                 }
 
@@ -168,7 +155,7 @@ class Banda extends Model
                     ) === 1
                 ) {
                     throw new InvalidArgumentException(
-                        'O nome da banda contém caracteres inválidos.',
+                        'O nome do artista contém caracteres inválidos.',
                     );
                 }
 
@@ -178,7 +165,7 @@ class Banda extends Model
 
                 if ($nomeNormalizado === '') {
                     throw new InvalidArgumentException(
-                        'O nome da banda não pode estar vazio.',
+                        'O nome do artista não pode estar vazio.',
                     );
                 }
 
@@ -189,7 +176,7 @@ class Banda extends Model
                 ) {
                     throw new InvalidArgumentException(
                         sprintf(
-                            'O nome da banda não pode exceder %d caracteres.',
+                            'O nome do artista não pode exceder %d caracteres.',
                             self::COMPRIMENTO_MAXIMO_NOME,
                         ),
                     );
@@ -201,7 +188,7 @@ class Banda extends Model
     }
 
     /**
-     * Obtém a origem geográfica da banda.
+     * Obtém a origem geográfica do artista.
      *
      * @return BelongsTo<OrigemGeografica, $this> Relação com a origem.
      *
@@ -216,7 +203,7 @@ class Banda extends Model
     }
 
     /**
-     * Obtém os géneros musicais associados à banda.
+     * Obtém os géneros musicais associados ao artista.
      *
      * Os géneros eliminados logicamente não são incluídos e os restantes são
      * devolvidos por ordem alfabética.
@@ -230,8 +217,8 @@ class Banda extends Model
         return $this
             ->belongsToMany(
                 Genero::class,
-                self::TABELA_BANDA_GENERO,
-                'banda_id',
+                self::TABELA_ARTISTA_GENERO,
+                'artista_id',
                 'genero_id',
             )
             ->orderBy(

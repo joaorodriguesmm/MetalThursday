@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Schema;
  * Cria a tabela das secções das MetalThursdays.
  *
  * Cada secção pertence a uma MetalThursday e a um tipo de secção. Pode ainda
- * conter uma banda, informação editorial e uma ligação externa incorporável.
+ * conter um artista, informação editorial e uma ligação externa incorporável.
  *
  * @since 2.0.0
  */
@@ -66,11 +66,11 @@ return new class extends Migration
 
                 $tabela
                     ->foreignId(
-                        'banda_id',
+                        'artista_id',
                     )
                     ->nullable()
                     ->constrained(
-                        table: 'bandas',
+                        table: 'artistas',
                     )
                     ->cascadeOnUpdate()
                     ->nullOnDelete();
@@ -155,11 +155,11 @@ return new class extends Migration
 
                 $tabela->index(
                     [
-                        'banda_id',
+                        'artista_id',
                         'deleted_at',
                         'metal_thursday_id',
                     ],
-                    'seccoes_metal_thursday_banda_estado_metal_indice',
+                    'seccoes_metal_thursday_artista_estado_metal_indice',
                 );
             },
         );

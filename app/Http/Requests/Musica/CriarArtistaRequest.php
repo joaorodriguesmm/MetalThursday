@@ -5,19 +5,19 @@ declare(strict_types=1);
 namespace App\Http\Requests\Musica;
 
 use App\Models\Autenticacao\Utilizador;
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Unique;
 
 /**
- * Valida os dados necessários para criar uma banda.
+ * Valida os dados necessários para criar um artista.
  *
  * @since 1.0.0
  */
-final class CriarBandaRequest extends PedidoBandaRequest
+final class CriarArtistaRequest extends PedidoArtistaRequest
 {
     /**
-     * Determina se o utilizador autenticado pode criar bandas.
+     * Determina se o utilizador autenticado pode criar artistas.
      *
      * A autorização é executada antes das consultas de validação.
      *
@@ -34,15 +34,18 @@ final class CriarBandaRequest extends PedidoBandaRequest
         return $utilizador instanceof Utilizador
             && $utilizador->can(
                 'create',
-                Banda::class,
+                Artista::class,
             );
     }
 
     /**
      * Obtém a regra de unicidade aplicável ao nome.
      *
-     * As bandas eliminadas logicamente não impedem a reutilização do
+     * Os artistas eliminados logicamente não impedem a reutilização do
      * respetivo nome.
+     *
+     * Esta restrição será substituída pelo mecanismo de confirmação de
+     * possíveis duplicados.
      *
      * @return Unique Regra de unicidade.
      *
@@ -51,7 +54,7 @@ final class CriarBandaRequest extends PedidoBandaRequest
     protected function obterRegraUnicidadeNome(): Unique
     {
         return Rule::unique(
-            Banda::class,
+            Artista::class,
             'nome',
         )->whereNull(
             'deleted_at',

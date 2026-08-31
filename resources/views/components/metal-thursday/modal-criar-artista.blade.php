@@ -1,10 +1,10 @@
 {{--
-    Apresenta o formulário modal para criação de uma banda sem abandonar
+    Apresenta o formulário modal para criação de um artista sem abandonar
     o formulário principal da MetalThursday.
 
     As opções, o endereço de submissão e os limites do formulário são
     preparados pela classe
-    App\View\Components\MetalThursday\ModalCriarBanda.
+    App\View\Components\MetalThursday\ModalCriarArtista.
 
     A validação da submissão AJAX é apresentada através dos contentores
     identificados com o atributo data-erro-campo.
@@ -14,36 +14,36 @@
 
 @can(
     'create',
-    App\Models\Musica\Banda::class
+    App\Models\Musica\Artista::class
 )
     <div
-        id="modal-criar-banda"
+        id="modal-criar-artista"
         class="modal fade"
         tabindex="-1"
-        aria-labelledby="titulo-modal-criar-banda"
+        aria-labelledby="titulo-modal-criar-artista"
         aria-hidden="true"
     >
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content bg-dark text-white">
                 <form
-                    id="formulario-criar-banda"
+                    id="formulario-criar-artista"
                     method="POST"
-                    action="{{ $enderecoGuardarBanda }}"
+                    action="{{ $enderecoGuardarArtista }}"
                     data-ajax-form
-                    data-formulario-criar-banda
-                    data-endereco="{{ $enderecoGuardarBanda }}"
-                    data-mensagem-sucesso="Banda criada com sucesso."
-                    data-mensagem-erro="Não foi possível criar a banda."
+                    data-formulario-criar-artista
+                    data-endereco="{{ $enderecoGuardarArtista }}"
+                    data-mensagem-sucesso="Artista criado com sucesso."
+                    data-mensagem-erro="Não foi possível criar o artista."
                     novalidate
                 >
                     @csrf
 
                     <div class="modal-header border-secondary">
                         <h2
-                            id="titulo-modal-criar-banda"
+                            id="titulo-modal-criar-artista"
                             class="h5 modal-title"
                         >
-                            Criar nova banda
+                            Criar novo artista
                         </h2>
 
                         <button
@@ -61,7 +61,7 @@
                         >
                             <label
                                 class="form-label"
-                                for="nome-nova-banda"
+                                for="nome-novo-artista"
                             >
                                 Nome
 
@@ -74,18 +74,18 @@
                             </label>
 
                             <input
-                                id="nome-nova-banda"
+                                id="nome-novo-artista"
                                 class="form-control"
                                 type="text"
                                 name="nome"
-                                placeholder="Nome da banda"
+                                placeholder="Nome do artista"
                                 maxlength="{{ $comprimentoMaximoNome }}"
-                                aria-describedby="erro-nome-nova-banda"
+                                aria-describedby="erro-nome-novo-artista"
                                 required
                             >
 
                             <div
-                                id="erro-nome-nova-banda"
+                                id="erro-nome-novo-artista"
                                 class="invalid-feedback"
                                 aria-live="polite"
                                 aria-atomic="true"
@@ -99,7 +99,7 @@
                         >
                             <label
                                 class="form-label"
-                                for="origem-geografica-nova-banda"
+                                for="origem-geografica-novo-artista"
                             >
                                 Origem geográfica
 
@@ -112,11 +112,11 @@
                             </label>
 
                             <select
-                                id="origem-geografica-nova-banda"
+                                id="origem-geografica-novo-artista"
                                 class="form-select tom-select-unico"
                                 name="origem_geografica_id"
                                 placeholder="Seleciona uma origem geográfica"
-                                aria-describedby="erro-origem-geografica-nova-banda"
+                                aria-describedby="erro-origem-geografica-novo-artista"
                                 required
                             >
                                 <option value="">
@@ -133,7 +133,7 @@
                             </select>
 
                             <div
-                                id="erro-origem-geografica-nova-banda"
+                                id="erro-origem-geografica-novo-artista"
                                 class="invalid-feedback"
                                 aria-live="polite"
                                 aria-atomic="true"
@@ -147,7 +147,7 @@
                         >
                             <label
                                 class="form-label"
-                                for="generos-nova-banda"
+                                for="generos-novo-artista"
                             >
                                 Géneros
 
@@ -161,11 +161,11 @@
 
                             <div class="input-group has-validation">
                                 <select
-                                    id="generos-nova-banda"
+                                    id="generos-novo-artista"
                                     class="form-select tom-select-multiplo"
                                     name="generos[]"
                                     placeholder="Seleciona um ou mais géneros"
-                                    aria-describedby="erro-generos-nova-banda"
+                                    aria-describedby="erro-generos-novo-artista"
                                     data-ordenar-alfabeticamente
                                     multiple
                                     required
@@ -200,7 +200,7 @@
                             </div>
 
                             <div
-                                id="erro-generos-nova-banda"
+                                id="erro-generos-novo-artista"
                                 class="invalid-feedback"
                                 aria-live="polite"
                                 aria-atomic="true"
@@ -222,7 +222,7 @@
                             class="btn btn-primary"
                             type="submit"
                         >
-                            Criar banda
+                            Criar artista
                         </button>
                     </div>
                 </form>

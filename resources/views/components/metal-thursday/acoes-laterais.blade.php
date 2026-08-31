@@ -63,16 +63,16 @@
 
         @can(
             'viewAny',
-            App\Models\Musica\Banda::class
+            App\Models\Musica\Artista::class
         )
             <a
                 class="list-group-item list-group-item-action bg-dark text-white border-secondary {{
-                    $paginaBandasAtiva
+                    $paginaArtistasAtiva
                         ? 'active'
                         : ''
                 }}"
-                href="{{ route('bandas.indice') }}"
-                @if ($paginaBandasAtiva)
+                href="{{ route('artistas.indice') }}"
+                @if ($paginaArtistasAtiva)
                     aria-current="page"
                 @endif
             >
@@ -81,7 +81,7 @@
                     aria-hidden="true"
                 ></i>
 
-                Bandas
+                Artistas
             </a>
         @endcan
 

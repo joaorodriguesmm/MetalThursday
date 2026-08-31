@@ -7,24 +7,27 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Cria a tabela das bandas.
+ * Cria a tabela dos artistas musicais.
  *
- * Cada banda pertence a uma origem geográfica e pode ser associada a vários
+ * Cada artista pertence a uma origem geográfica e pode ser associado a vários
  * géneros musicais.
+ *
+ * O nome não constitui a identidade do artista e pode, por isso, ser repetido
+ * entre registos distintos.
  *
  * @since 2.0.0
  */
 return new class extends Migration
 {
     /**
-     * Cria a tabela das bandas.
+     * Cria a tabela dos artistas.
      *
      * @since 2.0.0
      */
     public function up(): void
     {
         Schema::create(
-            'bandas',
+            'artistas',
             static function (Blueprint $tabela): void {
                 $tabela->id();
 
@@ -70,22 +73,16 @@ return new class extends Migration
                 $tabela->softDeletes();
 
                 /*
-                 * Permite reutilizar o nome de uma banda eliminada
-                 * logicamente, mantendo a unicidade entre bandas ativas.
+                 * Suporta a identificação de possíveis duplicados e a
+                 * ordenação dos artistas sem transformar o nome numa chave
+                 * de identidade.
                  */
-                $tabela
-                    ->string(
-                        'nome_ativo',
-                        255,
-                    )
-                    ->nullable()
-                    ->virtualAs(
-                        'if(`deleted_at` is null, `nome`, null)',
-                    );
-
-                $tabela->unique(
-                    'nome_ativo',
-                    'bandas_nome_ativo_unico',
+                $tabela->index(
+                    [
+                        'nome',
+                        'deleted_at',
+                    ],
+                    'artistas_nome_estado_indice',
                 );
 
                 $tabela->index(
@@ -94,21 +91,21 @@ return new class extends Migration
                         'deleted_at',
                         'nome',
                     ],
-                    'bandas_origem_estado_nome_indice',
+                    'artistas_origem_estado_nome_indice',
                 );
             },
         );
     }
 
     /**
-     * Elimina a tabela das bandas.
+     * Elimina a tabela dos artistas.
      *
      * @since 2.0.0
      */
     public function down(): void
     {
         Schema::dropIfExists(
-            'bandas',
+            'artistas',
         );
     }
 };

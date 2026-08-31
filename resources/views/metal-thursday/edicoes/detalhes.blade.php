@@ -137,7 +137,7 @@
                                                             $campo['valorPredefinido'],
                                                         )
                                                     }}"
-                                                    placeholder="Banda: álbum — música"
+                                                    placeholder="Artista: álbum — música"
                                                     maxlength="{{ App\Models\MetalThursday\MusicaFavoritaEdicao::COMPRIMENTO_MAXIMO_MUSICA }}"
                                                     aria-describedby="{{
                                                         $campo['identificadorErro']

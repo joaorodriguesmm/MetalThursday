@@ -1,7 +1,7 @@
 {{--
-    Apresenta os detalhes de um género musical e as bandas associadas.
+    Apresenta os detalhes de um género musical e os artistas associados.
 
-    Os nomes dos géneros relacionados e os dados de apresentação das bandas
+    Os nomes dos géneros relacionados e os dados de apresentação dos artistas
     são preparados pelo App\Http\Controllers\Musica\ControladorGenero.
 
     @since 1.0.0
@@ -38,8 +38,8 @@
         class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-3"
     >
         <h2 class="h5 mb-0">
-            Bandas associadas
-            ({{ $bandas->total() }})
+            Artistas associados
+            ({{ $artistas->total() }})
         </h2>
 
         <a
@@ -57,13 +57,13 @@
                     class="table table-dark table-striped table-hover align-middle mb-0"
                 >
                     <caption class="visually-hidden">
-                        Bandas associadas ao género {{ $genero->nome }}
+                        Artistas associados ao género {{ $genero->nome }}
                     </caption>
 
                     <thead>
                         <tr>
                             <th scope="col">
-                                Banda
+                                Artista
                             </th>
 
                             <th scope="col">
@@ -84,17 +84,17 @@
                     </thead>
 
                     <tbody>
-                        @forelse ($bandas as $bandaApresentacao)
+                        @forelse ($artistas as $artistaApresentacao)
                             <tr
-                                id="banda-{{ $bandaApresentacao['identificador'] }}"
+                                id="artista-{{ $artistaApresentacao['identificador'] }}"
                             >
                                 <th scope="row">
-                                    {{ $bandaApresentacao['nome'] }}
+                                    {{ $artistaApresentacao['nome'] }}
                                 </th>
 
                                 <td>
                                     {{
-                                        $bandaApresentacao[
+                                        $artistaApresentacao[
                                             'nomeOrigemGeografica'
                                         ]
                                     }}
@@ -102,11 +102,11 @@
 
                                 <td>
                                     @if (
-                                        $bandaApresentacao['nomesOutrosGeneros']
+                                        $artistaApresentacao['nomesOutrosGeneros']
                                         !== null
                                     )
                                         {{
-                                            $bandaApresentacao[
+                                            $artistaApresentacao[
                                                 'nomesOutrosGeneros'
                                             ]
                                         }}
@@ -120,18 +120,18 @@
                                 <td class="text-end text-nowrap">
                                     @can(
                                         'view',
-                                        $bandaApresentacao['modelo']
+                                        $artistaApresentacao['modelo']
                                     )
                                         <a
                                             class="btn btn-sm btn-info"
                                             href="{{
                                                 route(
-                                                    'bandas.detalhes',
-                                                    $bandaApresentacao['modelo'],
+                                                    'artistas.detalhes',
+                                                    $artistaApresentacao['modelo'],
                                                 )
                                             }}"
-                                            aria-label="Ver detalhes de {{ $bandaApresentacao['nome'] }}"
-                                            title="Ver detalhes da banda"
+                                            aria-label="Ver detalhes de {{ $artistaApresentacao['nome'] }}"
+                                            title="Ver detalhes do artista"
                                         >
                                             <i
                                                 class="bi bi-eye"
@@ -147,7 +147,7 @@
                                     class="py-4 text-center"
                                     colspan="4"
                                 >
-                                    Nenhuma banda está associada a este género.
+                                    Nenhum artista está associado a este género.
                                 </td>
                             </tr>
                         @endforelse
@@ -156,11 +156,11 @@
             </div>
         </div>
 
-        @if ($bandas->hasPages())
+        @if ($artistas->hasPages())
             <div class="card-footer bg-dark border-secondary">
-                <nav aria-label="Paginação das bandas associadas">
+                <nav aria-label="Paginação dos artistas associados">
                     {{
-                        $bandas->links(
+                        $artistas->links(
                             'vendor.pagination.bootstrap-5',
                         )
                     }}

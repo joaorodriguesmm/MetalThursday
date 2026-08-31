@@ -9,7 +9,7 @@ use App\Http\Controllers\Interacoes\ControladorComentario;
 use App\Http\Controllers\Interacoes\ControladorGosto;
 use App\Http\Controllers\MetalThursday\ControladorEdicao;
 use App\Http\Controllers\MetalThursday\ControladorMetalThursday;
-use App\Http\Controllers\Musica\ControladorBanda;
+use App\Http\Controllers\Musica\ControladorArtista;
 use App\Http\Controllers\Musica\ControladorGenero;
 use App\Http\Controllers\Utilizadores\ControladorNotificacao;
 use Illuminate\Support\Facades\Route;
@@ -133,18 +133,18 @@ Route::middleware([
 
         /*
         |--------------------------------------------------------------------------
-        | Bandas
+        | Artistas
         |--------------------------------------------------------------------------
         */
 
         Route::controller(
-            ControladorBanda::class,
+            ControladorArtista::class,
         )
             ->prefix(
-                'bandas',
+                'artistas',
             )
             ->name(
-                'bandas.',
+                'artistas.',
             )
             ->group(
                 static function (): void {
@@ -170,44 +170,44 @@ Route::middleware([
                     );
 
                     Route::get(
-                        '{banda}',
+                        '{artista}',
                         'detalhes',
                     )
                         ->whereNumber(
-                            'banda',
+                            'artista',
                         )
                         ->name(
                             'detalhes',
                         );
 
                     Route::get(
-                        '{banda}/editar',
+                        '{artista}/editar',
                         'editar',
                     )
                         ->whereNumber(
-                            'banda',
+                            'artista',
                         )
                         ->name(
                             'editar',
                         );
 
                     Route::patch(
-                        '{banda}',
+                        '{artista}',
                         'atualizar',
                     )
                         ->whereNumber(
-                            'banda',
+                            'artista',
                         )
                         ->name(
                             'atualizar',
                         );
 
                     Route::delete(
-                        '{banda}',
+                        '{artista}',
                         'eliminar',
                     )
                         ->whereNumber(
-                            'banda',
+                            'artista',
                         )
                         ->name(
                             'eliminar',

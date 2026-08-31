@@ -36,11 +36,11 @@ final class AcoesLaterais extends Component
     public readonly bool $paginaCriacaoMetalThursdayAtiva;
 
     /**
-     * Indica se uma página da área de bandas está ativa.
+     * Indica se uma página da área de artistas está ativa.
      *
      * @since 2.0.0
      */
-    public readonly bool $paginaBandasAtiva;
+    public readonly bool $paginaArtistasAtiva;
 
     /**
      * Indica se uma página da área de edições está ativa.
@@ -80,9 +80,9 @@ final class AcoesLaterais extends Component
                 'metal-thursday.criar',
             );
 
-        $this->paginaBandasAtiva =
+        $this->paginaArtistasAtiva =
             $pedido->routeIs(
-                'bandas.*',
+                'artistas.*',
             );
 
         $this->paginaEdicoesAtiva =

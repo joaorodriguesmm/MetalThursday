@@ -77,7 +77,7 @@
                                 :indice="$indice"
                                 :seccao="$seccao"
                                 :tipos-seccao="$tiposSeccao"
-                                :bandas="$bandas"
+                                :artistas="$artistas"
                             />
                         @endforeach
                     </div>
@@ -143,7 +143,7 @@
         <x-metal-thursday.item-seccao-formulario
             indice="__INDICE_SECCAO__"
             :tipos-seccao="$tiposSeccao"
-            :bandas="$bandas"
+            :artistas="$artistas"
         />
     </template>
 
@@ -151,7 +151,7 @@
         'metal-thursday.parciais._modal-criar-edicao'
     )
 
-    <x-metal-thursday.modal-criar-banda
+    <x-metal-thursday.modal-criar-artista
         :origens-geograficas="$origensGeograficas"
         :generos="$generos"
     />

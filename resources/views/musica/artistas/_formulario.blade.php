@@ -1,14 +1,14 @@
 {{--
-    Apresenta o formulário de criação ou edição de uma banda.
+    Apresenta o formulário de criação ou edição de um artista.
 
     O endereço, os valores selecionados e o texto do botão são preparados
-    pelo controlador responsável pelas bandas.
+    pelo controlador responsável pelos artistas.
 
     @since 1.0.0
 --}}
 
 <form
-    id="formulario-banda"
+    id="formulario-artista"
     method="POST"
     action="{{ $enderecoFormulario }}"
     autocomplete="off"
@@ -23,7 +23,7 @@
     <div class="grupo-campo-formulario mb-3">
         <label
             class="form-label"
-            for="nome-banda"
+            for="nome-artista"
         >
             Nome
 
@@ -36,15 +36,15 @@
         </label>
 
         <input
-            id="nome-banda"
+            id="nome-artista"
             class="form-control @error('nome') is-invalid @enderror"
             type="text"
             name="nome"
-            value="{{ $nomeBanda }}"
-            placeholder="Nome da banda"
-            maxlength="{{ App\Models\Musica\Banda::COMPRIMENTO_MAXIMO_NOME }}"
+            value="{{ $nomeArtista }}"
+            placeholder="Nome do artista"
+            maxlength="{{ App\Models\Musica\Artista::COMPRIMENTO_MAXIMO_NOME }}"
             autocomplete="off"
-            aria-describedby="erro-nome-banda"
+            aria-describedby="erro-nome-artista"
             required
             autofocus
             @error('nome')
@@ -53,7 +53,7 @@
         >
 
         <div
-            id="erro-nome-banda"
+            id="erro-nome-artista"
             class="invalid-feedback @error('nome') d-block @enderror"
             aria-live="polite"
         >
@@ -66,7 +66,7 @@
     <div class="grupo-campo-formulario mb-3">
         <label
             class="form-label"
-            for="origem-geografica-banda"
+            for="origem-geografica-artista"
         >
             Origem geográfica
 
@@ -79,11 +79,11 @@
         </label>
 
         <select
-            id="origem-geografica-banda"
+            id="origem-geografica-artista"
             class="form-select tom-select-unico @error('origem_geografica_id') is-invalid @enderror"
             name="origem_geografica_id"
             placeholder="Seleciona uma origem geográfica"
-            aria-describedby="erro-origem-geografica-banda"
+            aria-describedby="erro-origem-geografica-artista"
             autocomplete="off"
             required
             @error('origem_geografica_id')
@@ -111,7 +111,7 @@
         </select>
 
         <div
-            id="erro-origem-geografica-banda"
+            id="erro-origem-geografica-artista"
             class="invalid-feedback @error('origem_geografica_id') d-block @enderror"
             aria-live="polite"
         >
@@ -124,7 +124,7 @@
     <div class="grupo-campo-formulario mb-3">
         <label
             class="form-label"
-            for="generos-banda"
+            for="generos-artista"
         >
             Géneros
 
@@ -138,7 +138,7 @@
 
         <div class="input-group has-validation">
             <select
-                id="generos-banda"
+                id="generos-artista"
                 class="form-select tom-select-multiplo {{
                     (
                         $errors->has('generos')
@@ -149,7 +149,7 @@
                 }}"
                 name="generos[]"
                 placeholder="Seleciona um ou mais géneros"
-                aria-describedby="erro-generos-banda"
+                aria-describedby="erro-generos-artista"
                 autocomplete="off"
                 data-ordenar-alfabeticamente
                 multiple
@@ -198,7 +198,7 @@
         </div>
 
         <div
-            id="erro-generos-banda"
+            id="erro-generos-artista"
             class="invalid-feedback {{
                 (
                     $errors->has('generos')
@@ -222,7 +222,7 @@
     <div class="d-flex justify-content-end gap-2">
         <a
             class="btn btn-secondary"
-            href="{{ route('bandas.indice') }}"
+            href="{{ route('artistas.indice') }}"
         >
             Cancelar
         </a>

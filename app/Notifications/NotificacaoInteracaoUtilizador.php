@@ -11,7 +11,7 @@ use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
@@ -590,7 +590,7 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
         $seccao->loadMissing([
             'metalThursday',
             'tipoSeccao:id,nome',
-            'banda:id,nome',
+            'artista:id,nome',
         ]);
 
         $metalThursday =
@@ -794,15 +794,15 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
             )
             : null;
 
-        $banda =
-            $seccao->banda;
+        $artista =
+            $seccao->artista;
 
-        $nomeBanda =
-            $banda instanceof Banda
-            && is_string($banda->nome)
-            && trim($banda->nome) !== ''
+        $nomeArtista =
+            $artista instanceof Artista
+            && is_string($artista->nome)
+            && trim($artista->nome) !== ''
             ? trim(
-                $banda->nome,
+                $artista->nome,
             )
             : null;
 
@@ -814,10 +814,10 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
             )
             : 'secção';
 
-        if ($nomeBanda !== null) {
+        if ($nomeArtista !== null) {
             $descricao .= sprintf(
                 ' de %s',
-                $nomeBanda,
+                $nomeArtista,
             );
         }
 

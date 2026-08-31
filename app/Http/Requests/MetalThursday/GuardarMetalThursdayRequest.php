@@ -12,7 +12,7 @@ use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use App\Servicos\MetalThursday\ServicoReservasMetalThursday;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -298,7 +298,7 @@ final class GuardarMetalThursdayRequest extends FormRequest
             'seccoes.*' => [
                 'bail',
                 'required',
-                'array:id,tipo_seccao_id,titulo,descricao,banda_id,ligacao,tipo_incorporacao,ano',
+                'array:id,tipo_seccao_id,titulo,descricao,artista_id,ligacao,tipo_incorporacao,ano',
             ],
             'seccoes.*.id' => $regrasIdentificadorSeccao,
             'seccoes.*.tipo_seccao_id' => [
@@ -330,12 +330,12 @@ final class GuardarMetalThursdayRequest extends FormRequest
                 ),
                 'max:'.SeccaoMetalThursday::COMPRIMENTO_MAXIMO_DESCRICAO,
             ],
-            'seccoes.*.banda_id' => [
+            'seccoes.*.artista_id' => [
                 'bail',
                 'nullable',
                 'integer',
                 Rule::exists(
-                    Banda::class,
+                    Artista::class,
                     'id',
                 )->whereNull(
                     'deleted_at',
@@ -457,8 +457,8 @@ final class GuardarMetalThursdayRequest extends FormRequest
                 'A descrição da secção não pode ter mais de %d caracteres.',
                 SeccaoMetalThursday::COMPRIMENTO_MAXIMO_DESCRICAO,
             ),
-            'seccoes.*.banda_id.integer' => 'A banda selecionada não é válida.',
-            'seccoes.*.banda_id.exists' => 'A banda selecionada não existe ou não está disponível.',
+            'seccoes.*.artista_id.integer' => 'O artista selecionado não é válido.',
+            'seccoes.*.artista_id.exists' => 'O artista selecionado não existe ou não está disponível.',
             'seccoes.*.ligacao.string' => 'A ligação da secção não é válida.',
             'seccoes.*.ligacao.url' => 'A ligação da secção deve ser um endereço HTTP ou HTTPS válido.',
             'seccoes.*.ligacao.max' => sprintf(
@@ -498,7 +498,7 @@ final class GuardarMetalThursdayRequest extends FormRequest
             'seccoes.*.tipo_seccao_id' => 'tipo da secção',
             'seccoes.*.titulo' => 'título da secção',
             'seccoes.*.descricao' => 'descrição da secção',
-            'seccoes.*.banda_id' => 'banda da secção',
+            'seccoes.*.artista_id' => 'artista da secção',
             'seccoes.*.ligacao' => 'ligação da secção',
             'seccoes.*.tipo_incorporacao' => 'tipo de incorporação',
             'seccoes.*.ano' => 'ano da secção',
@@ -995,7 +995,7 @@ final class GuardarMetalThursdayRequest extends FormRequest
     /**
      * Valida as regras dependentes do tipo de cada secção.
      *
-     * Os tipos que exigem detalhes requerem título, banda, ligação, tipo de
+     * Os tipos que exigem detalhes requerem título, artista, ligação, tipo de
      * incorporação e ano. Os restantes tipos não podem guardar esses campos.
      * A descrição é obrigatória em todas as secções.
      *
@@ -1121,7 +1121,7 @@ final class GuardarMetalThursdayRequest extends FormRequest
     ): void {
         $campos = [
             'titulo' => 'Por favor, insere o título da secção.',
-            'banda_id' => 'Por favor, seleciona a banda da secção.',
+            'artista_id' => 'Por favor, seleciona o artista da secção.',
             'ligacao' => 'Por favor, insere a ligação da secção.',
             'tipo_incorporacao' => 'Por favor, seleciona o tipo de incorporação da secção.',
             'ano' => 'Por favor, insere o ano da secção.',
@@ -1161,7 +1161,7 @@ final class GuardarMetalThursdayRequest extends FormRequest
         foreach (
             [
                 'titulo',
-                'banda_id',
+                'artista_id',
                 'ligacao',
                 'tipo_incorporacao',
                 'ano',
@@ -1339,9 +1339,9 @@ final class GuardarMetalThursdayRequest extends FormRequest
                     $seccao['descricao']
                         ?? null,
                 );
-            $seccao['banda_id'] =
+            $seccao['artista_id'] =
                 $this->normalizarIdentificador(
-                    $seccao['banda_id']
+                    $seccao['artista_id']
                         ?? null,
                 );
             $seccao['ligacao'] =

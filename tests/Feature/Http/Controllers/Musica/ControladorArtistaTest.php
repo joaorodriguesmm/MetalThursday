@@ -6,18 +6,18 @@ namespace Tests\Feature\Http\Controllers\Musica;
 
 use App\Models\Autenticacao\Utilizador;
 use App\Models\Geografia\OrigemGeografica;
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use App\Models\Musica\Genero;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 /**
- * Testa os pedidos HTTP associados às bandas.
+ * Testa os pedidos HTTP associados aos artistas.
  *
  * @since 2.0.0
  */
-final class ControladorBandaTest extends TestCase
+final class ControladorArtistaTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -54,20 +54,20 @@ final class ControladorBandaTest extends TestCase
             'PT',
         );
 
-        $banda = $this->criarBanda(
+        $artista = $this->criarArtista(
             $criador,
             $origemGeografica,
             'Moonspell',
         );
 
         $enderecoEdicao = route(
-            'bandas.editar',
-            $banda,
+            'artistas.editar',
+            $artista,
         );
 
         $enderecoEliminacao = route(
-            'bandas.eliminar',
-            $banda,
+            'artistas.eliminar',
+            $artista,
         );
 
         $atributoEnderecoEliminacao = sprintf(
@@ -82,7 +82,7 @@ final class ControladorBandaTest extends TestCase
             )
             ->get(
                 route(
-                    'bandas.indice',
+                    'artistas.indice',
                 ),
             )
             ->assertOk()
@@ -105,7 +105,7 @@ final class ControladorBandaTest extends TestCase
             )
             ->get(
                 route(
-                    'bandas.indice',
+                    'artistas.indice',
                 ),
             )
             ->assertOk()
@@ -129,7 +129,7 @@ final class ControladorBandaTest extends TestCase
      * @since 2.0.0
      */
     #[Test]
-    public function cria_banda_em_json_com_as_relacoes_esperadas(): void
+    public function cria_artista_em_json_com_as_relacoes_esperadas(): void
     {
         $utilizador = $this->criarUtilizador();
 
@@ -149,7 +149,7 @@ final class ControladorBandaTest extends TestCase
             )
             ->postJson(
                 route(
-                    'bandas.guardar',
+                    'artistas.guardar',
                 ),
                 [
                     'nome' => 'Moonspell',
@@ -166,41 +166,41 @@ final class ControladorBandaTest extends TestCase
             ->assertCreated()
             ->assertJsonPath(
                 'mensagem',
-                'Banda criada com sucesso.',
+                'Artista criado com sucesso.',
             )
             ->assertJsonPath(
-                'banda.nome',
+                'artista.nome',
                 'Moonspell',
             )
             ->assertJsonPath(
-                'banda.origem_geografica.id',
+                'artista.origem_geografica.id',
                 (int) $origemGeografica->getKey(),
             )
             ->assertJsonPath(
-                'banda.origem_geografica.nome',
+                'artista.origem_geografica.nome',
                 'Portugal',
             )
             ->assertJsonPath(
-                'banda.generos.0.id',
+                'artista.generos.0.id',
                 (int) $genero->getKey(),
             )
             ->assertJsonPath(
-                'banda.generos.0.nome',
+                'artista.generos.0.nome',
                 'Heavy Metal',
             );
 
-        $identificadorBanda = $resposta->json(
-            'banda.id',
+        $identificadorArtista = $resposta->json(
+            'artista.id',
         );
 
         self::assertIsInt(
-            $identificadorBanda,
+            $identificadorArtista,
         );
 
         $this->assertDatabaseHas(
-            'bandas',
+            'artistas',
             [
-                'id' => $identificadorBanda,
+                'id' => $identificadorArtista,
 
                 'nome' => 'Moonspell',
 
@@ -213,9 +213,9 @@ final class ControladorBandaTest extends TestCase
         );
 
         $this->assertDatabaseHas(
-            'banda_genero',
+            'artista_genero',
             [
-                'banda_id' => $identificadorBanda,
+                'artista_id' => $identificadorArtista,
 
                 'genero_id' => $genero->getKey(),
             ],
@@ -223,12 +223,12 @@ final class ControladorBandaTest extends TestCase
     }
 
     /**
-     * Confirma que o criador pode atualizar os dados e as relações da banda.
+     * Confirma que o criador pode atualizar os dados e as relações do artista.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function criador_atualiza_banda(): void
+    public function criador_atualiza_artista(): void
     {
         $utilizador = $this->criarUtilizador();
 
@@ -255,7 +255,7 @@ final class ControladorBandaTest extends TestCase
             'sessao',
         );
 
-        $banda = Banda::factory()
+        $artista = Artista::factory()
             ->comNome(
                 'Insomnium',
             )
@@ -264,7 +264,7 @@ final class ControladorBandaTest extends TestCase
             )
             ->create();
 
-        $banda
+        $artista
             ->generos()
             ->attach(
                 $generoInicial->getKey(),
@@ -272,8 +272,8 @@ final class ControladorBandaTest extends TestCase
 
         $resposta = $this->patch(
             route(
-                'bandas.atualizar',
-                $banda,
+                'artistas.atualizar',
+                $artista,
             ),
             [
                 'nome' => 'Insomnium Atualizada',
@@ -289,18 +289,18 @@ final class ControladorBandaTest extends TestCase
         $resposta
             ->assertRedirect(
                 route(
-                    'bandas.indice',
+                    'artistas.indice',
                 ),
             )
             ->assertSessionHas(
                 'sucesso',
-                'Banda atualizada com sucesso.',
+                'Artista atualizado com sucesso.',
             );
 
         $this->assertDatabaseHas(
-            'bandas',
+            'artistas',
             [
-                'id' => $banda->getKey(),
+                'id' => $artista->getKey(),
 
                 'nome' => 'Insomnium Atualizada',
 
@@ -313,18 +313,18 @@ final class ControladorBandaTest extends TestCase
         );
 
         $this->assertDatabaseMissing(
-            'banda_genero',
+            'artista_genero',
             [
-                'banda_id' => $banda->getKey(),
+                'artista_id' => $artista->getKey(),
 
                 'genero_id' => $generoInicial->getKey(),
             ],
         );
 
         $this->assertDatabaseHas(
-            'banda_genero',
+            'artista_genero',
             [
-                'banda_id' => $banda->getKey(),
+                'artista_id' => $artista->getKey(),
 
                 'genero_id' => $generoNovo->getKey(),
             ],
@@ -334,7 +334,7 @@ final class ControladorBandaTest extends TestCase
     /**
      * Confirma que a autorização antecede as consultas de validação.
      *
-     * Mesmo com dados inválidos, um utilizador que não criou a banda deve
+     * Mesmo com dados inválidos, um utilizador que não criou o artista deve
      * receber uma resposta de proibição, e não uma resposta de validação.
      *
      * @since 2.0.0
@@ -351,7 +351,7 @@ final class ControladorBandaTest extends TestCase
             'NO',
         );
 
-        $banda = $this->criarBanda(
+        $artista = $this->criarArtista(
             $criador,
             $origemGeografica,
             'Emperor',
@@ -364,8 +364,8 @@ final class ControladorBandaTest extends TestCase
             )
             ->patchJson(
                 route(
-                    'bandas.atualizar',
-                    $banda,
+                    'artistas.atualizar',
+                    $artista,
                 ),
                 [
                     'nome' => '',
@@ -381,9 +381,9 @@ final class ControladorBandaTest extends TestCase
         $resposta->assertForbidden();
 
         $this->assertDatabaseHas(
-            'bandas',
+            'artistas',
             [
-                'id' => $banda->getKey(),
+                'id' => $artista->getKey(),
 
                 'nome' => 'Emperor',
 
@@ -393,12 +393,12 @@ final class ControladorBandaTest extends TestCase
     }
 
     /**
-     * Confirma que apenas o criador pode eliminar a banda.
+     * Confirma que apenas o criador pode eliminar o artista.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function utilizador_sem_autorizacao_nao_elimina_banda(): void
+    public function utilizador_sem_autorizacao_nao_elimina_artista(): void
     {
         $criador = $this->criarUtilizador();
 
@@ -409,7 +409,7 @@ final class ControladorBandaTest extends TestCase
             'GB',
         );
 
-        $banda = $this->criarBanda(
+        $artista = $this->criarArtista(
             $criador,
             $origemGeografica,
             'Paradise Lost',
@@ -422,28 +422,28 @@ final class ControladorBandaTest extends TestCase
             )
             ->deleteJson(
                 route(
-                    'bandas.eliminar',
-                    $banda,
+                    'artistas.eliminar',
+                    $artista,
                 ),
             );
 
         $resposta->assertForbidden();
 
         $this->assertNotSoftDeleted(
-            'bandas',
+            'artistas',
             [
-                'id' => $banda->getKey(),
+                'id' => $artista->getKey(),
             ],
         );
     }
 
     /**
-     * Confirma que o criador pode eliminar logicamente a banda.
+     * Confirma que o criador pode eliminar logicamente o artista.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function criador_elimina_banda(): void
+    public function criador_elimina_artista(): void
     {
         $criador = $this->criarUtilizador();
 
@@ -452,7 +452,7 @@ final class ControladorBandaTest extends TestCase
             'PL',
         );
 
-        $banda = $this->criarBanda(
+        $artista = $this->criarArtista(
             $criador,
             $origemGeografica,
             'Behemoth',
@@ -465,16 +465,16 @@ final class ControladorBandaTest extends TestCase
             )
             ->deleteJson(
                 route(
-                    'bandas.eliminar',
-                    $banda,
+                    'artistas.eliminar',
+                    $artista,
                 ),
             )
             ->assertNoContent();
 
         $this->assertSoftDeleted(
-            'bandas',
+            'artistas',
             [
-                'id' => $banda->getKey(),
+                'id' => $artista->getKey(),
             ],
         );
     }
@@ -532,26 +532,26 @@ final class ControladorBandaTest extends TestCase
     }
 
     /**
-     * Cria uma banda atribuída ao utilizador indicado.
+     * Cria um artista atribuído ao utilizador indicado.
      *
      * @param  Utilizador  $criador  Utilizador criador.
-     * @param  OrigemGeografica  $origemGeografica  Origem da banda.
-     * @param  string  $nome  Nome da banda.
-     * @return Banda Banda criada.
+     * @param  OrigemGeografica  $origemGeografica  Origem do artista.
+     * @param  string  $nome  Nome do artista.
+     * @return Artista Artista criado.
      *
      * @since 2.0.0
      */
-    private function criarBanda(
+    private function criarArtista(
         Utilizador $criador,
         OrigemGeografica $origemGeografica,
         string $nome,
-    ): Banda {
+    ): Artista {
         $this->actingAs(
             $criador,
             'sessao',
         );
 
-        return Banda::factory()
+        return Artista::factory()
             ->comNome(
                 $nome,
             )

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models\Geografia;
 
-use App\Models\Musica\Banda;
+use App\Models\Musica\Artista;
 use Carbon\CarbonInterface;
 use Database\Factories\Geografia\OrigemGeograficaFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -26,7 +26,7 @@ use InvalidArgumentException;
  * @property string $codigo
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
- * @property-read Collection<int, Banda> $bandas
+ * @property-read Collection<int, Artista> $artistas
  *
  * @since 2.0.0
  */
@@ -225,19 +225,19 @@ class OrigemGeografica extends Model
     }
 
     /**
-     * Obtém as bandas associadas à origem geográfica.
+     * Obtém os artistas associados à origem geográfica.
      *
-     * As bandas são devolvidas por ordem alfabética.
+     * Os artistas são devolvidos por ordem alfabética.
      *
-     * @return HasMany<Banda, $this> Relação com as bandas.
+     * @return HasMany<Artista, $this> Relação com os artistas.
      *
      * @since 2.0.0
      */
-    public function bandas(): HasMany
+    public function artistas(): HasMany
     {
         return $this
             ->hasMany(
-                Banda::class,
+                Artista::class,
                 'origem_geografica_id',
             )
             ->orderBy(
