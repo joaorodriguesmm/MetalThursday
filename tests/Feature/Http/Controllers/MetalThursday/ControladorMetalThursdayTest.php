@@ -1954,6 +1954,47 @@ final class ControladorMetalThursdayTest extends TestCase
     }
 
     /**
+     * Confirma que a criação rápida de artistas apresenta a origem geográfica
+     * como opcional.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function modal_criacao_artista_apresenta_origem_geografica_como_opcional(): void
+    {
+        $administrador = Utilizador::factory()
+            ->comPapel(
+                PapelUtilizador::Administrador,
+            )
+            ->create();
+
+        $this->actingAs(
+            $administrador,
+            'sessao',
+        );
+
+        $resposta = $this->get(
+            route(
+                'metal-thursday.criar',
+            ),
+        );
+
+        $resposta
+            ->assertOk()
+            ->assertSee(
+                'Origem geográfica',
+            )
+            ->assertSee(
+                '(opcional)',
+            );
+
+        self::assertDoesNotMatchRegularExpression(
+            '/<select\b(?=[^>]*\bid="origem-geografica-novo-artista")[^>]*\brequired\b[^>]*>/s',
+            $resposta->getContent(),
+        );
+    }
+
+    /**
      * Cria um utilizador autenticável e verificado.
      *
      * @return Utilizador Utilizador criado.

@@ -81,11 +81,8 @@
         >
             Origem geográfica
 
-            <span
-                class="text-danger"
-                aria-hidden="true"
-            >
-                *
+            <span class="fw-normal text-muted">
+                (opcional)
             </span>
         </label>
 
@@ -97,7 +94,6 @@
             aria-describedby="erro-origem-geografica-artista"
             autocomplete="off"
             data-ordenar-alfabeticamente
-            required
             @error('origem_geografica_id')
                 aria-invalid="true"
             @enderror

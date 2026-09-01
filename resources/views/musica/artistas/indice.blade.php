@@ -135,7 +135,7 @@
                                 <td>
                                     {{
                                         $artista->origemGeografica?->nome
-                                        ?? 'Origem geográfica indisponível'
+                                        ?? 'Não indicada'
                                     }}
                                 </td>
 

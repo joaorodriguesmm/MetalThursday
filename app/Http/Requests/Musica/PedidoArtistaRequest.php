@@ -16,8 +16,8 @@ use Illuminate\Validation\Rules\Unique;
 /**
  * Define a validação comum dos pedidos de criação e atualização de artistas.
  *
- * A origem geográfica e os géneros são recebidos através dos respetivos
- * identificadores. Os limites persistidos pertencem aos modelos
+ * A origem geográfica, quando indicada, e os géneros são recebidos através dos
+ * respetivos identificadores. Os limites persistidos pertencem aos modelos
  * correspondentes.
  *
  * @since 2.0.0
@@ -92,7 +92,7 @@ abstract class PedidoArtistaRequest extends FormRequest
 
             'origem_geografica_id' => [
                 'bail',
-                'required',
+                'nullable',
                 'integer',
 
                 Rule::exists(
@@ -145,8 +145,6 @@ abstract class PedidoArtistaRequest extends FormRequest
             ),
 
             'nome.unique' => 'Já existe um artista com esse nome.',
-
-            'origem_geografica_id.required' => 'Por favor, seleciona a origem geográfica do artista.',
 
             'origem_geografica_id.integer' => 'A origem geográfica selecionada não é válida.',
 

@@ -21,9 +21,11 @@
             <h1 class="h4 mb-1 fw-bold">
                 {{ $artista->nome }}
 
-                <span class="h5">
-                    ({{ $nomeOrigemGeograficaArtista }})
-                </span>
+                @if ($nomeOrigemGeograficaArtista !== null)
+                    <span class="h5">
+                        ({{ $nomeOrigemGeograficaArtista }})
+                    </span>
+                @endif
             </h1>
 
             @if ($nomesGenerosArtista !== null)

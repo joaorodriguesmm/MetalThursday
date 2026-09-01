@@ -1458,7 +1458,6 @@ function criarConfiguracoesModais(
                 ],
 
                 origem_geografica_id: [
-                    'obrigatorio',
                     'inteiro',
                 ],
 
@@ -1478,9 +1477,6 @@ function criarConfiguracoesModais(
                 },
 
                 origem_geografica_id: {
-                    obrigatorio:
-                        'Por favor, seleciona a origem geográfica.',
-
                     inteiro:
                         'A origem geográfica selecionada não é válida.',
                 },

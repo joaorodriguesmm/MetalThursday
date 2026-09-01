@@ -6,6 +6,7 @@ namespace Tests\Feature\Models\Musica;
 
 use App\Models\Geografia\OrigemGeografica;
 use App\Models\Musica\Artista;
+use App\Models\Musica\Genero;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
@@ -73,6 +74,30 @@ final class ArtistaTest extends TestCase
     }
 
     /**
+     * Confirma que um artista pode existir sem origem geográfica.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function permite_artista_sem_origem_geografica(): void
+    {
+        $artista = Artista::factory()
+            ->create([
+                'origem_geografica_id' => null,
+            ]);
+
+        $artista->refresh();
+
+        self::assertNull(
+            $artista->origem_geografica_id,
+        );
+
+        self::assertNull(
+            $artista->origemGeografica,
+        );
+    }
+
+    /**
      * Confirma que o modelo não converte silenciosamente valores não textuais.
      *
      * @since 2.0.0
@@ -104,5 +129,45 @@ final class ArtistaTest extends TestCase
         $artista = new Artista;
 
         $artista->nome = "Artista\nInválido";
+    }
+
+    /**
+     * Confirma que o rótulo de seleção omite a origem geográfica quando esta não
+     * está indicada.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function constroi_rotulo_selecao_sem_origem_geografica(): void
+    {
+        $genero = Genero::factory()
+            ->comNome(
+                'Heavy Metal',
+            )
+            ->create();
+
+        $artista = Artista::factory()
+            ->comNome(
+                'Ghost',
+            )
+            ->create([
+                'origem_geografica_id' => null,
+            ]);
+
+        $artista
+            ->generos()
+            ->attach(
+                $genero->getKey(),
+            );
+
+        $artista->load([
+            'origemGeografica:id,nome',
+            'generos:id,nome',
+        ]);
+
+        self::assertSame(
+            'Ghost · Heavy Metal',
+            $artista->obterRotuloSelecao(),
+        );
     }
 }

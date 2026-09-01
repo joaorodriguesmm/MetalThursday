@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Cria a tabela dos artistas musicais.
  *
- * Cada artista pertence a uma origem geográfica e pode ser associado a vários
+ * Cada artista pode pertencer a uma origem geográfica e ser associado a vários
  * géneros musicais.
  *
  * O nome não constitui a identidade do artista e pode, por isso, ser repetido
@@ -40,6 +40,7 @@ return new class extends Migration
                     ->foreignId(
                         'origem_geografica_id',
                     )
+                    ->nullable()
                     ->constrained(
                         table: 'origens_geograficas',
                     )

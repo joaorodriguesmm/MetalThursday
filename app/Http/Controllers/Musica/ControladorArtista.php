@@ -179,7 +179,7 @@ final class ControladorArtista extends Controller
         /**
          * @var array{
          *     nome: string,
-         *     origem_geografica_id: int,
+         *     origem_geografica_id: int|null,
          *     generos: list<int>,
          *     confirmar_nome_repetido?: mixed
          * } $dados
@@ -450,7 +450,7 @@ final class ControladorArtista extends Controller
         /**
          * @var array{
          *     nome: string,
-         *     origem_geografica_id: int,
+         *     origem_geografica_id: int|null,
          *     generos: list<int>
          * } $dados
          */
@@ -692,12 +692,12 @@ final class ControladorArtista extends Controller
      *
      * @param  Artista  $artista  Artista apresentado.
      * @return array{
-     *     nomeOrigemGeograficaArtista: string,
+     *     nomeOrigemGeograficaArtista: string|null,
      *     nomesGenerosArtista: string|null
      * } Dados preparados.
      *
-     * @throws LogicException Quando a origem geográfica do artista não está
-     *                        disponível.
+     * @throws LogicException Quando a relação de géneros contém dados persistidos
+     *                        inválidos.
      *
      * @since 2.0.0
      */
@@ -706,12 +706,6 @@ final class ControladorArtista extends Controller
     ): array {
         $origemGeografica =
             $artista->origemGeografica;
-
-        if (! $origemGeografica instanceof OrigemGeografica) {
-            throw new LogicException(
-                'O artista não possui uma origem geográfica válida.',
-            );
-        }
 
         $nomesGeneros = [];
 
@@ -727,7 +721,9 @@ final class ControladorArtista extends Controller
         }
 
         return [
-            'nomeOrigemGeograficaArtista' => $origemGeografica->nome,
+            'nomeOrigemGeograficaArtista' => $origemGeografica instanceof OrigemGeografica
+                ? $origemGeografica->nome
+                : null,
 
             'nomesGenerosArtista' => $nomesGeneros !== []
                 ? implode(
@@ -748,11 +744,8 @@ final class ControladorArtista extends Controller
      *     origem_geografica: array{
      *         id: int,
      *         nome: string
-     *     }
+     *     }|null
      * } Dados necessários para identificar o homónimo.
-     *
-     * @throws LogicException Quando a origem geográfica do artista não está
-     *                        disponível.
      *
      * @since 2.0.0
      */
@@ -762,22 +755,18 @@ final class ControladorArtista extends Controller
         $origemGeografica =
             $artista->origemGeografica;
 
-        if (! $origemGeografica instanceof OrigemGeografica) {
-            throw new LogicException(
-                'O artista não possui uma origem geográfica válida.',
-            );
-        }
-
         return [
             'id' => (int) $artista->getKey(),
 
             'nome' => $artista->nome,
 
-            'origem_geografica' => [
-                'id' => (int) $origemGeografica->getKey(),
+            'origem_geografica' => $origemGeografica instanceof OrigemGeografica
+                ? [
+                    'id' => (int) $origemGeografica->getKey(),
 
-                'nome' => $origemGeografica->nome,
-            ],
+                    'nome' => $origemGeografica->nome,
+                ]
+                : null,
         ];
     }
 
@@ -785,17 +774,17 @@ final class ControladorArtista extends Controller
      * Converte um artista para o formato da resposta HTTP.
      *
      * @param  Artista  $artista  Artista convertido.
-     *                            * @return array{
-     *                            id: int,
-     *                            nome: string,
-     *                            rotulo_selecao: string,
-     *                            origem_geografica_id: int,
-     *                            origem_geografica: array{id: int, nome: string},
-     *                            generos: list<array{id: int, nome: string}>
-     *                            } Dados do artista.
+     * @return array{
+     *     id: int,
+     *     nome: string,
+     *     rotulo_selecao: string,
+     *     origem_geografica_id: int|null,
+     *     origem_geografica: array{id: int, nome: string}|null,
+     *     generos: list<array{id: int, nome: string}>
+     * } Dados do artista.
      *
-     * @throws LogicException Quando a origem geográfica do artista não está
-     *                        disponível.
+     * @throws LogicException Quando a relação de géneros contém dados persistidos
+     *                        inválidos.
      *
      * @since 2.0.0
      */
@@ -804,12 +793,6 @@ final class ControladorArtista extends Controller
     ): array {
         $origemGeografica =
             $artista->origemGeografica;
-
-        if (! $origemGeografica instanceof OrigemGeografica) {
-            throw new LogicException(
-                'O artista não possui uma origem geográfica válida.',
-            );
-        }
 
         $generos = [];
 
@@ -834,13 +817,17 @@ final class ControladorArtista extends Controller
 
             'rotulo_selecao' => $artista->obterRotuloSelecao(),
 
-            'origem_geografica_id' => (int) $origemGeografica->getKey(),
+            'origem_geografica_id' => $origemGeografica instanceof OrigemGeografica
+                ? (int) $origemGeografica->getKey()
+                : null,
 
-            'origem_geografica' => [
-                'id' => (int) $origemGeografica->getKey(),
+            'origem_geografica' => $origemGeografica instanceof OrigemGeografica
+                ? [
+                    'id' => (int) $origemGeografica->getKey(),
 
-                'nome' => $origemGeografica->nome,
-            ],
+                    'nome' => $origemGeografica->nome,
+                ]
+                : null,
 
             'generos' => $generos,
         ];

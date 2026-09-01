@@ -66,7 +66,6 @@ const CONFIGURACOES_FORMULARIOS = Object.freeze([
             ],
 
             origem_geografica_id: [
-                'obrigatorio',
                 'inteiro',
             ],
 
@@ -85,9 +84,6 @@ const CONFIGURACOES_FORMULARIOS = Object.freeze([
             },
 
             origem_geografica_id: {
-                obrigatorio:
-                    'Por favor, seleciona a origem geográfica do artista.',
-
                 inteiro:
                     'A origem geográfica selecionada não é válida.',
             },

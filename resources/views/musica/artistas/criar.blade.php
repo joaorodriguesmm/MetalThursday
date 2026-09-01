@@ -43,63 +43,65 @@
 
     @if ($exigeConfirmacaoNomeRepetido)
         <div
-            class="alert alert-warning mb-4"
+            class="aviso-artista-homonimo"
             role="alert"
         >
-            <h2 class="h5 alert-heading">
-                Possível artista repetido
-            </h2>
+            <div class="aviso-artista-homonimo__cabecalho">
+                <i
+                    class="bi bi-exclamation-triangle-fill aviso-artista-homonimo__icone"
+                    aria-hidden="true"
+                ></i>
 
-            <p>
-                {{
-                    $confirmacaoNomeRepetido['mensagem']
-                    ?? 'Já existem artistas com este nome. Confirma se pretendes criar um novo artista.'
-                }}
-            </p>
+                <div>
+                    <div class="aviso-artista-homonimo__titulo">
+                        Artista com o mesmo nome
+                    </div>
 
-            <div class="vstack gap-3">
+                    <p class="aviso-artista-homonimo__mensagem">
+                        {{
+                            $confirmacaoNomeRepetido['mensagem']
+                            ?? 'Já existem artistas com este nome. Confirma se pretendes criar um novo artista.'
+                        }}
+                    </p>
+                </div>
+            </div>
+
+            <div class="aviso-artista-homonimo__lista">
                 @foreach (
                     $artistasHomonimos
                     as $artistaHomonimo
                 )
-                    <div class="border rounded p-3">
-                        <div class="fw-bold mb-2">
+                    <div
+                        class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-1 gap-sm-3 px-3 py-2"
+                    >
+                        <strong>
                             {{
                                 $artistaHomonimo['nome']
                                 ?? 'Artista desconhecido'
                             }}
-                        </div>
+                        </strong>
 
-                        <dl class="row mb-0">
-                            <dt class="col-sm-4">
-                                Ano de início de atividade
-                            </dt>
+                        <span class="text-muted text-sm-end">
+                            {{
+                                data_get(
+                                    $artistaHomonimo,
+                                    'origem_geografica.nome',
+                                    'Origem não indicada',
+                                )
+                            }}
 
-                            <dd class="col-sm-8">
-                                Desconhecido
-                            </dd>
+                            <span aria-hidden="true">
+                                ·
+                            </span>
 
-                            <dt class="col-sm-4">
-                                Origem geográfica
-                            </dt>
-
-                            <dd class="col-sm-8 mb-0">
-                                {{
-                                    data_get(
-                                        $artistaHomonimo,
-                                        'origem_geografica.nome',
-                                        'Desconhecida',
-                                    )
-                                }}
-                            </dd>
-                        </dl>
+                            Ano de início desconhecido
+                        </span>
                     </div>
                 @endforeach
             </div>
 
-            <p class="mb-0 mt-3">
-                Se se trata de um artista diferente, podes confirmar
-                a criação mesmo utilizando o mesmo nome.
+            <p class="aviso-artista-homonimo__nota">
+                Se for um artista diferente, volta a confirmar a criação.
             </p>
         </div>
     @endif

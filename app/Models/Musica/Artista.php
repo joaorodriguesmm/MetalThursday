@@ -22,7 +22,7 @@ use LogicException;
 /**
  * Representa um artista musical.
  *
- * Cada artista pertence a uma origem geográfica e pode estar associado a
+ * Cada artista pode pertencer a uma origem geográfica e estar associado a
  * vários géneros musicais.
  *
  * O nome não identifica univocamente o artista. Artistas distintos podem
@@ -30,13 +30,13 @@ use LogicException;
  *
  * @property int $id
  * @property string $nome
- * @property int $origem_geografica_id
+ * @property int|null $origem_geografica_id
  * @property int|null $criado_por_id
  * @property int|null $atualizado_por_id
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
  * @property CarbonInterface|null $deleted_at
- * @property-read OrigemGeografica $origemGeografica
+ * @property-read OrigemGeografica|null $origemGeografica
  * @property-read Collection<int, Genero> $generos
  *
  * @since 1.0.0
@@ -76,8 +76,8 @@ class Artista extends Model
     /**
      * Atributos permitidos em operações de atribuição em massa.
      *
-     * A origem geográfica deve ser associada explicitamente através da
-     * relação Eloquent `origemGeografica`.
+     * A origem geográfica, quando indicada, deve ser associada explicitamente
+     * através da relação Eloquent `origemGeografica`.
      *
      * @var list<string>
      *
@@ -191,14 +191,14 @@ class Artista extends Model
     /**
      * Obtém o rótulo contextual utilizado na seleção do artista.
      *
-     * O nome é complementado pela origem geográfica e pelos géneros para que
-     * artistas homónimos permaneçam distinguíveis sem alterar o respetivo nome
+     * O nome pode ser complementado pela origem geográfica e pelos géneros para
+     * que artistas homónimos permaneçam distinguíveis sem alterar o respetivo nome
      * canónico.
      *
      * @return string Rótulo contextual do artista.
      *
-     * @throws LogicException Quando as relações carregadas contêm dados
-     *                        persistidos inválidos.
+     * @throws LogicException Quando a relação de géneros contém dados persistidos
+     *                        inválidos.
      *
      * @since 2.0.0
      */
@@ -206,12 +206,6 @@ class Artista extends Model
     {
         $origemGeografica =
             $this->origemGeografica;
-
-        if (! $origemGeografica instanceof OrigemGeografica) {
-            throw new LogicException(
-                'O artista não possui uma origem geográfica válida.',
-            );
-        }
 
         $nomesGeneros = [];
 
@@ -226,24 +220,25 @@ class Artista extends Model
                 $genero->nome;
         }
 
-        $partesContexto = [
-            $origemGeografica->nome,
-        ];
+        $rotulo =
+            $this->nome;
+
+        if ($origemGeografica instanceof OrigemGeografica) {
+            $rotulo .=
+                ' — '
+                .$origemGeografica->nome;
+        }
 
         if ($nomesGeneros !== []) {
-            $partesContexto[] =
-                implode(
+            $rotulo .=
+                ' · '
+                .implode(
                     ', ',
                     $nomesGeneros,
                 );
         }
 
-        return $this->nome
-            .' — '
-            .implode(
-                ' · ',
-                $partesContexto,
-            );
+        return $rotulo;
     }
 
     /**

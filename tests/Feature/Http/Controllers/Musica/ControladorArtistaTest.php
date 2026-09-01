@@ -983,6 +983,15 @@ final class ControladorArtistaTest extends TestCase
 
         $respostaFormulario
             ->assertOk()
+            ->assertSeeHtml(
+                'class="aviso-artista-homonimo"',
+            )
+            ->assertDontSeeHtml(
+                'class="alert alert-warning mb-4"',
+            )
+            ->assertSee(
+                'Artista com o mesmo nome',
+            )
             ->assertSee(
                 'Já existem artistas com este nome. Confirma se pretendes criar um novo artista.',
             )
@@ -990,16 +999,13 @@ final class ControladorArtistaTest extends TestCase
                 'Ghost',
             )
             ->assertSee(
-                'Ano de início de atividade',
-            )
-            ->assertSee(
-                'Desconhecido',
-            )
-            ->assertSee(
-                'Origem geográfica',
-            )
-            ->assertSee(
                 'Suécia',
+            )
+            ->assertSee(
+                'Ano de início desconhecido',
+            )
+            ->assertSee(
+                'Se for um artista diferente, volta a confirmar a criação.',
             )
             ->assertSee(
                 'Criar artista mesmo assim',
@@ -1491,6 +1497,380 @@ final class ControladorArtistaTest extends TestCase
                 )
                 ->count(),
         );
+    }
+
+    /**
+     * Confirma que a criação JSON permite um artista sem origem geográfica.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function cria_artista_em_json_sem_origem_geografica(): void
+    {
+        $utilizador = $this->criarUtilizador();
+
+        $genero = $this->criarGenero(
+            'Heavy Metal',
+        );
+
+        $resposta = $this
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
+            ->postJson(
+                route(
+                    'artistas.guardar',
+                ),
+                [
+                    'nome' => 'Moonspell',
+
+                    'generos' => [
+                        (int) $genero->getKey(),
+                    ],
+                ],
+            );
+
+        $resposta
+            ->assertCreated()
+            ->assertJsonStructure([
+                'artista' => [
+                    'origem_geografica_id',
+                    'origem_geografica',
+                ],
+            ])
+            ->assertJsonPath(
+                'artista.nome',
+                'Moonspell',
+            )
+            ->assertJsonPath(
+                'artista.rotulo_selecao',
+                'Moonspell · Heavy Metal',
+            )
+            ->assertJsonPath(
+                'artista.origem_geografica_id',
+                null,
+            )
+            ->assertJsonPath(
+                'artista.origem_geografica',
+                null,
+            );
+
+        $identificadorArtista =
+            $resposta->json(
+                'artista.id',
+            );
+
+        self::assertIsInt(
+            $identificadorArtista,
+        );
+
+        $this->assertDatabaseHas(
+            'artistas',
+            [
+                'id' => $identificadorArtista,
+
+                'nome' => 'Moonspell',
+
+                'origem_geografica_id' => null,
+
+                'criado_por_id' => $utilizador->getKey(),
+
+                'deleted_at' => null,
+            ],
+        );
+
+        $this->assertDatabaseHas(
+            'artista_genero',
+            [
+                'artista_id' => $identificadorArtista,
+
+                'genero_id' => $genero->getKey(),
+            ],
+        );
+    }
+
+    /**
+     * Confirma que a atualização permite remover a origem geográfica existente.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function atualiza_artista_removendo_origem_geografica(): void
+    {
+        $utilizador = $this->criarUtilizador();
+
+        $origemGeografica = $this->criarOrigemGeografica(
+            'Finlândia',
+            'FI',
+        );
+
+        $genero = $this->criarGenero(
+            'Melodic Death Metal',
+        );
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $artista = Artista::factory()
+            ->comNome(
+                'Insomnium',
+            )
+            ->deOrigemGeografica(
+                $origemGeografica,
+            )
+            ->create();
+
+        $artista
+            ->generos()
+            ->attach(
+                $genero->getKey(),
+            );
+
+        $resposta = $this->patchJson(
+            route(
+                'artistas.atualizar',
+                $artista,
+            ),
+            [
+                'nome' => 'Insomnium',
+
+                'origem_geografica_id' => null,
+
+                'generos' => [
+                    (int) $genero->getKey(),
+                ],
+            ],
+        );
+
+        $resposta
+            ->assertOk()
+            ->assertJsonStructure([
+                'artista' => [
+                    'origem_geografica_id',
+                    'origem_geografica',
+                ],
+            ])
+            ->assertJsonPath(
+                'artista.rotulo_selecao',
+                'Insomnium · Melodic Death Metal',
+            )
+            ->assertJsonPath(
+                'artista.origem_geografica_id',
+                null,
+            )
+            ->assertJsonPath(
+                'artista.origem_geografica',
+                null,
+            );
+
+        $this->assertDatabaseHas(
+            'artistas',
+            [
+                'id' => $artista->getKey(),
+
+                'origem_geografica_id' => null,
+
+                'atualizado_por_id' => $utilizador->getKey(),
+
+                'deleted_at' => null,
+            ],
+        );
+    }
+
+    /**
+     * Confirma que um homónimo sem origem geográfica é serializado sem inventar
+     * uma origem.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function confirmacao_de_homonimo_suporta_artista_sem_origem_geografica(): void
+    {
+        $utilizador = $this->criarUtilizador();
+
+        $genero = $this->criarGenero(
+            'Heavy Metal',
+        );
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $artistaExistente = Artista::factory()
+            ->comNome(
+                'Ghost',
+            )
+            ->create([
+                'origem_geografica_id' => null,
+            ]);
+
+        $resposta = $this->postJson(
+            route(
+                'artistas.guardar',
+            ),
+            [
+                'nome' => 'Ghost',
+
+                'generos' => [
+                    (int) $genero->getKey(),
+                ],
+            ],
+        );
+
+        $resposta
+            ->assertStatus(
+                409,
+            )
+            ->assertJsonStructure([
+                'artistas_homonimos' => [
+                    [
+                        'id',
+                        'nome',
+                        'origem_geografica',
+                    ],
+                ],
+            ])
+            ->assertJsonPath(
+                'artistas_homonimos.0.id',
+                (int) $artistaExistente->getKey(),
+            )
+            ->assertJsonPath(
+                'artistas_homonimos.0.nome',
+                'Ghost',
+            )
+            ->assertJsonPath(
+                'artistas_homonimos.0.origem_geografica',
+                null,
+            );
+
+        $this->assertDatabaseCount(
+            'artistas',
+            1,
+        );
+    }
+
+    /**
+     * Confirma que a listagem e os detalhes apresentam corretamente um artista
+     * sem origem geográfica.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function apresenta_artista_sem_origem_geografica(): void
+    {
+        $utilizador = $this->criarUtilizador();
+
+        $genero = $this->criarGenero(
+            'Heavy Metal',
+        );
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $artista = Artista::factory()
+            ->comNome(
+                'Ghost',
+            )
+            ->create([
+                'origem_geografica_id' => null,
+            ]);
+
+        $artista
+            ->generos()
+            ->attach(
+                $genero->getKey(),
+            );
+
+        $this
+            ->get(
+                route(
+                    'artistas.indice',
+                ),
+            )
+            ->assertOk()
+            ->assertSee(
+                'Ghost',
+            )
+            ->assertSee(
+                'Não indicada',
+            );
+
+        $this
+            ->get(
+                route(
+                    'artistas.detalhes',
+                    $artista,
+                ),
+            )
+            ->assertOk()
+            ->assertSee(
+                'Ghost',
+            )
+            ->assertSee(
+                'Heavy Metal',
+            );
+    }
+
+    /**
+     * Confirma que a origem geográfica é apresentada como opcional nos
+     * formulários de criação e edição.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function formularios_apresentam_origem_geografica_como_opcional(): void
+    {
+        $utilizador = $this->criarUtilizador();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $artista = Artista::factory()
+            ->comNome(
+                'Ghost',
+            )
+            ->create([
+                'origem_geografica_id' => null,
+            ]);
+
+        $respostas = [
+            $this->get(
+                route(
+                    'artistas.criar',
+                ),
+            ),
+
+            $this->get(
+                route(
+                    'artistas.editar',
+                    $artista,
+                ),
+            ),
+        ];
+
+        foreach ($respostas as $resposta) {
+            $resposta
+                ->assertOk()
+                ->assertSee(
+                    'Origem geográfica',
+                )
+                ->assertSee(
+                    '(opcional)',
+                );
+
+            self::assertDoesNotMatchRegularExpression(
+                '/<select\b(?=[^>]*\bid="origem-geografica-artista")[^>]*\brequired\b[^>]*>/s',
+                $resposta->getContent(),
+            );
+        }
     }
 
     /**

@@ -145,11 +145,8 @@
                             >
                                 Origem geográfica
 
-                                <span
-                                    class="text-danger"
-                                    aria-hidden="true"
-                                >
-                                    *
+                                <span class="fw-normal text-muted">
+                                    (opcional)
                                 </span>
                             </label>
 
@@ -160,7 +157,6 @@
                                 placeholder="Seleciona uma origem geográfica"
                                 aria-describedby="erro-origem-geografica-novo-artista"
                                 data-ordenar-alfabeticamente
-                                required
                             >
                                 <option value="">
                                     Seleciona uma origem geográfica
