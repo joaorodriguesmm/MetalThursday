@@ -131,7 +131,7 @@
             for="generos-artista"
         >
             Géneros
-            <span class="text-danger" aria-hidden="true">*</span>
+            <span class="fw-normal text-muted">(opcional)</span>
         </label>
 
         <div class="input-group has-validation">
@@ -148,7 +148,6 @@
                 autocomplete="off"
                 data-ordenar-alfabeticamente
                 multiple
-                required
             >
                 @foreach ($generos as $genero)
                     <option

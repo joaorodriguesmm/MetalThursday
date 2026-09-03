@@ -1502,7 +1502,6 @@ function criarConfiguracoesModais(
                 ],
 
                 'generos[]': [
-                    'obrigatorio',
                     validarListaIdentificadores,
                 ],
             },
@@ -1519,11 +1518,6 @@ function criarConfiguracoesModais(
                 origem_geografica_id: {
                     inteiro:
                         'A origem geográfica selecionada não é válida.',
-                },
-
-                'generos[]': {
-                    obrigatorio:
-                        'Por favor, seleciona, pelo menos, um género.',
                 },
             },
 

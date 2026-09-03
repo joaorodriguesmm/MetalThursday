@@ -261,10 +261,8 @@ abstract class PedidoArtistaRequest extends FormRequest
 
             'generos' => [
                 'bail',
-                'required',
                 'array',
                 'list',
-                'min:1',
             ],
 
             'generos.*' => [
@@ -390,13 +388,9 @@ abstract class PedidoArtistaRequest extends FormRequest
 
             'ligacoes.*.url.distinct' => 'A mesma ligação foi indicada mais do que uma vez.',
 
-            'generos.required' => 'Por favor, seleciona pelo menos um género.',
-
             'generos.array' => 'Os géneros devem ser enviados numa lista.',
 
             'generos.list' => 'A lista de géneros não tem um formato válido.',
-
-            'generos.min' => 'Por favor, seleciona pelo menos um género.',
 
             'generos.*.required' => 'Um dos géneros selecionados não é válido.',
 

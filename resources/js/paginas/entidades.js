@@ -68,10 +68,6 @@ const CONFIGURACOES_FORMULARIOS = Object.freeze([
             origem_geografica_id: [
                 'inteiro',
             ],
-
-            'generos[]': [
-                'obrigatorio',
-            ],
         },
 
         mensagens: {
@@ -86,11 +82,6 @@ const CONFIGURACOES_FORMULARIOS = Object.freeze([
             origem_geografica_id: {
                 inteiro:
                     'A origem geográfica selecionada não é válida.',
-            },
-
-            'generos[]': {
-                obrigatorio:
-                    'Por favor, seleciona pelo menos um género.',
             },
         },
     },

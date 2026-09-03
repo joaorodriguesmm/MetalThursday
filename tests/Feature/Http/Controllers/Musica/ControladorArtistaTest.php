@@ -227,6 +227,91 @@ final class ControladorArtistaTest extends TestCase
     }
 
     /**
+     * Confirma que a criação JSON permite um artista sem géneros.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function cria_artista_em_json_sem_generos(): void
+    {
+        $utilizador = $this->criarUtilizador();
+
+        $origemGeografica = $this->criarOrigemGeografica(
+            'Portugal',
+            'PT',
+        );
+
+        $resposta = $this
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
+            ->postJson(
+                route(
+                    'artistas.guardar',
+                ),
+                [
+                    'nome' => 'Moonspell',
+
+                    'origem_geografica_id' => (int) $origemGeografica->getKey(),
+                ],
+            );
+
+        $resposta
+            ->assertCreated()
+            ->assertJsonPath(
+                'mensagem',
+                'Artista criado com sucesso.',
+            )
+            ->assertJsonPath(
+                'artista.nome',
+                'Moonspell',
+            )
+            ->assertJsonPath(
+                'artista.rotulo_selecao',
+                'Moonspell — Portugal',
+            )
+            ->assertJsonPath(
+                'artista.origem_geografica.id',
+                (int) $origemGeografica->getKey(),
+            )
+            ->assertJsonPath(
+                'artista.generos',
+                [],
+            );
+
+        $identificadorArtista = $resposta->json(
+            'artista.id',
+        );
+
+        self::assertIsInt(
+            $identificadorArtista,
+        );
+
+        $this->assertDatabaseHas(
+            'artistas',
+            [
+                'id' => $identificadorArtista,
+
+                'nome' => 'Moonspell',
+
+                'origem_geografica_id' => $origemGeografica->getKey(),
+
+                'criado_por_id' => $utilizador->getKey(),
+
+                'deleted_at' => null,
+            ],
+        );
+
+        $this->assertDatabaseMissing(
+            'artista_genero',
+            [
+                'artista_id' => $identificadorArtista,
+            ],
+        );
+    }
+
+    /**
      * Confirma que a criação JSON de um artista com nome repetido exige
      * confirmação explícita.
      *
@@ -1276,6 +1361,89 @@ final class ControladorArtistaTest extends TestCase
     }
 
     /**
+     * Confirma que o criador pode remover todos os géneros de um artista.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function criador_atualiza_artista_removendo_todos_os_generos(): void
+    {
+        $utilizador = $this->criarUtilizador();
+
+        $origemGeografica = $this->criarOrigemGeografica(
+            'Finlândia',
+            'FI',
+        );
+
+        $genero = $this->criarGenero(
+            'Melodic Death Metal',
+        );
+
+        $artista = $this->criarArtista(
+            $utilizador,
+            $origemGeografica,
+            'Insomnium',
+        );
+
+        $artista
+            ->generos()
+            ->attach(
+                $genero->getKey(),
+            );
+
+        $resposta = $this
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
+            ->patch(
+                route(
+                    'artistas.atualizar',
+                    $artista,
+                ),
+                [
+                    'nome' => 'Insomnium',
+
+                    'origem_geografica_id' => (int) $origemGeografica->getKey(),
+                ],
+            );
+
+        $resposta
+            ->assertRedirect(
+                route(
+                    'artistas.indice',
+                ),
+            )
+            ->assertSessionHas(
+                'sucesso',
+                'Artista atualizado com sucesso.',
+            )
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas(
+            'artistas',
+            [
+                'id' => $artista->getKey(),
+
+                'nome' => 'Insomnium',
+
+                'origem_geografica_id' => $origemGeografica->getKey(),
+
+                'atualizado_por_id' => $utilizador->getKey(),
+
+                'deleted_at' => null,
+            ],
+        );
+
+        $this->assertDatabaseMissing(
+            'artista_genero',
+            [
+                'artista_id' => $artista->getKey(),
+            ],
+        );
+    }
+
+    /**
      * Confirma que a autorização antecede as consultas de validação.
      *
      * Mesmo com dados inválidos, um utilizador que não criou o artista deve
@@ -1868,6 +2036,58 @@ final class ControladorArtistaTest extends TestCase
 
             self::assertDoesNotMatchRegularExpression(
                 '/<select\b(?=[^>]*\bid="origem-geografica-artista")[^>]*\brequired\b[^>]*>/s',
+                $resposta->getContent(),
+            );
+        }
+    }
+
+    /**
+     * Confirma que os géneros são apresentados como opcionais nos formulários de
+     * criação e edição.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function formularios_apresentam_generos_como_opcionais(): void
+    {
+        $utilizador = $this->criarUtilizador();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $artista = Artista::factory()
+            ->comNome(
+                'Ghost',
+            )
+            ->create();
+
+        $respostas = [
+            $this->get(
+                route(
+                    'artistas.criar',
+                ),
+            ),
+
+            $this->get(
+                route(
+                    'artistas.editar',
+                    $artista,
+                ),
+            ),
+        ];
+
+        foreach ($respostas as $resposta) {
+            $resposta->assertOk();
+
+            self::assertMatchesRegularExpression(
+                '/<label\b(?=[^>]*\bfor="generos-artista")[^>]*>(?:(?!<\/label>).)*Géneros(?:(?!<\/label>).)*\(opcional\)(?:(?!<\/label>).)*<\/label>/s',
+                $resposta->getContent(),
+            );
+
+            self::assertDoesNotMatchRegularExpression(
+                '/<select\b(?=[^>]*\bid="generos-artista")[^>]*\brequired\b[^>]*>/s',
                 $resposta->getContent(),
             );
         }

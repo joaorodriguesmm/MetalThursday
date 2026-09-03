@@ -148,7 +148,7 @@
                     <div class="grupo-campo-formulario mb-3" data-grupo-campo>
                         <label class="form-label" for="generos-novo-artista">
                             Géneros
-                            <span class="text-danger" aria-hidden="true">*</span>
+                            <span class="fw-normal text-muted">(opcional)</span>
                         </label>
 
                         <div class="input-group has-validation">
@@ -160,7 +160,6 @@
                                 aria-describedby="erro-generos-novo-artista"
                                 data-ordenar-alfabeticamente
                                 multiple
-                                required
                             >
                                 @foreach ($generos as $genero)
                                     <option value="{{ $genero['identificador'] }}">
