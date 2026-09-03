@@ -6,6 +6,8 @@ namespace App\Providers;
 
 use App\Enumeracoes\Interacoes\TipoEntidadeInteracao;
 use App\Models\Autenticacao\Utilizador;
+use App\Models\Comum\Ligacao;
+use App\Models\Musica\Artista;
 use App\Regras\Autenticacao\RequisitosPalavraPasse;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -24,7 +26,7 @@ use Illuminate\Validation\Rules\Password;
 final class AppServiceProvider extends ServiceProvider
 {
     /**
-     * Alias polimórfico persistido para os utilizadores notificáveis.
+     * Alias polimórfico persistido para os utilizadores.
      *
      * @since 2.0.0
      */
@@ -32,10 +34,15 @@ final class AppServiceProvider extends ServiceProvider
         'utilizador';
 
     /**
-     * Inicia os serviços e as configurações gerais da aplicação.
+     * Alias polimórfico persistido para os artistas.
      *
-     * O nome permanece em inglês por corresponder ao método definido pelo
-     * ciclo de vida dos providers do Laravel.
+     * @since 2.0.0
+     */
+    private const ALIAS_POLIMORFICO_ARTISTA =
+        'artista';
+
+    /**
+     * Inicia os serviços e as configurações gerais da aplicação.
      *
      * @since 1.0.0
      */
@@ -43,20 +50,13 @@ final class AppServiceProvider extends ServiceProvider
     {
         $this->configurarModelosEloquent();
         $this->configurarMapaPolimorfico();
+        $this->configurarRelacoesDinamicas();
         $this->configurarRequisitosPalavraPasse();
         $this->configurarPaginacao();
     }
 
     /**
      * Ativa as verificações estritas dos modelos fora de produção.
-     *
-     * Durante o desenvolvimento e os testes, o Eloquent rejeita carregamentos
-     * preguiçosos, atributos descartados silenciosamente e acessos a atributos
-     * que não tenham sido selecionados.
-     *
-     * Em produção, estas verificações permanecem desativadas para que uma
-     * violação não interrompa um pedido real. As violações devem ser detetadas
-     * previamente pela suite automatizada.
      *
      * @since 2.0.0
      */
@@ -72,12 +72,6 @@ final class AppServiceProvider extends ServiceProvider
     /**
      * Configura os aliases obrigatórios das relações polimórficas.
      *
-     * Os aliases impedem que os valores persistidos dependam diretamente dos
-     * namespaces PHP dos modelos.
-     *
-     * O alias do utilizador pertence ao mapa geral porque é utilizado pelas
-     * notificações persistidas, mas não representa uma entidade de interação.
-     *
      * @since 2.0.0
      */
     private function configurarMapaPolimorfico(): void
@@ -86,7 +80,40 @@ final class AppServiceProvider extends ServiceProvider
             ...TipoEntidadeInteracao::obterMapaPolimorfico(),
 
             self::ALIAS_POLIMORFICO_UTILIZADOR => Utilizador::class,
+            self::ALIAS_POLIMORFICO_ARTISTA => Artista::class,
         ]);
+    }
+
+    /**
+     * Acrescenta ao utilizador a relação genérica de ligações.
+     *
+     * A relação é registada dinamicamente para não acoplar a primeira fase da
+     * infraestrutura de ligações à interface do perfil de utilizador. Quando
+     * essa interface for implementada, a relação poderá passar para o próprio
+     * modelo sem alterar o contrato persistido.
+     *
+     * @since 2.0.0
+     */
+    private function configurarRelacoesDinamicas(): void
+    {
+        Utilizador::resolveRelationUsing(
+            'ligacoes',
+            static fn (
+                Utilizador $utilizador,
+            ) => $utilizador
+                ->morphMany(
+                    Ligacao::class,
+                    'ligavel',
+                    'tipo_ligavel',
+                    'ligavel_id',
+                )
+                ->orderBy(
+                    'ordem',
+                )
+                ->orderBy(
+                    'id',
+                ),
+        );
     }
 
     /**

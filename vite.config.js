@@ -20,6 +20,7 @@ const ENTRADAS_APLICACAO = Object.freeze([
     'resources/js/paginas/iniciarSessao.js',
     'resources/js/paginas/inicio.js',
     'resources/js/paginas/perfil.js',
+    'resources/js/paginas/perfilArtista.js',
     'resources/js/paginas/recuperarPalavraPasse.js',
     'resources/js/paginas/redefinirPalavraPasse.js',
     'resources/js/paginas/registoConvite.js',

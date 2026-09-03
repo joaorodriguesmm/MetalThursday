@@ -878,9 +878,7 @@ function inicializarNovaSeccao(
 /**
  * Obtém e valida os dados de uma confirmação de nome de artista repetido.
  *
- * Apenas é reconhecido o contrato HTTP específico utilizado pela criação de
- * artistas. Qualquer outro erro continua disponível para o tratamento
- * genérico do formulário AJAX.
+ * A origem geográfica e o ano de início são opcionais.
  *
  * @param {unknown} erro Erro recebido durante a submissão.
  *
@@ -892,7 +890,8 @@ function inicializarNovaSeccao(
  *         origemGeografica: {
  *             identificador: number,
  *             nome: string
- *         }
+ *         }|null,
+ *         anoInicioAtividade: number|null
  *     }>
  * }|null} Dados normalizados ou nulo quando o erro não corresponde ao
  *     contrato esperado.
@@ -945,17 +944,47 @@ function obterDadosConfirmacaoNomeRepetidoArtista(
             || artista.id <= 0
             || typeof artista.nome !== 'string'
             || artista.nome.trim() === ''
-            || !eObjeto(
-                artista.origem_geografica,
+        ) {
+            return null;
+        }
+
+        const origemRecebida =
+            artista.origem_geografica
+            ?? null;
+
+        if (
+            origemRecebida !== null
+            && (
+                !eObjeto(
+                    origemRecebida,
+                )
+                || !Number.isInteger(
+                    origemRecebida.id,
+                )
+                || origemRecebida.id <= 0
+                || typeof origemRecebida.nome
+                    !== 'string'
+                || origemRecebida.nome.trim()
+                    === ''
             )
-            || !Number.isInteger(
-                artista.origem_geografica.id,
+        ) {
+            return null;
+        }
+
+        const anoInicioRecebido =
+            artista.ano_inicio_atividade
+            ?? null;
+
+        if (
+            anoInicioRecebido !== null
+            && (
+                !Number.isInteger(
+                    anoInicioRecebido,
+                )
+                || anoInicioRecebido < 1000
+                || anoInicioRecebido
+                    > new Date().getFullYear()
             )
-            || artista.origem_geografica.id <= 0
-            || typeof artista.origem_geografica.nome
-                !== 'string'
-            || artista.origem_geografica.nome.trim()
-                === ''
         ) {
             return null;
         }
@@ -968,14 +997,20 @@ function obterDadosConfirmacaoNomeRepetidoArtista(
                 nome:
                     artista.nome.trim(),
 
-                origemGeografica: {
-                    identificador:
-                        artista.origem_geografica.id,
+                origemGeografica:
+                    origemRecebida === null
+                        ? null
+                        : {
+                            identificador:
+                                origemRecebida.id,
 
-                    nome:
-                        artista.origem_geografica.nome
-                            .trim(),
-                },
+                            nome:
+                                origemRecebida.nome
+                                    .trim(),
+                        },
+
+                anoInicioAtividade:
+                    anoInicioRecebido,
             },
         );
     }
@@ -1036,7 +1071,8 @@ function criarElementoArtistaHomonimo(
         );
 
     origem.textContent =
-        artista.origemGeografica.nome;
+        artista.origemGeografica?.nome
+        ?? 'Origem não indicada';
 
     const separador =
         document.createElement(
@@ -1057,7 +1093,11 @@ function criarElementoArtistaHomonimo(
         );
 
     ano.textContent =
-        'Ano de início desconhecido';
+        Number.isInteger(
+            artista.anoInicioAtividade,
+        )
+            ? `Início em ${artista.anoInicioAtividade}`
+            : 'Ano de início desconhecido';
 
     detalhes.append(
         origem,

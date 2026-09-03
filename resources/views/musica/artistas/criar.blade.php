@@ -1,9 +1,6 @@
 {{--
     Apresenta o formulário de criação de um artista.
 
-    Os dados e os valores iniciais do formulário são preparados pelo
-    App\Http\Controllers\Musica\ControladorArtista.
-
     @since 1.0.0
 --}}
 
@@ -14,12 +11,8 @@
 
     $artistasHomonimos = (
         is_array($confirmacaoNomeRepetido)
-        && isset(
-            $confirmacaoNomeRepetido['artistas_homonimos']
-        )
-        && is_array(
-            $confirmacaoNomeRepetido['artistas_homonimos']
-        )
+        && isset($confirmacaoNomeRepetido['artistas_homonimos'])
+        && is_array($confirmacaoNomeRepetido['artistas_homonimos'])
     )
         ? $confirmacaoNomeRepetido['artistas_homonimos']
         : [];
@@ -67,18 +60,12 @@
             </div>
 
             <div class="aviso-artista-homonimo__lista">
-                @foreach (
-                    $artistasHomonimos
-                    as $artistaHomonimo
-                )
+                @foreach ($artistasHomonimos as $artistaHomonimo)
                     <div
                         class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-1 gap-sm-3 px-3 py-2"
                     >
                         <strong>
-                            {{
-                                $artistaHomonimo['nome']
-                                ?? 'Artista desconhecido'
-                            }}
+                            {{ $artistaHomonimo['nome'] ?? 'Artista desconhecido' }}
                         </strong>
 
                         <span class="text-muted text-sm-end">
@@ -86,15 +73,22 @@
                                 data_get(
                                     $artistaHomonimo,
                                     'origem_geografica.nome',
-                                    'Origem não indicada',
                                 )
+                                ?? 'Origem não indicada'
                             }}
 
                             <span aria-hidden="true">
                                 ·
                             </span>
 
-                            Ano de início desconhecido
+                            @if (
+                                isset($artistaHomonimo['ano_inicio_atividade'])
+                                && is_numeric($artistaHomonimo['ano_inicio_atividade'])
+                            )
+                                Início em {{ $artistaHomonimo['ano_inicio_atividade'] }}
+                            @else
+                                Ano de início desconhecido
+                            @endif
                         </span>
                     </div>
                 @endforeach
@@ -121,6 +115,10 @@
     @push('scripts-pagina')
         @vite(
             'resources/js/paginas/entidades.js'
+        )
+
+        @vite(
+            'resources/js/paginas/perfilArtista.js'
         )
     @endpush
 </x-layout-aplicacao>

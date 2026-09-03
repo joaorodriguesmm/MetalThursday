@@ -11,6 +11,7 @@ use App\Http\Controllers\MetalThursday\ControladorEdicao;
 use App\Http\Controllers\MetalThursday\ControladorMetalThursday;
 use App\Http\Controllers\Musica\ControladorArtista;
 use App\Http\Controllers\Musica\ControladorGenero;
+use App\Http\Controllers\Musica\ControladorImportacaoArtista;
 use App\Http\Controllers\Utilizadores\ControladorNotificacao;
 use Illuminate\Support\Facades\Route;
 
@@ -136,6 +137,37 @@ Route::middleware([
         | Artistas
         |--------------------------------------------------------------------------
         */
+
+        Route::controller(
+            ControladorImportacaoArtista::class,
+        )
+            ->prefix(
+                'artistas/importacao',
+            )
+            ->name(
+                'artistas.importacao.',
+            )
+            ->group(
+                static function (): void {
+                    Route::get(
+                        'pesquisar',
+                        'pesquisar',
+                    )->name(
+                        'pesquisar',
+                    );
+
+                    Route::get(
+                        'musicbrainz/{mbid}',
+                        'obter',
+                    )
+                        ->whereUuid(
+                            'mbid',
+                        )
+                        ->name(
+                            'obter',
+                        );
+                },
+            );
 
         Route::controller(
             ControladorArtista::class,
@@ -589,9 +621,6 @@ Route::middleware([
         |--------------------------------------------------------------------------
         | Notificações
         |--------------------------------------------------------------------------
-        |
-        | A ação estática deve ser declarada antes da rota que recebe o UUID.
-        |
         */
 
         Route::controller(

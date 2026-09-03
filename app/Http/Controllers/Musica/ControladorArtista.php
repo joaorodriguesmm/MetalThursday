@@ -4,16 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Musica;
 
+use App\Enumeracoes\EstadoAtividadeArtista;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Musica\AtualizarArtistaRequest;
 use App\Http\Requests\Musica\CriarArtistaRequest;
+use App\Models\Comum\Ligacao;
 use App\Models\Geografia\OrigemGeografica;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\Musica\Artista;
 use App\Models\Musica\Genero;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -26,10 +27,6 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * Gere a consulta, criação, atualização e eliminação de artistas.
  *
- * A persistência dos dados principais e a sincronização dos géneros são
- * executadas atomicamente. As operações sobre artistas existentes voltam a
- * obter e a bloquear o registo dentro da transação.
- *
  * @since 1.0.0
  */
 final class ControladorArtista extends Controller
@@ -39,94 +36,75 @@ final class ControladorArtista extends Controller
     /**
      * Número de registos apresentados por página.
      *
-     * @var int
-     *
      * @since 2.0.0
      */
-    private const REGISTOS_POR_PAGINA =
-        20;
+    private const REGISTOS_POR_PAGINA = 20;
 
     /**
      * Comprimento máximo do termo de pesquisa.
      *
-     * @var int
-     *
      * @since 2.0.0
      */
-    private const COMPRIMENTO_MAXIMO_PESQUISA =
-        100;
+    private const COMPRIMENTO_MAXIMO_PESQUISA = 100;
 
     /**
      * Número máximo de tentativas perante conflitos transitórios.
      *
-     * @var int
-     *
      * @since 2.0.0
      */
-    private const TENTATIVAS_TRANSACAO =
-        3;
+    private const TENTATIVAS_TRANSACAO = 3;
 
     /**
      * Apresenta a lista paginada de artistas.
      *
-     * @param  Request  $pedido  Pedido HTTP.
+     * @param  Request  $pedido  Pedido HTTP atual.
      * @return View Listagem de artistas.
      *
      * @since 1.0.0
      */
-    public function indice(
-        Request $pedido,
-    ): View {
+    public function indice(Request $pedido): View
+    {
         $this->authorize(
             'viewAny',
             Artista::class,
         );
 
-        $pesquisa =
-            $this->normalizarPesquisa(
-                $pedido->query(
-                    'pesquisa',
-                ),
-            );
+        $pesquisa = $this->normalizarPesquisa(
+            $pedido->query('pesquisa'),
+        );
 
-        $artistas =
-            Artista::query()
-                ->select([
-                    'id',
+        $artistas = Artista::query()
+            ->select([
+                'id',
+                'nome',
+                'origem_geografica_id',
+                'ano_inicio_atividade',
+                'estado_atividade',
+                'criado_por_id',
+            ])
+            ->with([
+                'origemGeografica:id,nome',
+                'generos:id,nome',
+            ])
+            ->when(
+                $pesquisa !== null,
+                static fn (Builder $construtor): Builder => $construtor->where(
                     'nome',
-                    'origem_geografica_id',
-                    'criado_por_id',
-                ])
-                ->with([
-                    'origemGeografica:id,nome',
-                    'generos:id,nome',
-                ])
-                ->when(
-                    $pesquisa !== null,
-                    static fn (
-                        Builder $construtor,
-                    ): Builder => $construtor->where(
-                        'nome',
-                        'like',
-                        '%'.$pesquisa.'%',
-                    ),
-                )
-                ->orderBy(
-                    'nome',
-                )
-                ->orderBy(
-                    'id',
-                )
-                ->paginate(
-                    self::REGISTOS_POR_PAGINA,
-                )
-                ->withQueryString();
+                    'like',
+                    '%'.$pesquisa.'%',
+                ),
+            )
+            ->orderBy('nome')
+            ->orderBy('id')
+            ->paginate(
+                self::REGISTOS_POR_PAGINA,
+            )
+            ->withQueryString();
 
         return view(
             'musica.artistas.indice',
             [
                 'artistas' => $artistas,
-
                 'pesquisaAtual' => $pesquisa,
             ],
         );
@@ -140,9 +118,8 @@ final class ControladorArtista extends Controller
      *
      * @since 1.0.0
      */
-    public function criar(
-        Request $pedido,
-    ): View {
+    public function criar(Request $pedido): View
+    {
         $this->authorize(
             'create',
             Artista::class,
@@ -157,11 +134,11 @@ final class ControladorArtista extends Controller
     }
 
     /**
-     * Guarda um novo artista e sincroniza os respetivos géneros.
+     * Guarda um novo artista e todas as relações do respetivo perfil.
      *
-     * Quando existem artistas ativos com o mesmo nome, a criação fica suspensa
-     * até que o utilizador confirme explicitamente que pretende criar outro
-     * artista homónimo.
+     * A persistência dos dados principais, géneros e ligações é executada na
+     * mesma transação. Quando existem artistas ativos com o mesmo nome, a
+     * criação exige confirmação explícita antes de prosseguir.
      *
      * @param  CriarArtistaRequest  $pedido  Pedido validado.
      * @return JsonResponse|RedirectResponse Resposta da operação.
@@ -176,35 +153,25 @@ final class ControladorArtista extends Controller
             Artista::class,
         );
 
-        /**
-         * @var array{
-         *     nome: string,
-         *     origem_geografica_id: int|null,
-         *     generos: list<int>,
-         *     confirmar_nome_repetido?: mixed
-         * } $dados
-         */
-        $dados =
-            $pedido->validated();
+        /** @var array<string, mixed> $dados */
+        $dados = $pedido->validated();
 
-        $artistasHomonimos =
-            Artista::query()
-                ->select([
-                    'id',
-                    'nome',
-                    'origem_geografica_id',
-                ])
-                ->with([
-                    'origemGeografica:id,nome',
-                ])
-                ->where(
-                    'nome',
-                    $dados['nome'],
-                )
-                ->orderBy(
-                    'id',
-                )
-                ->get();
+        $artistasHomonimos = Artista::query()
+            ->select([
+                'id',
+                'nome',
+                'origem_geografica_id',
+                'ano_inicio_atividade',
+            ])
+            ->with([
+                'origemGeografica:id,nome',
+            ])
+            ->where(
+                'nome',
+                $dados['nome'],
+            )
+            ->orderBy('id')
+            ->get();
 
         if (
             $artistasHomonimos->isNotEmpty()
@@ -216,17 +183,14 @@ final class ControladorArtista extends Controller
             $artistasHomonimosSerializados = [];
 
             foreach ($artistasHomonimos as $artistaHomonimo) {
-                $artistasHomonimosSerializados[] =
-                    $this->serializarArtistaHomonimo(
-                        $artistaHomonimo,
-                    );
+                $artistasHomonimosSerializados[] = $this->serializarArtistaHomonimo(
+                    $artistaHomonimo,
+                );
             }
 
             $dadosConfirmacao = [
                 'codigo' => 'confirmacao_nome_repetido_necessaria',
-
                 'mensagem' => 'Já existem artistas com este nome. Confirma se pretendes criar um novo artista.',
-
                 'artistas_homonimos' => $artistasHomonimosSerializados,
             ];
 
@@ -245,44 +209,59 @@ final class ControladorArtista extends Controller
                 );
         }
 
-        $artista =
-            DB::transaction(
-                static function () use (
+        $ligacoes = $this->prepararLigacoesPersistencia(
+            $dados['ligacoes'] ?? [],
+        );
+
+        $artista = DB::transaction(
+            function () use (
+                $dados,
+                $ligacoes,
+            ): Artista {
+                $artista = new Artista;
+
+                $this->aplicarDadosPerfil(
+                    $artista,
                     $dados,
-                ): Artista {
-                    $artista = new Artista([
-                        'nome' => $dados['nome'],
-                    ]);
+                );
 
+                $artista
+                    ->origemGeografica()
+                    ->associate(
+                        $dados['origem_geografica_id'],
+                    );
+
+                $artista->saveOrFail();
+
+                $artista
+                    ->generos()
+                    ->sync(
+                        $dados['generos'],
+                    );
+
+                if ($ligacoes !== []) {
                     $artista
-                        ->origemGeografica()
-                        ->associate(
-                            $dados['origem_geografica_id'],
+                        ->ligacoes()
+                        ->createMany(
+                            $ligacoes,
                         );
+                }
 
-                    $artista->saveOrFail();
-
-                    $artista
-                        ->generos()
-                        ->sync(
-                            $dados['generos'],
-                        );
-
-                    return $artista;
-                },
-                self::TENTATIVAS_TRANSACAO,
-            );
+                return $artista;
+            },
+            self::TENTATIVAS_TRANSACAO,
+        );
 
         if ($pedido->expectsJson()) {
             $artista->load([
                 'origemGeografica:id,nome',
                 'generos:id,nome',
+                'ligacoes:id,tipo_ligavel,ligavel_id,titulo,url,ordem',
             ]);
 
             return response()->json(
                 [
                     'mensagem' => 'Artista criado com sucesso.',
-
                     'artista' => $this->serializarArtista(
                         $artista,
                     ),
@@ -300,16 +279,18 @@ final class ControladorArtista extends Controller
     }
 
     /**
-     * Apresenta os detalhes de um artista.
+     * Apresenta os detalhes de um artista e as respetivas aparições publicadas.
      *
      * @param  Artista  $artista  Artista apresentado.
-     * @return View Página de detalhes.
+     * @return View Página de detalhes do artista.
+     *
+     * @throws LogicException Quando uma relação carregada contém dados
+     *                        persistidos inválidos.
      *
      * @since 1.0.0
      */
-    public function detalhes(
-        Artista $artista,
-    ): View {
+    public function detalhes(Artista $artista): View
+    {
         $this->authorize(
             'view',
             $artista,
@@ -318,75 +299,60 @@ final class ControladorArtista extends Controller
         $artista->loadMissing([
             'origemGeografica:id,nome',
             'generos:id,nome',
+            'ligacoes:id,tipo_ligavel,ligavel_id,titulo,url,ordem',
         ]);
 
-        $modeloSeccao =
-            new SeccaoMetalThursday;
+        $modeloSeccao = new SeccaoMetalThursday;
+        $modeloMetalThursday = new MetalThursday;
+        $tabelaSeccoes = $modeloSeccao->getTable();
+        $tabelaMetalThursdays = $modeloMetalThursday->getTable();
+        $aliasOrdenacao = 'metal_thursdays_ordenacao';
 
-        $modeloMetalThursday =
-            new MetalThursday;
-
-        $tabelaSeccoes =
-            $modeloSeccao->getTable();
-
-        $tabelaMetalThursdays =
-            $modeloMetalThursday->getTable();
-
-        $aliasOrdenacao =
-            'metal_thursdays_ordenacao';
-
-        $seccoes =
-            SeccaoMetalThursday::query()
-                ->select([
-                    $tabelaSeccoes.'.id',
-                    $tabelaSeccoes.'.metal_thursday_id',
-                    $tabelaSeccoes.'.tipo_seccao_id',
-                    $tabelaSeccoes.'.titulo',
-                    $tabelaSeccoes.'.descricao',
-                    $tabelaSeccoes.'.ligacao',
-                    $tabelaSeccoes.'.ano',
-                ])
-                ->join(
-                    $tabelaMetalThursdays
-                        .' as '
-                        .$aliasOrdenacao,
-                    $aliasOrdenacao.'.id',
-                    '=',
-                    $tabelaSeccoes.'.metal_thursday_id',
-                )
-                ->where(
-                    $tabelaSeccoes.'.artista_id',
-                    $artista->getKey(),
-                )
-                ->whereHas(
-                    'metalThursday',
-                    static fn (
-                        Builder $construtor,
-                    ): Builder => $construtor->publicadas(),
-                )
-                ->with([
-                    'metalThursday:id,autor_id,data,deleted_at',
-                    'metalThursday.autor:id,nome',
-                    'tipoSeccao:id,nome',
-                ])
-                ->orderByDesc(
-                    $aliasOrdenacao.'.data',
-                )
-                ->orderByDesc(
-                    $tabelaSeccoes.'.id',
-                )
-                ->paginate(
-                    self::REGISTOS_POR_PAGINA,
-                )
-                ->withQueryString();
+        $seccoes = SeccaoMetalThursday::query()
+            ->select([
+                $tabelaSeccoes.'.id',
+                $tabelaSeccoes.'.metal_thursday_id',
+                $tabelaSeccoes.'.tipo_seccao_id',
+                $tabelaSeccoes.'.titulo',
+                $tabelaSeccoes.'.descricao',
+                $tabelaSeccoes.'.ligacao',
+                $tabelaSeccoes.'.ano',
+            ])
+            ->join(
+                $tabelaMetalThursdays.' as '.$aliasOrdenacao,
+                $aliasOrdenacao.'.id',
+                '=',
+                $tabelaSeccoes.'.metal_thursday_id',
+            )
+            ->where(
+                $tabelaSeccoes.'.artista_id',
+                $artista->getKey(),
+            )
+            ->whereHas(
+                'metalThursday',
+                static fn (Builder $construtor): Builder => $construtor->publicadas(),
+            )
+            ->with([
+                'metalThursday:id,autor_id,data,deleted_at',
+                'metalThursday.autor:id,nome',
+                'tipoSeccao:id,nome',
+            ])
+            ->orderByDesc(
+                $aliasOrdenacao.'.data',
+            )
+            ->orderByDesc(
+                $tabelaSeccoes.'.id',
+            )
+            ->paginate(
+                self::REGISTOS_POR_PAGINA,
+            )
+            ->withQueryString();
 
         return view(
             'musica.artistas.detalhes',
             [
                 'artista' => $artista,
-
                 'seccoes' => $seccoes,
-
                 ...$this->obterDadosCabecalho(
                     $artista,
                 ),
@@ -422,15 +388,11 @@ final class ControladorArtista extends Controller
     }
 
     /**
-     * Atualiza um artista e sincroniza os respetivos géneros.
+     * Atualiza o perfil completo de um artista.
      *
-     * O registo é novamente obtido e bloqueado dentro da transação. A
-     * autorização é verificada antes de iniciar a operação.
-     *
-     * O artista só é persistido quando os atributos ou a relação de géneros
-     * sofrem uma alteração efetiva. Desta forma, os dados de auditoria não são
-     * atualizados por uma submissão idêntica, mas continuam a refletir uma
-     * alteração que afecte apenas os géneros.
+     * O registo é novamente obtido e bloqueado dentro da transação. O artista
+     * só é persistido quando existe uma alteração efetiva nos atributos,
+     * géneros ou ligações.
      *
      * @param  AtualizarArtistaRequest  $pedido  Pedido validado.
      * @param  Artista  $artista  Artista atualizado.
@@ -447,69 +409,72 @@ final class ControladorArtista extends Controller
             $artista,
         );
 
-        /**
-         * @var array{
-         *     nome: string,
-         *     origem_geografica_id: int|null,
-         *     generos: list<int>
-         * } $dados
-         */
-        $dados =
-            $pedido->validated();
+        /** @var array<string, mixed> $dados */
+        $dados = $pedido->validated();
 
-        $artistaAtualizado =
-            DB::transaction(
-                function () use (
-                    $artista,
+        $ligacoes = $this->prepararLigacoesPersistencia(
+            $dados['ligacoes'] ?? [],
+        );
+
+        $artistaAtualizado = DB::transaction(
+            function () use (
+                $artista,
+                $dados,
+                $ligacoes,
+            ): Artista {
+                $artistaBloqueado = Artista::query()
+                    ->whereKey(
+                        $artista->getKey(),
+                    )
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                $this->aplicarDadosPerfil(
+                    $artistaBloqueado,
                     $dados,
-                ): Artista {
-                    $artistaBloqueado =
-                        Artista::query()
-                            ->whereKey(
-                                $artista->getKey(),
-                            )
-                            ->lockForUpdate()
-                            ->firstOrFail();
+                );
 
-                    $artistaBloqueado->nome =
-                        $dados['nome'];
+                $artistaBloqueado
+                    ->origemGeografica()
+                    ->associate(
+                        $dados['origem_geografica_id'],
+                    );
 
-                    $artistaBloqueado
-                        ->origemGeografica()
-                        ->associate(
-                            $dados['origem_geografica_id'],
-                        );
+                $alteracoesGeneros = $artistaBloqueado
+                    ->generos()
+                    ->sync(
+                        $dados['generos'],
+                    );
 
-                    $alteracoesGeneros =
-                        $artistaBloqueado
-                            ->generos()
-                            ->sync(
-                                $dados['generos'],
-                            );
+                $ligacoesAlteradas = $this->sincronizarLigacoesSeNecessario(
+                    $artistaBloqueado,
+                    $ligacoes,
+                );
 
-                    if (
-                        $artistaBloqueado->isDirty()
-                        || $alteracoesGeneros['attached'] !== []
-                        || $alteracoesGeneros['detached'] !== []
-                        || $alteracoesGeneros['updated'] !== []
-                    ) {
-                        $artistaBloqueado->saveOrFail();
-                    }
+                if (
+                    $artistaBloqueado->isDirty()
+                    || $alteracoesGeneros['attached'] !== []
+                    || $alteracoesGeneros['detached'] !== []
+                    || $alteracoesGeneros['updated'] !== []
+                    || $ligacoesAlteradas
+                ) {
+                    $artistaBloqueado->saveOrFail();
+                }
 
-                    return $artistaBloqueado;
-                },
-                self::TENTATIVAS_TRANSACAO,
-            );
+                return $artistaBloqueado;
+            },
+            self::TENTATIVAS_TRANSACAO,
+        );
 
         if ($pedido->expectsJson()) {
             $artistaAtualizado->load([
                 'origemGeografica:id,nome',
                 'generos:id,nome',
+                'ligacoes:id,tipo_ligavel,ligavel_id,titulo,url,ordem',
             ]);
 
             return response()->json([
                 'mensagem' => 'Artista atualizado com sucesso.',
-
                 'artista' => $this->serializarArtista(
                     $artistaAtualizado,
                 ),
@@ -527,9 +492,10 @@ final class ControladorArtista extends Controller
     /**
      * Elimina logicamente um artista.
      *
-     * A autorização é verificada antes de bloquear e eliminar o registo.
+     * O registo é novamente obtido e bloqueado dentro da transação antes da
+     * eliminação lógica.
      *
-     * @param  Request  $pedido  Pedido HTTP.
+     * @param  Request  $pedido  Pedido HTTP atual.
      * @param  Artista  $artista  Artista eliminado.
      * @return JsonResponse|RedirectResponse Resposta da operação.
      *
@@ -545,16 +511,13 @@ final class ControladorArtista extends Controller
         );
 
         DB::transaction(
-            function () use (
-                $artista,
-            ): void {
-                $artistaBloqueado =
-                    Artista::query()
-                        ->whereKey(
-                            $artista->getKey(),
-                        )
-                        ->lockForUpdate()
-                        ->firstOrFail();
+            function () use ($artista): void {
+                $artistaBloqueado = Artista::query()
+                    ->whereKey(
+                        $artista->getKey(),
+                    )
+                    ->lockForUpdate()
+                    ->firstOrFail();
 
                 $artistaBloqueado->deleteOrFail();
             },
@@ -577,21 +540,157 @@ final class ControladorArtista extends Controller
     }
 
     /**
+     * Aplica ao artista os atributos escalares validados do respetivo perfil.
+     *
+     * As relações com a origem geográfica, os géneros e as ligações são geridas
+     * separadamente pelo controlador.
+     *
+     * @param  Artista  $artista  Artista que recebe os dados.
+     * @param  array<string, mixed>  $dados  Dados validados do pedido.
+     *
+     * @since 2.0.0
+     */
+    private function aplicarDadosPerfil(
+        Artista $artista,
+        array $dados,
+    ): void {
+        $artista->nome =
+            $dados['nome'];
+
+        $artista->ano_inicio_atividade =
+            $dados['ano_inicio_atividade']
+            ?? null;
+
+        $artista->ano_fim_atividade =
+            $dados['ano_fim_atividade']
+            ?? null;
+
+        $artista->estado_atividade =
+            $dados['estado_atividade']
+            ?? null;
+
+        $artista->biografia =
+            $dados['biografia']
+            ?? null;
+
+        $artista->imagem =
+            $dados['imagem']
+            ?? null;
+
+        $artista->musicbrainz_id =
+            $dados['musicbrainz_id']
+            ?? null;
+
+        $artista->discogs_id =
+            $dados['discogs_id']
+            ?? null;
+    }
+
+    /**
+     * Converte as ligações validadas para o formato persistido.
+     *
+     * Entradas estruturalmente inválidas são ignoradas nesta fase defensiva,
+     * uma vez que a validação HTTP já garante o contrato esperado.
+     *
+     * @param  mixed  $dadosLigacoes  Ligações validadas.
+     * @return list<array{titulo: string, url: string, ordem: int}> Ligações.
+     *
+     * @since 2.0.0
+     */
+    private function prepararLigacoesPersistencia(mixed $dadosLigacoes): array
+    {
+        if (! is_array($dadosLigacoes)) {
+            return [];
+        }
+
+        $ligacoes = [];
+
+        foreach ($dadosLigacoes as $indice => $dadosLigacao) {
+            if (! is_array($dadosLigacao)) {
+                continue;
+            }
+
+            $titulo = $dadosLigacao['titulo'] ?? null;
+            $url = $dadosLigacao['url'] ?? null;
+
+            if (! is_string($titulo) || ! is_string($url)) {
+                continue;
+            }
+
+            $ligacoes[] = [
+                'titulo' => $titulo,
+                'url' => $url,
+                'ordem' => $indice + 1,
+            ];
+        }
+
+        return $ligacoes;
+    }
+
+    /**
+     * Sincroniza as ligações apenas quando o conteúdo realmente mudou.
+     *
+     * A coleção atual é comparada com o novo conjunto já normalizado. Quando
+     * existe diferença, as ligações são recriadas dentro da mesma transação do
+     * artista.
+     *
+     * @param  Artista  $artista  Artista cujas ligações são sincronizadas.
+     * @param  list<array{titulo: string, url: string, ordem: int}>  $novasLigacoes  Ligações pretendidas.
+     * @return bool Verdadeiro quando foi necessário alterar as ligações.
+     *
+     * @since 2.0.0
+     */
+    private function sincronizarLigacoesSeNecessario(
+        Artista $artista,
+        array $novasLigacoes,
+    ): bool {
+        $ligacoesAtuais = $artista
+            ->ligacoes()
+            ->get([
+                'titulo',
+                'url',
+                'ordem',
+            ])
+            ->map(
+                static fn (Ligacao $ligacao): array => [
+                    'titulo' => $ligacao->titulo,
+                    'url' => $ligacao->url,
+                    'ordem' => $ligacao->ordem,
+                ],
+            )
+            ->values()
+            ->all();
+
+        if ($ligacoesAtuais === $novasLigacoes) {
+            return false;
+        }
+
+        $artista
+            ->ligacoes()
+            ->delete();
+
+        if ($novasLigacoes !== []) {
+            $artista
+                ->ligacoes()
+                ->createMany(
+                    $novasLigacoes,
+                );
+        }
+
+        return true;
+    }
+
+    /**
      * Obtém os dados utilizados pelo formulário de artistas.
      *
+     * Durante a edição são carregados os géneros e as ligações atuais. Os
+     * valores anteriores da sessão prevalecem sobre os dados persistidos para
+     * permitir reconstruir corretamente o formulário após uma falha de
+     * validação.
+     *
      * @param  Request  $pedido  Pedido HTTP atual.
-     * @param  Artista|null  $artista  Artista editado ou nulo durante a criação.
-     * @return array{
-     *     artista: Artista|null,
-     *     origensGeograficas: Collection<int, OrigemGeografica>,
-     *     generos: Collection<int, Genero>,
-     *     emEdicao: bool,
-     *     enderecoFormulario: string,
-     *     nomeArtista: string,
-     *     identificadorOrigemGeograficaSelecionada: string,
-     *     identificadoresGenerosSelecionados: list<string>,
-     *     textoBotaoSubmissao: string
-     * } Dados preparados.
+     * @param  Artista|null  $artista  Artista editado ou nulo na criação.
+     * @return array<string, mixed> Dados preparados para a vista.
      *
      * @since 2.0.0
      */
@@ -599,33 +698,41 @@ final class ControladorArtista extends Controller
         Request $pedido,
         ?Artista $artista = null,
     ): array {
-        $emEdicao =
-            $artista instanceof Artista;
+        $emEdicao = $artista instanceof Artista;
 
         if ($emEdicao) {
-            $artista->loadMissing(
+            $artista->loadMissing([
                 'generos:id,nome',
+                'ligacoes:id,tipo_ligavel,ligavel_id,titulo,url,ordem',
+            ]);
+
+            $enderecoFormulario = route(
+                'artistas.atualizar',
+                $artista,
             );
 
-            $enderecoFormulario =
-                route(
-                    'artistas.atualizar',
-                    $artista,
-                );
+            $identificadoresGenerosModelo = $artista
+                ->generos
+                ->modelKeys();
 
-            $identificadoresGenerosModelo =
-                $artista
-                    ->generos
-                    ->modelKeys();
+            $ligacoesModelo = $artista
+                ->ligacoes
+                ->map(
+                    static fn (Ligacao $ligacao): array => [
+                        'titulo' => $ligacao->titulo,
+                        'url' => $ligacao->url,
+                    ],
+                )
+                ->all();
         } else {
-            $enderecoFormulario =
-                route(
-                    'artistas.guardar',
-                );
-
-            $identificadoresGenerosModelo =
-                [];
+            $enderecoFormulario = route(
+                'artistas.guardar',
+            );
+            $identificadoresGenerosModelo = [];
+            $ligacoesModelo = [];
         }
+
+        $estadoModelo = $artista?->estado_atividade;
 
         return [
             'artista' => $artista,
@@ -635,12 +742,8 @@ final class ControladorArtista extends Controller
                     'id',
                     'nome',
                 ])
-                ->orderBy(
-                    'nome',
-                )
-                ->orderBy(
-                    'id',
-                )
+                ->orderBy('nome')
+                ->orderBy('id')
                 ->get(),
 
             'generos' => Genero::query()
@@ -648,16 +751,11 @@ final class ControladorArtista extends Controller
                     'id',
                     'nome',
                 ])
-                ->orderBy(
-                    'nome',
-                )
-                ->orderBy(
-                    'id',
-                )
+                ->orderBy('nome')
+                ->orderBy('id')
                 ->get(),
 
             'emEdicao' => $emEdicao,
-
             'enderecoFormulario' => $enderecoFormulario,
 
             'nomeArtista' => $this->normalizarTextoFormulario(
@@ -674,6 +772,64 @@ final class ControladorArtista extends Controller
                 ),
             ),
 
+            'anoInicioAtividadeArtista' => $this->normalizarTextoFormulario(
+                $pedido->old(
+                    'ano_inicio_atividade',
+                    $artista?->ano_inicio_atividade,
+                ),
+            ),
+
+            'anoFimAtividadeArtista' => $this->normalizarTextoFormulario(
+                $pedido->old(
+                    'ano_fim_atividade',
+                    $artista?->ano_fim_atividade,
+                ),
+            ),
+
+            'estadoAtividadeArtista' => $this->normalizarTextoFormulario(
+                $pedido->old(
+                    'estado_atividade',
+                    $estadoModelo instanceof EstadoAtividadeArtista
+                        ? $estadoModelo->value
+                        : null,
+                ),
+            ),
+
+            'biografiaArtista' => $this->normalizarTextoFormularioSemCompactar(
+                $pedido->old(
+                    'biografia',
+                    $artista?->biografia,
+                ),
+            ),
+
+            'imagemArtista' => $this->normalizarTextoFormulario(
+                $pedido->old(
+                    'imagem',
+                    $artista?->imagem,
+                ),
+            ),
+
+            'identificadorMusicBrainzArtista' => $this->normalizarMbidFormulario(
+                $pedido->old(
+                    'musicbrainz_id',
+                    $artista?->musicbrainz_id,
+                ),
+            ),
+
+            'identificadorDiscogsArtista' => $this->normalizarIdentificadorFormulario(
+                $pedido->old(
+                    'discogs_id',
+                    $artista?->discogs_id,
+                ),
+            ),
+
+            'ligacoesFormulario' => $this->normalizarLigacoesFormulario(
+                $pedido->old(
+                    'ligacoes',
+                    $ligacoesModelo,
+                ),
+            ),
+
             'identificadoresGenerosSelecionados' => $this->normalizarListaIdentificadoresFormulario(
                 $pedido->old(
                     'generos',
@@ -681,6 +837,7 @@ final class ControladorArtista extends Controller
                 ),
             ),
 
+            'anoAtual' => (int) date('Y'),
             'textoBotaoSubmissao' => $emEdicao
                 ? 'Guardar alterações'
                 : 'Criar artista',
@@ -696,17 +853,14 @@ final class ControladorArtista extends Controller
      *     nomesGenerosArtista: string|null
      * } Dados preparados.
      *
-     * @throws LogicException Quando a relação de géneros contém dados persistidos
-     *                        inválidos.
+     * @throws LogicException Quando a relação de géneros contém dados
+     *                        persistidos inválidos.
      *
      * @since 2.0.0
      */
-    private function obterDadosCabecalho(
-        Artista $artista,
-    ): array {
-        $origemGeografica =
-            $artista->origemGeografica;
-
+    private function obterDadosCabecalho(Artista $artista): array
+    {
+        $origemGeografica = $artista->origemGeografica;
         $nomesGeneros = [];
 
         foreach ($artista->generos as $genero) {
@@ -716,8 +870,7 @@ final class ControladorArtista extends Controller
                 );
             }
 
-            $nomesGeneros[] =
-                $genero->nome;
+            $nomesGeneros[] = $genero->nome;
         }
 
         return [
@@ -726,10 +879,7 @@ final class ControladorArtista extends Controller
                 : null,
 
             'nomesGenerosArtista' => $nomesGeneros !== []
-                ? implode(
-                    ', ',
-                    $nomesGeneros,
-                )
+                ? implode(', ', $nomesGeneros)
                 : null,
         ];
     }
@@ -741,29 +891,23 @@ final class ControladorArtista extends Controller
      * @return array{
      *     id: int,
      *     nome: string,
-     *     origem_geografica: array{
-     *         id: int,
-     *         nome: string
-     *     }|null
-     * } Dados necessários para identificar o homónimo.
+     *     ano_inicio_atividade: int|null,
+     *     origem_geografica: array{id: int, nome: string}|null
+     * } Dados necessários para distinguir o homónimo.
      *
      * @since 2.0.0
      */
-    private function serializarArtistaHomonimo(
-        Artista $artista,
-    ): array {
-        $origemGeografica =
-            $artista->origemGeografica;
+    private function serializarArtistaHomonimo(Artista $artista): array
+    {
+        $origemGeografica = $artista->origemGeografica;
 
         return [
             'id' => (int) $artista->getKey(),
-
             'nome' => $artista->nome,
-
+            'ano_inicio_atividade' => $artista->ano_inicio_atividade,
             'origem_geografica' => $origemGeografica instanceof OrigemGeografica
                 ? [
                     'id' => (int) $origemGeografica->getKey(),
-
                     'nome' => $origemGeografica->nome,
                 ]
                 : null,
@@ -771,7 +915,7 @@ final class ControladorArtista extends Controller
     }
 
     /**
-     * Converte um artista para o formato da resposta HTTP.
+     * Converte um artista para o formato utilizado nas respostas HTTP.
      *
      * @param  Artista  $artista  Artista convertido.
      * @return array{
@@ -779,11 +923,34 @@ final class ControladorArtista extends Controller
      *     nome: string,
      *     rotulo_selecao: string,
      *     origem_geografica_id: int|null,
-     *     origem_geografica: array{id: int, nome: string}|null,
-     *     generos: list<array{id: int, nome: string}>
-     * } Dados do artista.
+     *     origem_geografica: array{
+     *         id: int,
+     *         nome: string
+     *     }|null,
+     *     ano_inicio_atividade: int|null,
+     *     ano_fim_atividade: int|null,
+     *     estado_atividade: string|null,
+     *     estado_atividade_etiqueta: string|null,
+     *     biografia: string|null,
+     *     imagem: string|null,
+     *     url_imagem: string|null,
+     *     musicbrainz_id: string|null,
+     *     url_musicbrainz: string|null,
+     *     discogs_id: int|null,
+     *     url_discogs: string|null,
+     *     ligacoes: list<array{
+     *         id: int,
+     *         titulo: string,
+     *         url: string,
+     *         ordem: int
+     *     }>,
+     *     generos: list<array{
+     *         id: int,
+     *         nome: string
+     *     }>
+     * } Dados serializados.
      *
-     * @throws LogicException Quando a relação de géneros contém dados persistidos
+     * @throws LogicException Quando alguma relação persistida contém dados
      *                        inválidos.
      *
      * @since 2.0.0
@@ -795,6 +962,7 @@ final class ControladorArtista extends Controller
             $artista->origemGeografica;
 
         $generos = [];
+        $ligacoes = [];
 
         foreach ($artista->generos as $genero) {
             if (! $genero instanceof Genero) {
@@ -809,6 +977,27 @@ final class ControladorArtista extends Controller
                 'nome' => $genero->nome,
             ];
         }
+
+        foreach ($artista->ligacoes as $ligacao) {
+            if (! $ligacao instanceof Ligacao) {
+                throw new LogicException(
+                    'O artista possui uma ligação persistida inválida.',
+                );
+            }
+
+            $ligacoes[] = [
+                'id' => (int) $ligacao->getKey(),
+
+                'titulo' => $ligacao->titulo,
+
+                'url' => $ligacao->url,
+
+                'ordem' => $ligacao->ordem,
+            ];
+        }
+
+        $estado =
+            $artista->estado_atividade;
 
         return [
             'id' => (int) $artista->getKey(),
@@ -829,29 +1018,93 @@ final class ControladorArtista extends Controller
                 ]
                 : null,
 
+            'ano_inicio_atividade' => $artista->ano_inicio_atividade,
+
+            'ano_fim_atividade' => $artista->ano_fim_atividade,
+
+            'estado_atividade' => $estado instanceof EstadoAtividadeArtista
+                ? $estado->value
+                : null,
+
+            'estado_atividade_etiqueta' => $estado instanceof EstadoAtividadeArtista
+                ? $estado->etiqueta()
+                : null,
+
+            'biografia' => $artista->biografia,
+
+            'imagem' => $artista->imagem,
+
+            'url_imagem' => $artista->url_imagem,
+
+            'musicbrainz_id' => $artista->musicbrainz_id,
+
+            'url_musicbrainz' => $artista->url_musicbrainz,
+
+            'discogs_id' => $artista->discogs_id,
+
+            'url_discogs' => $artista->url_discogs,
+
+            'ligacoes' => $ligacoes,
+
             'generos' => $generos,
         ];
     }
 
     /**
-     * Normaliza o termo de pesquisa.
+     * Normaliza um identificador MusicBrainz reconstruído no formulário.
      *
-     * @param  mixed  $valor  Valor recebido.
+     * Identificadores ausentes ou com formato UUID inválido são representados por
+     * uma sequência vazia para não serem reapresentados como associações válidas.
+     *
+     * @param  mixed  $valor  Valor recebido do modelo ou dos dados anteriores.
+     * @return string Identificador MusicBrainz normalizado ou sequência vazia.
+     *
+     * @since 2.0.0
+     */
+    private function normalizarMbidFormulario(
+        mixed $valor,
+    ): string {
+        if (! is_string($valor)) {
+            return '';
+        }
+
+        $identificador =
+            mb_strtolower(
+                trim(
+                    $valor,
+                ),
+            );
+
+        if (
+            preg_match(
+                '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/',
+                $identificador,
+            ) !== 1
+        ) {
+            return '';
+        }
+
+        return $identificador;
+    }
+
+    /**
+     * Normaliza o termo utilizado na pesquisa de artistas.
+     *
+     * Sequências vazias são convertidas para nulo e o comprimento máximo é
+     * aplicado antes de o valor ser utilizado na consulta.
+     *
+     * @param  mixed  $valor  Valor recebido na query string.
      * @return string|null Termo normalizado ou nulo.
      *
      * @since 2.0.0
      */
-    private function normalizarPesquisa(
-        mixed $valor,
-    ): ?string {
+    private function normalizarPesquisa(mixed $valor): ?string
+    {
         if (! is_string($valor)) {
             return null;
         }
 
-        $pesquisa =
-            trim(
-                $valor,
-            );
+        $pesquisa = trim($valor);
 
         if ($pesquisa === '') {
             return null;
@@ -865,16 +1118,15 @@ final class ControladorArtista extends Controller
     }
 
     /**
-     * Normaliza um texto utilizado num formulário.
+     * Normaliza um valor textual curto reconstruído no formulário.
      *
-     * @param  mixed  $valor  Valor recebido.
-     * @return string Texto normalizado.
+     * @param  mixed  $valor  Valor recebido do modelo ou da sessão.
+     * @return string Texto normalizado ou sequência vazia.
      *
      * @since 2.0.0
      */
-    private function normalizarTextoFormulario(
-        mixed $valor,
-    ): string {
+    private function normalizarTextoFormulario(mixed $valor): string
+    {
         if (
             ! is_string($valor)
             && ! is_int($valor)
@@ -883,22 +1135,37 @@ final class ControladorArtista extends Controller
             return '';
         }
 
-        return trim(
-            (string) $valor,
-        );
+        return trim((string) $valor);
     }
 
     /**
-     * Normaliza um identificador utilizado num formulário.
+     * Normaliza texto longo sem alterar a respetiva estrutura interior.
      *
-     * @param  mixed  $valor  Valor recebido.
-     * @return string Identificador normalizado.
+     * @param  mixed  $valor  Valor recebido do modelo ou da sessão.
+     * @return string Texto normalizado ou sequência vazia.
      *
      * @since 2.0.0
      */
-    private function normalizarIdentificadorFormulario(
-        mixed $valor,
-    ): string {
+    private function normalizarTextoFormularioSemCompactar(mixed $valor): string
+    {
+        return is_string($valor)
+            ? trim($valor)
+            : '';
+    }
+
+    /**
+     * Normaliza um identificador numérico reconstruído no formulário.
+     *
+     * Valores inválidos ou não positivos são representados por uma sequência
+     * vazia.
+     *
+     * @param  mixed  $valor  Valor recebido do modelo ou da sessão.
+     * @return string Identificador normalizado ou sequência vazia.
+     *
+     * @since 2.0.0
+     */
+    private function normalizarIdentificadorFormulario(mixed $valor): string
+    {
         if (is_int($valor)) {
             return $valor > 0
                 ? (string) $valor
@@ -909,10 +1176,7 @@ final class ControladorArtista extends Controller
             return '';
         }
 
-        $identificador =
-            trim(
-                $valor,
-            );
+        $identificador = trim($valor);
 
         if (
             $identificador === ''
@@ -926,19 +1190,18 @@ final class ControladorArtista extends Controller
     }
 
     /**
-     * Normaliza uma lista de identificadores do formulário.
+     * Normaliza uma lista de identificadores reconstruída no formulário.
      *
-     * Identificadores inválidos são ignorados apenas durante a reconstrução
-     * visual do formulário. Valores repetidos são removidos.
+     * Identificadores inválidos são ignorados e valores repetidos são
+     * removidos, preservando a ordem da primeira ocorrência válida.
      *
-     * @param  mixed  $valores  Valores recebidos.
+     * @param  mixed  $valores  Valores recebidos do modelo ou da sessão.
      * @return list<string> Identificadores normalizados.
      *
      * @since 2.0.0
      */
-    private function normalizarListaIdentificadoresFormulario(
-        mixed $valores,
-    ): array {
+    private function normalizarListaIdentificadoresFormulario(mixed $valores): array
+    {
         if (! is_array($valores)) {
             return [];
         }
@@ -946,21 +1209,59 @@ final class ControladorArtista extends Controller
         $identificadores = [];
 
         foreach ($valores as $valor) {
-            $identificador =
-                $this->normalizarIdentificadorFormulario(
-                    $valor,
-                );
+            $identificador = $this->normalizarIdentificadorFormulario(
+                $valor,
+            );
 
-            if ($identificador === '') {
-                continue;
+            if ($identificador !== '') {
+                $identificadores[$identificador] = $identificador;
             }
-
-            $identificadores[$identificador] =
-                $identificador;
         }
 
         return array_values(
             $identificadores,
         );
+    }
+
+    /**
+     * Normaliza as ligações reconstruídas no formulário.
+     *
+     * É sempre devolvida pelo menos uma linha vazia para que a interface possa
+     * apresentar imediatamente um conjunto de campos editável.
+     *
+     * @param  mixed  $valores  Ligações recebidas do modelo ou da sessão.
+     * @return non-empty-list<array{titulo: string, url: string}> Ligações.
+     *
+     * @since 2.0.0
+     */
+    private function normalizarLigacoesFormulario(mixed $valores): array
+    {
+        $ligacoes = [];
+
+        if (is_array($valores)) {
+            foreach ($valores as $valor) {
+                if (! is_array($valor)) {
+                    continue;
+                }
+
+                $ligacoes[] = [
+                    'titulo' => $this->normalizarTextoFormulario(
+                        $valor['titulo'] ?? '',
+                    ),
+                    'url' => $this->normalizarTextoFormulario(
+                        $valor['url'] ?? '',
+                    ),
+                ];
+            }
+        }
+
+        if ($ligacoes === []) {
+            $ligacoes[] = [
+                'titulo' => '',
+                'url' => '',
+            ];
+        }
+
+        return $ligacoes;
     }
 }

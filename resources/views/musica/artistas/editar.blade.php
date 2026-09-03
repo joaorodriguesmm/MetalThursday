@@ -1,9 +1,6 @@
 {{--
     Apresenta o formulário de edição de um artista.
 
-    Os dados e os valores iniciais do formulário são preparados pelo
-    App\Http\Controllers\Musica\ControladorArtista.
-
     @since 1.0.0
 --}}
 
@@ -35,6 +32,10 @@
     @push('scripts-pagina')
         @vite(
             'resources/js/paginas/entidades.js'
+        )
+
+        @vite(
+            'resources/js/paginas/perfilArtista.js'
         )
     @endpush
 </x-layout-aplicacao>
