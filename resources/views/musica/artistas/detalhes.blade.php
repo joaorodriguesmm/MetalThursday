@@ -111,11 +111,11 @@
                             @endif
                         </dd>
 
-                        <dt class="col-sm-4 text-muted">
+                        <dt class="col-sm-4 col-lg-3">
                             MusicBrainz
                         </dt>
 
-                        <dd class="col-sm-8">
+                        <dd class="col-sm-8 col-lg-9">
                             @if ($artista->url_musicbrainz !== null)
                                 <a
                                     href="{{ $artista->url_musicbrainz }}"

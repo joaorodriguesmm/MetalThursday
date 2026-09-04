@@ -22,7 +22,7 @@
     }}
 >
     <div class="card-body">
-        <h3 class="h5 card-title text-danger">
+        <h3 class="h5 card-title">
             {{ $dados['titulo'] }}
 
             @if ($dados['ano'] !== null)
