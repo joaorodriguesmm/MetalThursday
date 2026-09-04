@@ -8,6 +8,8 @@ use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
+use App\Models\MetalThursday\SeccaoMetalThursday;
+use App\Models\Musica\Artista;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -84,6 +86,69 @@ final class VisibilidadeDetalhesMetalThursdayTest extends TestCase
             ->assertOk()
             ->assertSee(
                 'MetalThursday Publicada',
+            );
+    }
+
+    /**
+     * Confirma que uma MetalThursday publicada continua a apresentar um artista
+     * eliminado logicamente.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function metal_thursday_publicada_apresenta_artista_eliminado_logicamente(): void
+    {
+        $autor = Utilizador::factory()
+            ->create();
+
+        $utilizador = Utilizador::factory()
+            ->create();
+
+        $artista = Artista::factory()
+            ->comNome(
+                'Artista Histórico',
+            )
+            ->create();
+
+        $metalThursday = $this->criarMetalThursday(
+            $autor,
+            '2026-08-20',
+            'MetalThursday Histórica',
+        );
+
+        SeccaoMetalThursday::factory()
+            ->paraMetalThursday(
+                $metalThursday,
+            )
+            ->comDetalhes(
+                $artista,
+            )
+            ->comConteudo(
+                'Descrição histórica.',
+                'Registo Histórico',
+            )
+            ->create();
+
+        $artista->deleteOrFail();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $this
+            ->get(
+                route(
+                    'metal-thursday.detalhes',
+                    $metalThursday,
+                ),
+            )
+            ->assertOk()
+            ->assertSee(
+                'Artista Histórico',
+            )
+            ->assertSee(
+                'Registo Histórico',
             );
     }
 

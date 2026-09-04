@@ -276,6 +276,7 @@ final class ServicoPersistenciaMetalThursday
                 $this->bloquearArtistasUtilizados(
                     $dadosNormalizados['seccoes'],
                     $tiposSeccao,
+                    $seccoesExistentes,
                 );
 
                 $this->reservarOrdensTemporarias(
@@ -989,24 +990,32 @@ final class ServicoPersistenciaMetalThursday
     }
 
     /**
-     * Bloqueia e confirma a existência dos artistas relevantes.
+     * Bloqueia os artistas utilizados pelas secções.
      *
-     * Apenas são considerados artistas de secções cujo tipo exige detalhes. Os
-     * contratos dos restantes campos são verificados antes da persistência.
+     * Na criação apenas artistas ativos são aceites. Durante uma atualização,
+     * uma secção existente pode conservar o próprio artista que tenha sido
+     * entretanto eliminado logicamente.
      *
-     * @param  list<array<string, mixed>>  $seccoes  Secções normalizadas.
-     * @param  ColecaoEloquent<int, TipoSeccao>  $tiposSeccao  Tipos
-     *                                                         carregados.
+     * Um artista eliminado não pode ser associado a uma secção nova nem
+     * transferido para outra secção.
      *
-     * @throws InvalidArgumentException Quando algum artista não existe.
+     * @param  list<array<string, mixed>>  $seccoes  Secções recebidas.
+     * @param  ColecaoEloquent<int, TipoSeccao>  $tiposSeccao  Tipos utilizados.
+     * @param  ColecaoEloquent<int, SeccaoMetalThursday>|null  $seccoesExistentes
+     *                                                                             Secções atuais.
+     *
+     * @throws InvalidArgumentException Quando algum artista não existe ou não está
+     *                                  disponível.
      *
      * @since 2.0.0
      */
     private function bloquearArtistasUtilizados(
         array $seccoes,
         ColecaoEloquent $tiposSeccao,
+        ?ColecaoEloquent $seccoesExistentes = null,
     ): void {
         $identificadores = [];
+        $associacoes = [];
 
         foreach ($seccoes as $seccao) {
             $tipoSeccao = $this->obterTipoSeccaoDaColecao(
@@ -1021,8 +1030,16 @@ final class ServicoPersistenciaMetalThursday
                 continue;
             }
 
-            $identificadores[] =
+            $identificadorArtista =
                 $seccao['artista_id'];
+
+            $identificadores[] =
+                $identificadorArtista;
+
+            $associacoes[] = [
+                'artista_id' => $identificadorArtista,
+                'seccao_id' => $seccao['id'],
+            ];
         }
 
         $identificadores = array_values(
@@ -1031,16 +1048,16 @@ final class ServicoPersistenciaMetalThursday
             ),
         );
 
-        if ($identificadores === []) {
-            return;
-        }
-
         sort(
             $identificadores,
             SORT_NUMERIC,
         );
 
-        $identificadoresExistentes = Artista::query()
+        if ($identificadores === []) {
+            return;
+        }
+
+        $artistas = Artista::withTrashed()
             ->whereKey(
                 $identificadores,
             )
@@ -1048,23 +1065,70 @@ final class ServicoPersistenciaMetalThursday
                 'id',
             )
             ->lockForUpdate()
-            ->pluck(
+            ->get([
                 'id',
-            )
-            ->map(
+                'deleted_at',
+            ])
+            ->keyBy(
                 static fn (
-                    mixed $identificador,
-                ): int => (int) $identificador,
-            )
-            ->all();
-
-        if (
-            $identificadoresExistentes
-            !== $identificadores
-        ) {
-            throw new InvalidArgumentException(
-                'Foi indicado um artista inexistente ou indisponível.',
+                    Artista $artista,
+                ): int => (int) $artista->getKey(),
             );
+
+        foreach ($associacoes as $associacao) {
+            $identificadorArtista =
+                $associacao['artista_id'];
+
+            $artista =
+                $artistas->get(
+                    $identificadorArtista,
+                );
+
+            if (! $artista instanceof Artista) {
+                throw new InvalidArgumentException(
+                    'Foi indicado um artista inexistente ou indisponível.',
+                );
+            }
+
+            if (! $artista->trashed()) {
+                continue;
+            }
+
+            if (! $seccoesExistentes instanceof ColecaoEloquent) {
+                throw new InvalidArgumentException(
+                    'Foi indicado um artista inexistente ou indisponível.',
+                );
+            }
+
+            $identificadorSeccao =
+                $associacao['seccao_id'];
+
+            if (
+                ! is_int($identificadorSeccao)
+                || $identificadorSeccao < 1
+            ) {
+                throw new InvalidArgumentException(
+                    'Foi indicado um artista inexistente ou indisponível.',
+                );
+            }
+
+            $seccaoExistente =
+                $seccoesExistentes->get(
+                    $identificadorSeccao,
+                );
+
+            if (
+                ! $seccaoExistente instanceof SeccaoMetalThursday
+                || ! is_numeric(
+                    $seccaoExistente->artista_id,
+                )
+                || (int) $seccaoExistente->artista_id
+                !== $identificadorArtista
+            ) {
+                throw new InvalidArgumentException(
+                    'Foi indicado um artista inexistente ou indisponível.',
+                );
+            }
         }
     }
 

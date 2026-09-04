@@ -537,6 +537,455 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
     }
 
     /**
+     * Confirma que o serviço permite conservar numa secção existente o artista
+     * que tenha sido entretanto eliminado logicamente.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function atualizacao_preserva_artista_eliminado_logicamente_ja_associado(): void
+    {
+        $utilizador = Utilizador::factory()
+            ->create();
+
+        $edicao =
+            $this->criarEdicao();
+
+        $tipoSeccao = TipoSeccao::factory()
+            ->comDetalhes()
+            ->create();
+
+        $artista = Artista::factory()
+            ->create();
+
+        $servico =
+            $this->servico();
+
+        $metalThursday = $servico->criar([
+            'edicao_id' => (int) $edicao->getKey(),
+
+            'data' => '2026-01-08',
+
+            'nome' => null,
+
+            'autor_id' => (int) $utilizador->getKey(),
+
+            'proximo_nomeado_id' => null,
+
+            'seccoes' => [
+                [
+                    'id' => null,
+
+                    'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
+
+                    'titulo' => 'Álbum histórico',
+
+                    'descricao' => 'Descrição histórica.',
+
+                    'artista_id' => (int) $artista->getKey(),
+
+                    'ligacao' => 'https://example.com/album-historico',
+
+                    'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+
+                    'ano' => 2020,
+                ],
+            ],
+        ]);
+
+        $seccao =
+            $metalThursday->seccoes->first();
+
+        self::assertNotNull(
+            $seccao,
+        );
+
+        $artista->deleteOrFail();
+
+        $servico->atualizar(
+            $metalThursday,
+            [
+                'edicao_id' => (int) $edicao->getKey(),
+
+                'data' => '2026-01-08',
+
+                'nome' => null,
+
+                'autor_id' => (int) $utilizador->getKey(),
+
+                'proximo_nomeado_id' => null,
+
+                'seccoes' => [
+                    [
+                        'id' => (int) $seccao->getKey(),
+
+                        'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
+
+                        'titulo' => 'Álbum histórico atualizado',
+
+                        'descricao' => 'Descrição histórica atualizada.',
+
+                        'artista_id' => (int) $artista->getKey(),
+
+                        'ligacao' => 'https://example.com/album-historico',
+
+                        'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+
+                        'ano' => 2020,
+                    ],
+                ],
+            ],
+        );
+
+        $this->assertDatabaseHas(
+            'seccoes_metal_thursday',
+            [
+                'id' => $seccao->getKey(),
+
+                'artista_id' => $artista->getKey(),
+
+                'titulo' => 'Álbum histórico atualizado',
+
+                'deleted_at' => null,
+            ],
+        );
+    }
+
+    /**
+     * Confirma que o serviço rejeita um artista eliminado logicamente numa nova
+     * secção durante uma atualização.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function atualizacao_rejeita_artista_eliminado_logicamente_em_nova_seccao(): void
+    {
+        $utilizador = Utilizador::factory()
+            ->create();
+
+        $edicao =
+            $this->criarEdicao();
+
+        $tipoSeccao = TipoSeccao::factory()
+            ->comDetalhes()
+            ->create();
+
+        $artistaAtivo = Artista::factory()
+            ->create();
+
+        $artistaEliminado = Artista::factory()
+            ->create();
+
+        $servico =
+            $this->servico();
+
+        $metalThursday = $servico->criar([
+            'edicao_id' => (int) $edicao->getKey(),
+
+            'data' => '2026-01-08',
+
+            'nome' => null,
+
+            'autor_id' => (int) $utilizador->getKey(),
+
+            'proximo_nomeado_id' => null,
+
+            'seccoes' => [
+                [
+                    'id' => null,
+
+                    'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
+
+                    'titulo' => 'Secção existente',
+
+                    'descricao' => 'Descrição existente.',
+
+                    'artista_id' => (int) $artistaAtivo->getKey(),
+
+                    'ligacao' => 'https://example.com/seccao-existente',
+
+                    'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+
+                    'ano' => 2020,
+                ],
+            ],
+        ]);
+
+        $seccaoExistente =
+            $metalThursday->seccoes->first();
+
+        self::assertNotNull(
+            $seccaoExistente,
+        );
+
+        $artistaEliminado->deleteOrFail();
+
+        try {
+            $servico->atualizar(
+                $metalThursday,
+                [
+                    'edicao_id' => (int) $edicao->getKey(),
+
+                    'data' => '2026-01-08',
+
+                    'nome' => null,
+
+                    'autor_id' => (int) $utilizador->getKey(),
+
+                    'proximo_nomeado_id' => null,
+
+                    'seccoes' => [
+                        [
+                            'id' => (int) $seccaoExistente->getKey(),
+
+                            'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
+
+                            'titulo' => 'Secção existente',
+
+                            'descricao' => 'Descrição existente.',
+
+                            'artista_id' => (int) $artistaAtivo->getKey(),
+
+                            'ligacao' => 'https://example.com/seccao-existente',
+
+                            'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+
+                            'ano' => 2020,
+                        ],
+                        [
+                            'id' => null,
+
+                            'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
+
+                            'titulo' => 'Nova secção inválida',
+
+                            'descricao' => 'Descrição da nova secção.',
+
+                            'artista_id' => (int) $artistaEliminado->getKey(),
+
+                            'ligacao' => 'https://example.com/nova-seccao',
+
+                            'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+
+                            'ano' => 2021,
+                        ],
+                    ],
+                ],
+            );
+
+            self::fail(
+                'Era esperada uma exceção para um artista eliminado numa nova secção.',
+            );
+        } catch (InvalidArgumentException $excecao) {
+            self::assertSame(
+                'Foi indicado um artista inexistente ou indisponível.',
+                $excecao->getMessage(),
+            );
+        }
+
+        $this->assertDatabaseHas(
+            'seccoes_metal_thursday',
+            [
+                'id' => $seccaoExistente->getKey(),
+
+                'artista_id' => $artistaAtivo->getKey(),
+
+                'titulo' => 'Secção existente',
+
+                'deleted_at' => null,
+            ],
+        );
+
+        $this->assertDatabaseMissing(
+            'seccoes_metal_thursday',
+            [
+                'metal_thursday_id' => $metalThursday->getKey(),
+
+                'titulo' => 'Nova secção inválida',
+            ],
+        );
+    }
+
+    /**
+     * Confirma que o serviço não permite transferir um artista eliminado
+     * logicamente para outra secção, mesmo quando a associação histórica
+     * original é preservada na mesma atualização.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function atualizacao_rejeita_transferencia_de_artista_eliminado_para_outra_seccao(): void
+    {
+        $utilizador = Utilizador::factory()
+            ->create();
+
+        $edicao =
+            $this->criarEdicao();
+
+        $tipoSeccao = TipoSeccao::factory()
+            ->comDetalhes()
+            ->create();
+
+        $artistaHistorico = Artista::factory()
+            ->create();
+
+        $outroArtista = Artista::factory()
+            ->create();
+
+        $servico =
+            $this->servico();
+
+        $metalThursday = $servico->criar([
+            'edicao_id' => (int) $edicao->getKey(),
+
+            'data' => '2026-01-08',
+
+            'nome' => null,
+
+            'autor_id' => (int) $utilizador->getKey(),
+
+            'proximo_nomeado_id' => null,
+
+            'seccoes' => [
+                [
+                    'id' => null,
+
+                    'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
+
+                    'titulo' => 'Secção histórica',
+
+                    'descricao' => 'Descrição histórica.',
+
+                    'artista_id' => (int) $artistaHistorico->getKey(),
+
+                    'ligacao' => 'https://example.com/historica',
+
+                    'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+
+                    'ano' => 2020,
+                ],
+                [
+                    'id' => null,
+
+                    'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
+
+                    'titulo' => 'Outra secção',
+
+                    'descricao' => 'Outra descrição.',
+
+                    'artista_id' => (int) $outroArtista->getKey(),
+
+                    'ligacao' => 'https://example.com/outra',
+
+                    'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+
+                    'ano' => 2021,
+                ],
+            ],
+        ]);
+
+        $seccoes =
+            $metalThursday->seccoes->values();
+
+        $seccaoHistorica =
+            $seccoes->get(0);
+
+        $outraSeccao =
+            $seccoes->get(1);
+
+        self::assertNotNull(
+            $seccaoHistorica,
+        );
+
+        self::assertNotNull(
+            $outraSeccao,
+        );
+
+        $artistaHistorico->deleteOrFail();
+
+        try {
+            $servico->atualizar(
+                $metalThursday,
+                [
+                    'edicao_id' => (int) $edicao->getKey(),
+
+                    'data' => '2026-01-08',
+
+                    'nome' => null,
+
+                    'autor_id' => (int) $utilizador->getKey(),
+
+                    'proximo_nomeado_id' => null,
+
+                    'seccoes' => [
+                        [
+                            'id' => (int) $seccaoHistorica->getKey(),
+
+                            'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
+
+                            'titulo' => 'Secção histórica',
+
+                            'descricao' => 'Descrição histórica.',
+
+                            'artista_id' => (int) $artistaHistorico->getKey(),
+
+                            'ligacao' => 'https://example.com/historica',
+
+                            'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+
+                            'ano' => 2020,
+                        ],
+                        [
+                            'id' => (int) $outraSeccao->getKey(),
+
+                            'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
+
+                            'titulo' => 'Outra secção',
+
+                            'descricao' => 'Outra descrição.',
+
+                            'artista_id' => (int) $artistaHistorico->getKey(),
+
+                            'ligacao' => 'https://example.com/outra',
+
+                            'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+
+                            'ano' => 2021,
+                        ],
+                    ],
+                ],
+            );
+
+            self::fail(
+                'Era esperada uma exceção ao transferir um artista eliminado para outra secção.',
+            );
+        } catch (InvalidArgumentException $excecao) {
+            self::assertSame(
+                'Foi indicado um artista inexistente ou indisponível.',
+                $excecao->getMessage(),
+            );
+        }
+
+        $this->assertDatabaseHas(
+            'seccoes_metal_thursday',
+            [
+                'id' => $seccaoHistorica->getKey(),
+
+                'artista_id' => $artistaHistorico->getKey(),
+            ],
+        );
+
+        $this->assertDatabaseHas(
+            'seccoes_metal_thursday',
+            [
+                'id' => $outraSeccao->getKey(),
+
+                'artista_id' => $outroArtista->getKey(),
+            ],
+        );
+    }
+
+    /**
      * Confirma que a atualização permite trocar a ordem de secções sem violar
      * a restrição única das posições ativas.
      *

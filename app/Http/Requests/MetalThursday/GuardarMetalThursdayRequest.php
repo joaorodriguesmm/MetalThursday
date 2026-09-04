@@ -334,12 +334,7 @@ final class GuardarMetalThursdayRequest extends FormRequest
                 'bail',
                 'nullable',
                 'integer',
-                Rule::exists(
-                    Artista::class,
-                    'id',
-                )->whereNull(
-                    'deleted_at',
-                ),
+                $this->criarRegraArtistaSecao(),
             ],
             'seccoes.*.ligacao' => [
                 'bail',
@@ -1248,6 +1243,132 @@ final class GuardarMetalThursdayRequest extends FormRequest
                 $dataReservaSeguinte->toDateString(),
             )
             ->exists();
+    }
+
+    /**
+     * Cria a regra que valida o artista associado a uma secção.
+     *
+     * Artistas ativos podem ser utilizados normalmente. Durante a atualização,
+     * uma secção existente pode ainda conservar o próprio artista que tenha sido
+     * entretanto eliminado logicamente.
+     *
+     * Um artista eliminado não pode ser associado a uma secção nova nem
+     * transferido para outra secção.
+     *
+     * @return Closure(string, mixed, Closure(string): void): void Regra.
+     *
+     * @since 2.0.0
+     */
+    private function criarRegraArtistaSecao(): Closure
+    {
+        return function (
+            string $atributo,
+            mixed $valor,
+            Closure $falhar,
+        ): void {
+            if (
+                ! is_int($valor)
+                || $valor < 1
+            ) {
+                return;
+            }
+
+            if (
+                Artista::query()
+                    ->whereKey(
+                        $valor,
+                    )
+                    ->exists()
+            ) {
+                return;
+            }
+
+            $metalThursday =
+                $this->obterMetalThursdayDaRota();
+
+            if (! $metalThursday instanceof MetalThursday) {
+                $falhar(
+                    'O artista selecionado não existe ou não está disponível.',
+                );
+
+                return;
+            }
+
+            if (
+                preg_match(
+                    '/^seccoes\.(\d+)\.artista_id$/D',
+                    $atributo,
+                    $correspondencias,
+                ) !== 1
+            ) {
+                $falhar(
+                    'O artista selecionado não existe ou não está disponível.',
+                );
+
+                return;
+            }
+
+            $indice =
+                (int) $correspondencias[1];
+
+            $identificadorSeccao =
+                $this->input(
+                    "seccoes.{$indice}.id",
+                );
+
+            if (
+                ! is_int($identificadorSeccao)
+                || $identificadorSeccao < 1
+            ) {
+                $falhar(
+                    'O artista selecionado não existe ou não está disponível.',
+                );
+
+                return;
+            }
+
+            $artistaEliminadoExiste = Artista::withTrashed()
+                ->whereKey(
+                    $valor,
+                )
+                ->whereNotNull(
+                    'deleted_at',
+                )
+                ->exists();
+
+            if (! $artistaEliminadoExiste) {
+                $falhar(
+                    'O artista selecionado não existe ou não está disponível.',
+                );
+
+                return;
+            }
+
+            $artistaJaPertenceASecao = SeccaoMetalThursday::query()
+                ->whereKey(
+                    $identificadorSeccao,
+                )
+                ->where(
+                    'metal_thursday_id',
+                    $metalThursday->getKey(),
+                )
+                ->where(
+                    'artista_id',
+                    $valor,
+                )
+                ->whereNull(
+                    'deleted_at',
+                )
+                ->exists();
+
+            if ($artistaJaPertenceASecao) {
+                return;
+            }
+
+            $falhar(
+                'O artista selecionado não existe ou não está disponível.',
+            );
+        };
     }
 
     /**

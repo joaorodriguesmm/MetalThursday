@@ -8,6 +8,7 @@ use App\Enumeracoes\TipoIncorporacao;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
+use App\Models\Musica\Artista;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -191,6 +192,51 @@ final class SeccaoMetalThursdayTest extends TestCase
 
             'tipo_incorporacao' => null,
         ]);
+    }
+
+    /**
+     * Confirma que uma secção preserva o artista eliminado logicamente.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function preserva_artista_eliminado_logicamente_na_relacao(): void
+    {
+        $artista = Artista::factory()
+            ->create();
+
+        $seccao = SeccaoMetalThursday::factory()
+            ->comDetalhes(
+                $artista,
+            )
+            ->create();
+
+        $identificadorArtista = (int) $artista->getKey();
+
+        $artista->deleteOrFail();
+
+        $seccao->refresh();
+
+        self::assertSame(
+            $identificadorArtista,
+            $seccao->artista_id,
+        );
+
+        $artistaHistorico = $seccao->artista;
+
+        self::assertInstanceOf(
+            Artista::class,
+            $artistaHistorico,
+        );
+
+        self::assertSame(
+            $identificadorArtista,
+            (int) $artistaHistorico->getKey(),
+        );
+
+        self::assertTrue(
+            $artistaHistorico->trashed(),
+        );
     }
 
     /**

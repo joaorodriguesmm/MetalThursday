@@ -200,7 +200,6 @@ final class TabelaVistaSimplificada extends Component
                     $artista,
                     'origemGeografica',
                     OrigemGeografica::class,
-                    true,
                 );
 
             $generos =
@@ -267,7 +266,7 @@ final class TabelaVistaSimplificada extends Component
             'nomeOrigemGeografica' => $this->normalizarTexto(
                 $origemGeografica?->nome,
             )
-                ?? 'Origem geográfica indisponível',
+                ?? 'Origem não indicada',
 
             'titulo' => $this->normalizarTexto(
                 $seccao->titulo,

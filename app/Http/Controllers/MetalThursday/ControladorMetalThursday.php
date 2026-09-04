@@ -1166,7 +1166,9 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                 )
                 ->get(),
 
-            'artistas' => $this->obterArtistasParaSelecao(),
+            'artistas' => $this->obterArtistasParaSelecao(
+                $metalThursday,
+            ),
 
             'origensGeograficas' => OrigemGeografica::query()
                 ->select([
@@ -1377,17 +1379,83 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
     /**
      * Obtém os artistas disponíveis para seleção.
      *
+     * Durante a edição, os artistas já associados às secções permanecem
+     * disponíveis mesmo que tenham sido entretanto eliminados logicamente. Os
+     * restantes artistas eliminados continuam excluídos.
+     *
      * A origem geográfica, o ano de início e os géneros são carregados
      * antecipadamente porque integram o rótulo contextual apresentado nas
      * opções.
      *
+     * @param  MetalThursday|null  $metalThursday  Registo atualmente editado.
      * @return Collection<int, Artista> Artistas.
+     *
+     * @throws LogicException Quando as secções esperadas não estão carregadas ou
+     *                        possuem um tipo inesperado.
      *
      * @since 2.0.0
      */
-    private function obterArtistasParaSelecao(): Collection
-    {
-        return Artista::query()
+    private function obterArtistasParaSelecao(
+        ?MetalThursday $metalThursday = null,
+    ): Collection {
+        $identificadoresArtistasAtuais = [];
+
+        if ($metalThursday instanceof MetalThursday) {
+            if (! $metalThursday->relationLoaded('seccoes')) {
+                throw new LogicException(
+                    'A relação "seccoes" deve estar carregada para preparar os artistas da edição.',
+                );
+            }
+
+            foreach ($metalThursday->getRelation('seccoes') as $seccao) {
+                if (! $seccao instanceof SeccaoMetalThursday) {
+                    throw new LogicException(
+                        'A relação "seccoes" contém um modelo inesperado.',
+                    );
+                }
+
+                if (
+                    is_numeric(
+                        $seccao->artista_id,
+                    )
+                    && (int) $seccao->artista_id > 0
+                ) {
+                    $identificadoresArtistasAtuais[] =
+                        (int) $seccao->artista_id;
+                }
+            }
+
+            $identificadoresArtistasAtuais = array_values(
+                array_unique(
+                    $identificadoresArtistasAtuais,
+                ),
+            );
+        }
+
+        $construtor = Artista::query();
+
+        if ($identificadoresArtistasAtuais !== []) {
+            $construtor
+                ->withTrashed()
+                ->where(
+                    static function (
+                        Builder $construtorArtistas,
+                    ) use (
+                        $identificadoresArtistasAtuais,
+                    ): void {
+                        $construtorArtistas
+                            ->whereNull(
+                                'artistas.deleted_at',
+                            )
+                            ->orWhereIn(
+                                'artistas.id',
+                                $identificadoresArtistasAtuais,
+                            );
+                    },
+                );
+        }
+
+        return $construtor
             ->select([
                 'id',
                 'nome',

@@ -1592,6 +1592,90 @@ final class ControladorArtistaTest extends TestCase
     }
 
     /**
+     * Confirma que a eliminação lógica preserva as relações de perfil do artista.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function criador_elimina_artista_preservando_relacoes_de_perfil(): void
+    {
+        $criador = $this->criarUtilizador();
+
+        $origemGeografica = $this->criarOrigemGeografica(
+            'Noruega',
+            'NO',
+        );
+
+        $genero = $this->criarGenero(
+            'Black Metal',
+        );
+
+        $artista = $this->criarArtista(
+            $criador,
+            $origemGeografica,
+            'Mayhem',
+        );
+
+        $artista
+            ->generos()
+            ->attach(
+                $genero->getKey(),
+            );
+
+        $ligacao = $artista
+            ->ligacoes()
+            ->create([
+                'titulo' => 'Site oficial',
+
+                'url' => 'https://example.com/mayhem',
+
+                'ordem' => 1,
+            ]);
+
+        $this
+            ->actingAs(
+                $criador,
+                'sessao',
+            )
+            ->deleteJson(
+                route(
+                    'artistas.eliminar',
+                    $artista,
+                ),
+            )
+            ->assertNoContent();
+
+        $this->assertSoftDeleted(
+            'artistas',
+            [
+                'id' => $artista->getKey(),
+            ],
+        );
+
+        $this->assertDatabaseHas(
+            'artista_genero',
+            [
+                'artista_id' => $artista->getKey(),
+
+                'genero_id' => $genero->getKey(),
+            ],
+        );
+
+        $this->assertDatabaseHas(
+            'ligacoes',
+            [
+                'id' => $ligacao->getKey(),
+
+                'ligavel_id' => $artista->getKey(),
+
+                'titulo' => 'Site oficial',
+
+                'url' => 'https://example.com/mayhem',
+            ],
+        );
+    }
+
+    /**
      * Confirma que um artista eliminado logicamente não exige confirmação para
      * reutilizar o mesmo nome numa nova criação.
      *
@@ -2091,6 +2175,95 @@ final class ControladorArtistaTest extends TestCase
                 $resposta->getContent(),
             );
         }
+    }
+
+    /**
+     * Confirma que a listagem não apresenta artistas eliminados logicamente.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function listagem_nao_apresenta_artista_eliminado_logicamente(): void
+    {
+        $utilizador = $this->criarUtilizador();
+
+        $origemGeografica = $this->criarOrigemGeografica(
+            'Portugal',
+            'PT',
+        );
+
+        $artistaAtivo = $this->criarArtista(
+            $utilizador,
+            $origemGeografica,
+            'Artista Ativo na Listagem',
+        );
+
+        $artistaEliminado = $this->criarArtista(
+            $utilizador,
+            $origemGeografica,
+            'Artista Eliminado da Listagem',
+        );
+
+        $artistaEliminado->deleteOrFail();
+
+        $this
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
+            ->get(
+                route(
+                    'artistas.indice',
+                ),
+            )
+            ->assertOk()
+            ->assertSee(
+                $artistaAtivo->nome,
+            )
+            ->assertDontSee(
+                $artistaEliminado->nome,
+            );
+    }
+
+    /**
+     * Confirma que um artista eliminado logicamente deixa de estar acessível
+     * através da página normal de detalhes.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function detalhes_nao_apresentam_artista_eliminado_logicamente(): void
+    {
+        $utilizador = $this->criarUtilizador();
+
+        $origemGeografica = $this->criarOrigemGeografica(
+            'Portugal',
+            'PT',
+        );
+
+        $artista = $this->criarArtista(
+            $utilizador,
+            $origemGeografica,
+            'Artista Eliminado dos Detalhes',
+        );
+
+        $identificadorArtista =
+            $artista->getKey();
+
+        $artista->deleteOrFail();
+
+        $this
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
+            ->get(
+                route(
+                    'artistas.detalhes',
+                    $identificadorArtista,
+                ),
+            )
+            ->assertNotFound();
     }
 
     /**
