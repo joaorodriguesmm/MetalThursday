@@ -174,6 +174,405 @@ final class VisibilidadeHistoricoArtistaTest extends TestCase
     }
 
     /**
+     * Confirma que o endpoint contextual apresenta apenas aparições publicadas e
+     * exclui explicitamente a MetalThursday atualmente editada.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function endpoint_contextual_exclui_metal_thursday_atual(): void
+    {
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $artista =
+            Artista::factory()
+                ->create();
+
+        $edicao =
+            Edicao::factory()
+                ->comPeriodo(
+                    CarbonImmutable::parse(
+                        '2026-08-01',
+                    ),
+                    CarbonImmutable::parse(
+                        '2026-09-30',
+                    ),
+                )
+                ->create();
+
+        $publicadaAnterior =
+            $this->criarMetalThursday(
+                $edicao,
+                $utilizador,
+                '2026-08-20',
+            );
+
+        $publicadaAtual =
+            $this->criarMetalThursday(
+                $edicao,
+                $utilizador,
+                '2026-08-27',
+            );
+
+        $preparadaFutura =
+            $this->criarMetalThursday(
+                $edicao,
+                $utilizador,
+                '2026-09-03',
+            );
+
+        $tipoSeccao =
+            TipoSeccao::factory()
+                ->comDetalhes()
+                ->create();
+
+        $seccaoAnterior =
+            $this->criarSeccao(
+                $publicadaAnterior,
+                $tipoSeccao,
+                $artista,
+                'Aparição anterior',
+            );
+
+        $seccaoAtual =
+            $this->criarSeccao(
+                $publicadaAtual,
+                $tipoSeccao,
+                $artista,
+                'Aparição atual excluída',
+            );
+
+        $seccaoFutura =
+            $this->criarSeccao(
+                $preparadaFutura,
+                $tipoSeccao,
+                $artista,
+                'Aparição futura privada',
+            );
+
+        $resposta =
+            $this->getJson(
+                route(
+                    'artistas.aparicoes-metal-thursday',
+                    [
+                        'identificadorArtista' => $artista->getKey(),
+
+                        'metal_thursday_excluida' => $publicadaAtual->getKey(),
+                    ],
+                ),
+            );
+
+        $resposta
+            ->assertOk()
+            ->assertJsonCount(
+                1,
+                'aparicoes',
+            )
+            ->assertJsonPath(
+                'aparicoes.0.identificador',
+                (int) $seccaoAnterior->getKey(),
+            )
+            ->assertJsonPath(
+                'aparicoes.0.tipo',
+                $tipoSeccao->nome,
+            )
+            ->assertJsonPath(
+                'aparicoes.0.titulo',
+                'Aparição anterior',
+            )
+            ->assertJsonPath(
+                'aparicoes.0.ano',
+                $seccaoAnterior->ano,
+            )
+            ->assertJsonPath(
+                'aparicoes.0.autor',
+                $utilizador->nome,
+            )
+            ->assertJsonPath(
+                'aparicoes.0.data',
+                '2026-08-20',
+            )
+            ->assertJsonPath(
+                'aparicoes.0.endereco_metal_thursday',
+                route(
+                    'metal-thursday.detalhes',
+                    $publicadaAnterior,
+                ),
+            )
+            ->assertJsonMissing([
+                'identificador' => (int) $seccaoAtual->getKey(),
+            ])
+            ->assertJsonMissing([
+                'identificador' => (int) $seccaoFutura->getKey(),
+            ]);
+    }
+
+    /**
+     * Confirma que um artista sem aparições publicadas devolve uma lista vazia.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function endpoint_contextual_devolve_lista_vazia_sem_historico(): void
+    {
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $artista =
+            Artista::factory()
+                ->create();
+
+        $this
+            ->getJson(
+                route(
+                    'artistas.aparicoes-metal-thursday',
+                    [
+                        'identificadorArtista' => $artista->getKey(),
+                    ],
+                ),
+            )
+            ->assertOk()
+            ->assertExactJson([
+                'aparicoes' => [],
+            ]);
+    }
+
+    /**
+     * Confirma que o endpoint contextual rejeita um identificador de exclusão
+     * inválido.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function endpoint_contextual_rejeita_identificador_exclusao_invalido(): void
+    {
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $artista =
+            Artista::factory()
+                ->create();
+
+        $this
+            ->getJson(
+                route(
+                    'artistas.aparicoes-metal-thursday',
+                    [
+                        'identificadorArtista' => $artista->getKey(),
+
+                        'metal_thursday_excluida' => 'invalida',
+                    ],
+                ),
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'metal_thursday_excluida',
+            ]);
+    }
+
+    /**
+     * Confirma que o contexto de edição continua a disponibilizar o histórico
+     * de um artista eliminado que já pertence à MetalThursday editada.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function endpoint_contextual_permite_artista_eliminado_ja_associado(): void
+    {
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $artista =
+            Artista::factory()
+                ->create();
+
+        $edicao =
+            Edicao::factory()
+                ->comPeriodo(
+                    CarbonImmutable::parse(
+                        '2026-08-01',
+                    ),
+                    CarbonImmutable::parse(
+                        '2026-09-30',
+                    ),
+                )
+                ->create();
+
+        $publicadaAnterior =
+            $this->criarMetalThursday(
+                $edicao,
+                $utilizador,
+                '2026-08-20',
+            );
+
+        $metalThursdayEditada =
+            $this->criarMetalThursday(
+                $edicao,
+                $utilizador,
+                '2026-09-03',
+            );
+
+        $tipoSeccao =
+            TipoSeccao::factory()
+                ->comDetalhes()
+                ->create();
+
+        $seccaoAnterior =
+            $this->criarSeccao(
+                $publicadaAnterior,
+                $tipoSeccao,
+                $artista,
+                'Aparição histórica preservada',
+            );
+
+        $this->criarSeccao(
+            $metalThursdayEditada,
+            $tipoSeccao,
+            $artista,
+            'Aparição atualmente editada',
+        );
+
+        $artista->deleteOrFail();
+
+        $this
+            ->getJson(
+                route(
+                    'artistas.aparicoes-metal-thursday',
+                    [
+                        'identificadorArtista' => $artista->getKey(),
+
+                        'metal_thursday_excluida' => $metalThursdayEditada->getKey(),
+                    ],
+                ),
+            )
+            ->assertOk()
+            ->assertJsonCount(
+                1,
+                'aparicoes',
+            )
+            ->assertJsonPath(
+                'aparicoes.0.identificador',
+                (int) $seccaoAnterior->getKey(),
+            )
+            ->assertJsonPath(
+                'aparicoes.0.titulo',
+                'Aparição histórica preservada',
+            );
+    }
+
+    /**
+     * Confirma que uma MetalThursday diferente não pode ser usada para
+     * consultar o contexto histórico de um artista eliminado.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function endpoint_contextual_rejeita_artista_eliminado_nao_associado(): void
+    {
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $artista =
+            Artista::factory()
+                ->create();
+
+        $outroArtista =
+            Artista::factory()
+                ->create();
+
+        $edicao =
+            Edicao::factory()
+                ->comPeriodo(
+                    CarbonImmutable::parse(
+                        '2026-08-01',
+                    ),
+                    CarbonImmutable::parse(
+                        '2026-09-30',
+                    ),
+                )
+                ->create();
+
+        $publicadaAnterior =
+            $this->criarMetalThursday(
+                $edicao,
+                $utilizador,
+                '2026-08-20',
+            );
+
+        $metalThursdayDiferente =
+            $this->criarMetalThursday(
+                $edicao,
+                $utilizador,
+                '2026-09-03',
+            );
+
+        $tipoSeccao =
+            TipoSeccao::factory()
+                ->comDetalhes()
+                ->create();
+
+        $this->criarSeccao(
+            $publicadaAnterior,
+            $tipoSeccao,
+            $artista,
+            'Histórico do artista eliminado',
+        );
+
+        $this->criarSeccao(
+            $metalThursdayDiferente,
+            $tipoSeccao,
+            $outroArtista,
+            'Secção de outro artista',
+        );
+
+        $artista->deleteOrFail();
+
+        $this
+            ->getJson(
+                route(
+                    'artistas.aparicoes-metal-thursday',
+                    [
+                        'identificadorArtista' => $artista->getKey(),
+
+                        'metal_thursday_excluida' => $metalThursdayDiferente->getKey(),
+                    ],
+                ),
+            )
+            ->assertNotFound();
+    }
+
+    /**
      * Cria uma MetalThursday numa data determinada.
      *
      * @param  Edicao  $edicao  Edição associada.
@@ -224,11 +623,11 @@ final class VisibilidadeHistoricoArtistaTest extends TestCase
             ->paraMetalThursday(
                 $metalThursday,
             )
-            ->doTipo(
-                $tipoSeccao,
-            )
             ->comDetalhes(
                 $artista,
+            )
+            ->doTipo(
+                $tipoSeccao,
             )
             ->comConteudo(
                 'Descrição de teste.',

@@ -1,3 +1,5 @@
+import HistoricoArtistaMetalThursday
+    from '../modulos/HistoricoArtistaMetalThursday';
 import inicializarFormularioMetalThursday
     from '../modulos/InicializadorFormularioMetalThursday';
 
@@ -9,8 +11,26 @@ import inicializarFormularioMetalThursday
  * @since 1.0.0
  */
 function iniciarPaginaEdicaoMetalThursday() {
+    const identificadorFormulario =
+        'formulario-editar-metal-thursday';
+
     inicializarFormularioMetalThursday(
-        'formulario-editar-metal-thursday',
+        identificadorFormulario,
+    );
+
+    const formulario =
+        document.getElementById(
+            identificadorFormulario,
+        );
+
+    if (!(formulario instanceof HTMLFormElement)) {
+        throw new TypeError(
+            'Não foi encontrado o formulário de edição da MetalThursday.',
+        );
+    }
+
+    new HistoricoArtistaMetalThursday(
+        formulario,
     );
 }
 

@@ -20,6 +20,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use LogicException;
 use Symfony\Component\HttpFoundation\Response;
@@ -302,46 +303,9 @@ final class ControladorArtista extends Controller
             'ligacoes:id,tipo_ligavel,ligavel_id,titulo,url,ordem',
         ]);
 
-        $modeloSeccao = new SeccaoMetalThursday;
-        $modeloMetalThursday = new MetalThursday;
-        $tabelaSeccoes = $modeloSeccao->getTable();
-        $tabelaMetalThursdays = $modeloMetalThursday->getTable();
-        $aliasOrdenacao = 'metal_thursdays_ordenacao';
-
-        $seccoes = SeccaoMetalThursday::query()
-            ->select([
-                $tabelaSeccoes.'.id',
-                $tabelaSeccoes.'.metal_thursday_id',
-                $tabelaSeccoes.'.tipo_seccao_id',
-                $tabelaSeccoes.'.titulo',
-                $tabelaSeccoes.'.descricao',
-                $tabelaSeccoes.'.ligacao',
-                $tabelaSeccoes.'.ano',
-            ])
-            ->join(
-                $tabelaMetalThursdays.' as '.$aliasOrdenacao,
-                $aliasOrdenacao.'.id',
-                '=',
-                $tabelaSeccoes.'.metal_thursday_id',
-            )
-            ->where(
-                $tabelaSeccoes.'.artista_id',
-                $artista->getKey(),
-            )
-            ->whereHas(
-                'metalThursday',
-                static fn (Builder $construtor): Builder => $construtor->publicadas(),
-            )
-            ->with([
-                'metalThursday:id,autor_id,data,deleted_at',
-                'metalThursday.autor:id,nome',
-                'tipoSeccao:id,nome',
-            ])
-            ->orderByDesc(
-                $aliasOrdenacao.'.data',
-            )
-            ->orderByDesc(
-                $tabelaSeccoes.'.id',
+        $seccoes = $this
+            ->criarConsultaAparicoesPublicadas(
+                $artista,
             )
             ->paginate(
                 self::REGISTOS_POR_PAGINA,
@@ -358,6 +322,154 @@ final class ControladorArtista extends Controller
                 ),
             ],
         );
+    }
+
+    /**
+     * Lista as aparições publicadas de um artista para apresentação contextual.
+     *
+     * Uma MetalThursday pode ser excluída, permitindo que o formulário de edição
+     * apresente apenas aparições anteriores e não a própria publicação editada.
+     *
+     * Um artista eliminado logicamente apenas pode ser consultado neste contexto
+     * quando já se encontra associado à MetalThursday que está a ser editada.
+     *
+     * @param  Request  $pedido  Pedido HTTP atual.
+     * @param  string  $identificadorArtista  Identificador do artista consultado.
+     * @return JsonResponse Resposta com as aparições publicadas.
+     *
+     * @since 2.0.0
+     */
+    public function listarAparicoesMetalThursday(
+        Request $pedido,
+        string $identificadorArtista,
+    ): JsonResponse {
+        $dados = $pedido->validate([
+            'metal_thursday_excluida' => [
+                'nullable',
+                'integer',
+                'min:1',
+                Rule::exists(
+                    MetalThursday::class,
+                    'id',
+                )->whereNull(
+                    'deleted_at',
+                ),
+            ],
+        ]);
+
+        $identificadorMetalThursdayExcluida =
+            array_key_exists(
+                'metal_thursday_excluida',
+                $dados,
+            )
+            ? (int) $dados['metal_thursday_excluida']
+            : null;
+
+        $metalThursdayExcluida =
+            $identificadorMetalThursdayExcluida !== null
+            ? MetalThursday::query()
+                ->findOrFail(
+                    $identificadorMetalThursdayExcluida,
+                )
+            : null;
+
+        $artista = Artista::withTrashed()
+            ->findOrFail(
+                $identificadorArtista,
+            );
+
+        if ($artista->trashed()) {
+            if (! $metalThursdayExcluida instanceof MetalThursday) {
+                abort(
+                    Response::HTTP_NOT_FOUND,
+                );
+            }
+
+            $this->authorize(
+                'update',
+                $metalThursdayExcluida,
+            );
+
+            $artistaPertenceAMetalThursday =
+                SeccaoMetalThursday::query()
+                    ->where(
+                        'metal_thursday_id',
+                        $metalThursdayExcluida->getKey(),
+                    )
+                    ->where(
+                        'artista_id',
+                        $artista->getKey(),
+                    )
+                    ->exists();
+
+            if (! $artistaPertenceAMetalThursday) {
+                abort(
+                    Response::HTTP_NOT_FOUND,
+                );
+            }
+        }
+
+        $this->authorize(
+            'view',
+            $artista,
+        );
+
+        $aparicoes = $this
+            ->criarConsultaAparicoesPublicadas(
+                $artista,
+                $metalThursdayExcluida,
+            )
+            ->get()
+            ->map(
+                static function (
+                    SeccaoMetalThursday $seccao,
+                ): array {
+                    $metalThursday =
+                        $seccao->metalThursday;
+
+                    $tipoSeccao =
+                        $seccao->tipoSeccao;
+
+                    if (
+                        ! $metalThursday instanceof MetalThursday
+                        || $tipoSeccao === null
+                    ) {
+                        throw new LogicException(
+                            'Uma aparição do artista possui relações inválidas.',
+                        );
+                    }
+
+                    return [
+                        'identificador' => (int) $seccao->getKey(),
+
+                        'tipo' => $tipoSeccao->nome,
+
+                        'titulo' => $seccao->titulo,
+
+                        'ano' => $seccao->ano,
+
+                        'autor' => $metalThursday->autor?->nome
+                            ?? 'Utilizador removido',
+
+                        'data' => $metalThursday->data->format(
+                            'Y-m-d',
+                        ),
+
+                        'endereco_metal_thursday' => route(
+                            'metal-thursday.detalhes',
+                            $metalThursday,
+                        ),
+
+                        'ligacao' => $seccao->ligacao,
+                    ];
+                },
+            )
+            ->values()
+            ->all();
+
+        return response()->json([
+            'aparicoes' => $aparicoes,
+        ]);
     }
 
     /**
@@ -537,6 +649,88 @@ final class ControladorArtista extends Controller
             'sucesso',
             'Artista eliminado com sucesso.',
         );
+    }
+
+    /**
+     * Constrói a consulta das aparições publicadas de um artista.
+     *
+     * A consulta exclui MetalThursdays ainda preparadas para datas futuras e
+     * mantém uma ordenação determinística da aparição mais recente para a mais
+     * antiga.
+     *
+     * Opcionalmente, uma MetalThursday pode ser excluída da consulta. Esta
+     * possibilidade será utilizada pelo contexto histórico do formulário de
+     * edição para não apresentar a própria publicação como aparição anterior.
+     *
+     * @param  Artista  $artista  Artista consultado.
+     * @param  MetalThursday|null  $metalThursdayExcluida  Publicação excluída.
+     * @return Builder<SeccaoMetalThursday> Consulta preparada.
+     *
+     * @since 2.0.0
+     */
+    private function criarConsultaAparicoesPublicadas(
+        Artista $artista,
+        ?MetalThursday $metalThursdayExcluida = null,
+    ): Builder {
+        $modeloSeccao = new SeccaoMetalThursday;
+        $modeloMetalThursday = new MetalThursday;
+
+        $tabelaSeccoes =
+            $modeloSeccao->getTable();
+
+        $tabelaMetalThursdays =
+            $modeloMetalThursday->getTable();
+
+        $aliasOrdenacao =
+            'metal_thursdays_ordenacao';
+
+        return SeccaoMetalThursday::query()
+            ->select([
+                $tabelaSeccoes.'.id',
+                $tabelaSeccoes.'.metal_thursday_id',
+                $tabelaSeccoes.'.tipo_seccao_id',
+                $tabelaSeccoes.'.titulo',
+                $tabelaSeccoes.'.descricao',
+                $tabelaSeccoes.'.ligacao',
+                $tabelaSeccoes.'.ano',
+            ])
+            ->join(
+                $tabelaMetalThursdays.' as '.$aliasOrdenacao,
+                $aliasOrdenacao.'.id',
+                '=',
+                $tabelaSeccoes.'.metal_thursday_id',
+            )
+            ->where(
+                $tabelaSeccoes.'.artista_id',
+                $artista->getKey(),
+            )
+            ->whereHas(
+                'metalThursday',
+                static fn (
+                    Builder $construtor,
+                ): Builder => $construtor->publicadas(),
+            )
+            ->when(
+                $metalThursdayExcluida instanceof MetalThursday,
+                static fn (
+                    Builder $construtor,
+                ): Builder => $construtor->where(
+                    $tabelaSeccoes.'.metal_thursday_id',
+                    '!=',
+                    $metalThursdayExcluida->getKey(),
+                ),
+            )
+            ->with([
+                'metalThursday:id,autor_id,data,deleted_at',
+                'metalThursday.autor:id,nome',
+                'tipoSeccao:id,nome',
+            ])
+            ->orderByDesc(
+                $aliasOrdenacao.'.data',
+            )
+            ->orderByDesc(
+                $tabelaSeccoes.'.id',
+            );
     }
 
     /**

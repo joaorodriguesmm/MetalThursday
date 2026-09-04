@@ -207,6 +207,25 @@
                     {{ $message }}
                 @enderror
             </div>
+
+            <div
+                class="historico-artista-metal-thursday mt-3"
+                hidden
+            >
+                <div class="small fw-semibold mb-2">
+                    Aparições anteriores em MetalThursdays
+                </div>
+
+                <div
+                    class="estado-historico-artista-metal-thursday small text-muted"
+                    aria-live="polite"
+                    aria-atomic="true"
+                ></div>
+
+                <div
+                    class="lista-historico-artista-metal-thursday"
+                ></div>
+            </div>
         </div>
 
         <div

@@ -49,6 +49,15 @@
                             'metal-thursday.guardar',
                         )
                 }}"
+                data-endereco-historico-artista="{{
+                    route(
+                        'artistas.aparicoes-metal-thursday',
+                        [
+                            'identificadorArtista' =>
+                                '__IDENTIFICADOR_ARTISTA__',
+                        ],
+                    )
+                }}"
                 autocomplete="off"
                 novalidate
             >

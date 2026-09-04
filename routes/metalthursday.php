@@ -202,6 +202,17 @@ Route::middleware([
                     );
 
                     Route::get(
+                        '{identificadorArtista}/aparicoes-metal-thursday',
+                        'listarAparicoesMetalThursday',
+                    )
+                        ->whereNumber(
+                            'identificadorArtista',
+                        )
+                        ->name(
+                            'aparicoes-metal-thursday',
+                        );
+
+                    Route::get(
                         '{artista}',
                         'detalhes',
                     )

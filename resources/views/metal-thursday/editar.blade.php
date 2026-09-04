@@ -40,6 +40,16 @@
                         $metalThursday,
                     )
                 }}"
+                data-endereco-historico-artista="{{
+                    route(
+                        'artistas.aparicoes-metal-thursday',
+                        [
+                            'identificadorArtista' =>
+                                '__IDENTIFICADOR_ARTISTA__',
+                        ],
+                    )
+                }}"
+                data-metal-thursday-id="{{ $metalThursday->getKey() }}"
                 autocomplete="off"
                 novalidate
             >
