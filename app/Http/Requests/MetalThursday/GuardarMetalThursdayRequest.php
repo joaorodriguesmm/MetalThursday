@@ -13,6 +13,7 @@ use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
 use App\Models\Musica\Artista;
+use App\Models\Musica\Lancamento;
 use App\Servicos\MetalThursday\ServicoReservasMetalThursday;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -298,7 +299,7 @@ final class GuardarMetalThursdayRequest extends FormRequest
             'seccoes.*' => [
                 'bail',
                 'required',
-                'array:id,tipo_seccao_id,titulo,descricao,artista_id,ligacao,tipo_incorporacao,ano',
+                'array:id,tipo_seccao_id,titulo,descricao,artista_id,lancamento_id,ligacao,tipo_incorporacao,ano',
             ],
             'seccoes.*.id' => $regrasIdentificadorSeccao,
             'seccoes.*.tipo_seccao_id' => [
@@ -335,6 +336,12 @@ final class GuardarMetalThursdayRequest extends FormRequest
                 'nullable',
                 'integer',
                 $this->criarRegraArtistaSecao(),
+            ],
+            'seccoes.*.lancamento_id' => [
+                'bail',
+                'nullable',
+                'integer',
+                $this->criarRegraLancamentoSecao(),
             ],
             'seccoes.*.ligacao' => [
                 'bail',
@@ -1157,6 +1164,7 @@ final class GuardarMetalThursdayRequest extends FormRequest
             [
                 'titulo',
                 'artista_id',
+                'lancamento_id',
                 'ligacao',
                 'tipo_incorporacao',
                 'ano',
@@ -1372,6 +1380,137 @@ final class GuardarMetalThursdayRequest extends FormRequest
     }
 
     /**
+     * Cria a regra que valida o lançamento associado a uma secção.
+     *
+     * Lançamentos ativos podem ser utilizados normalmente. Durante a
+     * atualização, uma secção existente pode ainda conservar o próprio
+     * lançamento que tenha sido entretanto eliminado logicamente.
+     *
+     * Um lançamento eliminado não pode ser associado a uma secção nova nem
+     * transferido para outra secção.
+     *
+     * @return Closure(string, mixed, Closure(string): void): void Regra.
+     *
+     * @since 2.0.0
+     */
+    private function criarRegraLancamentoSecao(): Closure
+    {
+        return function (
+            string $atributo,
+            mixed $valor,
+            Closure $falhar,
+        ): void {
+            if (! is_int($valor)) {
+                return;
+            }
+
+            if ($valor < 1) {
+                $falhar(
+                    'O lançamento selecionado não existe ou não está disponível.',
+                );
+
+                return;
+            }
+
+            if (
+                Lancamento::query()
+                    ->whereKey(
+                        $valor,
+                    )
+                    ->exists()
+            ) {
+                return;
+            }
+
+            $metalThursday =
+                $this->obterMetalThursdayDaRota();
+
+            if (! $metalThursday instanceof MetalThursday) {
+                $falhar(
+                    'O lançamento selecionado não existe ou não está disponível.',
+                );
+
+                return;
+            }
+
+            if (
+                preg_match(
+                    '/^seccoes\.(\d+)\.lancamento_id$/D',
+                    $atributo,
+                    $correspondencias,
+                ) !== 1
+            ) {
+                $falhar(
+                    'O lançamento selecionado não existe ou não está disponível.',
+                );
+
+                return;
+            }
+
+            $indice =
+                (int) $correspondencias[1];
+
+            $identificadorSeccao =
+                $this->input(
+                    "seccoes.{$indice}.id",
+                );
+
+            if (
+                ! is_int($identificadorSeccao)
+                || $identificadorSeccao < 1
+            ) {
+                $falhar(
+                    'O lançamento selecionado não existe ou não está disponível.',
+                );
+
+                return;
+            }
+
+            $lancamentoEliminadoExiste = Lancamento::withTrashed()
+                ->whereKey(
+                    $valor,
+                )
+                ->whereNotNull(
+                    'deleted_at',
+                )
+                ->exists();
+
+            if (! $lancamentoEliminadoExiste) {
+                $falhar(
+                    'O lançamento selecionado não existe ou não está disponível.',
+                );
+
+                return;
+            }
+
+            $lancamentoJaPertenceASecao = SeccaoMetalThursday::query()
+                ->whereKey(
+                    $identificadorSeccao,
+                )
+                ->where(
+                    'metal_thursday_id',
+                    $metalThursday->getKey(),
+                )
+                ->where(
+                    'lancamento_id',
+                    $valor,
+                )
+                ->whereNull(
+                    'deleted_at',
+                )
+                ->exists();
+
+            if ($lancamentoJaPertenceASecao) {
+                return;
+            }
+
+            $falhar(
+                'O lançamento selecionado não existe ou não está disponível.',
+            );
+        };
+    }
+
+    /**
      * Cria a regra que valida a elegibilidade de uma nova nomeação.
      *
      * A regra é utilizada apenas durante a criação. Depois da publicação, a
@@ -1463,6 +1602,11 @@ final class GuardarMetalThursdayRequest extends FormRequest
             $seccao['artista_id'] =
                 $this->normalizarIdentificador(
                     $seccao['artista_id']
+                        ?? null,
+                );
+            $seccao['lancamento_id'] =
+                $this->normalizarIdentificador(
+                    $seccao['lancamento_id']
                         ?? null,
                 );
             $seccao['ligacao'] =

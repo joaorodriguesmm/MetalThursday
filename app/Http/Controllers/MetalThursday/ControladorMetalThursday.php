@@ -1154,6 +1154,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
             'tiposSeccao' => TipoSeccao::query()
                 ->select([
                     'id',
+                    'identificador',
                     'nome',
                     'descricao',
                     'exige_detalhes',
@@ -2263,6 +2264,8 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
      *         guardarEdicao: string,
      *         guardarArtista: string,
      *         guardarGenero: string,
+     *         pesquisarLancamentos: string,
+     *         importarLancamento: string,
      *         obterUtilizadorHaMaisTempoSemNomeacao: string
      *     },
      *     fornecedoresIncorporacao: array<int, array{
@@ -2288,6 +2291,17 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
 
                 'guardarGenero' => route(
                     'generos.guardar',
+                ),
+
+                'pesquisarLancamentos' => route(
+                    'lancamentos.importacao.pesquisar',
+                ),
+
+                'importarLancamento' => route(
+                    'lancamentos.importacao.importar',
+                    [
+                        'identificadorDiscogs' => '__IDENTIFICADOR_DISCOGS__',
+                    ],
                 ),
 
                 'obterUtilizadorHaMaisTempoSemNomeacao' => route(

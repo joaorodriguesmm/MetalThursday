@@ -9,6 +9,7 @@ use App\Models\Interacoes\Audicao;
 use App\Models\Interacoes\Avaliacao;
 use App\Models\Interacoes\Comentario;
 use App\Models\Musica\Artista;
+use App\Models\Musica\Lancamento;
 use App\Traits\Auditoria\RegistaAutoria;
 use App\Traits\Interacoes\TemAudicoes;
 use App\Traits\Interacoes\TemAvaliacoes;
@@ -45,6 +46,7 @@ use InvalidArgumentException;
  * @property string|null $titulo
  * @property string $descricao
  * @property int|null $artista_id
+ * @property int|null $lancamento_id
  * @property string|null $ligacao
  * @property TipoIncorporacao|null $tipo_incorporacao
  * @property int|null $ano
@@ -56,6 +58,7 @@ use InvalidArgumentException;
  * @property-read MetalThursday $metalThursday
  * @property-read TipoSeccao $tipoSeccao
  * @property-read Artista|null $artista
+ * @property-read Lancamento|null $lancamento
  * @property-read Collection<int, Comentario> $comentarios
  * @property-read Collection<int, Avaliacao> $avaliacoes
  * @property-read Collection<int, Audicao> $audicoes
@@ -205,6 +208,8 @@ class SeccaoMetalThursday extends Model
             'ordem_ativa' => 'integer',
 
             'artista_id' => 'integer',
+
+            'lancamento_id' => 'integer',
 
             'tipo_incorporacao' => TipoIncorporacao::class,
 
@@ -661,6 +666,29 @@ class SeccaoMetalThursday extends Model
             ->belongsTo(
                 Artista::class,
                 'artista_id',
+            )
+            ->withTrashed();
+    }
+
+    /**
+     * Obtém o lançamento associado à secção.
+     *
+     * O lançamento continua acessível quando foi eliminado logicamente,
+     * preservando o conteúdo histórico da secção.
+     *
+     * A relação pode ser nula quando a secção não possui um lançamento ou
+     * quando o lançamento foi eliminado fisicamente.
+     *
+     * @return BelongsTo<Lancamento, $this> Relação com o lançamento.
+     *
+     * @since 2.0.0
+     */
+    public function lancamento(): BelongsTo
+    {
+        return $this
+            ->belongsTo(
+                Lancamento::class,
+                'lancamento_id',
             )
             ->withTrashed();
     }

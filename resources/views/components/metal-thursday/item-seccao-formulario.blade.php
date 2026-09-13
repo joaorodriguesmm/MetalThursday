@@ -82,6 +82,7 @@
                 @foreach ($tiposSeccao as $tipoSeccao)
                     <option
                         value="{{ $tipoSeccao->getKey() }}"
+                        data-identificador-tipo-seccao="{{ $tipoSeccao->identificador }}"
                         data-exige-detalhes="{{
                             $tipoSeccao->exige_detalhes
                                 ? 'true'
@@ -116,6 +117,11 @@
             hidden
         @endif
     >
+        <input
+            type="hidden"
+            name="{{ $nomeBaseCampo }}[lancamento_id]"
+            value="{{ $valores['lancamento'] }}"
+        >
         <div class="col-md-6 grupo-campo-formulario mb-3">
             <label
                 class="form-label"
@@ -289,6 +295,65 @@
                     {{ $message }}
                 @enderror
             </div>
+        </div>
+    </div>
+
+    <div
+        class="mb-3"
+        data-importacao-lancamento
+        aria-hidden="true"
+        hidden
+    >
+        <div class="border rounded p-3 bg-black bg-opacity-10">
+            <div class="fw-semibold">
+                Lançamento do Discogs
+            </div>
+
+            <p class="small text-muted mb-0">
+                Abre no Discogs a edição exata do LP ou EP, copia a ligação
+                da página e cola-a aqui. A ligação tem de ser de uma edição
+                concreta (<code>/release/...</code>), não de um Master.
+            </p>
+
+            <div class="input-group mt-3">
+                <input
+                    class="form-control"
+                    type="url"
+                    maxlength="2048"
+                    autocomplete="url"
+                    inputmode="url"
+                    placeholder="https://www.discogs.com/release/6025044-..."
+                    aria-label="Ligação da edição no Discogs"
+                    data-ligacao-lancamento-discogs
+                >
+
+                <button
+                    class="btn btn-secondary"
+                    type="button"
+                    data-acao-importar-lancamento
+                >
+                    <i
+                        class="bi bi-box-arrow-in-down me-1"
+                        aria-hidden="true"
+                    ></i>
+
+                    Importar do Discogs
+                </button>
+            </div>
+
+            <div
+                class="small text-muted mt-2"
+                aria-live="polite"
+                aria-atomic="true"
+                data-estado-importacao-lancamento
+            ></div>
+
+            <div
+                class="alert alert-success py-2 px-3 mt-3 mb-0"
+                role="status"
+                data-lancamento-associado
+                hidden
+            ></div>
         </div>
     </div>
 

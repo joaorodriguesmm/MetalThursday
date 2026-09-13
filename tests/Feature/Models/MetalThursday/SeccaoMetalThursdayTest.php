@@ -9,6 +9,7 @@ use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
 use App\Models\Musica\Artista;
+use App\Models\Musica\Lancamento;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -236,6 +237,101 @@ final class SeccaoMetalThursdayTest extends TestCase
 
         self::assertTrue(
             $artistaHistorico->trashed(),
+        );
+    }
+
+    /**
+     * Confirma que uma secção pode ficar associada a um lançamento.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function associa_lancamento_a_seccao(): void
+    {
+        $lancamento =
+            Lancamento::factory()
+                ->create();
+
+        $seccao =
+            SeccaoMetalThursday::factory()
+                ->create();
+
+        $seccao
+            ->lancamento()
+            ->associate(
+                $lancamento,
+            );
+
+        $seccao->saveOrFail();
+        $seccao->refresh();
+
+        self::assertSame(
+            $lancamento->getKey(),
+            $seccao->lancamento_id,
+        );
+
+        self::assertInstanceOf(
+            Lancamento::class,
+            $seccao->lancamento,
+        );
+
+        self::assertSame(
+            $lancamento->getKey(),
+            $seccao->lancamento->getKey(),
+        );
+    }
+
+    /**
+     * Confirma que uma secção preserva o lançamento eliminado logicamente.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function preserva_lancamento_eliminado_logicamente_na_relacao(): void
+    {
+        $lancamento =
+            Lancamento::factory()
+                ->create();
+
+        $seccao =
+            SeccaoMetalThursday::factory()
+                ->create();
+
+        $seccao
+            ->lancamento()
+            ->associate(
+                $lancamento,
+            );
+
+        $seccao->saveOrFail();
+
+        $identificadorLancamento =
+            (int) $lancamento->getKey();
+
+        $lancamento->deleteOrFail();
+
+        $seccao->refresh();
+
+        self::assertSame(
+            $identificadorLancamento,
+            $seccao->lancamento_id,
+        );
+
+        $lancamentoHistorico =
+            $seccao->lancamento;
+
+        self::assertInstanceOf(
+            Lancamento::class,
+            $lancamentoHistorico,
+        );
+
+        self::assertSame(
+            $identificadorLancamento,
+            (int) $lancamentoHistorico->getKey(),
+        );
+
+        self::assertTrue(
+            $lancamentoHistorico->trashed(),
         );
     }
 

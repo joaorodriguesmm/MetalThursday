@@ -13,6 +13,8 @@ use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
 use App\Models\Musica\Artista;
 use App\Models\Musica\Genero;
+use App\Models\Musica\Lancamento;
+use App\Servicos\MetalThursday\ServicoPersistenciaMetalThursday;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -2087,5 +2089,804 @@ final class ControladorMetalThursdayTest extends TestCase
                 $utilizador,
             )
             ->create();
+    }
+
+    /**
+     * Confirma que o formulário disponibiliza os endereços necessários à
+     * pesquisa e importação de lançamentos do Discogs.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function formulario_criacao_disponibiliza_enderecos_importacao_lancamentos(): void
+    {
+        $administrador =
+            Utilizador::factory()
+                ->comPapel(
+                    PapelUtilizador::Administrador,
+                )
+                ->create();
+
+        $this
+            ->actingAs(
+                $administrador,
+                'sessao',
+            )
+            ->get(
+                route(
+                    'metal-thursday.criar',
+                ),
+            )
+            ->assertOk()
+            ->assertViewHas(
+                'configuracaoFormularioMetalThursday',
+                static function (
+                    array $configuracao,
+                ): bool {
+                    return data_get(
+                        $configuracao,
+                        'enderecos.pesquisarLancamentos',
+                    ) === route(
+                        'lancamentos.importacao.pesquisar',
+                    )
+                        && data_get(
+                            $configuracao,
+                            'enderecos.importarLancamento',
+                        ) === route(
+                            'lancamentos.importacao.importar',
+                            [
+                                'identificadorDiscogs' => '__IDENTIFICADOR_DISCOGS__',
+                            ],
+                        );
+                },
+            );
+    }
+
+    /**
+     * Confirma que uma secção pode guardar o lançamento selecionado.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function criacao_guarda_lancamento_associado_a_seccao(): void
+    {
+        Notification::fake();
+
+        $administrador =
+            Utilizador::factory()
+                ->comPapel(
+                    PapelUtilizador::Administrador,
+                )
+                ->create();
+
+        $proximoNomeado =
+            $this->criarUtilizador();
+
+        $artista =
+            Artista::factory()
+                ->create();
+
+        $lancamento =
+            Lancamento::factory()
+                ->create();
+
+        $tipoSeccao =
+            TipoSeccao::factory()
+                ->comDetalhes()
+                ->create();
+
+        $this->actingAs(
+            $administrador,
+            'sessao',
+        );
+
+        $this->criarEdicao();
+
+        $this
+            ->postJson(
+                route(
+                    'metal-thursday.guardar',
+                ),
+                [
+                    'data' => '2026-01-15',
+
+                    'nome' => null,
+
+                    'autor_id' => $administrador->getKey(),
+
+                    'proximo_nomeado_id' => $proximoNomeado->getKey(),
+
+                    'seccoes' => [
+                        [
+                            'id' => null,
+
+                            'tipo_seccao_id' => $tipoSeccao->getKey(),
+
+                            'titulo' => 'Master of Puppets',
+
+                            'descricao' => 'Lançamento selecionado no Discogs.',
+
+                            'artista_id' => $artista->getKey(),
+
+                            'lancamento_id' => $lancamento->getKey(),
+
+                            'ligacao' => 'https://example.com/master-of-puppets',
+
+                            'tipo_incorporacao' => 'ligacao',
+
+                            'ano' => 1986,
+                        ],
+                    ],
+                ],
+            )
+            ->assertCreated();
+
+        $this->assertDatabaseHas(
+            'seccoes_metal_thursday',
+            [
+                'artista_id' => $artista->getKey(),
+
+                'lancamento_id' => $lancamento->getKey(),
+
+                'titulo' => 'Master of Puppets',
+
+                'deleted_at' => null,
+            ],
+        );
+    }
+
+    /**
+     * Confirma que a atualização HTTP preserva o lançamento eliminado
+     * logicamente quando já pertence à mesma secção.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function atualizacao_http_preserva_lancamento_eliminado_logicamente_na_mesma_seccao(): void
+    {
+        $administrador =
+            Utilizador::factory()
+                ->comPapel(
+                    PapelUtilizador::Administrador,
+                )
+                ->create();
+
+        $this->actingAs(
+            $administrador,
+            'sessao',
+        );
+
+        $edicao =
+            $this->criarEdicao();
+
+        $tipoSeccao =
+            TipoSeccao::factory()
+                ->comDetalhes()
+                ->create();
+
+        $artista =
+            Artista::factory()
+                ->create();
+
+        $lancamento =
+            Lancamento::factory()
+                ->create();
+
+        $servico =
+            app(
+                ServicoPersistenciaMetalThursday::class,
+            );
+
+        $metalThursday = $servico->criar([
+            'edicao_id' => (int) $edicao->getKey(),
+
+            'data' => '2026-01-15',
+
+            'nome' => null,
+
+            'autor_id' => (int) $administrador->getKey(),
+
+            'proximo_nomeado_id' => null,
+
+            'seccoes' => [
+                [
+                    'id' => null,
+
+                    'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
+
+                    'titulo' => 'Lançamento histórico',
+
+                    'descricao' => 'Descrição histórica.',
+
+                    'artista_id' => (int) $artista->getKey(),
+
+                    'lancamento_id' => (int) $lancamento->getKey(),
+
+                    'ligacao' => 'https://example.com/historico',
+
+                    'tipo_incorporacao' => 'ligacao',
+
+                    'ano' => 2026,
+                ],
+            ],
+        ]);
+
+        $seccao =
+            $metalThursday->seccoes->first();
+
+        self::assertNotNull(
+            $seccao,
+        );
+
+        $identificadorLancamento =
+            (int) $lancamento->getKey();
+
+        $lancamento->deleteOrFail();
+
+        $this
+            ->patchJson(
+                route(
+                    'metal-thursday.atualizar',
+                    $metalThursday,
+                ),
+                [
+                    'data' => '2026-01-15',
+
+                    'nome' => null,
+
+                    'autor_id' => $administrador->getKey(),
+
+                    'proximo_nomeado_id' => null,
+
+                    'seccoes' => [
+                        [
+                            'id' => $seccao->getKey(),
+
+                            'tipo_seccao_id' => $tipoSeccao->getKey(),
+
+                            'titulo' => 'Lançamento histórico atualizado',
+
+                            'descricao' => 'Descrição histórica atualizada.',
+
+                            'artista_id' => $artista->getKey(),
+
+                            'lancamento_id' => $identificadorLancamento,
+
+                            'ligacao' => 'https://example.com/historico',
+
+                            'tipo_incorporacao' => 'ligacao',
+
+                            'ano' => 2026,
+                        ],
+                    ],
+                ],
+            )
+            ->assertOk();
+
+        $this->assertDatabaseHas(
+            'seccoes_metal_thursday',
+            [
+                'id' => $seccao->getKey(),
+
+                'lancamento_id' => $identificadorLancamento,
+
+                'titulo' => 'Lançamento histórico atualizado',
+
+                'deleted_at' => null,
+            ],
+        );
+    }
+
+    /**
+     * Confirma que a atualização HTTP rejeita a transferência de um lançamento
+     * eliminado logicamente para outra secção.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function atualizacao_http_rejeita_transferencia_de_lancamento_eliminado_para_outra_seccao(): void
+    {
+        $administrador =
+            Utilizador::factory()
+                ->comPapel(
+                    PapelUtilizador::Administrador,
+                )
+                ->create();
+
+        $this->actingAs(
+            $administrador,
+            'sessao',
+        );
+
+        $edicao =
+            $this->criarEdicao();
+
+        $tipoSeccao =
+            TipoSeccao::factory()
+                ->comDetalhes()
+                ->create();
+
+        $artista =
+            Artista::factory()
+                ->create();
+
+        $lancamento =
+            Lancamento::factory()
+                ->create();
+
+        $servico =
+            app(
+                ServicoPersistenciaMetalThursday::class,
+            );
+
+        $metalThursday = $servico->criar([
+            'edicao_id' => (int) $edicao->getKey(),
+
+            'data' => '2026-01-15',
+
+            'nome' => null,
+
+            'autor_id' => (int) $administrador->getKey(),
+
+            'proximo_nomeado_id' => null,
+
+            'seccoes' => [
+                [
+                    'id' => null,
+
+                    'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
+
+                    'titulo' => 'Secção histórica',
+
+                    'descricao' => 'Descrição histórica.',
+
+                    'artista_id' => (int) $artista->getKey(),
+
+                    'lancamento_id' => (int) $lancamento->getKey(),
+
+                    'ligacao' => 'https://example.com/historica',
+
+                    'tipo_incorporacao' => 'ligacao',
+
+                    'ano' => 2026,
+                ],
+                [
+                    'id' => null,
+
+                    'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
+
+                    'titulo' => 'Outra secção',
+
+                    'descricao' => 'Outra descrição.',
+
+                    'artista_id' => (int) $artista->getKey(),
+
+                    'lancamento_id' => null,
+
+                    'ligacao' => 'https://example.com/outra',
+
+                    'tipo_incorporacao' => 'ligacao',
+
+                    'ano' => 2026,
+                ],
+            ],
+        ]);
+
+        $seccoes =
+            $metalThursday
+                ->seccoes
+                ->values();
+
+        $seccaoHistorica =
+            $seccoes->get(0);
+
+        $outraSeccao =
+            $seccoes->get(1);
+
+        self::assertNotNull(
+            $seccaoHistorica,
+        );
+
+        self::assertNotNull(
+            $outraSeccao,
+        );
+
+        $identificadorLancamento =
+            (int) $lancamento->getKey();
+
+        $lancamento->deleteOrFail();
+
+        $this
+            ->patchJson(
+                route(
+                    'metal-thursday.atualizar',
+                    $metalThursday,
+                ),
+                [
+                    'data' => '2026-01-15',
+
+                    'nome' => null,
+
+                    'autor_id' => $administrador->getKey(),
+
+                    'proximo_nomeado_id' => null,
+
+                    'seccoes' => [
+                        [
+                            'id' => $seccaoHistorica->getKey(),
+
+                            'tipo_seccao_id' => $tipoSeccao->getKey(),
+
+                            'titulo' => 'Secção histórica',
+
+                            'descricao' => 'Descrição histórica.',
+
+                            'artista_id' => $artista->getKey(),
+
+                            'lancamento_id' => $identificadorLancamento,
+
+                            'ligacao' => 'https://example.com/historica',
+
+                            'tipo_incorporacao' => 'ligacao',
+
+                            'ano' => 2026,
+                        ],
+                        [
+                            'id' => $outraSeccao->getKey(),
+
+                            'tipo_seccao_id' => $tipoSeccao->getKey(),
+
+                            'titulo' => 'Outra secção',
+
+                            'descricao' => 'Outra descrição.',
+
+                            'artista_id' => $artista->getKey(),
+
+                            'lancamento_id' => $identificadorLancamento,
+
+                            'ligacao' => 'https://example.com/outra',
+
+                            'tipo_incorporacao' => 'ligacao',
+
+                            'ano' => 2026,
+                        ],
+                    ],
+                ],
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'seccoes.1.lancamento_id' => 'O lançamento selecionado não existe ou não está disponível.',
+            ]);
+
+        $this->assertDatabaseHas(
+            'seccoes_metal_thursday',
+            [
+                'id' => $seccaoHistorica->getKey(),
+
+                'lancamento_id' => $identificadorLancamento,
+
+                'titulo' => 'Secção histórica',
+
+                'deleted_at' => null,
+            ],
+        );
+
+        $this->assertDatabaseHas(
+            'seccoes_metal_thursday',
+            [
+                'id' => $outraSeccao->getKey(),
+
+                'lancamento_id' => null,
+
+                'titulo' => 'Outra secção',
+
+                'deleted_at' => null,
+            ],
+        );
+    }
+
+    /**
+     * Confirma que a criação rejeita um identificador de lançamento não positivo.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function criacao_rejeita_identificador_lancamento_nao_positivo(): void
+    {
+        Notification::fake();
+
+        $administrador =
+            Utilizador::factory()
+                ->comPapel(
+                    PapelUtilizador::Administrador,
+                )
+                ->create();
+
+        $proximoNomeado =
+            $this->criarUtilizador();
+
+        $artista =
+            Artista::factory()
+                ->create();
+
+        $tipoSeccao =
+            TipoSeccao::factory()
+                ->comDetalhes()
+                ->create();
+
+        $this->actingAs(
+            $administrador,
+            'sessao',
+        );
+
+        $this->criarEdicao();
+
+        $this
+            ->postJson(
+                route(
+                    'metal-thursday.guardar',
+                ),
+                [
+                    'data' => '2026-01-15',
+
+                    'nome' => null,
+
+                    'autor_id' => $administrador->getKey(),
+
+                    'proximo_nomeado_id' => $proximoNomeado->getKey(),
+
+                    'seccoes' => [
+                        [
+                            'id' => null,
+
+                            'tipo_seccao_id' => $tipoSeccao->getKey(),
+
+                            'titulo' => 'Lançamento inválido',
+
+                            'descricao' => 'Descrição válida.',
+
+                            'artista_id' => $artista->getKey(),
+
+                            'lancamento_id' => 0,
+
+                            'ligacao' => 'https://example.com/lancamento',
+
+                            'tipo_incorporacao' => 'ligacao',
+
+                            'ano' => 2026,
+                        ],
+                    ],
+                ],
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'seccoes.0.lancamento_id',
+            ]);
+    }
+
+    /**
+     * Confirma que o formulário de edição preserva o lançamento associado à
+     * secção.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function formulario_edicao_preserva_lancamento_associado_a_seccao(): void
+    {
+        $administrador =
+            Utilizador::factory()
+                ->comPapel(
+                    PapelUtilizador::Administrador,
+                )
+                ->create();
+
+        $this->actingAs(
+            $administrador,
+            'sessao',
+        );
+
+        $edicao =
+            $this->criarEdicao();
+
+        $tipoSeccao =
+            TipoSeccao::factory()
+                ->comDetalhes()
+                ->create();
+
+        $artista =
+            Artista::factory()
+                ->create();
+
+        $lancamento =
+            Lancamento::factory()
+                ->create();
+
+        $metalThursday =
+            app(
+                ServicoPersistenciaMetalThursday::class,
+            )->criar([
+                'edicao_id' => (int) $edicao->getKey(),
+
+                'data' => '2026-01-15',
+
+                'nome' => null,
+
+                'autor_id' => (int) $administrador->getKey(),
+
+                'proximo_nomeado_id' => null,
+
+                'seccoes' => [
+                    [
+                        'id' => null,
+
+                        'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
+
+                        'titulo' => 'Lançamento associado',
+
+                        'descricao' => 'Descrição da secção.',
+
+                        'artista_id' => (int) $artista->getKey(),
+
+                        'lancamento_id' => (int) $lancamento->getKey(),
+
+                        'ligacao' => 'https://example.com/lancamento',
+
+                        'tipo_incorporacao' => 'ligacao',
+
+                        'ano' => 2026,
+                    ],
+                ],
+            ]);
+
+        $this
+            ->get(
+                route(
+                    'metal-thursday.editar',
+                    $metalThursday,
+                ),
+            )
+            ->assertOk()
+            ->assertSeeHtml(
+                'name="seccoes[0][lancamento_id]"',
+            )
+            ->assertSeeHtml(
+                'value="'.$lancamento->getKey().'"',
+            );
+    }
+
+    /**
+     * Confirma que o modelo de secção do formulário transporta o identificador
+     * do lançamento dentro dos detalhes condicionais.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function formulario_criacao_inclui_campo_lancamento_nas_seccoes(): void
+    {
+        $administrador =
+            Utilizador::factory()
+                ->comPapel(
+                    PapelUtilizador::Administrador,
+                )
+                ->create();
+
+        $this->actingAs(
+            $administrador,
+            'sessao',
+        );
+
+        $this->criarEdicao();
+
+        $this
+            ->get(
+                route(
+                    'metal-thursday.criar',
+                ),
+            )
+            ->assertOk()
+            ->assertSeeHtml(
+                'name="seccoes[__INDICE_SECCAO__][lancamento_id]"',
+            )
+            ->assertSeeInOrder(
+                [
+                    'class="row linha-detalhes-seccao linha-detalhes-seccao-principal"',
+                    'name="seccoes[__INDICE_SECCAO__][lancamento_id]"',
+                ],
+                false,
+            );
+    }
+
+    /**
+     * Confirma que as opções dos tipos de secção expõem o respetivo identificador
+     * técnico ao formulário.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function formulario_criacao_expoe_identificador_tecnico_dos_tipos_seccao(): void
+    {
+        $administrador =
+            Utilizador::factory()
+                ->comPapel(
+                    PapelUtilizador::Administrador,
+                )
+                ->create();
+
+        $this->actingAs(
+            $administrador,
+            'sessao',
+        );
+
+        $this->criarEdicao();
+
+        TipoSeccao::factory()
+            ->comDados(
+                'album',
+                'LP',
+                'Secção destinada a um álbum.',
+            )
+            ->comDetalhes()
+            ->create();
+
+        $this
+            ->get(
+                route(
+                    'metal-thursday.criar',
+                ),
+            )
+            ->assertOk()
+            ->assertSeeHtml(
+                'data-identificador-tipo-seccao="album"',
+            );
+    }
+
+    /**
+     * Confirma que o formulário permite indicar diretamente a ligação de uma
+     * edição concreta do Discogs em cada secção de lançamento.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function formulario_criacao_inclui_importacao_lancamento_por_ligacao_discogs(): void
+    {
+        $administrador =
+            Utilizador::factory()
+                ->comPapel(
+                    PapelUtilizador::Administrador,
+                )
+                ->create();
+
+        $this->actingAs(
+            $administrador,
+            'sessao',
+        );
+
+        $this->criarEdicao();
+
+        $this
+            ->get(
+                route(
+                    'metal-thursday.criar',
+                ),
+            )
+            ->assertOk()
+            ->assertSeeHtml(
+                'data-importacao-lancamento',
+            )
+            ->assertSeeHtml(
+                'data-ligacao-lancamento-discogs',
+            )
+            ->assertSeeHtml(
+                'data-acao-importar-lancamento',
+            )
+            ->assertSeeHtml(
+                'data-estado-importacao-lancamento',
+            )
+            ->assertSeeHtml(
+                'data-lancamento-associado',
+            )
+            ->assertSeeHtml(
+                'placeholder="https://www.discogs.com/release/6025044-..."',
+            );
     }
 }

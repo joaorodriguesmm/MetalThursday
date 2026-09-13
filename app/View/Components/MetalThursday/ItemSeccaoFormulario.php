@@ -74,6 +74,7 @@ final class ItemSeccaoFormulario extends Component
      *     identificador: string,
      *     tipoSeccao: string,
      *     artista: string,
+     *     lancamento: string,
      *     titulo: string,
      *     ligacao: string,
      *     tipoIncorporacao: string,
@@ -297,6 +298,14 @@ final class ItemSeccaoFormulario extends Component
                     $pedido,
                     $seccao,
                     'artista_id',
+                ),
+            ),
+
+            'lancamento' => $this->normalizarTexto(
+                $this->obterValorCampo(
+                    $pedido,
+                    $seccao,
+                    'lancamento_id',
                 ),
             ),
 

@@ -12,6 +12,7 @@ use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
 use App\Models\Musica\Artista;
+use App\Models\Musica\Lancamento;
 use App\Resultados\MetalThursday\MetalThursdayCriada;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -136,6 +137,11 @@ final class ServicoPersistenciaMetalThursday
                 );
 
                 $this->bloquearArtistasUtilizados(
+                    $dadosNormalizados['seccoes'],
+                    $tiposSeccao,
+                );
+
+                $this->bloquearLancamentosUtilizados(
                     $dadosNormalizados['seccoes'],
                     $tiposSeccao,
                 );
@@ -279,6 +285,12 @@ final class ServicoPersistenciaMetalThursday
                     $seccoesExistentes,
                 );
 
+                $this->bloquearLancamentosUtilizados(
+                    $dadosNormalizados['seccoes'],
+                    $tiposSeccao,
+                    $seccoesExistentes,
+                );
+
                 $this->reservarOrdensTemporarias(
                     $seccoesExistentes,
                     count(
@@ -370,6 +382,7 @@ final class ServicoPersistenciaMetalThursday
      *         id: int|null,
      *         tipo_seccao_id: int,
      *         artista_id: int|null,
+     *         lancamento_id: int|null,
      *         titulo: string|null,
      *         ligacao: string|null,
      *         tipo_incorporacao: TipoIncorporacao|null,
@@ -438,6 +451,11 @@ final class ServicoPersistenciaMetalThursday
                     $dadosSeccao['artista_id']
                         ?? null,
                     $prefixoCampo.'.artista_id',
+                ),
+                'lancamento_id' => $this->normalizarIdentificadorOpcional(
+                    $dadosSeccao['lancamento_id']
+                        ?? null,
+                    $prefixoCampo.'.lancamento_id',
                 ),
                 'titulo' => $this->normalizarTextoLinhaOpcional(
                     $dadosSeccao['titulo']
@@ -627,6 +645,10 @@ final class ServicoPersistenciaMetalThursday
                 ->artista()
                 ->dissociate();
 
+            $seccao
+                ->lancamento()
+                ->dissociate();
+
             $seccao->titulo = null;
 
             $seccao->ligacao = null;
@@ -647,6 +669,18 @@ final class ServicoPersistenciaMetalThursday
             ->associate(
                 $dados['artista_id'],
             );
+
+        if ($dados['lancamento_id'] === null) {
+            $seccao
+                ->lancamento()
+                ->dissociate();
+        } else {
+            $seccao
+                ->lancamento()
+                ->associate(
+                    $dados['lancamento_id'],
+                );
+        }
 
         $seccao->titulo =
             $dados['titulo'];
@@ -886,6 +920,7 @@ final class ServicoPersistenciaMetalThursday
             [
                 'titulo',
                 'artista_id',
+                'lancamento_id',
                 'ligacao',
                 'tipo_incorporacao',
                 'ano',
@@ -1127,6 +1162,149 @@ final class ServicoPersistenciaMetalThursday
             ) {
                 throw new InvalidArgumentException(
                     'Foi indicado um artista inexistente ou indisponível.',
+                );
+            }
+        }
+    }
+
+    /**
+     * Bloqueia os lançamentos utilizados pelas secções.
+     *
+     * Na criação apenas lançamentos ativos são aceites. Durante uma
+     * atualização, uma secção existente pode conservar o próprio lançamento
+     * que tenha sido entretanto eliminado logicamente.
+     *
+     * Um lançamento eliminado não pode ser associado a uma secção nova nem
+     * transferido para outra secção.
+     *
+     * @param  list<array<string, mixed>>  $seccoes  Secções recebidas.
+     * @param  ColecaoEloquent<int, TipoSeccao>  $tiposSeccao  Tipos utilizados.
+     * @param  ColecaoEloquent<int, SeccaoMetalThursday>|null  $seccoesExistentes
+     *                                                                             Secções atuais.
+     *
+     * @throws InvalidArgumentException Quando algum lançamento não existe ou
+     *                                  não está disponível.
+     *
+     * @since 2.0.0
+     */
+    private function bloquearLancamentosUtilizados(
+        array $seccoes,
+        ColecaoEloquent $tiposSeccao,
+        ?ColecaoEloquent $seccoesExistentes = null,
+    ): void {
+        $identificadores = [];
+        $associacoes = [];
+
+        foreach ($seccoes as $seccao) {
+            $tipoSeccao = $this->obterTipoSeccaoDaColecao(
+                $tiposSeccao,
+                $seccao['tipo_seccao_id'],
+            );
+
+            if (
+                ! $tipoSeccao->exige_detalhes
+                || $seccao['lancamento_id'] === null
+            ) {
+                continue;
+            }
+
+            $identificadorLancamento =
+                $seccao['lancamento_id'];
+
+            $identificadores[] =
+                $identificadorLancamento;
+
+            $associacoes[] = [
+                'lancamento_id' => $identificadorLancamento,
+                'seccao_id' => $seccao['id'],
+            ];
+        }
+
+        $identificadores = array_values(
+            array_unique(
+                $identificadores,
+            ),
+        );
+
+        sort(
+            $identificadores,
+            SORT_NUMERIC,
+        );
+
+        if ($identificadores === []) {
+            return;
+        }
+
+        $lancamentos = Lancamento::withTrashed()
+            ->whereKey(
+                $identificadores,
+            )
+            ->orderBy(
+                'id',
+            )
+            ->lockForUpdate()
+            ->get([
+                'id',
+                'deleted_at',
+            ])
+            ->keyBy(
+                static fn (
+                    Lancamento $lancamento,
+                ): int => (int) $lancamento->getKey(),
+            );
+
+        foreach ($associacoes as $associacao) {
+            $identificadorLancamento =
+                $associacao['lancamento_id'];
+
+            $lancamento =
+                $lancamentos->get(
+                    $identificadorLancamento,
+                );
+
+            if (! $lancamento instanceof Lancamento) {
+                throw new InvalidArgumentException(
+                    'Foi indicado um lançamento inexistente ou indisponível.',
+                );
+            }
+
+            if (! $lancamento->trashed()) {
+                continue;
+            }
+
+            if (! $seccoesExistentes instanceof ColecaoEloquent) {
+                throw new InvalidArgumentException(
+                    'Foi indicado um lançamento inexistente ou indisponível.',
+                );
+            }
+
+            $identificadorSeccao =
+                $associacao['seccao_id'];
+
+            if (
+                ! is_int($identificadorSeccao)
+                || $identificadorSeccao < 1
+            ) {
+                throw new InvalidArgumentException(
+                    'Foi indicado um lançamento inexistente ou indisponível.',
+                );
+            }
+
+            $seccaoExistente =
+                $seccoesExistentes->get(
+                    $identificadorSeccao,
+                );
+
+            if (
+                ! $seccaoExistente instanceof SeccaoMetalThursday
+                || ! is_numeric(
+                    $seccaoExistente->lancamento_id,
+                )
+                || (int) $seccaoExistente->lancamento_id
+                !== $identificadorLancamento
+            ) {
+                throw new InvalidArgumentException(
+                    'Foi indicado um lançamento inexistente ou indisponível.',
                 );
             }
         }

@@ -10,6 +10,7 @@ use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
 use App\Models\Musica\Artista;
+use App\Models\Musica\Lancamento;
 use App\Resultados\MetalThursday\MetalThursdayCriada;
 use App\Servicos\MetalThursday\ServicoPersistenciaMetalThursday;
 use App\Servicos\MetalThursday\ServicoReservasMetalThursday;
@@ -1276,6 +1277,725 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
         $this->assertDatabaseCount(
             'metal_thursdays',
             0,
+        );
+    }
+
+    /**
+     * Confirma que uma secção detalhada pode deixar de estar associada a um
+     * lançamento.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function atualizacao_remove_lancamento_associado_a_seccao(): void
+    {
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $edicao =
+            $this->criarEdicao();
+
+        $tipoSeccao =
+            TipoSeccao::factory()
+                ->comDetalhes()
+                ->create();
+
+        $artista =
+            Artista::factory()
+                ->create();
+
+        $lancamento =
+            Lancamento::factory()
+                ->create();
+
+        $servico =
+            $this->servico();
+
+        $metalThursday = $servico->criar([
+            'edicao_id' => (int) $edicao->getKey(),
+
+            'data' => '2026-01-08',
+
+            'nome' => null,
+
+            'autor_id' => (int) $utilizador->getKey(),
+
+            'proximo_nomeado_id' => null,
+
+            'seccoes' => [
+                [
+                    'id' => null,
+
+                    'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
+
+                    'titulo' => 'Lançamento inicial',
+
+                    'descricao' => 'Descrição inicial.',
+
+                    'artista_id' => (int) $artista->getKey(),
+
+                    'lancamento_id' => (int) $lancamento->getKey(),
+
+                    'ligacao' => 'https://example.com/inicial',
+
+                    'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+
+                    'ano' => 2026,
+                ],
+            ],
+        ]);
+
+        $seccao =
+            $metalThursday->seccoes->first();
+
+        self::assertNotNull(
+            $seccao,
+        );
+
+        $servico->atualizar(
+            $metalThursday,
+            [
+                'edicao_id' => (int) $edicao->getKey(),
+
+                'data' => '2026-01-08',
+
+                'nome' => null,
+
+                'autor_id' => (int) $utilizador->getKey(),
+
+                'proximo_nomeado_id' => null,
+
+                'seccoes' => [
+                    [
+                        'id' => (int) $seccao->getKey(),
+
+                        'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
+
+                        'titulo' => 'Secção sem lançamento associado',
+
+                        'descricao' => 'Descrição atualizada.',
+
+                        'artista_id' => (int) $artista->getKey(),
+
+                        'lancamento_id' => null,
+
+                        'ligacao' => 'https://example.com/sem-lancamento',
+
+                        'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+
+                        'ano' => 2026,
+                    ],
+                ],
+            ],
+        );
+
+        $this->assertDatabaseHas(
+            'seccoes_metal_thursday',
+            [
+                'id' => $seccao->getKey(),
+
+                'lancamento_id' => null,
+
+                'titulo' => 'Secção sem lançamento associado',
+
+                'artista_id' => $artista->getKey(),
+
+                'deleted_at' => null,
+            ],
+        );
+
+        $this->assertDatabaseMissing(
+            'seccoes_metal_thursday',
+            [
+                'id' => $seccao->getKey(),
+
+                'lancamento_id' => $lancamento->getKey(),
+            ],
+        );
+    }
+
+    /**
+     * Confirma que uma secção existente pode trocar de lançamento.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function atualizacao_altera_lancamento_associado_a_seccao(): void
+    {
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $edicao =
+            $this->criarEdicao();
+
+        $tipoSeccao =
+            TipoSeccao::factory()
+                ->comDetalhes()
+                ->create();
+
+        $artista =
+            Artista::factory()
+                ->create();
+
+        $lancamentoInicial =
+            Lancamento::factory()
+                ->create();
+
+        $novoLancamento =
+            Lancamento::factory()
+                ->create();
+
+        $servico =
+            $this->servico();
+
+        $metalThursday = $servico->criar([
+            'edicao_id' => (int) $edicao->getKey(),
+
+            'data' => '2026-01-08',
+
+            'nome' => null,
+
+            'autor_id' => (int) $utilizador->getKey(),
+
+            'proximo_nomeado_id' => null,
+
+            'seccoes' => [
+                [
+                    'id' => null,
+
+                    'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
+
+                    'titulo' => 'Lançamento inicial',
+
+                    'descricao' => 'Descrição inicial.',
+
+                    'artista_id' => (int) $artista->getKey(),
+
+                    'lancamento_id' => (int) $lancamentoInicial->getKey(),
+
+                    'ligacao' => 'https://example.com/inicial',
+
+                    'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+
+                    'ano' => 2026,
+                ],
+            ],
+        ]);
+
+        $seccao =
+            $metalThursday->seccoes->first();
+
+        self::assertNotNull(
+            $seccao,
+        );
+
+        $servico->atualizar(
+            $metalThursday,
+            [
+                'edicao_id' => (int) $edicao->getKey(),
+
+                'data' => '2026-01-08',
+
+                'nome' => null,
+
+                'autor_id' => (int) $utilizador->getKey(),
+
+                'proximo_nomeado_id' => null,
+
+                'seccoes' => [
+                    [
+                        'id' => (int) $seccao->getKey(),
+
+                        'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
+
+                        'titulo' => 'Novo lançamento',
+
+                        'descricao' => 'Descrição atualizada.',
+
+                        'artista_id' => (int) $artista->getKey(),
+
+                        'lancamento_id' => (int) $novoLancamento->getKey(),
+
+                        'ligacao' => 'https://example.com/novo',
+
+                        'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+
+                        'ano' => 2026,
+                    ],
+                ],
+            ],
+        );
+
+        $this->assertDatabaseHas(
+            'seccoes_metal_thursday',
+            [
+                'id' => $seccao->getKey(),
+
+                'lancamento_id' => $novoLancamento->getKey(),
+
+                'titulo' => 'Novo lançamento',
+
+                'deleted_at' => null,
+            ],
+        );
+
+        $this->assertDatabaseMissing(
+            'seccoes_metal_thursday',
+            [
+                'id' => $seccao->getKey(),
+
+                'lancamento_id' => $lancamentoInicial->getKey(),
+            ],
+        );
+    }
+
+    /**
+     * Confirma que uma secção existente pode preservar o lançamento que tenha
+     * sido eliminado logicamente depois da sua associação.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function atualizacao_preserva_lancamento_eliminado_logicamente_na_mesma_seccao(): void
+    {
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $edicao =
+            $this->criarEdicao();
+
+        $tipoSeccao =
+            TipoSeccao::factory()
+                ->comDetalhes()
+                ->create();
+
+        $artista =
+            Artista::factory()
+                ->create();
+
+        $lancamento =
+            Lancamento::factory()
+                ->create();
+
+        $servico =
+            $this->servico();
+
+        $metalThursday = $servico->criar([
+            'edicao_id' => (int) $edicao->getKey(),
+
+            'data' => '2026-01-08',
+
+            'nome' => null,
+
+            'autor_id' => (int) $utilizador->getKey(),
+
+            'proximo_nomeado_id' => null,
+
+            'seccoes' => [
+                [
+                    'id' => null,
+
+                    'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
+
+                    'titulo' => 'Lançamento histórico',
+
+                    'descricao' => 'Descrição histórica.',
+
+                    'artista_id' => (int) $artista->getKey(),
+
+                    'lancamento_id' => (int) $lancamento->getKey(),
+
+                    'ligacao' => 'https://example.com/historico',
+
+                    'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+
+                    'ano' => 2026,
+                ],
+            ],
+        ]);
+
+        $seccao =
+            $metalThursday->seccoes->first();
+
+        self::assertNotNull(
+            $seccao,
+        );
+
+        $identificadorLancamento =
+            (int) $lancamento->getKey();
+
+        $lancamento->deleteOrFail();
+
+        $servico->atualizar(
+            $metalThursday,
+            [
+                'edicao_id' => (int) $edicao->getKey(),
+
+                'data' => '2026-01-08',
+
+                'nome' => null,
+
+                'autor_id' => (int) $utilizador->getKey(),
+
+                'proximo_nomeado_id' => null,
+
+                'seccoes' => [
+                    [
+                        'id' => (int) $seccao->getKey(),
+
+                        'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
+
+                        'titulo' => 'Lançamento histórico atualizado',
+
+                        'descricao' => 'Descrição histórica atualizada.',
+
+                        'artista_id' => (int) $artista->getKey(),
+
+                        'lancamento_id' => $identificadorLancamento,
+
+                        'ligacao' => 'https://example.com/historico',
+
+                        'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+
+                        'ano' => 2026,
+                    ],
+                ],
+            ],
+        );
+
+        $this->assertDatabaseHas(
+            'seccoes_metal_thursday',
+            [
+                'id' => $seccao->getKey(),
+
+                'lancamento_id' => $identificadorLancamento,
+
+                'titulo' => 'Lançamento histórico atualizado',
+
+                'deleted_at' => null,
+            ],
+        );
+    }
+
+    /**
+     * Confirma que um lançamento eliminado logicamente não pode ser transferido
+     * para outra secção.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function atualizacao_rejeita_transferencia_de_lancamento_eliminado_para_outra_seccao(): void
+    {
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $edicao =
+            $this->criarEdicao();
+
+        $tipoSeccao =
+            TipoSeccao::factory()
+                ->comDetalhes()
+                ->create();
+
+        $artista =
+            Artista::factory()
+                ->create();
+
+        $lancamentoHistorico =
+            Lancamento::factory()
+                ->create();
+
+        $servico =
+            $this->servico();
+
+        $metalThursday = $servico->criar([
+            'edicao_id' => (int) $edicao->getKey(),
+
+            'data' => '2026-01-08',
+
+            'nome' => null,
+
+            'autor_id' => (int) $utilizador->getKey(),
+
+            'proximo_nomeado_id' => null,
+
+            'seccoes' => [
+                [
+                    'id' => null,
+
+                    'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
+
+                    'titulo' => 'Secção histórica',
+
+                    'descricao' => 'Descrição histórica.',
+
+                    'artista_id' => (int) $artista->getKey(),
+
+                    'lancamento_id' => (int) $lancamentoHistorico->getKey(),
+
+                    'ligacao' => 'https://example.com/historica',
+
+                    'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+
+                    'ano' => 2026,
+                ],
+                [
+                    'id' => null,
+
+                    'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
+
+                    'titulo' => 'Outra secção',
+
+                    'descricao' => 'Outra descrição.',
+
+                    'artista_id' => (int) $artista->getKey(),
+
+                    'lancamento_id' => null,
+
+                    'ligacao' => 'https://example.com/outra',
+
+                    'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+
+                    'ano' => 2026,
+                ],
+            ],
+        ]);
+
+        $seccoes =
+            $metalThursday
+                ->seccoes
+                ->values();
+
+        $seccaoHistorica =
+            $seccoes->get(0);
+
+        $outraSeccao =
+            $seccoes->get(1);
+
+        self::assertNotNull(
+            $seccaoHistorica,
+        );
+
+        self::assertNotNull(
+            $outraSeccao,
+        );
+
+        $identificadorLancamento =
+            (int) $lancamentoHistorico->getKey();
+
+        $lancamentoHistorico->deleteOrFail();
+
+        try {
+            $servico->atualizar(
+                $metalThursday,
+                [
+                    'edicao_id' => (int) $edicao->getKey(),
+
+                    'data' => '2026-01-08',
+
+                    'nome' => null,
+
+                    'autor_id' => (int) $utilizador->getKey(),
+
+                    'proximo_nomeado_id' => null,
+
+                    'seccoes' => [
+                        [
+                            'id' => (int) $seccaoHistorica->getKey(),
+
+                            'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
+
+                            'titulo' => 'Secção histórica atualizada',
+
+                            'descricao' => 'Descrição histórica atualizada.',
+
+                            'artista_id' => (int) $artista->getKey(),
+
+                            'lancamento_id' => $identificadorLancamento,
+
+                            'ligacao' => 'https://example.com/historica',
+
+                            'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+
+                            'ano' => 2026,
+                        ],
+                        [
+                            'id' => (int) $outraSeccao->getKey(),
+
+                            'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
+
+                            'titulo' => 'Outra secção atualizada',
+
+                            'descricao' => 'Outra descrição atualizada.',
+
+                            'artista_id' => (int) $artista->getKey(),
+
+                            'lancamento_id' => $identificadorLancamento,
+
+                            'ligacao' => 'https://example.com/outra',
+
+                            'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+
+                            'ano' => 2026,
+                        ],
+                    ],
+                ],
+            );
+
+            self::fail(
+                'Era esperada uma exceção ao transferir um lançamento eliminado para outra secção.',
+            );
+        } catch (InvalidArgumentException $excecao) {
+            self::assertSame(
+                'Foi indicado um lançamento inexistente ou indisponível.',
+                $excecao->getMessage(),
+            );
+        }
+
+        $this->assertDatabaseHas(
+            'seccoes_metal_thursday',
+            [
+                'id' => $seccaoHistorica->getKey(),
+
+                'lancamento_id' => $identificadorLancamento,
+
+                'titulo' => 'Secção histórica',
+
+                'deleted_at' => null,
+            ],
+        );
+
+        $this->assertDatabaseHas(
+            'seccoes_metal_thursday',
+            [
+                'id' => $outraSeccao->getKey(),
+
+                'lancamento_id' => null,
+
+                'titulo' => 'Outra secção',
+
+                'deleted_at' => null,
+            ],
+        );
+    }
+
+    /**
+     * Confirma que um lançamento eliminado logicamente não pode ser associado
+     * a uma nova secção.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function criacao_rejeita_lancamento_eliminado_logicamente(): void
+    {
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $edicao =
+            $this->criarEdicao();
+
+        $tipoSeccao =
+            TipoSeccao::factory()
+                ->comDetalhes()
+                ->create();
+
+        $artista =
+            Artista::factory()
+                ->create();
+
+        $lancamento =
+            Lancamento::factory()
+                ->create();
+
+        $identificadorLancamento =
+            (int) $lancamento->getKey();
+
+        $lancamento->deleteOrFail();
+
+        try {
+            $this
+                ->servico()
+                ->criar([
+                    'edicao_id' => (int) $edicao->getKey(),
+
+                    'data' => '2026-01-08',
+
+                    'nome' => null,
+
+                    'autor_id' => (int) $utilizador->getKey(),
+
+                    'proximo_nomeado_id' => null,
+
+                    'seccoes' => [
+                        [
+                            'id' => null,
+
+                            'tipo_seccao_id' => (int) $tipoSeccao->getKey(),
+
+                            'titulo' => 'Lançamento eliminado',
+
+                            'descricao' => 'Descrição válida.',
+
+                            'artista_id' => (int) $artista->getKey(),
+
+                            'lancamento_id' => $identificadorLancamento,
+
+                            'ligacao' => 'https://example.com/lancamento',
+
+                            'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+
+                            'ano' => 2026,
+                        ],
+                    ],
+                ]);
+
+            self::fail(
+                'Era esperada uma exceção para um lançamento eliminado numa nova secção.',
+            );
+        } catch (InvalidArgumentException $excecao) {
+            self::assertSame(
+                'Foi indicado um lançamento inexistente ou indisponível.',
+                $excecao->getMessage(),
+            );
+        }
+
+        $this->assertDatabaseMissing(
+            'seccoes_metal_thursday',
+            [
+                'lancamento_id' => $identificadorLancamento,
+
+                'deleted_at' => null,
+            ],
         );
     }
 

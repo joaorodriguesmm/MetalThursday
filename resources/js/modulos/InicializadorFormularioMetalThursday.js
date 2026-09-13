@@ -5,6 +5,8 @@ import {
 } from './OpcoesTomSelect';
 import GestorEdicaoMetalThursday from './GestorEdicaoMetalThursday';
 import GestorFormulariosModais from './GestorFormulariosModais';
+import GestorImportacaoLancamentoDiscogs
+    from './GestorImportacaoLancamentoDiscogs';
 import GestorSeccoes from './GestorSeccoes';
 import InicializadorTomSelect from './InicializadorTomSelect';
 import InicializadorTooltips from './InicializadorTooltips';
@@ -30,6 +32,8 @@ const CHAVES_ENDERECOS = Object.freeze([
     'guardarEdicao',
     'guardarArtista',
     'guardarGenero',
+    'pesquisarLancamentos',
+    'importarLancamento',
     'obterUtilizadorHaMaisTempoSemNomeacao',
 ]);
 
@@ -1863,6 +1867,16 @@ function inicializarFormularioMetalThursday(
     const possuiSelecaoProximoNomeado =
         campoProximoNomeado
         instanceof HTMLSelectElement;
+
+    new GestorImportacaoLancamentoDiscogs(
+        formulario,
+        {
+            urlImportacao:
+                configuracao
+                    .enderecos
+                    .importarLancamento,
+        },
+    );
 
     /*
      * O testador de incorporação é específico de cada secção e, por isso,
