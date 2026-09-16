@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Servicos\Musica;
 
+use App\Enumeracoes\TipoLancamento;
 use App\Models\Musica\Artista;
 use App\Models\Musica\Lancamento;
 use App\Models\Musica\Musica;
 use App\Servicos\Musica\ServicoImportacaoLancamento;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
-use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -120,6 +120,75 @@ final class ServicoImportacaoLancamentoTest extends TestCase
     }
 
     /**
+     * Confirma a persistência da sugestão de tipo e do ano original do Master.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function persiste_tipo_sugerido_e_ano_original_do_master(): void
+    {
+        Http::fake([
+            'https://api.discogs.com/releases/249504' => Http::response(
+                [
+                    'id' => 249504,
+                    'title' => 'Master Of Puppets',
+                    'year' => 1991,
+                    'master_id' => 12345,
+
+                    'formats' => [
+                        [
+                            'name' => 'CD',
+
+                            'descriptions' => [
+                                'Album',
+                                'Reissue',
+                            ],
+                        ],
+                    ],
+
+                    'artists' => [],
+                    'tracklist' => [],
+                ],
+                200,
+            ),
+
+            'https://api.discogs.com/masters/12345' => Http::response(
+                [
+                    'id' => 12345,
+                    'year' => 1986,
+                ],
+                200,
+            ),
+        ]);
+
+        $lancamento =
+            app(
+                ServicoImportacaoLancamento::class,
+            )->importar(
+                249504,
+            );
+
+        self::assertSame(
+            TipoLancamento::AlbumEstudio,
+            $lancamento->tipo,
+        );
+
+        self::assertSame(
+            1986,
+            $lancamento->ano_original,
+        );
+
+        $this->assertDatabaseHas(
+            'lancamentos',
+            [
+                'id' => $lancamento->getKey(),
+                'tipo' => TipoLancamento::AlbumEstudio->value,
+                'ano_original' => 1986,
+            ],
+        );
+    }
+
+    /**
      * Confirma que uma edição Discogs já importada é reutilizada.
      *
      * @since 2.0.0
@@ -132,6 +201,13 @@ final class ServicoImportacaoLancamentoTest extends TestCase
                 [
                     'id' => 249504,
                     'title' => 'Master Of Puppets',
+                    'year' => 1986,
+                    'formats' => [
+                        [
+                            'name' => 'Vinyl',
+                            'descriptions' => ['Album'],
+                        ],
+                    ],
                     'artists' => [],
                     'tracklist' => [],
                 ],
@@ -175,6 +251,77 @@ final class ServicoImportacaoLancamentoTest extends TestCase
     }
 
     /**
+     * Confirma que metadados em falta são completados numa importação antiga.
+     *
+     * Valores já existentes continuam preservados para não substituir
+     * correções efetuadas manualmente pelo utilizador.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function completa_metadados_em_falta_ao_reutilizar_lancamento_discogs(): void
+    {
+        $existente =
+            Lancamento::factory()
+                ->create([
+                    'titulo' => 'Título corrigido manualmente',
+                    'tipo' => TipoLancamento::AlbumEstudio,
+                    'ano_original' => null,
+                    'discogs_release_id' => 2609819,
+                ]);
+
+        Http::fake([
+            'https://api.discogs.com/releases/2609819' => Http::response(
+                [
+                    'id' => 2609819,
+                    'title' => 'Master Of Puppets',
+                    'year' => 1986,
+                    'formats' => [
+                        [
+                            'name' => 'Vinyl',
+                            'descriptions' => ['Album'],
+                        ],
+                    ],
+                    'artists' => [],
+                    'tracklist' => [],
+                ],
+                200,
+            ),
+        ]);
+
+        $lancamento =
+            app(
+                ServicoImportacaoLancamento::class,
+            )->importar(
+                2609819,
+            );
+
+        self::assertSame(
+            $existente->getKey(),
+            $lancamento->getKey(),
+        );
+
+        self::assertSame(
+            'Título corrigido manualmente',
+            $lancamento->titulo,
+        );
+
+        self::assertSame(
+            TipoLancamento::AlbumEstudio,
+            $lancamento->tipo,
+        );
+
+        self::assertSame(
+            1986,
+            $lancamento->ano_original,
+        );
+
+        Http::assertSentCount(
+            1,
+        );
+    }
+
+    /**
      * Confirma que uma edição Discogs eliminada logicamente é restaurada.
      *
      * @since 2.0.0
@@ -187,6 +334,13 @@ final class ServicoImportacaoLancamentoTest extends TestCase
                 [
                     'id' => 249504,
                     'title' => 'Master Of Puppets',
+                    'year' => 1986,
+                    'formats' => [
+                        [
+                            'name' => 'Vinyl',
+                            'descriptions' => ['Album'],
+                        ],
+                    ],
                     'artists' => [],
                     'tracklist' => [],
                 ],
@@ -246,12 +400,12 @@ final class ServicoImportacaoLancamentoTest extends TestCase
     }
 
     /**
-     * Confirma que um artista Discogs já existente é associado ao lançamento.
+     * Confirma que um artista Discogs já existente não é associado.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function associa_artista_discogs_ja_existente(): void
+    public function nao_associa_artista_discogs_ja_existente(): void
     {
         $artista =
             Artista::factory()
@@ -286,39 +440,30 @@ final class ServicoImportacaoLancamentoTest extends TestCase
                 249504,
             );
 
-        $artistas =
+        self::assertSame(
+            0,
             $lancamento
                 ->artistas()
-                ->get();
-
-        self::assertCount(
-            1,
-            $artistas,
-        );
-
-        self::assertSame(
-            $artista->getKey(),
-            $artistas->first()?->getKey(),
+                ->count(),
         );
 
         self::assertSame(
             1,
             Artista::query()
-                ->where(
-                    'discogs_id',
-                    18839,
+                ->whereKey(
+                    $artista->getKey(),
                 )
                 ->count(),
         );
     }
 
     /**
-     * Confirma que um artista Discogs inexistente é criado e associado.
+     * Confirma que um artista Discogs inexistente não é criado.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function cria_artista_discogs_inexistente(): void
+    public function nao_cria_artista_discogs_inexistente(): void
     {
         Http::fake([
             'https://api.discogs.com/releases/249504' => Http::response(
@@ -346,51 +491,28 @@ final class ServicoImportacaoLancamentoTest extends TestCase
                 249504,
             );
 
-        $artista =
-            Artista::query()
-                ->where(
-                    'discogs_id',
-                    18839,
-                )
-                ->first();
-
-        self::assertInstanceOf(
-            Artista::class,
-            $artista,
+        $this->assertDatabaseMissing(
+            'artistas',
+            [
+                'discogs_id' => 18839,
+            ],
         );
 
         self::assertSame(
-            'Metallica',
-            $artista->nome,
-        );
-
-        self::assertTrue(
+            0,
             $lancamento
                 ->artistas()
-                ->whereKey(
-                    $artista->getKey(),
-                )
-                ->exists(),
-        );
-
-        self::assertSame(
-            1,
-            Artista::query()
-                ->where(
-                    'discogs_id',
-                    18839,
-                )
                 ->count(),
         );
     }
 
     /**
-     * Confirma que um artista Discogs eliminado logicamente é restaurado.
+     * Confirma que um artista Discogs eliminado não é restaurado.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function restaura_artista_discogs_eliminado(): void
+    public function nao_restaura_artista_discogs_eliminado(): void
     {
         $artista =
             Artista::factory()
@@ -404,13 +526,6 @@ final class ServicoImportacaoLancamentoTest extends TestCase
 
         $artista->delete();
 
-        self::assertSoftDeleted(
-            'artistas',
-            [
-                'id' => $identificadorArtista,
-            ],
-        );
-
         Http::fake([
             'https://api.discogs.com/releases/249504' => Http::response(
                 [
@@ -430,62 +545,30 @@ final class ServicoImportacaoLancamentoTest extends TestCase
             ),
         ]);
 
-        $lancamento =
-            app(
-                ServicoImportacaoLancamento::class,
-            )->importar(
-                249504,
-            );
-
-        $restaurado =
-            Artista::query()
-                ->where(
-                    'discogs_id',
-                    18839,
-                )
-                ->first();
-
-        self::assertInstanceOf(
-            Artista::class,
-            $restaurado,
+        app(
+            ServicoImportacaoLancamento::class,
+        )->importar(
+            249504,
         );
 
-        self::assertSame(
-            $identificadorArtista,
-            $restaurado->getKey(),
-        );
-
-        self::assertFalse(
-            $restaurado->trashed(),
-        );
+        $artistaDepois =
+            Artista::withTrashed()
+                ->findOrFail(
+                    $identificadorArtista,
+                );
 
         self::assertTrue(
-            $lancamento
-                ->artistas()
-                ->whereKey(
-                    $identificadorArtista,
-                )
-                ->exists(),
-        );
-
-        self::assertSame(
-            1,
-            Artista::withTrashed()
-                ->where(
-                    'discogs_id',
-                    18839,
-                )
-                ->count(),
+            $artistaDepois->trashed(),
         );
     }
 
     /**
-     * Confirma que uma falha durante a persistência reverte toda a importação.
+     * Confirma que dados inválidos de artista não interferem com a importação.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function reverte_importacao_perante_falha_de_persistencia(): void
+    public function ignora_dados_de_artista_invalidos_na_importacao(): void
     {
         Http::fake([
             'https://api.discogs.com/releases/249504' => Http::response(
@@ -509,25 +592,15 @@ final class ServicoImportacaoLancamentoTest extends TestCase
             ),
         ]);
 
-        try {
+        $lancamento =
             app(
                 ServicoImportacaoLancamento::class,
             )->importar(
                 249504,
             );
 
-            self::fail(
-                'Era esperada uma falha durante a persistência do artista.',
-            );
-        } catch (InvalidArgumentException) {
-            // A falha é esperada para validar a atomicidade da operação.
-        }
-
-        $this->assertDatabaseMissing(
-            'lancamentos',
-            [
-                'discogs_release_id' => 249504,
-            ],
+        self::assertTrue(
+            $lancamento->exists,
         );
 
         $this->assertDatabaseMissing(
@@ -628,12 +701,12 @@ final class ServicoImportacaoLancamentoTest extends TestCase
     }
 
     /**
-     * Confirma que um artista explícito da faixa já existente é associado à música.
+     * Confirma que um artista existente indicado na faixa não é associado.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function associa_artista_existente_indicado_na_faixa(): void
+    public function nao_associa_artista_existente_indicado_na_faixa(): void
     {
         $artista =
             Artista::factory()
@@ -681,39 +754,30 @@ final class ServicoImportacaoLancamentoTest extends TestCase
                 ->firstOrFail()
                 ->musica;
 
-        $artistas =
+        self::assertSame(
+            0,
             $musica
                 ->artistas()
-                ->get();
-
-        self::assertCount(
-            1,
-            $artistas,
-        );
-
-        self::assertSame(
-            $artista->getKey(),
-            $artistas->first()?->getKey(),
+                ->count(),
         );
 
         self::assertSame(
             1,
             Artista::query()
-                ->where(
-                    'discogs_id',
-                    987654,
+                ->whereKey(
+                    $artista->getKey(),
                 )
                 ->count(),
         );
     }
 
     /**
-     * Confirma que um artista inexistente indicado na faixa é criado e associado.
+     * Confirma que um artista inexistente indicado na faixa não é criado.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function cria_artista_inexistente_indicado_na_faixa(): void
+    public function nao_cria_artista_inexistente_indicado_na_faixa(): void
     {
         Http::fake([
             'https://api.discogs.com/releases/249504' => Http::response(
@@ -748,22 +812,11 @@ final class ServicoImportacaoLancamentoTest extends TestCase
                 249504,
             );
 
-        $artista =
-            Artista::query()
-                ->where(
-                    'discogs_id',
-                    987654,
-                )
-                ->first();
-
-        self::assertInstanceOf(
-            Artista::class,
-            $artista,
-        );
-
-        self::assertSame(
-            'Artista Convidado',
-            $artista->nome,
+        $this->assertDatabaseMissing(
+            'artistas',
+            [
+                'discogs_id' => 987654,
+            ],
         );
 
         $musica =
@@ -772,30 +825,21 @@ final class ServicoImportacaoLancamentoTest extends TestCase
                 ->firstOrFail()
                 ->musica;
 
-        self::assertTrue(
-            $musica
-                ->artistas()
-                ->whereKey(
-                    $artista->getKey(),
-                )
-                ->exists(),
-        );
-
         self::assertSame(
             0,
-            $lancamento
+            $musica
                 ->artistas()
                 ->count(),
         );
     }
 
     /**
-     * Confirma que um artista eliminado indicado numa faixa é restaurado.
+     * Confirma que um artista eliminado indicado numa faixa não é restaurado.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function restaura_artista_eliminado_indicado_na_faixa(): void
+    public function nao_restaura_artista_eliminado_indicado_na_faixa(): void
     {
         $artista =
             Artista::factory()
@@ -809,13 +853,6 @@ final class ServicoImportacaoLancamentoTest extends TestCase
 
         $artista->delete();
 
-        self::assertSoftDeleted(
-            'artistas',
-            [
-                'id' => $identificadorArtista,
-            ],
-        );
-
         Http::fake([
             'https://api.discogs.com/releases/249504' => Http::response(
                 [
@@ -849,26 +886,14 @@ final class ServicoImportacaoLancamentoTest extends TestCase
                 249504,
             );
 
-        $restaurado =
-            Artista::query()
-                ->where(
-                    'discogs_id',
-                    987654,
-                )
-                ->first();
+        $artistaDepois =
+            Artista::withTrashed()
+                ->findOrFail(
+                    $identificadorArtista,
+                );
 
-        self::assertInstanceOf(
-            Artista::class,
-            $restaurado,
-        );
-
-        self::assertSame(
-            $identificadorArtista,
-            $restaurado->getKey(),
-        );
-
-        self::assertFalse(
-            $restaurado->trashed(),
+        self::assertTrue(
+            $artistaDepois->trashed(),
         );
 
         $musica =
@@ -877,40 +902,21 @@ final class ServicoImportacaoLancamentoTest extends TestCase
                 ->firstOrFail()
                 ->musica;
 
-        self::assertTrue(
-            $musica
-                ->artistas()
-                ->whereKey(
-                    $identificadorArtista,
-                )
-                ->exists(),
-        );
-
         self::assertSame(
             0,
-            $lancamento
+            $musica
                 ->artistas()
-                ->count(),
-        );
-
-        self::assertSame(
-            1,
-            Artista::withTrashed()
-                ->where(
-                    'discogs_id',
-                    987654,
-                )
                 ->count(),
         );
     }
 
     /**
-     * Confirma que uma faixa sem artistas próprios herda os artistas da Release.
+     * Confirma que artistas da Release não são associados às faixas.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function associa_artistas_do_lancamento_a_faixa_sem_artistas_proprios(): void
+    public function nao_associa_artistas_do_lancamento_a_faixa(): void
     {
         Http::fake([
             'https://api.discogs.com/releases/249504' => Http::response(
@@ -944,52 +950,41 @@ final class ServicoImportacaoLancamentoTest extends TestCase
                 249504,
             );
 
-        $artista =
-            Artista::query()
-                ->where(
-                    'discogs_id',
-                    18839,
-                )
-                ->firstOrFail();
-
         $musica =
             $lancamento
                 ->faixas()
                 ->firstOrFail()
                 ->musica;
 
-        $artistasMusica =
+        self::assertSame(
+            0,
             $musica
                 ->artistas()
-                ->get();
-
-        self::assertCount(
-            1,
-            $artistasMusica,
+                ->count(),
         );
 
         self::assertSame(
-            $artista->getKey(),
-            $artistasMusica->first()?->getKey(),
-        );
-
-        self::assertTrue(
+            0,
             $lancamento
                 ->artistas()
-                ->whereKey(
-                    $artista->getKey(),
-                )
-                ->exists(),
+                ->count(),
+        );
+
+        $this->assertDatabaseMissing(
+            'artistas',
+            [
+                'discogs_id' => 18839,
+            ],
         );
     }
 
     /**
-     * Confirma que artistas próprios da faixa substituem o fallback dos artistas da Release.
+     * Confirma que artistas próprios da faixa também são ignorados.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function artistas_proprios_da_faixa_tem_prioridade_sobre_artistas_do_lancamento(): void
+    public function nao_associa_artistas_proprios_da_faixa(): void
     {
         Http::fake([
             'https://api.discogs.com/releases/249504' => Http::response(
@@ -1030,59 +1025,30 @@ final class ServicoImportacaoLancamentoTest extends TestCase
                 249504,
             );
 
-        $artistaPrincipal =
-            Artista::query()
-                ->where(
-                    'discogs_id',
-                    18839,
-                )
-                ->firstOrFail();
-
-        $artistaConvidado =
-            Artista::query()
-                ->where(
-                    'discogs_id',
-                    987654,
-                )
-                ->firstOrFail();
-
         $musica =
             $lancamento
                 ->faixas()
                 ->firstOrFail()
                 ->musica;
 
-        $identificadoresArtistasMusica =
+        self::assertSame(
+            0,
             $musica
                 ->artistas()
-                ->pluck(
-                    'artistas.id',
-                )
-                ->all();
+                ->count(),
+        );
 
         self::assertSame(
-            [
-                $artistaConvidado->getKey(),
-            ],
-            $identificadoresArtistasMusica,
-        );
-
-        self::assertTrue(
+            0,
             $lancamento
                 ->artistas()
-                ->whereKey(
-                    $artistaPrincipal->getKey(),
-                )
-                ->exists(),
+                ->count(),
         );
 
-        self::assertFalse(
-            $lancamento
-                ->artistas()
-                ->whereKey(
-                    $artistaConvidado->getKey(),
-                )
-                ->exists(),
+        self::assertSame(
+            0,
+            Artista::query()
+                ->count(),
         );
     }
 }

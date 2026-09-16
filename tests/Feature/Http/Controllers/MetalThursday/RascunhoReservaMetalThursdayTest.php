@@ -203,6 +203,8 @@ final class RascunhoReservaMetalThursdayTest extends TestCase
 
                     'artista_id' => null,
 
+                    'lancamento_id' => null,
+
                     'ligacao' => 'https://',
 
                     'tipo_incorporacao' => null,

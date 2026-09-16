@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Servicos\Musica;
 
+use App\Enumeracoes\TipoLancamento;
 use App\Servicos\Integracoes\LimitadorPedidosExternos;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
@@ -223,6 +224,12 @@ final class ServicoDiscogs
             );
         }
 
+        $formatos =
+            $this->normalizarFormatos(
+                $dados['formats']
+                    ?? null,
+            );
+
         return [
             'discogs_release_id' => $discogsReleaseId,
 
@@ -235,15 +242,23 @@ final class ServicoDiscogs
                     ?? null,
             ),
 
+            'ano_original' => $this->obterAnoOriginal(
+                $dados['master_id']
+                    ?? null,
+                $dados['year']
+                    ?? null,
+            ),
+
+            'tipo_sugerido' => $this->sugerirTipoLancamento(
+                $formatos,
+            ),
+
             'pais' => $this->normalizarTextoOpcional(
                 $dados['country']
                     ?? null,
             ),
 
-            'formatos' => $this->normalizarFormatos(
-                $dados['formats']
-                    ?? null,
-            ),
+            'formatos' => $formatos,
 
             'artistas' => $this->normalizarArtistas(
                 $dados['artists']
@@ -255,6 +270,107 @@ final class ServicoDiscogs
                     ?? [],
             ),
         ];
+    }
+
+    /**
+     * Obtém o melhor ano disponível para pré-preencher o lançamento.
+     *
+     * O ano do Master continua a ter prioridade por representar a edição
+     * original. Quando o Master não existe, falha ou não possui um ano válido,
+     * é utilizado o ano da Release como sugestão editável pelo utilizador.
+     *
+     * @param  mixed  $identificadorMaster  Identificador Master recebido.
+     * @param  mixed  $anoRelease  Ano devolvido pela Release.
+     * @return int|null Melhor ano disponível ou nulo.
+     *
+     * @since 2.0.0
+     */
+    private function obterAnoOriginal(
+        mixed $identificadorMaster,
+        mixed $anoRelease,
+    ): ?int {
+        $anoReleaseNormalizado =
+            $this->normalizarAno(
+                $anoRelease,
+            );
+
+        if (
+            ! is_int($identificadorMaster)
+            || $identificadorMaster < 1
+        ) {
+            return $anoReleaseNormalizado;
+        }
+
+        try {
+            $resposta =
+                $this->executarPedido(
+                    '/masters/'.$identificadorMaster,
+                );
+        } catch (RuntimeException) {
+            return $anoReleaseNormalizado;
+        }
+
+        $dados =
+            $resposta->json();
+
+        if (! is_array($dados)) {
+            return $anoReleaseNormalizado;
+        }
+
+        return $this->normalizarAno(
+            $dados['year']
+                ?? null,
+        ) ?? $anoReleaseNormalizado;
+    }
+
+    /**
+     * Sugere o tipo interno de lançamento a partir dos formatos Discogs.
+     *
+     * Só são consideradas descrições inequívocas. Formatos físicos como LP,
+     * CD ou Vinyl, isoladamente, não permitem inferir o tipo editorial.
+     *
+     * @param  list<string>  $formatos  Formatos normalizados da Release.
+     * @return string|null Valor da enumeração sugerido ou nulo.
+     *
+     * @since 2.0.0
+     */
+    private function sugerirTipoLancamento(
+        array $formatos,
+    ): ?string {
+        $normalizados =
+            array_map(
+                static fn (string $formato): string => strtolower(
+                    trim(
+                        $formato,
+                    ),
+                ),
+                $formatos,
+            );
+
+        $sugestoes = [
+            'soundtrack' => TipoLancamento::BandaSonora,
+            'live' => TipoLancamento::AlbumAoVivo,
+            'compilation' => TipoLancamento::Compilacao,
+            'demo' => TipoLancamento::Demo,
+            'split' => TipoLancamento::Split,
+            'ep' => TipoLancamento::EP,
+            'single' => TipoLancamento::Single,
+            'album' => TipoLancamento::AlbumEstudio,
+        ];
+
+        foreach ($sugestoes as $formato => $tipo) {
+            if (
+                in_array(
+                    $formato,
+                    $normalizados,
+                    true,
+                )
+            ) {
+                return $tipo->value;
+            }
+        }
+
+        return null;
     }
 
     /**

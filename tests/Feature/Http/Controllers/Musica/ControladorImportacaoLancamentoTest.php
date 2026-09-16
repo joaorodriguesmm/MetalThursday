@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Http\Controllers\Musica;
 
 use App\Enumeracoes\PapelUtilizador;
+use App\Enumeracoes\TipoLancamento;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\ReservaMetalThursday;
@@ -213,6 +214,19 @@ final class ControladorImportacaoLancamentoTest extends TestCase
                 [
                     'id' => 249504,
                     'title' => 'Master Of Puppets',
+                    'year' => 1991,
+                    'master_id' => 12345,
+
+                    'formats' => [
+                        [
+                            'name' => 'CD',
+
+                            'descriptions' => [
+                                'Album',
+                                'Reissue',
+                            ],
+                        ],
+                    ],
 
                     'artists' => [
                         [
@@ -228,6 +242,14 @@ final class ControladorImportacaoLancamentoTest extends TestCase
                             'title' => 'Battery',
                         ],
                     ],
+                ],
+                200,
+            ),
+
+            'https://api.discogs.com/masters/12345' => Http::response(
+                [
+                    'id' => 12345,
+                    'year' => 1986,
                 ],
                 200,
             ),
@@ -257,6 +279,26 @@ final class ControladorImportacaoLancamentoTest extends TestCase
             ->assertJsonPath(
                 'lancamento.titulo',
                 'Master Of Puppets',
+            )
+            ->assertJsonPath(
+                'lancamento.tipo',
+                TipoLancamento::AlbumEstudio->value,
+            )
+            ->assertJsonPath(
+                'lancamento.ano_original',
+                1986,
+            )
+            ->assertJsonPath(
+                'lancamento.faixas.0.titulo',
+                'Battery',
+            )
+            ->assertJsonPath(
+                'lancamento.faixas.0.posicao',
+                'A1',
+            )
+            ->assertJsonPath(
+                'lancamento.faixas.0.ordem',
+                1,
             );
 
         $this->assertDatabaseHas(
@@ -267,11 +309,10 @@ final class ControladorImportacaoLancamentoTest extends TestCase
             ],
         );
 
-        $this->assertDatabaseHas(
+        $this->assertDatabaseMissing(
             'artistas',
             [
                 'discogs_id' => 18839,
-                'nome' => 'Metallica',
             ],
         );
 

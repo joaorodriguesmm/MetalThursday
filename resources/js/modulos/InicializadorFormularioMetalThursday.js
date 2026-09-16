@@ -527,6 +527,12 @@ function validarSeccao(
         '[name$="[ano]"]',
     );
 
+    const eLancamento =
+        selecaoTipo.selectedOptions
+            .item(0)
+            ?.dataset
+            .identificadorTipoSeccao === 'lancamento';
+
     const validacoes = [
         validarCampoSeccao(
             validador,
@@ -544,24 +550,26 @@ function validarSeccao(
             },
         ),
 
-        validarCampoSeccao(
-            validador,
-            titulo,
-            [
-                'obrigatorio',
-                `maximo:${obterComprimentoMaximoCampo(
-                    titulo,
-                    255,
-                )}`,
-            ],
-            {
-                obrigatorio:
-                    'Por favor, insere o título.',
+        eLancamento
+            ? true
+            : validarCampoSeccao(
+                validador,
+                titulo,
+                [
+                    'obrigatorio',
+                    `maximo:${obterComprimentoMaximoCampo(
+                        titulo,
+                        255,
+                    )}`,
+                ],
+                {
+                    obrigatorio:
+                        'Por favor, insere o título.',
 
-                maximo:
-                    'O título excede o comprimento máximo permitido.',
-            },
-        ),
+                    maximo:
+                        'O título excede o comprimento máximo permitido.',
+                },
+            ),
 
         validarCampoSeccao(
             validador,
@@ -603,31 +611,33 @@ function validarSeccao(
             },
         ),
 
-        validarCampoSeccao(
-            validador,
-            ano,
-            ano instanceof HTMLInputElement
-                ? [
-                    'obrigatorio',
-                    'inteiro',
+        eLancamento
+            ? true
+            : validarCampoSeccao(
+                validador,
+                ano,
+                ano instanceof HTMLInputElement
+                    ? [
+                        'obrigatorio',
+                        'inteiro',
 
-                    criarRegraIntervaloNumerico(
-                        ano,
-                        'O ano indicado não pertence ao intervalo permitido.',
-                    ),
-                ]
-                : [
-                    'obrigatorio',
-                    'inteiro',
-                ],
-            {
-                obrigatorio:
-                    'Por favor, insere o ano.',
+                        criarRegraIntervaloNumerico(
+                            ano,
+                            'O ano indicado não pertence ao intervalo permitido.',
+                        ),
+                    ]
+                    : [
+                        'obrigatorio',
+                        'inteiro',
+                    ],
+                {
+                    obrigatorio:
+                        'Por favor, insere o ano.',
 
-                inteiro:
-                    'O ano deve ser um número inteiro.',
-            },
-        ),
+                    inteiro:
+                        'O ano deve ser um número inteiro.',
+                },
+            ),
     ];
 
     if (

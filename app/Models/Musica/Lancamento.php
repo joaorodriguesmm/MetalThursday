@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property int $id
  * @property string $titulo
  * @property TipoLancamento|null $tipo
+ * @property int|null $ano_original
  * @property int|null $discogs_release_id
  * @property int|null $criado_por_id
  * @property int|null $atualizado_por_id
@@ -79,6 +80,7 @@ class Lancamento extends Model
     protected $fillable = [
         'titulo',
         'tipo',
+        'ano_original',
         'discogs_release_id',
     ];
 
@@ -93,6 +95,7 @@ class Lancamento extends Model
     {
         return [
             'tipo' => TipoLancamento::class,
+            'ano_original' => 'integer',
             'discogs_release_id' => 'integer',
             'criado_por_id' => 'integer',
             'atualizado_por_id' => 'integer',

@@ -1,7 +1,8 @@
 import axios from 'axios';
+import EditorLancamentoDiscogs from './EditorLancamentoDiscogs';
 
 /**
- * Gere a associação de edições concretas do Discogs às secções de LP e EP.
+ * Gere a associação de edições concretas do Discogs às secções de lançamento.
  *
  * A edição é indicada através da ligação da respetiva página `release` no
  * Discogs, evitando uma pesquisa paralela dentro do MetalThursday.
@@ -27,8 +28,7 @@ class GestorImportacaoLancamentoDiscogs {
      * @since 2.0.0
      */
     static TIPOS_SECCAO_LANCAMENTO = new Set([
-        'album',
-        'ep',
+        'lancamento',
     ]);
 
     /**
@@ -70,6 +70,9 @@ class GestorImportacaoLancamentoDiscogs {
         this.urlImportacao = urlImportacao;
         this.identificadorMetalThursday =
             this.obterIdentificadorMetalThursday();
+        this.editorLancamentos = new EditorLancamentoDiscogs(
+            formulario,
+        );
 
         this.normalizarSeccoesExistentes();
 
@@ -213,8 +216,8 @@ class GestorImportacaoLancamentoDiscogs {
     /**
      * Atualiza a visibilidade da integração consoante o tipo selecionado.
      *
-     * Ao abandonar LP ou EP, a associação é removida para impedir que um
-     * lançamento seja submetido numa secção incompatível.
+     * Ao abandonar o tipo de lançamento, a associação é removida para impedir
+     * que um lançamento seja submetido numa secção incompatível.
      *
      * @param {HTMLElement} seccao Secção atualizada.
      * @param {boolean} limparQuandoInaplicavel Indica se deve limpar a seleção.
@@ -253,6 +256,17 @@ class GestorImportacaoLancamentoDiscogs {
             aplicavel,
         );
 
+        this.editorLancamentos.atualizarCamposGenericos(
+            seccao,
+            aplicavel,
+        );
+
+        if (aplicavel) {
+            this.editorLancamentos.inicializarSeccao(
+                seccao,
+            );
+        }
+
         if (!aplicavel) {
             if (limparQuandoInaplicavel) {
                 this.limparAssociacao(
@@ -269,7 +283,7 @@ class GestorImportacaoLancamentoDiscogs {
     }
 
     /**
-     * Determina se a secção selecionada é um LP ou EP.
+     * Determina se a secção selecionada aceita um lançamento.
      *
      * @param {HTMLElement} seccao Secção consultada.
      *
@@ -518,7 +532,7 @@ class GestorImportacaoLancamentoDiscogs {
         );
 
         const campoTitulo = seccao.querySelector(
-            '[name$="[titulo]"]',
+            '[data-campo-titulo-seccao]',
         );
 
         if (campoLancamento instanceof HTMLInputElement) {
@@ -538,6 +552,11 @@ class GestorImportacaoLancamentoDiscogs {
                 campoTitulo,
             );
         }
+
+        this.editorLancamentos.carregarLancamento(
+            seccao,
+            lancamento,
+        );
     }
 
     /**
@@ -573,7 +592,7 @@ class GestorImportacaoLancamentoDiscogs {
         }
 
         elemento.textContent =
-            `Lançamento já associado (registo local #${campo.value}). Cola outra ligação do Discogs para o substituir.`;
+            'Lançamento associado. Cola outra ligação do Discogs para o substituir.';
         elemento.hidden = false;
     }
 
@@ -666,6 +685,10 @@ class GestorImportacaoLancamentoDiscogs {
                 'text-muted',
             );
         }
+
+        this.editorLancamentos.limpar(
+            seccao,
+        );
     }
 
     /**
@@ -683,11 +706,12 @@ class GestorImportacaoLancamentoDiscogs {
         ativos,
     ) {
         area.querySelectorAll(
-            'input, button',
+            'input, button, select',
         ).forEach((controlo) => {
             if (
                 controlo instanceof HTMLInputElement
                 || controlo instanceof HTMLButtonElement
+                || controlo instanceof HTMLSelectElement
             ) {
                 controlo.disabled = !ativos;
             }
@@ -772,16 +796,9 @@ class GestorImportacaoLancamentoDiscogs {
      * @since 2.0.0
      */
     lancamentoImportadoValido(lancamento) {
-        return typeof lancamento === 'object'
-            && lancamento !== null
-            && Number.isSafeInteger(lancamento.id)
-            && lancamento.id > 0
-            && Number.isSafeInteger(
-                lancamento.discogs_release_id,
-            )
-            && lancamento.discogs_release_id > 0
-            && typeof lancamento.titulo === 'string'
-            && lancamento.titulo.trim() !== '';
+        return this.editorLancamentos.dadosImportacaoValidos(
+            lancamento,
+        );
     }
 
     /**

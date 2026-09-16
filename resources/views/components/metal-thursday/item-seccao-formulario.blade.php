@@ -214,24 +214,75 @@
                 @enderror
             </div>
 
-            <div
-                class="historico-artista-metal-thursday mt-3"
-                hidden
+        </div>
+
+        <div
+            class="col-md-6 grupo-campo-formulario mb-3"
+            data-importacao-lancamento
+            data-nome-base-campo="{{ $nomeBaseCampo }}"
+            aria-hidden="true"
+            hidden
+        >
+            <label class="form-label">
+                <strong>Discogs</strong>
+
+                <span class="badge text-bg-secondary ms-1">
+                    Opcional
+                </span>
+            </label>
+
+            <button
+                class="btn border-0 bg-transparent text-muted p-0 align-baseline"
+                type="button"
+                data-bs-toggle="tooltip"
+                data-bs-title="Cola a ligação de uma Release do Discogs (/release/...) para preencher automaticamente os dados do lançamento."
+                aria-label="Ajuda sobre o preenchimento pelo Discogs"
             >
-                <div class="small fw-semibold mb-2">
-                    Aparições anteriores em MetalThursdays
-                </div>
+                <i
+                    class="bi bi-info-circle"
+                    aria-hidden="true"
+                ></i>
+            </button>
 
-                <div
-                    class="estado-historico-artista-metal-thursday small text-muted"
-                    aria-live="polite"
-                    aria-atomic="true"
-                ></div>
+            <div class="input-group">
+                <input
+                    class="form-control"
+                    type="url"
+                    maxlength="2048"
+                    autocomplete="url"
+                    inputmode="url"
+                    placeholder="https://www.discogs.com/release/..."
+                    aria-label="Ligação da edição no Discogs"
+                    data-ligacao-lancamento-discogs
+                >
 
-                <div
-                    class="lista-historico-artista-metal-thursday"
-                ></div>
+                <button
+                    class="btn btn-secondary d-inline-flex align-items-center justify-content-center gap-2 text-nowrap px-3"
+                    type="button"
+                    data-acao-importar-lancamento
+                >
+                    <i
+                        class="bi bi-box-arrow-in-down"
+                        aria-hidden="true"
+                    ></i>
+
+                    Preencher
+                </button>
             </div>
+
+            <div
+                class="small text-muted mt-2"
+                aria-live="polite"
+                aria-atomic="true"
+                data-estado-importacao-lancamento
+            ></div>
+
+            <div
+                class="alert alert-success py-2 px-3 mt-2 mb-0"
+                role="status"
+                data-lancamento-associado
+                hidden
+            ></div>
         </div>
 
         <div
@@ -274,6 +325,7 @@
                 class="form-control @error($chavesErro['titulo']) is-invalid @enderror"
                 type="text"
                 name="{{ $nomeBaseCampo }}[titulo]"
+                data-campo-titulo-seccao
                 value="{{ $valores['titulo'] }}"
                 maxlength="{{ $comprimentoMaximoTitulo }}"
                 aria-describedby="erro-{{ $identificadores['titulo'] }}"
@@ -299,61 +351,217 @@
     </div>
 
     <div
+        class="historico-artista-metal-thursday mb-3"
+        hidden
+    >
+        <div class="small fw-semibold mb-2">
+            Aparições anteriores em MetalThursdays
+        </div>
+
+        <div
+            class="estado-historico-artista-metal-thursday small text-muted"
+            aria-live="polite"
+            aria-atomic="true"
+        ></div>
+
+        <div
+            class="lista-historico-artista-metal-thursday"
+        ></div>
+    </div>
+
+    <div
         class="mb-3"
-        data-importacao-lancamento
-        aria-hidden="true"
+        data-editor-lancamento
         hidden
     >
         <div class="border rounded p-3 bg-black bg-opacity-10">
-            <div class="fw-semibold">
-                Lançamento do Discogs
+            <div class="fw-semibold mb-3">
+                Dados do lançamento
             </div>
 
-            <p class="small text-muted mb-0">
-                Abre no Discogs a edição exata do LP ou EP, copia a ligação
-                da página e cola-a aqui. A ligação tem de ser de uma edição
-                concreta (<code>/release/...</code>), não de um Master.
-            </p>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">
+                        <strong>Título do lançamento</strong>
+                    </label>
 
-            <div class="input-group mt-3">
-                <input
-                    class="form-control"
-                    type="url"
-                    maxlength="2048"
-                    autocomplete="url"
-                    inputmode="url"
-                    placeholder="https://www.discogs.com/release/6025044-..."
-                    aria-label="Ligação da edição no Discogs"
-                    data-ligacao-lancamento-discogs
-                >
+                    <input
+                        class="form-control"
+                        type="text"
+                        name="{{ $nomeBaseCampo }}[lancamento][titulo]"
+                        value="{{ $dadosLancamento['titulo'] }}"
+                        maxlength="{{ $comprimentoMaximoTituloLancamento }}"
+                        data-campo-titulo-lancamento
+                        required
+                    >
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">
+                        <strong>Tipo</strong>
+                    </label>
+
+                    <select
+                        class="form-select"
+                        name="{{ $nomeBaseCampo }}[lancamento][tipo]"
+                        data-campo-tipo-lancamento
+                    >
+                        <option value="">
+                            Não definido
+                        </option>
+
+                        @foreach ($tiposLancamento as $tipoLancamento)
+                            <option
+                                value="{{ $tipoLancamento['valor'] }}"
+                                @selected(
+                                    $dadosLancamento['tipo']
+                                    === $tipoLancamento['valor']
+                                )
+                            >
+                                {{ $tipoLancamento['etiqueta'] }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">
+                        <strong>Ano original</strong>
+                    </label>
+
+                    <input
+                        class="form-control"
+                        type="number"
+                        name="{{ $nomeBaseCampo }}[lancamento][ano_original]"
+                        value="{{ $dadosLancamento['ano_original'] }}"
+                        min="{{ $anoMinimo }}"
+                        max="{{ $anoMaximo }}"
+                        step="1"
+                        inputmode="numeric"
+                        data-campo-ano-original-lancamento
+                    >
+
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mt-4 mb-2">
+                <strong>Tracklist</strong>
 
                 <button
-                    class="btn btn-secondary"
+                    class="btn btn-sm btn-secondary d-inline-flex align-items-center gap-2"
                     type="button"
-                    data-acao-importar-lancamento
+                    data-acao-faixa-lancamento="adicionar"
                 >
                     <i
-                        class="bi bi-box-arrow-in-down me-1"
+                        class="bi bi-plus-lg"
                         aria-hidden="true"
                     ></i>
 
-                    Importar do Discogs
+                    Adicionar faixa
                 </button>
             </div>
 
-            <div
-                class="small text-muted mt-2"
-                aria-live="polite"
-                aria-atomic="true"
-                data-estado-importacao-lancamento
-            ></div>
+            <div data-lista-faixas-lancamento>
+                @foreach ($dadosLancamento['faixas'] as $indiceFaixa => $faixa)
+                    <div
+                        class="row g-2 align-items-end border rounded p-2 mb-2"
+                        data-faixa-lancamento
+                    >
+                        <input
+                            type="hidden"
+                            name="{{ $nomeBaseCampo }}[lancamento][faixas][{{ $indiceFaixa }}][id]"
+                            value="{{ $faixa['id'] }}"
+                            data-campo-id-faixa
+                        >
 
-            <div
-                class="alert alert-success py-2 px-3 mt-3 mb-0"
-                role="status"
-                data-lancamento-associado
-                hidden
-            ></div>
+                        <input
+                            type="hidden"
+                            name="{{ $nomeBaseCampo }}[lancamento][faixas][{{ $indiceFaixa }}][musica_id]"
+                            value="{{ $faixa['musica_id'] }}"
+                            data-campo-musica-id-faixa
+                        >
+
+                        <input
+                            type="hidden"
+                            name="{{ $nomeBaseCampo }}[lancamento][faixas][{{ $indiceFaixa }}][ordem]"
+                            value="{{ $indiceFaixa + 1 }}"
+                            data-campo-ordem-faixa
+                        >
+
+                        <div class="col-sm-2">
+                            <label class="form-label small mb-1">
+                                Posição
+                            </label>
+
+                            <input
+                                class="form-control form-control-sm"
+                                type="text"
+                                name="{{ $nomeBaseCampo }}[lancamento][faixas][{{ $indiceFaixa }}][posicao]"
+                                value="{{ $faixa['posicao'] }}"
+                                maxlength="100"
+                                data-campo-posicao-faixa
+                            >
+                        </div>
+
+                        <div class="col">
+                            <label class="form-label small mb-1">
+                                Título
+                            </label>
+
+                            <input
+                                class="form-control form-control-sm"
+                                type="text"
+                                name="{{ $nomeBaseCampo }}[lancamento][faixas][{{ $indiceFaixa }}][titulo]"
+                                value="{{ $faixa['titulo'] }}"
+                                maxlength="255"
+                                data-campo-titulo-faixa
+                                required
+                            >
+                        </div>
+
+                        <div class="col-auto d-flex gap-1 align-items-center">
+                            <span
+                                class="badge text-bg-secondary align-self-center me-1"
+                                data-ordem-faixa-lancamento
+                            >
+                                {{ $indiceFaixa + 1 }}
+                            </span>
+
+                            <button
+                                class="btn btn-sm btn-secondary"
+                                type="button"
+                                data-acao-faixa-lancamento="subir"
+                                aria-label="Subir faixa"
+                                title="Subir faixa"
+                                @disabled($loop->first)
+                            >
+                                <i class="bi bi-arrow-up" aria-hidden="true"></i>
+                            </button>
+
+                            <button
+                                class="btn btn-sm btn-secondary"
+                                type="button"
+                                data-acao-faixa-lancamento="descer"
+                                aria-label="Descer faixa"
+                                title="Descer faixa"
+                                @disabled($loop->last)
+                            >
+                                <i class="bi bi-arrow-down" aria-hidden="true"></i>
+                            </button>
+
+                            <button
+                                class="btn btn-sm btn-danger"
+                                type="button"
+                                data-acao-faixa-lancamento="remover"
+                                aria-label="Remover faixa"
+                                title="Remover faixa"
+                            >
+                                <i class="bi bi-trash" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
         </div>
     </div>
 
@@ -363,7 +571,7 @@
             hidden
         @endif
     >
-        <div class="col-md-6 grupo-campo-formulario mb-3">
+        <div class="col-12 grupo-campo-formulario mb-3">
             <label
                 class="form-label"
                 for="{{ $identificadores['ligacao'] }}"
@@ -562,7 +770,7 @@
             </div>
         </div>
 
-        <div class="col-md-6 grupo-campo-formulario mb-3">
+        <div class="col-12 grupo-campo-formulario coluna-ano-seccao mb-3">
             <label
                 class="form-label"
                 for="{{ $identificadores['ano'] }}"
@@ -598,6 +806,7 @@
                 type="number"
                 name="{{ $nomeBaseCampo }}[ano]"
                 value="{{ $valores['ano'] }}"
+                data-campo-ano-seccao
                 min="{{ $anoMinimo }}"
                 max="{{ $anoMaximo }}"
                 step="1"

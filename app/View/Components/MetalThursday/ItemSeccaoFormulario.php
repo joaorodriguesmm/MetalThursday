@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\View\Components\MetalThursday;
 
 use App\Enumeracoes\TipoIncorporacao;
+use App\Enumeracoes\TipoLancamento;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
 use App\Models\Musica\Artista;
+use App\Models\Musica\FaixaLancamento;
+use App\Models\Musica\Lancamento;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
@@ -137,6 +140,42 @@ final class ItemSeccaoFormulario extends Component
      * @since 2.0.0
      */
     public readonly array $tiposIncorporacao;
+
+    /**
+     * Tipos de lançamento disponíveis no editor estruturado.
+     *
+     * @var list<array{valor: string, etiqueta: string}>
+     *
+     * @since 2.0.0
+     */
+    public readonly array $tiposLancamento;
+
+    /**
+     * Dados editáveis do lançamento associado à secção.
+     *
+     * @var array{
+     *     titulo: string,
+     *     tipo: string,
+     *     ano_original: string,
+     *     faixas: list<array{
+     *         id: string,
+     *         musica_id: string,
+     *         titulo: string,
+     *         posicao: string,
+     *         ordem: string
+     *     }>
+     * }
+     *
+     * @since 2.0.0
+     */
+    public readonly array $dadosLancamento;
+
+    /**
+     * Comprimento máximo do título do lançamento.
+     *
+     * @since 2.0.0
+     */
+    public readonly int $comprimentoMaximoTituloLancamento;
 
     /**
      * Indica se o tipo de secção selecionado exige detalhes musicais.
@@ -356,6 +395,24 @@ final class ItemSeccaoFormulario extends Component
             'ligacao' => TipoIncorporacao::Ligacao->value,
         ];
 
+        $this->tiposLancamento = array_map(
+            static fn (
+                TipoLancamento $tipo,
+            ): array => [
+                'valor' => $tipo->value,
+                'etiqueta' => $tipo->etiqueta(),
+            ],
+            TipoLancamento::cases(),
+        );
+
+        $this->dadosLancamento = $this->obterDadosLancamento(
+            $pedido,
+            $seccao,
+        );
+
+        $this->comprimentoMaximoTituloLancamento =
+            Lancamento::COMPRIMENTO_MAXIMO_TITULO;
+
         $this->exigeDetalhes =
             $this->tipoExigeDetalhes(
                 $this->valores['tipoSeccao'],
@@ -376,6 +433,169 @@ final class ItemSeccaoFormulario extends Component
 
         $this->comprimentoMaximoDescricao =
             SeccaoMetalThursday::COMPRIMENTO_MAXIMO_DESCRICAO;
+    }
+
+    /**
+     * Obtém os dados editáveis do lançamento associado à secção.
+     *
+     * Dados antigos de uma submissão inválida têm precedência. Num formulário
+     * de edição, os dados persistidos do catálogo são carregados com a
+     * tracklist atual.
+     *
+     * @param  Request  $pedido  Pedido HTTP atual.
+     * @param  SeccaoMetalThursday|array<string, mixed>|null  $seccao  Secção atual.
+     * @return array<string, mixed> Dados normalizados para o formulário.
+     *
+     * @since 2.0.0
+     */
+    private function obterDadosLancamento(
+        Request $pedido,
+        SeccaoMetalThursday|array|null $seccao,
+    ): array {
+        $dadosAntigos = $pedido->old(
+            "{$this->prefixoCampo}.lancamento",
+        );
+
+        if (is_array($dadosAntigos)) {
+            return $this->normalizarDadosLancamentoFormulario(
+                $dadosAntigos,
+            );
+        }
+
+        if (
+            is_array($seccao)
+            && is_array(
+                $seccao['lancamento']
+                    ?? null,
+            )
+        ) {
+            return $this->normalizarDadosLancamentoFormulario(
+                $seccao['lancamento'],
+            );
+        }
+
+        if ($seccao instanceof SeccaoMetalThursday) {
+            $lancamento = $seccao->lancamento;
+
+            if ($lancamento instanceof Lancamento) {
+                $lancamento->loadMissing(
+                    'faixas.musica',
+                );
+
+                $faixas = [];
+
+                foreach ($lancamento->faixas as $faixa) {
+                    if (! $faixa instanceof FaixaLancamento) {
+                        continue;
+                    }
+
+                    $tituloMusica = $faixa->musica?->titulo;
+
+                    if (! is_string($tituloMusica)) {
+                        continue;
+                    }
+
+                    $faixas[] = [
+                        'id' => (string) $faixa->getKey(),
+                        'musica_id' => (string) $faixa->musica_id,
+                        'titulo' => $tituloMusica,
+                        'posicao' => $this->normalizarTexto(
+                            $faixa->posicao,
+                        ),
+                        'ordem' => $this->normalizarTexto(
+                            $faixa->ordem,
+                        ),
+                    ];
+                }
+
+                return [
+                    'titulo' => $lancamento->titulo,
+                    'tipo' => $lancamento->tipo?->value
+                        ?? '',
+                    'ano_original' => $this->normalizarTexto(
+                        $lancamento->ano_original,
+                    ),
+                    'faixas' => $faixas,
+                ];
+            }
+        }
+
+        return [
+            'titulo' => '',
+            'tipo' => '',
+            'ano_original' => '',
+            'faixas' => [],
+        ];
+    }
+
+    /**
+     * Normaliza dados de lançamento provenientes de sessão ou rascunho.
+     *
+     * @param  array<string, mixed>  $dados  Dados recebidos.
+     * @return array<string, mixed> Dados seguros para renderização.
+     *
+     * @since 2.0.0
+     */
+    private function normalizarDadosLancamentoFormulario(
+        array $dados,
+    ): array {
+        $tipo = $dados['tipo']
+            ?? null;
+
+        if ($tipo instanceof TipoLancamento) {
+            $tipo = $tipo->value;
+        }
+
+        $faixasRecebidas = $dados['faixas']
+            ?? [];
+
+        $faixas = [];
+
+        if (is_array($faixasRecebidas)) {
+            foreach (array_values($faixasRecebidas) as $indice => $faixa) {
+                if (! is_array($faixa)) {
+                    continue;
+                }
+
+                $faixas[] = [
+                    'id' => $this->normalizarTexto(
+                        $faixa['id']
+                            ?? '',
+                    ),
+                    'musica_id' => $this->normalizarTexto(
+                        $faixa['musica_id']
+                            ?? '',
+                    ),
+                    'titulo' => $this->normalizarTexto(
+                        $faixa['titulo']
+                            ?? '',
+                    ),
+                    'posicao' => $this->normalizarTexto(
+                        $faixa['posicao']
+                            ?? '',
+                    ),
+                    'ordem' => $this->normalizarTexto(
+                        $faixa['ordem']
+                            ?? $indice + 1,
+                    ),
+                ];
+            }
+        }
+
+        return [
+            'titulo' => $this->normalizarTexto(
+                $dados['titulo']
+                    ?? '',
+            ),
+            'tipo' => $this->normalizarTexto(
+                $tipo,
+            ),
+            'ano_original' => $this->normalizarTexto(
+                $dados['ano_original']
+                    ?? '',
+            ),
+            'faixas' => $faixas,
+        ];
     }
 
     /**

@@ -43,26 +43,15 @@ final class TipoSeccaoSeeder extends Seeder
             'ordem' => 1,
         ],
         [
-            'identificador' => 'album',
+            'identificador' => 'lancamento',
 
-            'nome' => 'LP',
+            'nome' => 'Lançamento',
 
-            'descricao' => 'Secção destinada à apresentação de um álbum de longa duração.',
+            'descricao' => 'Secção destinada à apresentação de um lançamento musical.',
 
             'exige_detalhes' => true,
 
             'ordem' => 2,
-        ],
-        [
-            'identificador' => 'ep',
-
-            'nome' => 'EP',
-
-            'descricao' => 'Secção destinada à apresentação de um lançamento de duração intermédia.',
-
-            'exige_detalhes' => true,
-
-            'ordem' => 3,
         ],
         [
             'identificador' => 'musica',
@@ -73,7 +62,7 @@ final class TipoSeccaoSeeder extends Seeder
 
             'exige_detalhes' => true,
 
-            'ordem' => 4,
+            'ordem' => 3,
         ],
     ];
 

@@ -6,6 +6,7 @@ namespace App\Http\Requests\MetalThursday;
 
 use App\Enumeracoes\PapelUtilizador;
 use App\Enumeracoes\TipoIncorporacao;
+use App\Enumeracoes\TipoLancamento;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
@@ -14,6 +15,7 @@ use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
 use App\Models\Musica\Artista;
 use App\Models\Musica\Lancamento;
+use App\Models\Musica\Musica;
 use App\Servicos\MetalThursday\ServicoReservasMetalThursday;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -52,6 +54,16 @@ final class GuardarMetalThursdayRequest extends FormRequest
      * @since 2.0.0
      */
     private const NUMERO_MAXIMO_SECCOES = 50;
+
+    /**
+     * Número máximo de faixas editáveis num lançamento.
+     *
+     * O limite protege a validação e a sincronização transacional de cargas
+     * anormais sem limitar os lançamentos musicais usuais.
+     *
+     * @since 2.0.0
+     */
+    private const NUMERO_MAXIMO_FAIXAS_LANCAMENTO = 250;
 
     /**
      * Indica se o parâmetro da rota já foi resolvido.
@@ -299,7 +311,7 @@ final class GuardarMetalThursdayRequest extends FormRequest
             'seccoes.*' => [
                 'bail',
                 'required',
-                'array:id,tipo_seccao_id,titulo,descricao,artista_id,lancamento_id,ligacao,tipo_incorporacao,ano',
+                'array:id,tipo_seccao_id,titulo,descricao,artista_id,lancamento_id,lancamento,ligacao,tipo_incorporacao,ano',
             ],
             'seccoes.*.id' => $regrasIdentificadorSeccao,
             'seccoes.*.tipo_seccao_id' => [
@@ -342,6 +354,85 @@ final class GuardarMetalThursdayRequest extends FormRequest
                 'nullable',
                 'integer',
                 $this->criarRegraLancamentoSecao(),
+            ],
+            'seccoes.*.lancamento' => [
+                'bail',
+                'nullable',
+                'array:titulo,tipo,ano_original,faixas',
+            ],
+            'seccoes.*.lancamento.titulo' => [
+                'bail',
+                'nullable',
+                'string',
+                $this->criarRegraTextoLinha(
+                    'O título do lançamento contém texto inválido.',
+                    'O título do lançamento contém caracteres inválidos.',
+                ),
+                'max:'.Lancamento::COMPRIMENTO_MAXIMO_TITULO,
+            ],
+            'seccoes.*.lancamento.tipo' => [
+                'bail',
+                'nullable',
+                Rule::enum(
+                    TipoLancamento::class,
+                ),
+            ],
+            'seccoes.*.lancamento.ano_original' => [
+                'bail',
+                'nullable',
+                'integer',
+                'min:'.SeccaoMetalThursday::ANO_MINIMO,
+                'max:'.SeccaoMetalThursday::ANO_MAXIMO,
+            ],
+            'seccoes.*.lancamento.faixas' => [
+                'bail',
+                'nullable',
+                'array',
+                'list',
+                'max:'.self::NUMERO_MAXIMO_FAIXAS_LANCAMENTO,
+            ],
+            'seccoes.*.lancamento.faixas.*' => [
+                'bail',
+                'required',
+                'array:id,musica_id,titulo,posicao,ordem',
+            ],
+            'seccoes.*.lancamento.faixas.*.id' => [
+                'bail',
+                'nullable',
+                'integer',
+                'min:1',
+            ],
+            'seccoes.*.lancamento.faixas.*.musica_id' => [
+                'bail',
+                'nullable',
+                'integer',
+                'min:1',
+            ],
+            'seccoes.*.lancamento.faixas.*.titulo' => [
+                'bail',
+                'required',
+                'string',
+                $this->criarRegraTextoLinha(
+                    'O título da faixa contém texto inválido.',
+                    'O título da faixa contém caracteres inválidos.',
+                ),
+                'max:'.Musica::COMPRIMENTO_MAXIMO_TITULO,
+            ],
+            'seccoes.*.lancamento.faixas.*.posicao' => [
+                'bail',
+                'nullable',
+                'string',
+                $this->criarRegraTextoLinha(
+                    'A posição da faixa contém texto inválido.',
+                    'A posição da faixa contém caracteres inválidos.',
+                ),
+                'max:100',
+            ],
+            'seccoes.*.lancamento.faixas.*.ordem' => [
+                'bail',
+                'nullable',
+                'integer',
+                'min:1',
             ],
             'seccoes.*.ligacao' => [
                 'bail',
@@ -461,6 +552,34 @@ final class GuardarMetalThursdayRequest extends FormRequest
             ),
             'seccoes.*.artista_id.integer' => 'O artista selecionado não é válido.',
             'seccoes.*.artista_id.exists' => 'O artista selecionado não existe ou não está disponível.',
+            'seccoes.*.lancamento.array' => 'Os dados do lançamento não têm um formato válido.',
+            'seccoes.*.lancamento.titulo.string' => 'O título do lançamento não é válido.',
+            'seccoes.*.lancamento.titulo.max' => sprintf(
+                'O título do lançamento não pode ter mais de %d caracteres.',
+                Lancamento::COMPRIMENTO_MAXIMO_TITULO,
+            ),
+            'seccoes.*.lancamento.tipo.enum' => 'O tipo de lançamento selecionado não é válido.',
+            'seccoes.*.lancamento.ano_original.integer' => 'O ano original do lançamento deve ser um número inteiro.',
+            'seccoes.*.lancamento.ano_original.min' => sprintf(
+                'O ano original do lançamento não pode ser anterior a %d.',
+                SeccaoMetalThursday::ANO_MINIMO,
+            ),
+            'seccoes.*.lancamento.ano_original.max' => sprintf(
+                'O ano original do lançamento não pode ser posterior a %d.',
+                SeccaoMetalThursday::ANO_MAXIMO,
+            ),
+            'seccoes.*.lancamento.faixas.array' => 'A tracklist do lançamento deve ser enviada numa lista.',
+            'seccoes.*.lancamento.faixas.list' => 'A tracklist do lançamento não tem um formato válido.',
+            'seccoes.*.lancamento.faixas.max' => sprintf(
+                'Um lançamento não pode possuir mais de %d faixas nesta edição.',
+                self::NUMERO_MAXIMO_FAIXAS_LANCAMENTO,
+            ),
+            'seccoes.*.lancamento.faixas.*.titulo.required' => 'Cada faixa deve possuir um título.',
+            'seccoes.*.lancamento.faixas.*.titulo.string' => 'O título de uma das faixas não é válido.',
+            'seccoes.*.lancamento.faixas.*.titulo.max' => sprintf(
+                'O título de uma faixa não pode ter mais de %d caracteres.',
+                Musica::COMPRIMENTO_MAXIMO_TITULO,
+            ),
             'seccoes.*.ligacao.string' => 'A ligação da secção não é válida.',
             'seccoes.*.ligacao.url' => 'A ligação da secção deve ser um endereço HTTP ou HTTPS válido.',
             'seccoes.*.ligacao.max' => sprintf(
@@ -501,6 +620,12 @@ final class GuardarMetalThursdayRequest extends FormRequest
             'seccoes.*.titulo' => 'título da secção',
             'seccoes.*.descricao' => 'descrição da secção',
             'seccoes.*.artista_id' => 'artista da secção',
+            'seccoes.*.lancamento_id' => 'lançamento da secção',
+            'seccoes.*.lancamento' => 'dados do lançamento',
+            'seccoes.*.lancamento.titulo' => 'título do lançamento',
+            'seccoes.*.lancamento.tipo' => 'tipo do lançamento',
+            'seccoes.*.lancamento.ano_original' => 'ano original do lançamento',
+            'seccoes.*.lancamento.faixas' => 'tracklist do lançamento',
             'seccoes.*.ligacao' => 'ligação da secção',
             'seccoes.*.tipo_incorporacao' => 'tipo de incorporação',
             'seccoes.*.ano' => 'ano da secção',
@@ -1091,10 +1216,25 @@ final class GuardarMetalThursdayRequest extends FormRequest
                 continue;
             }
             if ($tipo->exige_detalhes) {
-                $this->validarDetalhesObrigatorios(
+                if ($tipo->identificador === 'lancamento') {
+                    $this->validarDetalhesObrigatoriosLancamento(
+                        $validador,
+                        $prefixo,
+                        $seccao,
+                    );
+                } else {
+                    $this->validarDetalhesObrigatorios(
+                        $validador,
+                        $prefixo,
+                        $seccao,
+                    );
+                }
+
+                $this->validarDadosLancamentoDaSecao(
                     $validador,
                     $prefixo,
                     $seccao,
+                    $tipo,
                 );
 
                 continue;
@@ -1103,6 +1243,121 @@ final class GuardarMetalThursdayRequest extends FormRequest
                 $validador,
                 $prefixo,
                 $seccao,
+            );
+        }
+    }
+
+    /**
+     * Valida os dados estruturados do lançamento segundo o tipo de secção.
+     *
+     * Tipos antigos ou personalizados mantêm o comportamento anterior para
+     * preservar compatibilidade. Os tipos canónicos aplicam o contrato novo.
+     *
+     * @param  Validator  $validador  Validador do pedido.
+     * @param  string  $prefixo  Prefixo dos atributos da secção.
+     * @param  array<string, mixed>  $seccao  Dados da secção.
+     * @param  TipoSeccao  $tipo  Tipo da secção.
+     *
+     * @since 2.0.0
+     */
+    private function validarDadosLancamentoDaSecao(
+        Validator $validador,
+        string $prefixo,
+        array $seccao,
+        TipoSeccao $tipo,
+    ): void {
+        if ($tipo->identificador === 'lancamento') {
+            $dadosLancamento =
+                $seccao['lancamento']
+                ?? null;
+
+            if (! is_array($dadosLancamento)) {
+                $validador
+                    ->errors()
+                    ->add(
+                        $prefixo.'.lancamento',
+                        'Os dados editáveis do lançamento são obrigatórios.',
+                    );
+
+                return;
+            }
+
+            if (
+                $this->valorEstaVazio(
+                    $dadosLancamento['titulo']
+                        ?? null,
+                )
+            ) {
+                $validador
+                    ->errors()
+                    ->add(
+                        $prefixo.'.lancamento.titulo',
+                        'Por favor, insere o título do lançamento.',
+                    );
+            }
+
+            if (! is_array($dadosLancamento['faixas'] ?? null)) {
+                $validador
+                    ->errors()
+                    ->add(
+                        $prefixo.'.lancamento.faixas',
+                        'A tracklist do lançamento deve ser enviada, mesmo quando está vazia.',
+                    );
+            }
+
+            return;
+        }
+
+        if (! in_array($tipo->identificador, ['texto', 'musica'], true)) {
+            return;
+        }
+
+        foreach (['lancamento_id', 'lancamento'] as $campo) {
+            if ($this->valorEstaVazio($seccao[$campo] ?? null)) {
+                continue;
+            }
+
+            $validador
+                ->errors()
+                ->add(
+                    $prefixo.'.'.$campo,
+                    'O tipo selecionado não permite associar dados de um lançamento.',
+                );
+        }
+    }
+
+    /**
+     * Valida os detalhes genéricos obrigatórios de uma secção de lançamento.
+     *
+     * O título e o ano pertencem ao lançamento estruturado. A secção mantém
+     * apenas o artista selecionado manualmente e a incorporação usada para
+     * ouvir o conteúdo.
+     *
+     * @param  Validator  $validador  Validador do pedido.
+     * @param  string  $prefixo  Prefixo dos atributos da secção.
+     * @param  array<string, mixed>  $seccao  Dados da secção.
+     *
+     * @since 2.0.0
+     */
+    private function validarDetalhesObrigatoriosLancamento(
+        Validator $validador,
+        string $prefixo,
+        array $seccao,
+    ): void {
+        $campos = [
+            'artista_id' => 'Por favor, seleciona o artista da secção.',
+            'ligacao' => 'Por favor, insere a ligação da secção.',
+            'tipo_incorporacao' => 'Por favor, seleciona o tipo de incorporação da secção.',
+        ];
+
+        foreach ($campos as $campo => $mensagem) {
+            if (! $this->valorEstaVazio($seccao[$campo] ?? null)) {
+                continue;
+            }
+
+            $validador->errors()->add(
+                $prefixo.'.'.$campo,
+                $mensagem,
             );
         }
     }
@@ -1165,6 +1420,7 @@ final class GuardarMetalThursdayRequest extends FormRequest
                 'titulo',
                 'artista_id',
                 'lancamento_id',
+                'lancamento',
                 'ligacao',
                 'tipo_incorporacao',
                 'ano',

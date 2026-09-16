@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Servicos\Musica;
 
-use App\Models\Musica\Artista;
 use App\Models\Musica\FaixaLancamento;
 use App\Models\Musica\Lancamento;
 use App\Models\Musica\Musica;
@@ -34,13 +33,15 @@ final class ServicoImportacaoLancamento
     /**
      * Importa uma edição concreta do Discogs para o catálogo local.
      *
-     * Uma edição já importada é reutilizada sem nova consulta externa.
-     * Na primeira importação são persistidos o lançamento, os artistas,
-     * as músicas e as respetivas ocorrências na tracklist.
+     * Uma edição já importada é reutilizada. Quando ainda não possui tipo ou
+     * ano original, esses metadados são completados a partir do Discogs sem
+     * substituir valores que tenham sido corrigidos manualmente.
+     * Na primeira importação são persistidos o lançamento, a sugestão de tipo,
+     * o ano original fiável e as respetivas ocorrências na tracklist.
      *
-     * As faixas com artistas próprios utilizam esses artistas. Quando a
-     * faixa não indica artistas próprios, são utilizados os artistas
-     * principais da Release.
+     * Os artistas devolvidos pelo Discogs são deliberadamente ignorados. A
+     * associação de artistas ao MetalThursday continua a ser uma decisão
+     * manual do utilizador e não altera o catálogo automaticamente.
      *
      * @param  int  $identificadorDiscogs  Identificador da Release Discogs.
      * @return Lancamento Lançamento persistido.
@@ -63,6 +64,44 @@ final class ServicoImportacaoLancamento
                 $existente->restore();
             }
 
+            if (
+                $existente->tipo === null
+                || $existente->ano_original === null
+            ) {
+                $dados =
+                    $this
+                        ->discogs
+                        ->obterLancamento(
+                            $identificadorDiscogs,
+                        );
+
+                $alterado = false;
+
+                if (
+                    $existente->tipo === null
+                    && ($dados['tipo_sugerido'] ?? null) !== null
+                ) {
+                    $existente->tipo =
+                        $dados['tipo_sugerido'];
+
+                    $alterado = true;
+                }
+
+                if (
+                    $existente->ano_original === null
+                    && ($dados['ano_original'] ?? null) !== null
+                ) {
+                    $existente->ano_original =
+                        $dados['ano_original'];
+
+                    $alterado = true;
+                }
+
+                if ($alterado) {
+                    $existente->saveOrFail();
+                }
+            }
+
             return $existente;
         }
 
@@ -81,49 +120,14 @@ final class ServicoImportacaoLancamento
 
                 $lancamento->fill([
                     'titulo' => $dados['titulo'],
-                    'tipo' => null,
+                    'tipo' => $dados['tipo_sugerido']
+                        ?? null,
+                    'ano_original' => $dados['ano_original']
+                        ?? null,
                     'discogs_release_id' => $dados['discogs_release_id'],
                 ]);
 
                 $lancamento->saveOrFail();
-
-                $identificadoresArtistas = [];
-
-                foreach ($dados['artistas'] as $dadosArtista) {
-                    $artista =
-                        Artista::withTrashed()
-                            ->where(
-                                'discogs_id',
-                                $dadosArtista['discogs_id'],
-                            )
-                            ->first();
-
-                    if ($artista instanceof Artista) {
-                        if ($artista->trashed()) {
-                            $artista->restore();
-                        }
-                    } else {
-                        $artista = new Artista;
-
-                        $artista->fill([
-                            'nome' => $dadosArtista['nome'],
-                            'discogs_id' => $dadosArtista['discogs_id'],
-                        ]);
-
-                        $artista->saveOrFail();
-                    }
-
-                    $identificadoresArtistas[] =
-                        $artista->getKey();
-                }
-
-                if ($identificadoresArtistas !== []) {
-                    $lancamento
-                        ->artistas()
-                        ->syncWithoutDetaching(
-                            $identificadoresArtistas,
-                        );
-                }
 
                 foreach ($dados['faixas'] as $dadosFaixa) {
                     $musica = new Musica;
@@ -133,49 +137,6 @@ final class ServicoImportacaoLancamento
                     ]);
 
                     $musica->saveOrFail();
-
-                    $identificadoresArtistasFaixa =
-                        $dadosFaixa['artistas'] === []
-                        ? $identificadoresArtistas
-                        : [];
-
-                    if ($dadosFaixa['artistas'] !== []) {
-                        foreach ($dadosFaixa['artistas'] as $dadosArtista) {
-                            $artista =
-                                Artista::withTrashed()
-                                    ->where(
-                                        'discogs_id',
-                                        $dadosArtista['discogs_id'],
-                                    )
-                                    ->first();
-
-                            if ($artista instanceof Artista) {
-                                if ($artista->trashed()) {
-                                    $artista->restore();
-                                }
-                            } else {
-                                $artista = new Artista;
-
-                                $artista->fill([
-                                    'nome' => $dadosArtista['nome'],
-                                    'discogs_id' => $dadosArtista['discogs_id'],
-                                ]);
-
-                                $artista->saveOrFail();
-                            }
-
-                            $identificadoresArtistasFaixa[] =
-                                $artista->getKey();
-                        }
-                    }
-
-                    if ($identificadoresArtistasFaixa !== []) {
-                        $musica
-                            ->artistas()
-                            ->syncWithoutDetaching(
-                                $identificadoresArtistasFaixa,
-                            );
-                    }
 
                     $faixa = new FaixaLancamento;
 

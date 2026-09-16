@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Http\Requests\MetalThursday;
 
 use App\Enumeracoes\TipoIncorporacao;
+use App\Enumeracoes\TipoLancamento;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
 use App\Models\Musica\Artista;
+use App\Models\Musica\Lancamento;
+use App\Models\Musica\Musica;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -37,6 +40,13 @@ final class GuardarRascunhoMetalThursdayRequest extends FormRequest
      * @since 2.0.0
      */
     private const NUMERO_MAXIMO_SECCOES = 50;
+
+    /**
+     * Número máximo de faixas mantidas no editor de um rascunho.
+     *
+     * @since 2.0.0
+     */
+    private const NUMERO_MAXIMO_FAIXAS_LANCAMENTO = 250;
 
     /**
      * Determina se o utilizador autenticado pode guardar o rascunho.
@@ -155,7 +165,7 @@ final class GuardarRascunhoMetalThursdayRequest extends FormRequest
 
             'seccoes.*' => [
                 'bail',
-                'array:id,tipo_seccao_id,titulo,descricao,artista_id,ligacao,tipo_incorporacao,ano',
+                'array:id,tipo_seccao_id,titulo,descricao,artista_id,lancamento_id,lancamento,ligacao,tipo_incorporacao,ano',
             ],
 
             'seccoes.*.id' => [
@@ -205,6 +215,93 @@ final class GuardarRascunhoMetalThursdayRequest extends FormRequest
                 )->whereNull(
                     'deleted_at',
                 ),
+            ],
+
+            'seccoes.*.lancamento_id' => [
+                'bail',
+                'nullable',
+                'integer',
+                Rule::exists(
+                    Lancamento::class,
+                    'id',
+                )->whereNull(
+                    'deleted_at',
+                ),
+            ],
+
+            'seccoes.*.lancamento' => [
+                'bail',
+                'nullable',
+                'array:titulo,tipo,ano_original,faixas',
+            ],
+
+            'seccoes.*.lancamento.titulo' => [
+                'bail',
+                'nullable',
+                'string',
+                'max:'.Lancamento::COMPRIMENTO_MAXIMO_TITULO,
+            ],
+
+            'seccoes.*.lancamento.tipo' => [
+                'bail',
+                'nullable',
+                Rule::enum(
+                    TipoLancamento::class,
+                ),
+            ],
+
+            'seccoes.*.lancamento.ano_original' => [
+                'bail',
+                'nullable',
+                'integer',
+            ],
+
+            'seccoes.*.lancamento.faixas' => [
+                'bail',
+                'nullable',
+                'array',
+                'list',
+                'max:'.self::NUMERO_MAXIMO_FAIXAS_LANCAMENTO,
+            ],
+
+            'seccoes.*.lancamento.faixas.*' => [
+                'bail',
+                'array:id,musica_id,titulo,posicao,ordem',
+            ],
+
+            'seccoes.*.lancamento.faixas.*.id' => [
+                'bail',
+                'nullable',
+                'integer',
+                'min:1',
+            ],
+
+            'seccoes.*.lancamento.faixas.*.musica_id' => [
+                'bail',
+                'nullable',
+                'integer',
+                'min:1',
+            ],
+
+            'seccoes.*.lancamento.faixas.*.titulo' => [
+                'bail',
+                'nullable',
+                'string',
+                'max:'.Musica::COMPRIMENTO_MAXIMO_TITULO,
+            ],
+
+            'seccoes.*.lancamento.faixas.*.posicao' => [
+                'bail',
+                'nullable',
+                'string',
+                'max:100',
+            ],
+
+            'seccoes.*.lancamento.faixas.*.ordem' => [
+                'bail',
+                'nullable',
+                'integer',
+                'min:1',
             ],
 
             'seccoes.*.ligacao' => [
@@ -291,6 +388,57 @@ final class GuardarRascunhoMetalThursdayRequest extends FormRequest
 
             'seccoes.*.artista_id.exists' => 'O artista selecionado não existe ou não está disponível.',
 
+            'seccoes.*.lancamento_id.integer' => 'O lançamento selecionado não é válido.',
+
+            'seccoes.*.lancamento_id.exists' => 'O lançamento selecionado não existe ou não está disponível.',
+
+            'seccoes.*.lancamento.array' => 'Os dados do lançamento não têm um formato válido.',
+
+            'seccoes.*.lancamento.titulo.string' => 'O título do lançamento não é válido.',
+
+            'seccoes.*.lancamento.titulo.max' => sprintf(
+                'O título do lançamento não pode ter mais de %d caracteres.',
+                Lancamento::COMPRIMENTO_MAXIMO_TITULO,
+            ),
+
+            'seccoes.*.lancamento.tipo.enum' => 'O tipo de lançamento selecionado não é válido.',
+
+            'seccoes.*.lancamento.ano_original.integer' => 'O ano original do lançamento deve ser um número inteiro.',
+
+            'seccoes.*.lancamento.faixas.array' => 'A tracklist do lançamento deve ser enviada numa lista.',
+
+            'seccoes.*.lancamento.faixas.list' => 'A tracklist do lançamento não tem um formato válido.',
+
+            'seccoes.*.lancamento.faixas.max' => sprintf(
+                'Um lançamento não pode possuir mais de %d faixas neste rascunho.',
+                self::NUMERO_MAXIMO_FAIXAS_LANCAMENTO,
+            ),
+
+            'seccoes.*.lancamento.faixas.*.array' => 'Uma das faixas não tem um formato válido.',
+
+            'seccoes.*.lancamento.faixas.*.id.integer' => 'O identificador de uma das faixas não é válido.',
+
+            'seccoes.*.lancamento.faixas.*.id.min' => 'O identificador de uma das faixas não é válido.',
+
+            'seccoes.*.lancamento.faixas.*.musica_id.integer' => 'A música de uma das faixas não é válida.',
+
+            'seccoes.*.lancamento.faixas.*.musica_id.min' => 'A música de uma das faixas não é válida.',
+
+            'seccoes.*.lancamento.faixas.*.titulo.string' => 'O título de uma das faixas não é válido.',
+
+            'seccoes.*.lancamento.faixas.*.titulo.max' => sprintf(
+                'O título de uma faixa não pode ter mais de %d caracteres.',
+                Musica::COMPRIMENTO_MAXIMO_TITULO,
+            ),
+
+            'seccoes.*.lancamento.faixas.*.posicao.string' => 'A posição de uma das faixas não é válida.',
+
+            'seccoes.*.lancamento.faixas.*.posicao.max' => 'A posição de uma das faixas não pode ter mais de 100 caracteres.',
+
+            'seccoes.*.lancamento.faixas.*.ordem.integer' => 'A ordem de uma das faixas não é válida.',
+
+            'seccoes.*.lancamento.faixas.*.ordem.min' => 'A ordem de uma das faixas não é válida.',
+
             'seccoes.*.ligacao.string' => 'A ligação da secção não é válida.',
 
             'seccoes.*.ligacao.max' => sprintf(
@@ -354,6 +502,11 @@ final class GuardarRascunhoMetalThursdayRequest extends FormRequest
 
             $seccao['artista_id'] = $this->normalizarIdentificador(
                 $seccao['artista_id']
+                    ?? null,
+            );
+
+            $seccao['lancamento_id'] = $this->normalizarIdentificador(
+                $seccao['lancamento_id']
                     ?? null,
             );
 

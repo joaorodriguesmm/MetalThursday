@@ -169,9 +169,43 @@ class HistoricoArtistaMetalThursday {
                 const selecao =
                     evento.target;
 
+                if (!(selecao instanceof HTMLSelectElement)) {
+                    return;
+                }
+
                 if (
-                    !(selecao instanceof HTMLSelectElement)
-                    || !selecao.classList.contains(
+                    selecao.classList.contains(
+                        'seletor-tipo-seccao',
+                    )
+                ) {
+                    const seccao = selecao.closest(
+                        '.item-seccao',
+                    );
+
+                    const identificadorTipo =
+                        selecao.selectedOptions
+                            .item(0)
+                            ?.dataset
+                            .identificadorTipoSeccao;
+
+                    if (
+                        seccao instanceof HTMLElement
+                        && identificadorTipo === 'texto'
+                    ) {
+                        this.cancelarPedidoAnterior(
+                            seccao,
+                        );
+
+                        this.ocultarHistorico(
+                            seccao,
+                        );
+                    }
+
+                    return;
+                }
+
+                if (
+                    !selecao.classList.contains(
                         'tom-select-artistas',
                     )
                 ) {

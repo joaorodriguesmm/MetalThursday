@@ -683,7 +683,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
         );
 
         $metalThursday->loadMissing(
-            'seccoes',
+            'seccoes.lancamento.faixas.musica',
         );
 
         return view(

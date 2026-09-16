@@ -68,6 +68,38 @@ final class LancamentoTest extends TestCase
     }
 
     /**
+     * Confirma que o ano original é opcional e convertido para inteiro.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function permite_ano_original_opcional(): void
+    {
+        $lancamento = Lancamento::factory()
+            ->create([
+                'titulo' => 'Load',
+                'ano_original' => 1996,
+            ]);
+
+        $lancamento->refresh();
+
+        self::assertSame(
+            1996,
+            $lancamento->ano_original,
+        );
+
+        $lancamento->update([
+            'ano_original' => null,
+        ]);
+
+        self::assertNull(
+            $lancamento
+                ->fresh()
+                ?->ano_original,
+        );
+    }
+
+    /**
      * Confirma que lançamentos distintos podem possuir o mesmo título.
      *
      * O título não identifica univocamente um lançamento.

@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Musica;
 
 use App\Http\Controllers\Controller;
 use App\Models\MetalThursday\MetalThursday;
+use App\Models\Musica\FaixaLancamento;
 use App\Servicos\Musica\ServicoDiscogs;
 use App\Servicos\Musica\ServicoImportacaoLancamento;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -124,11 +125,33 @@ final class ControladorImportacaoLancamento extends Controller
             );
         }
 
+        $lancamento->load(
+            'faixas.musica',
+        );
+
         return response()->json([
             'lancamento' => [
                 'id' => (int) $lancamento->getKey(),
                 'discogs_release_id' => (int) $lancamento->discogs_release_id,
                 'titulo' => $lancamento->titulo,
+                'tipo' => $lancamento->tipo?->value,
+                'ano_original' => $lancamento->ano_original,
+
+                'faixas' => $lancamento
+                    ->faixas
+                    ->map(
+                        static fn (
+                            FaixaLancamento $faixa,
+                        ): array => [
+                            'id' => (int) $faixa->getKey(),
+                            'musica_id' => (int) $faixa->musica_id,
+                            'titulo' => $faixa->musica?->titulo,
+                            'posicao' => $faixa->posicao,
+                            'ordem' => $faixa->ordem,
+                        ],
+                    )
+                    ->values()
+                    ->all(),
             ],
         ]);
     }

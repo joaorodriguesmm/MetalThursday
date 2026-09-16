@@ -46,11 +46,14 @@ final class ServicoPersistenciaMetalThursday
      *
      * @param  ServicoReservasMetalThursday  $servicoReservas  Serviço de
      *                                                         reservas.
+     * @param  ServicoPersistenciaLancamentoSecao  $servicoLancamentos  Serviço
+     *                                                                  dos lançamentos.
      *
      * @since 2.0.0
      */
     public function __construct(
         private readonly ServicoReservasMetalThursday $servicoReservas,
+        private readonly ServicoPersistenciaLancamentoSecao $servicoLancamentos = new ServicoPersistenciaLancamentoSecao,
     ) {}
 
     /**
@@ -457,6 +460,11 @@ final class ServicoPersistenciaMetalThursday
                         ?? null,
                     $prefixoCampo.'.lancamento_id',
                 ),
+                'lancamento' => $this->servicoLancamentos->normalizarDados(
+                    $dadosSeccao['lancamento']
+                        ?? null,
+                    $prefixoCampo.'.lancamento',
+                ),
                 'titulo' => $this->normalizarTextoLinhaOpcional(
                     $dadosSeccao['titulo']
                         ?? null,
@@ -662,6 +670,7 @@ final class ServicoPersistenciaMetalThursday
 
         $this->garantirDetalhesObrigatorios(
             $dados,
+            $tipoSeccao,
         );
 
         $seccao
@@ -670,10 +679,29 @@ final class ServicoPersistenciaMetalThursday
                 $dados['artista_id'],
             );
 
-        if ($dados['lancamento_id'] === null) {
+        if ($tipoSeccao->identificador === 'lancamento') {
+            $lancamento =
+                $this->servicoLancamentos->sincronizar(
+                    $dados,
+                    $tipoSeccao,
+                );
+
+            $seccao
+                ->lancamento()
+                ->associate(
+                    $lancamento,
+                );
+        } elseif (in_array($tipoSeccao->identificador, ['texto', 'musica'], true)) {
+            $this->servicoLancamentos->garantirAusencia(
+                $dados,
+                $tipoSeccao,
+            );
+
             $seccao
                 ->lancamento()
                 ->dissociate();
+        } elseif ($dados['lancamento_id'] === null) {
+            $seccao->lancamento()->dissociate();
         } else {
             $seccao
                 ->lancamento()
@@ -682,8 +710,19 @@ final class ServicoPersistenciaMetalThursday
                 );
         }
 
-        $seccao->titulo =
-            $dados['titulo'];
+        if ($tipoSeccao->identificador === 'lancamento') {
+            $seccao->titulo =
+                $lancamento->titulo;
+
+            $seccao->ano =
+                $lancamento->ano_original;
+        } else {
+            $seccao->titulo =
+                $dados['titulo'];
+
+            $seccao->ano =
+                $dados['ano'];
+        }
 
         $seccao->ligacao =
             $dados['ligacao'];
@@ -693,9 +732,6 @@ final class ServicoPersistenciaMetalThursday
                 $dados['ligacao'],
                 $dados['tipo_incorporacao'],
             );
-
-        $seccao->ano =
-            $dados['ano'];
     }
 
     /**
@@ -877,6 +913,7 @@ final class ServicoPersistenciaMetalThursday
      * Confirma os detalhes obrigatórios de uma secção detalhada.
      *
      * @param  array<string, mixed>  $dados  Dados normalizados da secção.
+     * @param  TipoSeccao  $tipoSeccao  Tipo da secção.
      *
      * @throws InvalidArgumentException Quando falta algum detalhe obrigatório.
      *
@@ -884,14 +921,21 @@ final class ServicoPersistenciaMetalThursday
      */
     private function garantirDetalhesObrigatorios(
         array $dados,
+        TipoSeccao $tipoSeccao,
     ): void {
-        $camposObrigatorios = [
-            'titulo' => 'O título é obrigatório numa secção detalhada.',
-            'artista_id' => 'O artista é obrigatório numa secção detalhada.',
-            'ligacao' => 'A ligação é obrigatória numa secção detalhada.',
-            'tipo_incorporacao' => 'O tipo de incorporação é obrigatório numa secção detalhada.',
-            'ano' => 'O ano é obrigatório numa secção detalhada.',
-        ];
+        $camposObrigatorios = $tipoSeccao->identificador === 'lancamento'
+            ? [
+                'artista_id' => 'O artista é obrigatório numa secção de lançamento.',
+                'ligacao' => 'A ligação é obrigatória numa secção de lançamento.',
+                'tipo_incorporacao' => 'O tipo de incorporação é obrigatório numa secção de lançamento.',
+            ]
+            : [
+                'titulo' => 'O título é obrigatório numa secção detalhada.',
+                'artista_id' => 'O artista é obrigatório numa secção detalhada.',
+                'ligacao' => 'A ligação é obrigatória numa secção detalhada.',
+                'tipo_incorporacao' => 'O tipo de incorporação é obrigatório numa secção detalhada.',
+                'ano' => 'O ano é obrigatório numa secção detalhada.',
+            ];
 
         foreach ($camposObrigatorios as $campo => $mensagem) {
             if ($dados[$campo] !== null) {
@@ -921,6 +965,7 @@ final class ServicoPersistenciaMetalThursday
                 'titulo',
                 'artista_id',
                 'lancamento_id',
+                'lancamento',
                 'ligacao',
                 'tipo_incorporacao',
                 'ano',

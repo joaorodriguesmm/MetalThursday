@@ -2886,7 +2886,7 @@ final class ControladorMetalThursdayTest extends TestCase
                 'data-lancamento-associado',
             )
             ->assertSeeHtml(
-                'placeholder="https://www.discogs.com/release/6025044-..."',
+                'placeholder="https://www.discogs.com/release/..."',
             );
     }
 }
