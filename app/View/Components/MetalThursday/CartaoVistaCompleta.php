@@ -7,6 +7,7 @@ namespace App\View\Components\MetalThursday;
 use App\Enumeracoes\Interacoes\TipoEntidadeInteracao;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
+use App\Models\MetalThursday\LigacaoSeccaoMetalThursday;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
@@ -129,7 +130,8 @@ final class CartaoVistaCompleta extends Component
      *     descricao: string|null,
      *     tituloApresentacao: string,
      *     nomeAvaliavel: string,
-     *     temLigacao: bool,
+     *     ligacoes: Collection<int, LigacaoSeccaoMetalThursday>,
+     *     temLigacoes: bool,
      *     identificadorComentarios: string,
      *     interacoes: array{
      *         pontuacaoUtilizador: float,
@@ -337,6 +339,20 @@ final class CartaoVistaCompleta extends Component
             $temDetalhes =
                 (bool) $tipoSeccao->exige_detalhes;
 
+            $ligacoes =
+                $this->obterColecaoCarregada(
+                    $seccao,
+                    'ligacoes',
+                );
+
+            foreach ($ligacoes as $ligacao) {
+                if (! $ligacao instanceof LigacaoSeccaoMetalThursday) {
+                    throw new LogicException(
+                        'A relação "ligacoes" contém um modelo inesperado.',
+                    );
+                }
+            }
+
             if ($this->interacoesDisponiveis) {
                 $this->obterColecaoCarregada(
                     $seccao,
@@ -382,9 +398,9 @@ final class CartaoVistaCompleta extends Component
                     ? "{$nomeArtista} — {$titulo}"
                     : $nomeArtista,
 
-                'temLigacao' => $this->normalizarTexto(
-                    $seccao->ligacao,
-                ) !== null,
+                'ligacoes' => $ligacoes,
+
+                'temLigacoes' => $ligacoes->isNotEmpty(),
 
                 'identificadorComentarios' => "comentarios-seccao-{$identificador}",
 

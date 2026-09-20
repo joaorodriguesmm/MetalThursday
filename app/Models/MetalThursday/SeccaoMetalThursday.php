@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models\MetalThursday;
 
-use App\Enumeracoes\TipoIncorporacao;
 use App\Models\Interacoes\Audicao;
 use App\Models\Interacoes\Avaliacao;
 use App\Models\Interacoes\Comentario;
@@ -22,6 +21,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use InvalidArgumentException;
 
@@ -29,8 +29,8 @@ use InvalidArgumentException;
  * Representa uma secção pertencente a uma MetalThursday.
  *
  * Cada secção possui um tipo, uma posição e uma descrição obrigatória. Pode
- * ainda incluir um artista, um título, uma ligação externa, um tipo de
- * incorporação e um ano.
+ * ainda incluir um artista, um lançamento, um título, várias ligações e um
+ * ano.
  *
  * As secções suportam comentários, avaliações e registos de audição através
  * de relações polimórficas.
@@ -47,8 +47,6 @@ use InvalidArgumentException;
  * @property string $descricao
  * @property int|null $artista_id
  * @property int|null $lancamento_id
- * @property string|null $ligacao
- * @property TipoIncorporacao|null $tipo_incorporacao
  * @property int|null $ano
  * @property int|null $criado_por_id
  * @property int|null $atualizado_por_id
@@ -59,6 +57,7 @@ use InvalidArgumentException;
  * @property-read TipoSeccao $tipoSeccao
  * @property-read Artista|null $artista
  * @property-read Lancamento|null $lancamento
+ * @property-read Collection<int, LigacaoSeccaoMetalThursday> $ligacoes
  * @property-read Collection<int, Comentario> $comentarios
  * @property-read Collection<int, Avaliacao> $avaliacoes
  * @property-read Collection<int, Audicao> $audicoes
@@ -112,13 +111,6 @@ class SeccaoMetalThursday extends Model
     public const COMPRIMENTO_MAXIMO_DESCRICAO = 65_535;
 
     /**
-     * Comprimento máximo permitido para a ligação.
-     *
-     * @since 2.0.0
-     */
-    public const COMPRIMENTO_MAXIMO_LIGACAO = 2048;
-
-    /**
      * Primeiro ano permitido pelo domínio musical da aplicação.
      *
      * @since 2.0.0
@@ -159,8 +151,6 @@ class SeccaoMetalThursday extends Model
         'ordem',
         'titulo',
         'descricao',
-        'ligacao',
-        'tipo_incorporacao',
         'ano',
     ];
 
@@ -174,22 +164,6 @@ class SeccaoMetalThursday extends Model
     protected $hidden = [
         'ordem_ativa',
     ];
-
-    /**
-     * Regista as validações de coerência executadas antes da persistência.
-     *
-     * @since 2.0.0
-     */
-    protected static function booted(): void
-    {
-        static::saving(
-            static function (
-                self $seccao,
-            ): void {
-                $seccao->validarIncorporacao();
-            },
-        );
-    }
 
     /**
      * Define as conversões automáticas dos atributos.
@@ -210,8 +184,6 @@ class SeccaoMetalThursday extends Model
             'artista_id' => 'integer',
 
             'lancamento_id' => 'integer',
-
-            'tipo_incorporacao' => TipoIncorporacao::class,
 
             'criado_por_id' => 'integer',
 
@@ -436,113 +408,6 @@ class SeccaoMetalThursday extends Model
     }
 
     /**
-     * Normaliza e valida a ligação opcional da secção.
-     *
-     * Um valor nulo ou vazio remove a ligação. Apenas endereços absolutos
-     * HTTP ou HTTPS, sem credenciais incorporadas, são aceites.
-     *
-     * Apenas espaços ASCII exteriores são removidos antes da validação.
-     * Caracteres de controlo permanecem intactos para serem rejeitados.
-     *
-     * @return Attribute<string|null, string|null> Atributo da ligação.
-     *
-     * @throws InvalidArgumentException Quando a ligação não é válida.
-     *
-     * @since 2.0.0
-     */
-    protected function ligacao(): Attribute
-    {
-        return Attribute::make(
-            set: static function (
-                mixed $valor,
-            ): ?string {
-                if ($valor === null) {
-                    return null;
-                }
-
-                if (! is_string($valor)) {
-                    throw new InvalidArgumentException(
-                        'A ligação da secção deve ser uma sequência de caracteres.',
-                    );
-                }
-
-                self::validarTextoUtf8(
-                    $valor,
-                    'A ligação da secção contém texto inválido.',
-                );
-
-                $ligacaoNormalizada = trim(
-                    $valor,
-                    ' ',
-                );
-
-                if ($ligacaoNormalizada === '') {
-                    return null;
-                }
-
-                if (
-                    mb_strlen(
-                        $ligacaoNormalizada,
-                    ) > self::COMPRIMENTO_MAXIMO_LIGACAO
-                    || str_contains(
-                        $ligacaoNormalizada,
-                        '\\',
-                    )
-                    || preg_match(
-                        '/[\x00-\x20\x7F]/',
-                        $ligacaoNormalizada,
-                    ) === 1
-                    || filter_var(
-                        $ligacaoNormalizada,
-                        FILTER_VALIDATE_URL,
-                    ) === false
-                ) {
-                    throw new InvalidArgumentException(
-                        'A ligação da secção não é válida.',
-                    );
-                }
-
-                $componentes = parse_url(
-                    $ligacaoNormalizada,
-                );
-
-                if (
-                    ! is_array($componentes)
-                    || ! isset(
-                        $componentes['scheme'],
-                        $componentes['host'],
-                    )
-                    || isset(
-                        $componentes['user'],
-                    )
-                    || isset(
-                        $componentes['pass'],
-                    )
-                    || ! in_array(
-                        mb_strtolower(
-                            (string) $componentes['scheme'],
-                        ),
-                        [
-                            'http',
-                            'https',
-                        ],
-                        true,
-                    )
-                    || trim(
-                        (string) $componentes['host'],
-                    ) === ''
-                ) {
-                    throw new InvalidArgumentException(
-                        'A ligação da secção deve utilizar HTTP ou HTTPS e não pode incluir credenciais.',
-                    );
-                }
-
-                return $ligacaoNormalizada;
-            },
-        );
-    }
-
-    /**
      * Normaliza e valida o ano opcional da secção.
      *
      * Apenas valores inteiros pertencentes ao intervalo definido pelo domínio
@@ -694,31 +559,25 @@ class SeccaoMetalThursday extends Model
     }
 
     /**
-     * Valida a coerência entre a ligação e o tipo de incorporação.
+     * Obtém as ligações públicas da secção pela ordem definida.
      *
-     * A ligação e o tipo de incorporação devem existir em conjunto. A mesma
-     * regra é garantida pela restrição `CHECK` da base de dados.
-     *
-     * @throws InvalidArgumentException Quando apenas um dos dois atributos
-     *                                  está preenchido.
+     * @return HasMany<LigacaoSeccaoMetalThursday, $this> Relação com as ligações.
      *
      * @since 2.0.0
      */
-    private function validarIncorporacao(): void
+    public function ligacoes(): HasMany
     {
-        $temLigacao =
-            $this->ligacao !== null;
-
-        $temTipoIncorporacao =
-            $this->tipo_incorporacao !== null;
-
-        if ($temLigacao === $temTipoIncorporacao) {
-            return;
-        }
-
-        throw new InvalidArgumentException(
-            'A ligação e o tipo de incorporação devem ser indicados em conjunto.',
-        );
+        return $this
+            ->hasMany(
+                LigacaoSeccaoMetalThursday::class,
+                'seccao_metal_thursday_id',
+            )
+            ->orderBy(
+                'ordem',
+            )
+            ->orderBy(
+                'id',
+            );
     }
 
     /**

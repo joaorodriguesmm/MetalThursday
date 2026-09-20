@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Factories\MetalThursday;
 
-use App\Enumeracoes\TipoIncorporacao;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
@@ -92,7 +91,7 @@ final class FactoriesSeccoesMetalThursdayTest extends TestCase
      * @since 2.0.0
      */
     #[Test]
-    public function cria_seccao_com_conteudo_e_incorporacao(): void
+    public function cria_seccao_com_conteudo_personalizado(): void
     {
         $metalThursday = MetalThursday::factory()
             ->create();
@@ -125,10 +124,6 @@ final class FactoriesSeccoesMetalThursdayTest extends TestCase
             ->comConteudo(
                 'Descrição conhecida da secção.',
                 'Título conhecido',
-            )
-            ->comIncorporacao(
-                'https://example.com/video',
-                TipoIncorporacao::Ligacao,
             )
             ->create([
                 'ano' => 2026,
@@ -165,16 +160,6 @@ final class FactoriesSeccoesMetalThursdayTest extends TestCase
         );
 
         self::assertSame(
-            'https://example.com/video',
-            $seccao->ligacao,
-        );
-
-        self::assertSame(
-            TipoIncorporacao::Ligacao,
-            $seccao->tipo_incorporacao,
-        );
-
-        self::assertSame(
             2026,
             $seccao->ano,
         );
@@ -183,8 +168,7 @@ final class FactoriesSeccoesMetalThursdayTest extends TestCase
     /**
      * Confirma que o estado detalhado cria todos os dados exigidos.
      *
-     * O ano gerado deve respeitar o intervalo final e a ligação deve possuir
-     * sempre um tipo de incorporação correspondente.
+     * O ano gerado deve respeitar o intervalo final do domínio.
      *
      * @since 2.0.0
      */
@@ -236,38 +220,6 @@ final class FactoriesSeccoesMetalThursdayTest extends TestCase
             $seccao->ano,
         );
 
-        self::assertIsString(
-            $seccao->ligacao,
-        );
-
-        self::assertStringStartsWith(
-            'https://example.com/musica/',
-            $seccao->ligacao,
-        );
-
-        self::assertSame(
-            TipoIncorporacao::Ligacao,
-            $seccao->tipo_incorporacao,
-        );
-    }
-
-    /**
-     * Confirma que a factory rejeita ligações com credenciais incorporadas.
-     *
-     * @since 2.0.0
-     */
-    #[Test]
-    public function rejeita_incorporacao_com_credenciais(): void
-    {
-        $this->expectException(
-            InvalidArgumentException::class,
-        );
-
-        SeccaoMetalThursday::factory()
-            ->comIncorporacao(
-                'https://utilizador:segredo@example.com/video',
-                TipoIncorporacao::Ligacao,
-            );
     }
 
     /**

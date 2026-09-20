@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\View\Components\Musica\Artistas;
 
+use App\Enumeracoes\PlataformaLigacao;
 use App\Models\Autenticacao\Utilizador;
+use App\Models\MetalThursday\LigacaoSeccaoMetalThursday;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
 use DateTimeInterface;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\HtmlString;
 use Illuminate\View\Component;
 use LogicException;
@@ -37,7 +40,10 @@ final class CartaoAparicaoMetalThursday extends Component
      *     dataIso: string,
      *     dataApresentacao: string,
      *     descricao: HtmlString|null,
-     *     ligacao: string|null
+     *     ligacoes: list<array{
+     *         url: string,
+     *         etiqueta: string
+     *     }>
      * }
      *
      * @since 2.0.0
@@ -137,8 +143,10 @@ final class CartaoAparicaoMetalThursday extends Component
                 )
                 : null,
 
-            'ligacao' => $this->normalizarTexto(
-                $seccao->ligacao,
+            'ligacoes' => $this->prepararLigacoes(
+                $this->obterLigacoes(
+                    $seccao,
+                ),
             ),
         ];
     }
@@ -223,6 +231,86 @@ final class CartaoAparicaoMetalThursday extends Component
         }
 
         return $tipoSeccao;
+    }
+
+    /**
+     * Obtém as ligações previamente carregadas da secção.
+     *
+     * @param  SeccaoMetalThursday  $seccao  Secção consultada.
+     * @return Collection<int, LigacaoSeccaoMetalThursday> Ligações carregadas.
+     *
+     * @throws LogicException Quando a relação não está carregada ou possui
+     *                        um tipo inesperado.
+     *
+     * @since 2.0.0
+     */
+    private function obterLigacoes(
+        SeccaoMetalThursday $seccao,
+    ): Collection {
+        if (! $seccao->relationLoaded('ligacoes')) {
+            throw new LogicException(
+                'A relação "ligacoes" deve estar carregada.',
+            );
+        }
+
+        $ligacoes =
+            $seccao->getRelation(
+                'ligacoes',
+            );
+
+        if (! $ligacoes instanceof Collection) {
+            throw new LogicException(
+                'A relação "ligacoes" possui um tipo inesperado.',
+            );
+        }
+
+        foreach ($ligacoes as $ligacao) {
+            if (! $ligacao instanceof LigacaoSeccaoMetalThursday) {
+                throw new LogicException(
+                    'A relação "ligacoes" contém um modelo inesperado.',
+                );
+            }
+        }
+
+        /** @var Collection<int, LigacaoSeccaoMetalThursday> $ligacoes */
+        return $ligacoes;
+    }
+
+    /**
+     * Prepara as ligações da aparição para apresentação compacta.
+     *
+     * @param  Collection<int, LigacaoSeccaoMetalThursday>  $ligacoes  Ligações.
+     * @return list<array{
+     *     url: string,
+     *     etiqueta: string
+     * }> Ligações preparadas.
+     *
+     * @since 2.0.0
+     */
+    private function prepararLigacoes(
+        Collection $ligacoes,
+    ): array {
+        return $ligacoes
+            ->map(
+                function (
+                    LigacaoSeccaoMetalThursday $ligacao,
+                ): array {
+                    $etiqueta =
+                        $ligacao->plataforma === PlataformaLigacao::Outro
+                            ? $this->normalizarTexto(
+                                $ligacao->etiqueta,
+                            )
+                            ?? 'Ligação externa'
+                            : $ligacao->plataforma->nome();
+
+                    return [
+                        'url' => $ligacao->url,
+                        'etiqueta' => $etiqueta,
+                    ];
+                },
+            )
+            ->values()
+            ->all();
     }
 
     /**

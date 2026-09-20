@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Models\MetalThursday;
 
-use App\Enumeracoes\TipoIncorporacao;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
@@ -88,64 +87,6 @@ final class SeccaoMetalThursdayTest extends TestCase
     }
 
     /**
-     * Confirma que uma ligação com barra invertida é rejeitada.
-     *
-     * @since 2.0.0
-     */
-    #[Test]
-    public function rejeita_ligacao_com_barra_invertida(): void
-    {
-        $this->expectException(
-            InvalidArgumentException::class,
-        );
-
-        $seccao = new SeccaoMetalThursday;
-
-        $seccao->ligacao =
-            'https://example.com\\video';
-    }
-
-    /**
-     * Confirma que uma ligação sem tipo de incorporação não é persistida.
-     *
-     * @since 2.0.0
-     */
-    #[Test]
-    public function rejeita_ligacao_sem_tipo_de_incorporacao(): void
-    {
-        $this->expectException(
-            InvalidArgumentException::class,
-        );
-
-        $seccao = new SeccaoMetalThursday;
-
-        $seccao->ligacao =
-            'https://example.com/video';
-
-        $seccao->saveOrFail();
-    }
-
-    /**
-     * Confirma que um tipo de incorporação sem ligação não é persistido.
-     *
-     * @since 2.0.0
-     */
-    #[Test]
-    public function rejeita_tipo_de_incorporacao_sem_ligacao(): void
-    {
-        $this->expectException(
-            InvalidArgumentException::class,
-        );
-
-        $seccao = new SeccaoMetalThursday;
-
-        $seccao->tipo_incorporacao =
-            TipoIncorporacao::Ligacao;
-
-        $seccao->saveOrFail();
-    }
-
-    /**
      * Confirma que a base de dados rejeita um ano superior ao contrato.
      *
      * @since 2.0.0
@@ -166,32 +107,6 @@ final class SeccaoMetalThursdayTest extends TestCase
             ...$dadosBase,
 
             'ano' => SeccaoMetalThursday::ANO_MAXIMO + 1,
-        ]);
-    }
-
-    /**
-     * Confirma que a base de dados exige ligação e tipo em conjunto.
-     *
-     * @since 2.0.0
-     */
-    #[Test]
-    public function base_de_dados_rejeita_incorporacao_incompleta(): void
-    {
-        $dadosBase =
-            $this->criarDadosBase();
-
-        $this->expectException(
-            QueryException::class,
-        );
-
-        DB::table(
-            'seccoes_metal_thursday',
-        )->insert([
-            ...$dadosBase,
-
-            'ligacao' => 'https://example.com/video',
-
-            'tipo_incorporacao' => null,
         ]);
     }
 
@@ -363,10 +278,6 @@ final class SeccaoMetalThursdayTest extends TestCase
             'descricao' => 'Descrição válida.',
 
             'artista_id' => null,
-
-            'ligacao' => null,
-
-            'tipo_incorporacao' => null,
 
             'ano' => null,
 

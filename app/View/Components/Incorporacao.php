@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\View\Components;
 
-use App\Models\MetalThursday\SeccaoMetalThursday;
+use App\Models\MetalThursday\LigacaoSeccaoMetalThursday;
 use App\Servicos\Incorporacoes\RenderizadorIncorporacoes;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\HtmlString;
 use Illuminate\View\Component;
 
 /**
- * Prepara a incorporação associada a uma secção da MetalThursday.
+ * Prepara uma ligação pública de uma secção da MetalThursday.
  *
  * A validação da ligação e a construção segura do HTML são delegadas ao
  * serviço RenderizadorIncorporacoes.
@@ -21,7 +21,7 @@ use Illuminate\View\Component;
 final class Incorporacao extends Component
 {
     /**
-     * Conteúdo HTML validado da incorporação.
+     * Conteúdo HTML validado da ligação.
      *
      * @since 2.0.0
      */
@@ -30,7 +30,7 @@ final class Incorporacao extends Component
     /**
      * Cria uma nova instância do componente.
      *
-     * @param  SeccaoMetalThursday  $seccao  Secção apresentada.
+     * @param  LigacaoSeccaoMetalThursday  $ligacao  Ligação apresentada.
      * @param  RenderizadorIncorporacoes  $renderizadorIncorporacoes  Serviço
      *                                                                responsável
      *                                                                pela validação
@@ -39,12 +39,12 @@ final class Incorporacao extends Component
      * @since 2.0.0
      */
     public function __construct(
-        SeccaoMetalThursday $seccao,
+        LigacaoSeccaoMetalThursday $ligacao,
         RenderizadorIncorporacoes $renderizadorIncorporacoes,
     ) {
         $this->conteudo =
-            $renderizadorIncorporacoes->renderizar(
-                $seccao,
+            $renderizadorIncorporacoes->renderizarLigacao(
+                $ligacao,
             );
     }
 

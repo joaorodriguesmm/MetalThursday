@@ -169,7 +169,18 @@ final class RascunhoReservaMetalThursdayTest extends TestCase
                         [
                             'titulo' => '  Título   provisório  ',
 
-                            'ligacao' => 'https://',
+                            'ligacoes' => [
+                                [
+                                    'url' => 'https://',
+                                    'etiqueta' => '  Por   completar  ',
+                                    'incorporar' => '1',
+                                ],
+                                [
+                                    'url' => '',
+                                    'etiqueta' => '  Mais   tarde  ',
+                                    'incorporar' => '0',
+                                ],
+                            ],
                         ],
                     ],
                 ],
@@ -205,9 +216,18 @@ final class RascunhoReservaMetalThursdayTest extends TestCase
 
                     'lancamento_id' => null,
 
-                    'ligacao' => 'https://',
-
-                    'tipo_incorporacao' => null,
+                    'ligacoes' => [
+                        [
+                            'url' => 'https://',
+                            'etiqueta' => 'Por completar',
+                            'incorporar' => true,
+                        ],
+                        [
+                            'url' => null,
+                            'etiqueta' => 'Mais tarde',
+                            'incorporar' => false,
+                        ],
+                    ],
 
                     'ano' => null,
                 ],
@@ -519,9 +539,13 @@ final class RascunhoReservaMetalThursdayTest extends TestCase
 
                         'artista_id' => null,
 
-                        'ligacao' => 'https://exemplo.test',
-
-                        'tipo_incorporacao' => null,
+                        'ligacoes' => [
+                            [
+                                'url' => 'https://exemplo.test',
+                                'etiqueta' => 'Ouvir',
+                                'incorporar' => false,
+                            ],
+                        ],
 
                         'ano' => null,
                     ],
@@ -611,9 +635,7 @@ final class RascunhoReservaMetalThursdayTest extends TestCase
 
                         'artista_id' => null,
 
-                        'ligacao' => null,
-
-                        'tipo_incorporacao' => null,
+                        'ligacoes' => [],
 
                         'ano' => null,
                     ],
@@ -642,9 +664,7 @@ final class RascunhoReservaMetalThursdayTest extends TestCase
 
                             'artista_id' => null,
 
-                            'ligacao' => null,
-
-                            'tipo_incorporacao' => null,
+                            'ligacoes' => [],
 
                             'ano' => null,
                         ],

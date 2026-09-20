@@ -59,7 +59,7 @@
                         class="text-center"
                         scope="col"
                     >
-                        Ligação
+                        Ligações
                     </th>
 
                     <th
@@ -124,18 +124,25 @@
                         </td>
 
                         <td class="text-center">
-                            @if ($linha['ligacao'] !== null)
-                                <a
-                                    class="btn btn-sm btn-outline-light"
-                                    href="{{ $linha['ligacao'] }}"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    aria-label="Abrir a ligação de {{ $linha['titulo'] }} num novo separador"
+                            @if ($linha['ligacoes'] !== [])
+                                <div
+                                    class="d-flex flex-wrap justify-content-center gap-1"
+                                    aria-label="Ligações de {{ $linha['titulo'] }}"
                                 >
-                                    Abrir
-                                </a>
+                                    @foreach ($linha['ligacoes'] as $ligacao)
+                                        <a
+                                            class="btn btn-sm btn-outline-light"
+                                            href="{{ $ligacao['url'] }}"
+                                            target="_blank"
+                                            rel="noopener noreferrer external"
+                                            aria-label="Abrir {{ $ligacao['etiqueta'] }} de {{ $linha['titulo'] }} num novo separador"
+                                        >
+                                            {{ $ligacao['etiqueta'] }}
+                                        </a>
+                                    @endforeach
+                                </div>
                             @else
-                                <span aria-label="Sem ligação">
+                                <span aria-label="Sem ligações">
                                     —
                                 </span>
                             @endif

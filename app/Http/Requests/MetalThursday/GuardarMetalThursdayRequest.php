@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Requests\MetalThursday;
 
 use App\Enumeracoes\PapelUtilizador;
-use App\Enumeracoes\TipoIncorporacao;
+use App\Enumeracoes\PlataformaLigacao;
 use App\Enumeracoes\TipoLancamento;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
+use App\Models\MetalThursday\LigacaoSeccaoMetalThursday;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
@@ -16,6 +17,7 @@ use App\Models\MetalThursday\TipoSeccao;
 use App\Models\Musica\Artista;
 use App\Models\Musica\Lancamento;
 use App\Models\Musica\Musica;
+use App\Servicos\MetalThursday\ServicoLigacoesSecaoMetalThursday;
 use App\Servicos\MetalThursday\ServicoReservasMetalThursday;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -311,7 +313,7 @@ final class GuardarMetalThursdayRequest extends FormRequest
             'seccoes.*' => [
                 'bail',
                 'required',
-                'array:id,tipo_seccao_id,titulo,descricao,artista_id,lancamento_id,lancamento,ligacao,tipo_incorporacao,ano',
+                'array:id,tipo_seccao_id,titulo,descricao,artista_id,lancamento_id,lancamento,ligacoes,ano',
             ],
             'seccoes.*.id' => $regrasIdentificadorSeccao,
             'seccoes.*.tipo_seccao_id' => [
@@ -434,20 +436,40 @@ final class GuardarMetalThursdayRequest extends FormRequest
                 'integer',
                 'min:1',
             ],
-            'seccoes.*.ligacao' => [
+            'seccoes.*.ligacoes' => [
                 'bail',
                 'nullable',
+                'array',
+                'list',
+                'max:'.LigacaoSeccaoMetalThursday::NUMERO_MAXIMO_POR_SECCAO,
+            ],
+            'seccoes.*.ligacoes.*' => [
+                'bail',
+                'required',
+                'array:url,etiqueta,incorporar',
+            ],
+            'seccoes.*.ligacoes.*.url' => [
+                'bail',
+                'required',
                 'string',
                 $this->criarRegraLigacao(),
                 'url:http,https',
-                'max:'.SeccaoMetalThursday::COMPRIMENTO_MAXIMO_LIGACAO,
+                'max:'.LigacaoSeccaoMetalThursday::COMPRIMENTO_MAXIMO_URL,
             ],
-            'seccoes.*.tipo_incorporacao' => [
+            'seccoes.*.ligacoes.*.etiqueta' => [
                 'bail',
                 'nullable',
-                Rule::enum(
-                    TipoIncorporacao::class,
+                'string',
+                $this->criarRegraTextoLinha(
+                    'A etiqueta da ligação contém texto inválido.',
+                    'A etiqueta da ligação contém caracteres inválidos.',
                 ),
+                'max:'.LigacaoSeccaoMetalThursday::COMPRIMENTO_MAXIMO_ETIQUETA,
+            ],
+            'seccoes.*.ligacoes.*.incorporar' => [
+                'bail',
+                'required',
+                'boolean',
             ],
             'seccoes.*.ano' => [
                 'bail',
@@ -580,13 +602,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
                 'O título de uma faixa não pode ter mais de %d caracteres.',
                 Musica::COMPRIMENTO_MAXIMO_TITULO,
             ),
-            'seccoes.*.ligacao.string' => 'A ligação da secção não é válida.',
-            'seccoes.*.ligacao.url' => 'A ligação da secção deve ser um endereço HTTP ou HTTPS válido.',
-            'seccoes.*.ligacao.max' => sprintf(
-                'A ligação da secção não pode ter mais de %d caracteres.',
-                SeccaoMetalThursday::COMPRIMENTO_MAXIMO_LIGACAO,
-            ),
-            'seccoes.*.tipo_incorporacao.enum' => 'O tipo de incorporação selecionado não é válido.',
             'seccoes.*.ano.integer' => 'O ano deve ser um número inteiro.',
             'seccoes.*.ano.min' => sprintf(
                 'O ano não pode ser anterior a %d.',
@@ -626,8 +641,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
             'seccoes.*.lancamento.tipo' => 'tipo do lançamento',
             'seccoes.*.lancamento.ano_original' => 'ano original do lançamento',
             'seccoes.*.lancamento.faixas' => 'tracklist do lançamento',
-            'seccoes.*.ligacao' => 'ligação da secção',
-            'seccoes.*.tipo_incorporacao' => 'tipo de incorporação',
             'seccoes.*.ano' => 'ano da secção',
         ];
     }
@@ -1230,6 +1243,12 @@ final class GuardarMetalThursdayRequest extends FormRequest
                     );
                 }
 
+                $this->validarLigacoesSecao(
+                    $validador,
+                    $prefixo,
+                    $seccao,
+                );
+
                 $this->validarDadosLancamentoDaSecao(
                     $validador,
                     $prefixo,
@@ -1346,8 +1365,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
     ): void {
         $campos = [
             'artista_id' => 'Por favor, seleciona o artista da secção.',
-            'ligacao' => 'Por favor, insere a ligação da secção.',
-            'tipo_incorporacao' => 'Por favor, seleciona o tipo de incorporação da secção.',
         ];
 
         foreach ($campos as $campo => $mensagem) {
@@ -1379,8 +1396,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
         $campos = [
             'titulo' => 'Por favor, insere o título da secção.',
             'artista_id' => 'Por favor, seleciona o artista da secção.',
-            'ligacao' => 'Por favor, insere a ligação da secção.',
-            'tipo_incorporacao' => 'Por favor, seleciona o tipo de incorporação da secção.',
             'ano' => 'Por favor, insere o ano da secção.',
         ];
         foreach ($campos as $campo => $mensagem) {
@@ -1421,8 +1436,6 @@ final class GuardarMetalThursdayRequest extends FormRequest
                 'artista_id',
                 'lancamento_id',
                 'lancamento',
-                'ligacao',
-                'tipo_incorporacao',
                 'ano',
             ] as $campo
         ) {
@@ -1439,6 +1452,81 @@ final class GuardarMetalThursdayRequest extends FormRequest
                 ->add(
                     $prefixo.'.'.$campo,
                     'O tipo selecionado não permite detalhes adicionais.',
+                );
+        }
+
+        $ligacoes = $seccao['ligacoes']
+            ?? [];
+
+        if (is_array($ligacoes) && $ligacoes === []) {
+            return;
+        }
+
+        if ($ligacoes !== null) {
+            $validador
+                ->errors()
+                ->add(
+                    $prefixo.'.ligacoes',
+                    'O tipo selecionado não permite ligações.',
+                );
+        }
+    }
+
+    /**
+     * Valida regras dependentes da plataforma das ligações de uma secção.
+     *
+     * Uma plataforma personalizada exige uma etiqueta que permita ao leitor
+     * perceber o destino antes de abrir a ligação.
+     *
+     * @param  Validator  $validador  Validador do pedido.
+     * @param  string  $prefixo  Prefixo dos atributos da secção.
+     * @param  array<string, mixed>  $seccao  Dados da secção.
+     *
+     * @since 2.0.0
+     */
+    private function validarLigacoesSecao(
+        Validator $validador,
+        string $prefixo,
+        array $seccao,
+    ): void {
+        $ligacoes = $seccao['ligacoes']
+            ?? [];
+
+        if (! is_array($ligacoes)) {
+            return;
+        }
+
+        $servico = app(
+            ServicoLigacoesSecaoMetalThursday::class,
+        );
+
+        foreach ($ligacoes as $indice => $ligacao) {
+            if (! is_array($ligacao)) {
+                continue;
+            }
+
+            $campoUrl = $prefixo.'.ligacoes.'.$indice.'.url';
+            $url = $ligacao['url']
+                ?? null;
+
+            if (
+                ! is_string($url)
+                || $validador->errors()->has($campoUrl)
+                || $servico->detetarPlataforma($url)
+                    !== PlataformaLigacao::Outro
+                || ! $this->valorEstaVazio(
+                    $ligacao['etiqueta']
+                        ?? null,
+                )
+            ) {
+                continue;
+            }
+
+            $validador
+                ->errors()
+                ->add(
+                    $prefixo.'.ligacoes.'.$indice.'.etiqueta',
+                    'Indica uma etiqueta para a ligação personalizada.',
                 );
         }
     }
@@ -1865,16 +1953,14 @@ final class GuardarMetalThursdayRequest extends FormRequest
                     $seccao['lancamento_id']
                         ?? null,
                 );
-            $seccao['ligacao'] =
-                $this->normalizarTextoOpcional(
-                    $seccao['ligacao']
-                        ?? null,
-                );
-            $seccao['tipo_incorporacao'] =
-                $this->normalizarTextoOpcional(
-                    $seccao['tipo_incorporacao']
-                        ?? null,
-                );
+
+            if (array_key_exists('ligacoes', $seccao)) {
+                $seccao['ligacoes'] =
+                    $this->normalizarLigacoes(
+                        $seccao['ligacoes'],
+                    );
+            }
+
             $seccao['ano'] =
                 $this->normalizarIdentificador(
                     $seccao['ano']
@@ -1885,6 +1971,89 @@ final class GuardarMetalThursdayRequest extends FormRequest
         }
 
         return $seccoes;
+    }
+
+    /**
+     * Normaliza a lista opcional de ligações de uma secção.
+     *
+     * Campos desconhecidos são preservados para que as regras estruturais os
+     * possam rejeitar explicitamente.
+     *
+     * @param  mixed  $valor  Valor recebido.
+     * @return mixed Lista normalizada ou valor original.
+     *
+     * @since 2.0.0
+     */
+    private function normalizarLigacoes(
+        mixed $valor,
+    ): mixed {
+        if (! is_array($valor)) {
+            return $valor;
+        }
+
+        $ligacoes = [];
+
+        foreach (array_values($valor) as $ligacao) {
+            if (! is_array($ligacao)) {
+                $ligacoes[] = $ligacao;
+
+                continue;
+            }
+
+            $ligacao['url'] = $this->normalizarTextoOpcional(
+                $ligacao['url']
+                    ?? null,
+            );
+
+            $ligacao['etiqueta'] = $this->normalizarTextoLinhaOpcional(
+                $ligacao['etiqueta']
+                    ?? null,
+            );
+
+            $ligacao['incorporar'] = $this->normalizarBooleano(
+                $ligacao['incorporar']
+                    ?? false,
+            );
+
+            $ligacoes[] = $ligacao;
+        }
+
+        return $ligacoes;
+    }
+
+    /**
+     * Normaliza os valores booleanos aceites pelos controlos HTML.
+     *
+     * Valores desconhecidos são preservados para que a regra `boolean` os
+     * rejeite.
+     *
+     * @param  mixed  $valor  Valor recebido.
+     * @return mixed Booleano normalizado ou valor original.
+     *
+     * @since 2.0.0
+     */
+    private function normalizarBooleano(
+        mixed $valor,
+    ): mixed {
+        if (is_bool($valor)) {
+            return $valor;
+        }
+
+        if (
+            $valor === 0
+            || $valor === '0'
+        ) {
+            return false;
+        }
+
+        if (
+            $valor === 1
+            || $valor === '1'
+        ) {
+            return true;
+        }
+
+        return $valor;
     }
 
     /**

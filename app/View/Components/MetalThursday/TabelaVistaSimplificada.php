@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\View\Components\MetalThursday;
 
+use App\Enumeracoes\PlataformaLigacao;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\Geografia\OrigemGeografica;
+use App\Models\MetalThursday\LigacaoSeccaoMetalThursday;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
@@ -53,7 +55,10 @@ final class TabelaVistaSimplificada extends Component
      *     nomeTipoSeccao: string|null,
      *     ano: string,
      *     nomesGeneros: string,
-     *     ligacao: string|null,
+     *     ligacoes: list<array{
+     *         url: string,
+     *         etiqueta: string
+     *     }>,
      *     avaliacao: array{
      *         media: string,
      *         quantidade: int,
@@ -285,8 +290,11 @@ final class TabelaVistaSimplificada extends Component
                 $generos,
             ),
 
-            'ligacao' => $this->normalizarTexto(
-                $seccao->ligacao,
+            'ligacoes' => $this->prepararLigacoes(
+                $this->obterColecaoRelacionada(
+                    $seccao,
+                    'ligacoes',
+                ),
             ),
 
             'avaliacao' => [
@@ -400,6 +408,51 @@ final class TabelaVistaSimplificada extends Component
                 $nomes,
             )
             : '—';
+    }
+
+    /**
+     * Prepara as ligações públicas de uma secção para a tabela simplificada.
+     *
+     * A tabela não apresenta incorporações; disponibiliza apenas ligações
+     * externas compactas, preservando a ordem carregada da relação.
+     *
+     * @param  Collection<int, Model>  $ligacoes  Ligações carregadas.
+     * @return list<array{
+     *     url: string,
+     *     etiqueta: string
+     * }> Ligações prontas para apresentação.
+     *
+     * @throws LogicException Quando existe um modelo inesperado.
+     *
+     * @since 2.0.0
+     */
+    private function prepararLigacoes(
+        Collection $ligacoes,
+    ): array {
+        $ligacoesPreparadas = [];
+
+        foreach ($ligacoes as $ligacao) {
+            if (! $ligacao instanceof LigacaoSeccaoMetalThursday) {
+                throw new LogicException(
+                    'A relação "ligacoes" contém um modelo inesperado.',
+                );
+            }
+
+            $etiqueta =
+                $ligacao->plataforma === PlataformaLigacao::Outro
+                    ? $this->normalizarTexto(
+                        $ligacao->etiqueta,
+                    )
+                    ?? 'Ligação externa'
+                    : $ligacao->plataforma->nome();
+
+            $ligacoesPreparadas[] = [
+                'url' => $ligacao->url,
+                'etiqueta' => $etiqueta,
+            ];
+        }
+
+        return $ligacoesPreparadas;
     }
 
     /**

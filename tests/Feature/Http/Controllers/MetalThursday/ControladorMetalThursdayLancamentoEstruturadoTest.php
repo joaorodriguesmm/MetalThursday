@@ -106,8 +106,13 @@ final class ControladorMetalThursdayLancamentoEstruturadoTest extends TestCase
                                 'ano_original' => null,
                                 'faixas' => [],
                             ],
-                            'ligacao' => 'https://example.com/ouvir',
-                            'tipo_incorporacao' => 'ligacao',
+                            'ligacoes' => [
+                                [
+                                    'url' => 'https://example.com/ouvir',
+                                    'etiqueta' => 'Ouvir',
+                                    'incorporar' => false,
+                                ],
+                            ],
                         ],
                     ],
                 ],
@@ -214,8 +219,13 @@ final class ControladorMetalThursdayLancamentoEstruturadoTest extends TestCase
                                     ],
                                 ],
                             ],
-                            'ligacao' => 'https://example.com/ouvir-manual',
-                            'tipo_incorporacao' => 'ligacao',
+                            'ligacoes' => [
+                                [
+                                    'url' => 'https://example.com/ouvir-manual',
+                                    'etiqueta' => 'Ouvir',
+                                    'incorporar' => false,
+                                ],
+                            ],
                         ],
                     ],
                 ],

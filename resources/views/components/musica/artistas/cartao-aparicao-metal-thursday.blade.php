@@ -57,16 +57,23 @@
             </p>
         @endif
 
-        @if ($dados['ligacao'] !== null)
-            <a
-                class="btn btn-sm btn-secondary"
-                href="{{ $dados['ligacao'] }}"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Abrir a ligação externa de {{ $dados['titulo'] }} num novo separador"
+        @if ($dados['ligacoes'] !== [])
+            <div
+                class="d-flex flex-wrap gap-2"
+                aria-label="Ligações de {{ $dados['titulo'] }}"
             >
-                Abrir ligação externa
-            </a>
+                @foreach ($dados['ligacoes'] as $ligacao)
+                    <a
+                        class="btn btn-sm btn-secondary"
+                        href="{{ $ligacao['url'] }}"
+                        target="_blank"
+                        rel="noopener noreferrer external"
+                        aria-label="Abrir {{ $ligacao['etiqueta'] }} de {{ $dados['titulo'] }} num novo separador"
+                    >
+                        {{ $ligacao['etiqueta'] }}
+                    </a>
+                @endforeach
+            </div>
         @endif
     </div>
 </article>

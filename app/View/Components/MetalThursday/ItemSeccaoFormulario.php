@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\View\Components\MetalThursday;
 
-use App\Enumeracoes\TipoIncorporacao;
 use App\Enumeracoes\TipoLancamento;
+use App\Models\MetalThursday\LigacaoSeccaoMetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
 use App\Models\Musica\Artista;
@@ -21,8 +21,7 @@ use LogicException;
  * Prepara um item repetível do formulário de secções.
  *
  * O componente constrói os nomes e identificadores dos campos, recupera os
- * valores antigos do pedido, determina se o tipo selecionado exige detalhes
- * e disponibiliza os valores canónicos dos tipos de incorporação.
+ * valores antigos do pedido e determina se o tipo selecionado exige detalhes.
  *
  * @since 1.0.0
  */
@@ -79,8 +78,6 @@ final class ItemSeccaoFormulario extends Component
      *     artista: string,
      *     lancamento: string,
      *     titulo: string,
-     *     ligacao: string,
-     *     tipoIncorporacao: string,
      *     ano: string,
      *     descricao: string
      * }
@@ -96,15 +93,8 @@ final class ItemSeccaoFormulario extends Component
      *     tipoSeccao: string,
      *     artista: string,
      *     titulo: string,
-     *     ligacao: string,
-     *     tipoIncorporacao: string,
      *     ano: string,
-     *     descricao: string,
-     *     resultadosIncorporacao: string,
-     *     estadoTesteIncorporacao: string,
-     *     escolhaVideo: string,
-     *     escolhaListaReproducao: string,
-     *     escolhaLigacao: string
+     *     descricao: string
      * }
      *
      * @since 2.0.0
@@ -118,8 +108,6 @@ final class ItemSeccaoFormulario extends Component
      *     tipoSeccao: string,
      *     artista: string,
      *     titulo: string,
-     *     ligacao: string,
-     *     tipoIncorporacao: string,
      *     ano: string,
      *     descricao: string
      * }
@@ -127,19 +115,6 @@ final class ItemSeccaoFormulario extends Component
      * @since 2.0.0
      */
     public readonly array $chavesErro;
-
-    /**
-     * Valores canónicos dos tipos de incorporação.
-     *
-     * @var array{
-     *     videoYouTube: string,
-     *     listaReproducaoYouTube: string,
-     *     ligacao: string
-     * }
-     *
-     * @since 2.0.0
-     */
-    public readonly array $tiposIncorporacao;
 
     /**
      * Tipos de lançamento disponíveis no editor estruturado.
@@ -169,6 +144,29 @@ final class ItemSeccaoFormulario extends Component
      * @since 2.0.0
      */
     public readonly array $dadosLancamento;
+
+    /**
+     * Ligações públicas associadas à secção.
+     *
+     * @var list<array{url: string, etiqueta: string, incorporar: bool}>
+     *
+     * @since 2.0.0
+     */
+    public readonly array $ligacoes;
+
+    /**
+     * Número máximo de ligações permitido numa secção.
+     *
+     * @since 2.0.0
+     */
+    public readonly int $numeroMaximoLigacoes;
+
+    /**
+     * Comprimento máximo permitido para a etiqueta de uma ligação.
+     *
+     * @since 2.0.0
+     */
+    public readonly int $comprimentoMaximoEtiquetaLigacao;
 
     /**
      * Comprimento máximo do título do lançamento.
@@ -270,23 +268,9 @@ final class ItemSeccaoFormulario extends Component
 
             'titulo' => "seccoes-{$this->indice}-titulo",
 
-            'ligacao' => "seccoes-{$this->indice}-ligacao",
-
-            'tipoIncorporacao' => "seccoes-{$this->indice}-tipo-incorporacao",
-
             'ano' => "seccoes-{$this->indice}-ano",
 
             'descricao' => "seccoes-{$this->indice}-descricao",
-
-            'resultadosIncorporacao' => "resultados-incorporacao-{$this->indice}",
-
-            'estadoTesteIncorporacao' => "estado-teste-incorporacao-{$this->indice}",
-
-            'escolhaVideo' => "escolha-video-{$this->indice}",
-
-            'escolhaListaReproducao' => "escolha-lista-reproducao-{$this->indice}",
-
-            'escolhaLigacao' => "escolha-ligacao-{$this->indice}",
         ];
 
         $this->chavesErro = [
@@ -296,24 +280,10 @@ final class ItemSeccaoFormulario extends Component
 
             'titulo' => "{$this->prefixoCampo}.titulo",
 
-            'ligacao' => "{$this->prefixoCampo}.ligacao",
-
-            'tipoIncorporacao' => "{$this->prefixoCampo}.tipo_incorporacao",
-
             'ano' => "{$this->prefixoCampo}.ano",
 
             'descricao' => "{$this->prefixoCampo}.descricao",
         ];
-
-        $tipoIncorporacao =
-            $this->normalizarTipoIncorporacao(
-                $this->obterValorCampo(
-                    $pedido,
-                    $seccao,
-                    'tipo_incorporacao',
-                    TipoIncorporacao::Ligacao->value,
-                ),
-            );
 
         $this->valores = [
             'identificador' => $this->normalizarTexto(
@@ -357,17 +327,6 @@ final class ItemSeccaoFormulario extends Component
                 ),
             ),
 
-            'ligacao' => $this->normalizarTexto(
-                $this->obterValorCampo(
-                    $pedido,
-                    $seccao,
-                    'ligacao',
-                    '',
-                ),
-            ),
-
-            'tipoIncorporacao' => $tipoIncorporacao,
-
             'ano' => $this->normalizarTexto(
                 $this->obterValorCampo(
                     $pedido,
@@ -387,14 +346,6 @@ final class ItemSeccaoFormulario extends Component
             ),
         ];
 
-        $this->tiposIncorporacao = [
-            'videoYouTube' => TipoIncorporacao::VideoYouTube->value,
-
-            'listaReproducaoYouTube' => TipoIncorporacao::ListaReproducaoYouTube->value,
-
-            'ligacao' => TipoIncorporacao::Ligacao->value,
-        ];
-
         $this->tiposLancamento = array_map(
             static fn (
                 TipoLancamento $tipo,
@@ -409,6 +360,17 @@ final class ItemSeccaoFormulario extends Component
             $pedido,
             $seccao,
         );
+
+        $this->ligacoes = $this->obterLigacoesFormulario(
+            $pedido,
+            $seccao,
+        );
+
+        $this->numeroMaximoLigacoes =
+            LigacaoSeccaoMetalThursday::NUMERO_MAXIMO_POR_SECCAO;
+
+        $this->comprimentoMaximoEtiquetaLigacao =
+            LigacaoSeccaoMetalThursday::COMPRIMENTO_MAXIMO_ETIQUETA;
 
         $this->comprimentoMaximoTituloLancamento =
             Lancamento::COMPRIMENTO_MAXIMO_TITULO;
@@ -429,7 +391,7 @@ final class ItemSeccaoFormulario extends Component
             SeccaoMetalThursday::COMPRIMENTO_MAXIMO_TITULO;
 
         $this->comprimentoMaximoLigacao =
-            SeccaoMetalThursday::COMPRIMENTO_MAXIMO_LIGACAO;
+            LigacaoSeccaoMetalThursday::COMPRIMENTO_MAXIMO_URL;
 
         $this->comprimentoMaximoDescricao =
             SeccaoMetalThursday::COMPRIMENTO_MAXIMO_DESCRICAO;
@@ -599,6 +561,135 @@ final class ItemSeccaoFormulario extends Component
     }
 
     /**
+     * Obtém as ligações apresentadas pelo formulário.
+     *
+     * Dados antigos de uma submissão inválida têm precedência. Um rascunho
+     * pode fornecer diretamente a lista em formato de array e uma secção
+     * persistida utiliza a relação ordenada. Na ausência da estrutura nova,
+     * mantém-se uma ponte temporária para os campos legados.
+     *
+     * @param  Request  $pedido  Pedido HTTP atual.
+     * @param  SeccaoMetalThursday|array<string, mixed>|null  $seccao  Secção atual.
+     * @return list<array{url: string, etiqueta: string, incorporar: bool}> Ligações.
+     *
+     * @since 2.0.0
+     */
+    private function obterLigacoesFormulario(
+        Request $pedido,
+        SeccaoMetalThursday|array|null $seccao,
+    ): array {
+        $marcadorAusencia = new \stdClass;
+
+        $ligacoesAntigas = $pedido->old(
+            "{$this->prefixoCampo}.ligacoes",
+            $marcadorAusencia,
+        );
+
+        if ($ligacoesAntigas !== $marcadorAusencia) {
+            return $this->normalizarLigacoesFormulario(
+                $ligacoesAntigas,
+            );
+        }
+
+        if (
+            is_array($seccao)
+            && array_key_exists(
+                'ligacoes',
+                $seccao,
+            )
+        ) {
+            return $this->normalizarLigacoesFormulario(
+                $seccao['ligacoes'],
+            );
+        }
+
+        if ($seccao instanceof SeccaoMetalThursday) {
+            $seccao->loadMissing(
+                'ligacoes',
+            );
+
+            $ligacoes = [];
+
+            foreach ($seccao->ligacoes as $ligacao) {
+                if (! $ligacao instanceof LigacaoSeccaoMetalThursday) {
+                    continue;
+                }
+
+                $ligacoes[] = [
+                    'url' => $ligacao->url,
+                    'etiqueta' => $ligacao->etiqueta
+                        ?? '',
+                    'incorporar' => $ligacao->incorporar,
+                ];
+            }
+
+            return $ligacoes;
+        }
+
+        return [];
+    }
+
+    /**
+     * Normaliza ligações provenientes de dados submetidos ou de um rascunho.
+     *
+     * Linhas incompletas são preservadas para não destruir trabalho guardado
+     * num rascunho antes da publicação final.
+     *
+     * @param  mixed  $valor  Valor recebido.
+     * @return list<array{url: string, etiqueta: string, incorporar: bool}> Ligações.
+     *
+     * @since 2.0.0
+     */
+    private function normalizarLigacoesFormulario(
+        mixed $valor,
+    ): array {
+        if (! is_array($valor)) {
+            return [];
+        }
+
+        $ligacoes = [];
+
+        foreach (array_values($valor) as $ligacao) {
+            if (! is_array($ligacao)) {
+                continue;
+            }
+
+            $ligacoes[] = [
+                'url' => $this->normalizarTexto(
+                    $ligacao['url']
+                        ?? '',
+                ),
+                'etiqueta' => $this->normalizarTexto(
+                    $ligacao['etiqueta']
+                        ?? '',
+                ),
+                'incorporar' => $this->normalizarBooleanoFormulario(
+                    $ligacao['incorporar']
+                        ?? false,
+                ),
+            ];
+        }
+
+        return $ligacoes;
+    }
+
+    /**
+     * Normaliza um booleano recebido por um campo HTML.
+     *
+     * @param  mixed  $valor  Valor recebido.
+     * @return bool Valor normalizado.
+     *
+     * @since 2.0.0
+     */
+    private function normalizarBooleanoFormulario(
+        mixed $valor,
+    ): bool {
+        return $valor === true
+            || $valor === 1
+            || $valor === '1';
+    }
+
+    /**
      * Obtém a vista do componente.
      *
      * @return View Vista do item de secção.
@@ -709,32 +800,6 @@ final class ItemSeccaoFormulario extends Component
         return trim(
             (string) $valor,
         );
-    }
-
-    /**
-     * Normaliza o tipo de incorporação.
-     *
-     * Aceita diretamente a enumeração devolvida pelo cast do modelo ou um
-     * valor textual recebido através dos dados antigos do pedido.
-     *
-     * @param  mixed  $valor  Valor recebido.
-     * @return string Valor canónico.
-     *
-     * @since 2.0.0
-     */
-    private function normalizarTipoIncorporacao(
-        mixed $valor,
-    ): string {
-        if ($valor instanceof TipoIncorporacao) {
-            return $valor->value;
-        }
-
-        return (
-            TipoIncorporacao::tentarCriar(
-                $valor,
-            )
-            ?? TipoIncorporacao::Ligacao
-        )->value;
     }
 
     /**

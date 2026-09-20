@@ -16,6 +16,16 @@ class GestorSeccoes {
     static MARCADOR_INDICE = '__INDICE_SECCAO__';
 
     /**
+     * Evento emitido depois de atualizar o estado de uma secção.
+     *
+     * @type {string}
+     *
+     * @since 2.0.0
+     */
+    static EVENTO_ESTADO_ATUALIZADO =
+        'metal-thursday:estado-seccao-atualizado';
+
+    /**
      * Campos que são obrigatórios quando a secção exige detalhes.
      *
      * @type {string}
@@ -451,6 +461,17 @@ class GestorSeccoes {
             indicadorTituloObrigatorio.hidden =
                 !exigeDetalhes;
         }
+
+        seccao.dispatchEvent(
+            new CustomEvent(
+                GestorSeccoes.EVENTO_ESTADO_ATUALIZADO,
+                {
+                    detail: {
+                        exigeDetalhes,
+                    },
+                },
+            ),
+        );
     }
 
     /**

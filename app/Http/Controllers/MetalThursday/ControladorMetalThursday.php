@@ -24,7 +24,6 @@ use App\Models\Musica\Artista;
 use App\Models\Musica\Genero;
 use App\Notifications\NotificacaoUtilizadorNomeado;
 use App\Resultados\MetalThursday\MetalThursdayCriada;
-use App\Servicos\Incorporacoes\RenderizadorIncorporacoes;
 use App\Servicos\MetalThursday\ServicoNotificacaoPublicacaoMetalThursday;
 use App\Servicos\MetalThursday\ServicoPersistenciaMetalThursday;
 use App\Servicos\MetalThursday\ServicoPreparacaoMetalThursday;
@@ -188,10 +187,6 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
      *                                                                 responsável
      *                                                                 pela
      *                                                                 persistência.
-     * @param  RenderizadorIncorporacoes  $renderizadorIncorporacoes  Serviço
-     *                                                                responsável
-     *                                                                pelas
-     *                                                                incorporações.
      * @param  ServicoReservasMetalThursday  $servicoReservas  Serviço responsável
      *                                                         pelas reservas.
      * @param  ServicoPreparacaoMetalThursday  $servicoPreparacao  Serviço
@@ -207,7 +202,6 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
      */
     public function __construct(
         private readonly ServicoPersistenciaMetalThursday $servicoPersistencia,
-        private readonly RenderizadorIncorporacoes $renderizadorIncorporacoes,
         private readonly ServicoReservasMetalThursday $servicoReservas,
         private readonly ServicoPreparacaoMetalThursday $servicoPreparacao,
         private readonly ServicoNotificacaoPublicacaoMetalThursday $servicoNotificacaoPublicacao,
@@ -682,9 +676,10 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
             $metalThursday,
         );
 
-        $metalThursday->loadMissing(
+        $metalThursday->loadMissing([
             'seccoes.lancamento.faixas.musica',
-        );
+            'seccoes.ligacoes',
+        ]);
 
         return view(
             'metal-thursday.editar',
@@ -899,7 +894,6 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                 'tipo_seccao_id',
                 'artista_id',
                 'titulo',
-                'ligacao',
                 'ano',
             ])
             ->withCount([
@@ -917,6 +911,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                 'artista.origemGeografica:id,nome',
                 'artista.generos:id,nome',
                 'tipoSeccao:id,nome',
+                'ligacoes:id,seccao_metal_thursday_id,plataforma,etiqueta,url,ordem',
                 'avaliacoes.utilizador:id,nome',
                 'audicoes.utilizador:id,nome',
             ])
@@ -998,6 +993,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                     ->with([
                         'tipoSeccao:id,nome,exige_detalhes',
                         'artista:id,nome',
+                        'ligacoes',
                     ]);
             },
         ];
@@ -1058,6 +1054,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                     ->with([
                         'tipoSeccao:id,nome,exige_detalhes',
                         'artista:id,nome',
+                        'ligacoes',
                         'avaliacoes.utilizador:id,nome',
                         'audicoes.utilizador:id,nome',
                         'avaliacaoUtilizadorAutenticado',
@@ -2267,12 +2264,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
      *         pesquisarLancamentos: string,
      *         importarLancamento: string,
      *         obterUtilizadorHaMaisTempoSemNomeacao: string
-     *     },
-     *     fornecedoresIncorporacao: array<int, array{
-     *         tipo: string,
-     *         etiqueta: string,
-     *         expressao_regular: string
-     *     }>
+     *     }
      * } Configuração dos formulários.
      *
      * @since 2.0.0
@@ -2308,10 +2300,6 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                     'utilizadores.ha-mais-tempo-sem-nomeacao',
                 ),
             ],
-
-            'fornecedoresIncorporacao' => $this
-                ->renderizadorIncorporacoes
-                ->definicoesParaJavaScript(),
         ];
     }
 

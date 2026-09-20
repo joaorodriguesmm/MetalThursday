@@ -6,6 +6,7 @@ namespace Tests\Feature\Http\Controllers\Musica;
 
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
+use App\Models\MetalThursday\LigacaoSeccaoMetalThursday;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
@@ -174,6 +175,93 @@ final class VisibilidadeHistoricoArtistaTest extends TestCase
     }
 
     /**
+     * Confirma que o histórico apresenta a nova coleção pela ordem definida.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function historico_apresenta_novas_ligacoes_pela_ordem(): void
+    {
+        $utilizador =
+            Utilizador::factory()
+                ->create();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $artista =
+            Artista::factory()
+                ->create();
+
+        $edicao =
+            Edicao::factory()
+                ->comPeriodo(
+                    CarbonImmutable::parse(
+                        '2026-08-01',
+                    ),
+                    CarbonImmutable::parse(
+                        '2026-09-30',
+                    ),
+                )
+                ->create();
+
+        $metalThursday =
+            $this->criarMetalThursday(
+                $edicao,
+                $utilizador,
+                '2026-08-20',
+            );
+
+        $tipoSeccao =
+            TipoSeccao::factory()
+                ->comDetalhes()
+                ->create();
+
+        $seccao =
+            $this->criarSeccao(
+                $metalThursday,
+                $tipoSeccao,
+                $artista,
+                'Aparição com ligações',
+            );
+
+        LigacaoSeccaoMetalThursday::factory()
+            ->create([
+                'seccao_metal_thursday_id' => (int) $seccao->getKey(),
+                'etiqueta' => 'Segundo recurso',
+                'url' => 'https://example.com/segundo',
+                'incorporar' => false,
+                'ordem' => 2,
+            ]);
+
+        LigacaoSeccaoMetalThursday::factory()
+            ->create([
+                'seccao_metal_thursday_id' => (int) $seccao->getKey(),
+                'etiqueta' => 'Primeiro recurso',
+                'url' => 'https://example.com/primeiro',
+                'incorporar' => false,
+                'ordem' => 1,
+            ]);
+
+        $resposta =
+            $this->get(
+                route(
+                    'artistas.detalhes',
+                    $artista,
+                ),
+            );
+
+        $resposta
+            ->assertOk()
+            ->assertSeeInOrder([
+                'Primeiro recurso',
+                'Segundo recurso',
+            ]);
+    }
+
+    /**
      * Confirma que o endpoint contextual apresenta apenas aparições publicadas e
      * exclui explicitamente a MetalThursday atualmente editada.
      *
@@ -312,6 +400,20 @@ final class VisibilidadeHistoricoArtistaTest extends TestCase
             ->assertJsonMissing([
                 'identificador' => (int) $seccaoFutura->getKey(),
             ]);
+
+        $aparicao =
+            $resposta->json(
+                'aparicoes.0',
+            );
+
+        self::assertIsArray(
+            $aparicao,
+        );
+
+        self::assertArrayNotHasKey(
+            'ligacao',
+            $aparicao,
+        );
     }
 
     /**

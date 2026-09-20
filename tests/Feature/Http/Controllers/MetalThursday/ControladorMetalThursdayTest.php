@@ -10,6 +10,7 @@ use App\Models\Geografia\OrigemGeografica;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\ReservaMetalThursday;
+use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
 use App\Models\Musica\Artista;
 use App\Models\Musica\Genero;
@@ -1568,6 +1569,62 @@ final class ControladorMetalThursdayTest extends TestCase
     }
 
     /**
+     * Confirma que a apresentação dos detalhes carrega explicitamente as
+     * ligações das secções, evitando lazy loading durante a renderização.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function detalhes_carregam_ligacoes_das_seccoes(): void
+    {
+        $utilizador = $this->criarUtilizador();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $edicao = $this->criarEdicao();
+
+        $metalThursday = $this->criarMetalThursday(
+            $edicao,
+            $utilizador,
+            '2026-01-01',
+        );
+
+        SeccaoMetalThursday::factory()
+            ->paraMetalThursday(
+                $metalThursday,
+            )
+            ->create();
+
+        $this
+            ->get(
+                route(
+                    'metal-thursday.detalhes',
+                    $metalThursday,
+                ),
+            )
+            ->assertOk()
+            ->assertViewHas(
+                'metalThursday',
+                static function (
+                    MetalThursday $metalThursdayApresentada,
+                ): bool {
+                    $seccao =
+                        $metalThursdayApresentada
+                            ->seccoes
+                            ->first();
+
+                    return $seccao instanceof SeccaoMetalThursday
+                        && $seccao->relationLoaded(
+                            'ligacoes',
+                        );
+                },
+            );
+    }
+
+    /**
      * Confirma que o utilizador nunca nomeado com precedência alfabética é
      * apresentado antes dos utilizadores já nomeados.
      *
@@ -2210,9 +2267,13 @@ final class ControladorMetalThursdayTest extends TestCase
 
                             'lancamento_id' => $lancamento->getKey(),
 
-                            'ligacao' => 'https://example.com/master-of-puppets',
-
-                            'tipo_incorporacao' => 'ligacao',
+                            'ligacoes' => [
+                                [
+                                    'url' => 'https://example.com/master-of-puppets',
+                                    'etiqueta' => 'Ouvir',
+                                    'incorporar' => false,
+                                ],
+                            ],
 
                             'ano' => 1986,
                         ],
@@ -2302,9 +2363,13 @@ final class ControladorMetalThursdayTest extends TestCase
 
                     'lancamento_id' => (int) $lancamento->getKey(),
 
-                    'ligacao' => 'https://example.com/historico',
-
-                    'tipo_incorporacao' => 'ligacao',
+                    'ligacoes' => [
+                        [
+                            'url' => 'https://example.com/historico',
+                            'etiqueta' => 'Ouvir',
+                            'incorporar' => false,
+                        ],
+                    ],
 
                     'ano' => 2026,
                 ],
@@ -2352,9 +2417,13 @@ final class ControladorMetalThursdayTest extends TestCase
 
                             'lancamento_id' => $identificadorLancamento,
 
-                            'ligacao' => 'https://example.com/historico',
-
-                            'tipo_incorporacao' => 'ligacao',
+                            'ligacoes' => [
+                                [
+                                    'url' => 'https://example.com/historico',
+                                    'etiqueta' => 'Ouvir',
+                                    'incorporar' => false,
+                                ],
+                            ],
 
                             'ano' => 2026,
                         ],
@@ -2444,9 +2513,13 @@ final class ControladorMetalThursdayTest extends TestCase
 
                     'lancamento_id' => (int) $lancamento->getKey(),
 
-                    'ligacao' => 'https://example.com/historica',
-
-                    'tipo_incorporacao' => 'ligacao',
+                    'ligacoes' => [
+                        [
+                            'url' => 'https://example.com/historica',
+                            'etiqueta' => 'Ouvir',
+                            'incorporar' => false,
+                        ],
+                    ],
 
                     'ano' => 2026,
                 ],
@@ -2463,9 +2536,13 @@ final class ControladorMetalThursdayTest extends TestCase
 
                     'lancamento_id' => null,
 
-                    'ligacao' => 'https://example.com/outra',
-
-                    'tipo_incorporacao' => 'ligacao',
+                    'ligacoes' => [
+                        [
+                            'url' => 'https://example.com/outra',
+                            'etiqueta' => 'Ouvir',
+                            'incorporar' => false,
+                        ],
+                    ],
 
                     'ano' => 2026,
                 ],
@@ -2525,9 +2602,13 @@ final class ControladorMetalThursdayTest extends TestCase
 
                             'lancamento_id' => $identificadorLancamento,
 
-                            'ligacao' => 'https://example.com/historica',
-
-                            'tipo_incorporacao' => 'ligacao',
+                            'ligacoes' => [
+                                [
+                                    'url' => 'https://example.com/historica',
+                                    'etiqueta' => 'Ouvir',
+                                    'incorporar' => false,
+                                ],
+                            ],
 
                             'ano' => 2026,
                         ],
@@ -2544,9 +2625,13 @@ final class ControladorMetalThursdayTest extends TestCase
 
                             'lancamento_id' => $identificadorLancamento,
 
-                            'ligacao' => 'https://example.com/outra',
-
-                            'tipo_incorporacao' => 'ligacao',
+                            'ligacoes' => [
+                                [
+                                    'url' => 'https://example.com/outra',
+                                    'etiqueta' => 'Ouvir',
+                                    'incorporar' => false,
+                                ],
+                            ],
 
                             'ano' => 2026,
                         ],
@@ -2649,9 +2734,13 @@ final class ControladorMetalThursdayTest extends TestCase
 
                             'lancamento_id' => 0,
 
-                            'ligacao' => 'https://example.com/lancamento',
-
-                            'tipo_incorporacao' => 'ligacao',
+                            'ligacoes' => [
+                                [
+                                    'url' => 'https://example.com/lancamento',
+                                    'etiqueta' => 'Ouvir',
+                                    'incorporar' => false,
+                                ],
+                            ],
 
                             'ano' => 2026,
                         ],
@@ -2729,9 +2818,13 @@ final class ControladorMetalThursdayTest extends TestCase
 
                         'lancamento_id' => (int) $lancamento->getKey(),
 
-                        'ligacao' => 'https://example.com/lancamento',
-
-                        'tipo_incorporacao' => 'ligacao',
+                        'ligacoes' => [
+                            [
+                                'url' => 'https://example.com/lancamento',
+                                'etiqueta' => 'Ouvir',
+                                'incorporar' => false,
+                            ],
+                        ],
 
                         'ano' => 2026,
                     ],
@@ -2746,6 +2839,19 @@ final class ControladorMetalThursdayTest extends TestCase
                 ),
             )
             ->assertOk()
+            ->assertViewHas(
+                'seccoesFormulario',
+                static function (array $seccoes): bool {
+                    $seccao = $seccoes[0]
+                        ?? null;
+
+                    return $seccao instanceof SeccaoMetalThursday
+                        && $seccao->relationLoaded('ligacoes')
+                        && $seccao->ligacoes->count() === 1
+                        && $seccao->ligacoes->first()?->url
+                            === 'https://example.com/lancamento';
+                },
+            )
             ->assertSeeHtml(
                 'name="seccoes[0][lancamento_id]"',
             )

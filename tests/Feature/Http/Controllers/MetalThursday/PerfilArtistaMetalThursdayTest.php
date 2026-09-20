@@ -331,11 +331,7 @@ final class PerfilArtistaMetalThursdayTest extends TestCase
 
                         'artista_id' => $artista->getKey(),
 
-                        'ligacao' => $seccao->ligacao,
-
-                        'tipo_incorporacao' => $seccao
-                            ->tipo_incorporacao
-                            ?->value,
+                        'ligacoes' => [],
 
                         'ano' => $seccao->ano,
                     ],
@@ -476,11 +472,7 @@ final class PerfilArtistaMetalThursdayTest extends TestCase
 
                         'artista_id' => $artistaHistorico->getKey(),
 
-                        'ligacao' => $seccaoHistorica->ligacao,
-
-                        'tipo_incorporacao' => $seccaoHistorica
-                            ->tipo_incorporacao
-                            ?->value,
+                        'ligacoes' => [],
 
                         'ano' => $seccaoHistorica->ano,
                     ],
@@ -495,11 +487,7 @@ final class PerfilArtistaMetalThursdayTest extends TestCase
 
                         'artista_id' => $artistaHistorico->getKey(),
 
-                        'ligacao' => $outraSeccao->ligacao,
-
-                        'tipo_incorporacao' => $outraSeccao
-                            ->tipo_incorporacao
-                            ?->value,
+                        'ligacoes' => [],
 
                         'ano' => $outraSeccao->ano,
                     ],
@@ -651,11 +639,7 @@ final class PerfilArtistaMetalThursdayTest extends TestCase
 
                         'artista_id' => $artistaAtivo->getKey(),
 
-                        'ligacao' => $seccaoExistente->ligacao,
-
-                        'tipo_incorporacao' => $seccaoExistente
-                            ->tipo_incorporacao
-                            ?->value,
+                        'ligacoes' => [],
 
                         'ano' => $seccaoExistente->ano,
                     ],
@@ -670,9 +654,13 @@ final class PerfilArtistaMetalThursdayTest extends TestCase
 
                         'artista_id' => $artistaEliminado->getKey(),
 
-                        'ligacao' => 'https://example.com/nova-seccao',
-
-                        'tipo_incorporacao' => 'ligacao',
+                        'ligacoes' => [
+                            [
+                                'url' => 'https://example.com/nova-seccao',
+                                'etiqueta' => 'Ouvir',
+                                'incorporar' => false,
+                            ],
+                        ],
 
                         'ano' => 2020,
                     ],

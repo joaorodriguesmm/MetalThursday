@@ -7,11 +7,11 @@ import GestorEdicaoMetalThursday from './GestorEdicaoMetalThursday';
 import GestorFormulariosModais from './GestorFormulariosModais';
 import GestorImportacaoLancamentoDiscogs
     from './GestorImportacaoLancamentoDiscogs';
+import GestorLigacoesSecao from './GestorLigacoesSecao';
 import GestorSeccoes from './GestorSeccoes';
 import InicializadorTomSelect from './InicializadorTomSelect';
 import InicializadorTooltips from './InicializadorTooltips';
 import SeletorNomeados from './SeletorNomeados';
-import TestadorIncorporacao from './TestadorIncorporacao';
 import ValidadorFormulario from './ValidadorFormulario';
 
 /**
@@ -35,19 +35,6 @@ const CHAVES_ENDERECOS = Object.freeze([
     'pesquisarLancamentos',
     'importarLancamento',
     'obterUtilizadorHaMaisTempoSemNomeacao',
-]);
-
-/**
- * Tipos de incorporação permitidos nas secções.
- *
- * @type {ReadonlyArray<string>}
- *
- * @since 2.0.0
- */
-const TIPOS_INCORPORACAO = Object.freeze([
-    'ligacao',
-    'video_youtube',
-    'lista_reproducao_youtube',
 ]);
 
 /**
@@ -114,8 +101,7 @@ function normalizarEndereco(endereco, chave) {
  * Obtém e valida a configuração global do formulário.
  *
  * @returns {{
- *     enderecos: Readonly<Record<string, string>>,
- *     fornecedoresIncorporacao: Array<object>
+ *     enderecos: Readonly<Record<string, string>>
  * }} Configuração validada.
  *
  * @throws {TypeError} Quando a configuração é inválida.
@@ -129,9 +115,6 @@ function obterConfiguracaoFormulario() {
     if (
         !eObjeto(configuracao)
         || !eObjeto(configuracao.enderecos)
-        || !Array.isArray(
-            configuracao.fornecedoresIncorporacao,
-        )
     ) {
         throw new TypeError(
             'A configuração do formulário de MetalThursday é inválida.',
@@ -150,10 +133,6 @@ function obterConfiguracaoFormulario() {
 
     return {
         enderecos: Object.freeze(enderecos),
-
-        fornecedoresIncorporacao: [
-            ...configuracao.fornecedoresIncorporacao,
-        ],
     };
 }
 
@@ -421,6 +400,156 @@ function validarCampoSeccao(
 }
 
 /**
+ * Valida se um valor representa um URL absoluto HTTP ou HTTPS.
+ *
+ * @param {object} contexto Contexto fornecido pelo validador.
+ * @param {unknown} contexto.valor Valor recebido.
+ *
+ * @returns {true|string} Verdadeiro ou mensagem de erro.
+ *
+ * @since 2.0.0
+ */
+function validarUrlLigacao({
+    valor,
+}) {
+    if (typeof valor !== 'string') {
+        return 'A ligação deve ser um URL HTTP ou HTTPS válido.';
+    }
+
+    try {
+        const url = new URL(
+            valor.trim(),
+        );
+
+        return ['http:', 'https:'].includes(
+            url.protocol,
+        )
+            ? true
+            : 'A ligação deve ser um URL HTTP ou HTTPS válido.';
+    } catch {
+        return 'A ligação deve ser um URL HTTP ou HTTPS válido.';
+    }
+}
+
+/**
+ * Valida todas as ligações atualmente presentes numa secção.
+ *
+ * A ausência de ligações é válida. Cada linha existente exige um URL válido e
+ * apenas as ligações da plataforma "Outro" exigem uma etiqueta.
+ *
+ * @param {ValidadorFormulario} validador Validador principal.
+ * @param {HTMLElement} seccao Secção validada.
+ *
+ * @returns {boolean} Verdadeiro quando todas as ligações são válidas.
+ *
+ * @since 2.0.0
+ */
+function validarLigacoesSecao(
+    validador,
+    seccao,
+) {
+    let ligacoesValidas = true;
+
+    seccao.querySelectorAll(
+        '[data-ligacao-seccao]',
+    ).forEach((linha) => {
+        if (!(linha instanceof HTMLElement)) {
+            return;
+        }
+
+        const campoUrl = linha.querySelector(
+            '[data-campo-url-ligacao]',
+        );
+
+        const campoEtiqueta = linha.querySelector(
+            '[data-campo-etiqueta-ligacao]',
+        );
+
+        const urlValido = validarCampoSeccao(
+            validador,
+            campoUrl,
+            [
+                'obrigatorio',
+
+                `maximo:${obterComprimentoMaximoCampo(
+                    campoUrl,
+                    2048,
+                )}`,
+
+                validarUrlLigacao,
+            ],
+            {
+                obrigatorio:
+                    'Por favor, insere a ligação.',
+
+                maximo:
+                    'A ligação excede o comprimento máximo permitido.',
+            },
+        );
+
+        if (!urlValido) {
+            ligacoesValidas = false;
+            return;
+        }
+
+        const plataforma =
+            campoUrl instanceof HTMLInputElement
+                ? GestorLigacoesSecao
+                    .detetarPlataforma(
+                        campoUrl.value,
+                    )
+                : null;
+
+        const eOutro =
+            plataforma?.valor
+            === GestorLigacoesSecao
+                .PLATAFORMAS
+                .outro
+                .valor;
+
+        if (eOutro) {
+            const etiquetaValida =
+                validarCampoSeccao(
+                    validador,
+                    campoEtiqueta,
+                    [
+                        'obrigatorio',
+
+                        `maximo:${obterComprimentoMaximoCampo(
+                            campoEtiqueta,
+                            255,
+                        )}`,
+                    ],
+                    {
+                        obrigatorio:
+                            'Indica uma etiqueta para a ligação personalizada.',
+
+                        maximo:
+                            'A etiqueta excede o comprimento máximo permitido.',
+                    },
+                );
+
+            if (!etiquetaValida) {
+                ligacoesValidas = false;
+            }
+
+            return;
+        }
+
+        if (
+            campoEtiqueta instanceof HTMLInputElement
+            && campoEtiqueta.name !== ''
+        ) {
+            validador.limparErroCampo(
+                campoEtiqueta.name,
+            );
+        }
+    });
+
+    return ligacoesValidas;
+}
+
+/**
  * Determina se o tipo selecionado exige os campos de detalhe.
  *
  * @param {HTMLSelectElement} selecaoTipo Seleção do tipo de secção.
@@ -515,14 +644,6 @@ function validarSeccao(
         '[name$="[titulo]"]',
     );
 
-    const ligacao = seccao.querySelector(
-        '[name$="[ligacao]"]',
-    );
-
-    const tipoIncorporacao = seccao.querySelector(
-        '[name$="[tipo_incorporacao]"]',
-    );
-
     const ano = seccao.querySelector(
         '[name$="[ano]"]',
     );
@@ -550,6 +671,11 @@ function validarSeccao(
             },
         ),
 
+        validarLigacoesSecao(
+            validador,
+            seccao,
+        ),
+
         eLancamento
             ? true
             : validarCampoSeccao(
@@ -570,46 +696,6 @@ function validarSeccao(
                         'O título excede o comprimento máximo permitido.',
                 },
             ),
-
-        validarCampoSeccao(
-            validador,
-            ligacao,
-            [
-                'obrigatorio',
-                `maximo:${obterComprimentoMaximoCampo(
-                    ligacao,
-                    2048,
-                )}`,
-            ],
-            {
-                obrigatorio:
-                    'Por favor, insere a ligação.',
-
-                maximo:
-                    'A ligação excede o comprimento máximo permitido.',
-            },
-        ),
-
-        validarCampoSeccao(
-            validador,
-            tipoIncorporacao,
-            [
-                'obrigatorio',
-
-                ({ valor }) => (
-                    typeof valor === 'string'
-                    && TIPOS_INCORPORACAO.includes(
-                        valor,
-                    )
-                        ? true
-                        : 'O tipo de incorporação selecionado não é válido.'
-                ),
-            ],
-            {
-                obrigatorio:
-                    'Por favor, seleciona o tipo de incorporação.',
-            },
-        ),
 
         eLancamento
             ? true
@@ -783,26 +869,6 @@ function configurarValidacaoTempoRealSeccoes(
 }
 
 /**
- * Inicializa o testador de incorporação de uma secção.
- *
- * @param {HTMLElement} seccao Secção inicializada.
- * @param {Array<object>} fornecedoresIncorporacao Definições recebidas.
- *
- * @returns {void}
- *
- * @since 2.0.0
- */
-function inicializarTestadorIncorporacao(
-    seccao,
-    fornecedoresIncorporacao,
-) {
-    new TestadorIncorporacao(
-        seccao,
-        fornecedoresIncorporacao,
-    );
-}
-
-/**
  * Inicializa os tooltips pertencentes a uma secção criada dinamicamente.
  *
  * @param {HTMLElement} seccao Secção criada.
@@ -836,8 +902,6 @@ function inicializarTooltipsSeccao(
  *     campos Tom Select.
  * @param {InicializadorTooltips} inicializadorTooltips Inicializador dos
  *     tooltips.
- * @param {Array<object>} fornecedoresIncorporacao Definições das
- *     incorporações.
  * @param {Map<number, string>} artistasCriados Artistas criados na página.
  *
  * @returns {void}
@@ -848,9 +912,12 @@ function inicializarNovaSeccao(
     seccao,
     inicializadorTomSelect,
     inicializadorTooltips,
-    fornecedoresIncorporacao,
     artistasCriados,
 ) {
+    new GestorLigacoesSecao(
+        seccao,
+    );
+
     inicializadorTomSelect.iniciarTodos(
         seccao,
     );
@@ -877,11 +944,6 @@ function inicializarNovaSeccao(
             },
         );
     }
-
-    inicializarTestadorIncorporacao(
-        seccao,
-        fornecedoresIncorporacao,
-    );
 
     inicializarTooltipsSeccao(
         seccao,
@@ -1888,10 +1950,6 @@ function inicializarFormularioMetalThursday(
         },
     );
 
-    /*
-     * O testador de incorporação é específico de cada secção e, por isso,
-     * continua a necessitar de uma instância por item.
-     */
     contentorSeccoes
         .querySelectorAll(
             '.item-seccao',
@@ -1902,10 +1960,8 @@ function inicializarFormularioMetalThursday(
                     seccao
                     instanceof HTMLElement
                 ) {
-                    inicializarTestadorIncorporacao(
+                    new GestorLigacoesSecao(
                         seccao,
-                        configuracao
-                            .fornecedoresIncorporacao,
                     );
                 }
             },
@@ -1920,8 +1976,6 @@ function inicializarFormularioMetalThursday(
                 novaSeccao,
                 inicializadorTomSelect,
                 inicializadorTooltips,
-                configuracao
-                    .fornecedoresIncorporacao,
                 artistasCriados,
             );
 

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Database\Factories\MetalThursday;
 
-use App\Enumeracoes\TipoIncorporacao;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\MetalThursday\TipoSeccao;
@@ -40,7 +39,7 @@ final class SeccaoMetalThursdayFactory extends Factory
      * Define os atributos predefinidos de uma secção.
      *
      * Por predefinição, é criado um tipo de secção que não exige detalhes
-     * adicionais e não é associado qualquer artista ou incorporação.
+     * adicionais e não é associado qualquer artista.
      *
      * O nome `definition` permanece em inglês por corresponder ao método
      * convencional das factories do Laravel.
@@ -66,10 +65,6 @@ final class SeccaoMetalThursdayFactory extends Factory
                 ->paragraph(),
 
             'artista_id' => null,
-
-            'ligacao' => null,
-
-            'tipo_incorporacao' => null,
 
             'ano' => null,
         ];
@@ -213,56 +208,13 @@ final class SeccaoMetalThursdayFactory extends Factory
     }
 
     /**
-     * Define uma ligação e o respetivo tipo de incorporação.
-     *
-     * A normalização e a validação da ligação são delegadas ao contrato
-     * definitivo do modelo. Uma ligação vazia continua a ser rejeitada por este
-     * estado.
-     *
-     * @param  string  $ligacao  Ligação absoluta a persistir.
-     * @param  TipoIncorporacao  $tipoIncorporacao  Tipo da incorporação.
-     * @return static Factory configurada.
-     *
-     * @throws InvalidArgumentException Quando a ligação não é válida.
-     *
-     * @since 2.0.0
-     */
-    public function comIncorporacao(
-        string $ligacao,
-        TipoIncorporacao $tipoIncorporacao,
-    ): static {
-        $seccao = new SeccaoMetalThursday;
-
-        $seccao->ligacao =
-            $ligacao;
-
-        $ligacaoNormalizada =
-            $seccao->ligacao;
-
-        if (
-            ! is_string($ligacaoNormalizada)
-            || $ligacaoNormalizada === ''
-        ) {
-            throw new InvalidArgumentException(
-                'A ligação da secção não pode estar vazia.',
-            );
-        }
-
-        return $this->state([
-            'ligacao' => $ligacaoNormalizada,
-
-            'tipo_incorporacao' => $tipoIncorporacao->value,
-        ]);
-    }
-
-    /**
      * Cria uma secção com informação musical detalhada.
      *
      * É criado um tipo que exige detalhes. Quando nenhum artista é fornecido,
      * é criado um através da respetiva factory.
      *
-     * O estado preenche todos os campos exigidos pelo contrato das secções
-     * detalhadas: título, artista, ligação, tipo de incorporação e ano.
+     * O estado preenche os dados musicais estruturados da secção: título,
+     * artista e ano.
      *
      * @param  Artista|null  $artista  Artista pretendido.
      * @return static Factory configurada.
@@ -307,15 +259,6 @@ final class SeccaoMetalThursdayFactory extends Factory
                 $anoMaximo,
             );
 
-        $ligacao = sprintf(
-            'https://example.com/musica/%s',
-            Str::lower(
-                Str::random(
-                    20,
-                ),
-            ),
-        );
-
         return $this
             ->for(
                 TipoSeccao::factory()
@@ -332,10 +275,6 @@ final class SeccaoMetalThursdayFactory extends Factory
                 'descricao' => $descricao,
 
                 'ano' => $ano,
-
-                'ligacao' => $ligacao,
-
-                'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
             ]);
     }
 

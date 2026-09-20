@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Schema;
  * Cria a tabela das secções das MetalThursdays.
  *
  * Cada secção pertence a uma MetalThursday e a um tipo de secção. Pode ainda
- * conter um artista, informação editorial e uma ligação externa incorporável.
+ * conter um artista e informação editorial.
  *
  * @since 2.0.0
  */
@@ -74,22 +74,6 @@ return new class extends Migration
                     )
                     ->cascadeOnUpdate()
                     ->nullOnDelete();
-
-                $tabela
-                    ->string(
-                        'ligacao',
-                        2048,
-                    )
-                    ->nullable();
-
-                $tabela
-                    ->string(
-                        'tipo_incorporacao',
-                        24,
-                    )
-                    ->charset('ascii')
-                    ->collation('ascii_bin')
-                    ->nullable();
 
                 $tabela
                     ->unsignedSmallInteger(
@@ -180,32 +164,6 @@ return new class extends Migration
             SQL,
         );
 
-        DB::statement(
-            <<<'SQL'
-            ALTER TABLE `seccoes_metal_thursday`
-                ADD CONSTRAINT `seccoes_metal_thursday_tipo_incorporacao_valido`
-                CHECK (
-                    `tipo_incorporacao` IS NULL
-                    OR `tipo_incorporacao` IN (
-                        'ligacao',
-                        'video_youtube',
-                        'lista_reproducao_youtube'
-                    )
-                )
-            SQL,
-        );
-
-        DB::statement(
-            <<<'SQL'
-            ALTER TABLE `seccoes_metal_thursday`
-                ADD CONSTRAINT `seccoes_metal_thursday_incorporacao_coerente`
-                CHECK (
-                    (`ligacao` IS NULL AND `tipo_incorporacao` IS NULL)
-                    OR
-                    (`ligacao` IS NOT NULL AND `tipo_incorporacao` IS NOT NULL)
-                )
-            SQL,
-        );
     }
 
     /**

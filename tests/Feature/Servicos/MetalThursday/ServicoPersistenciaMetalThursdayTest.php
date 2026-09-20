@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Servicos\MetalThursday;
 
-use App\Enumeracoes\TipoIncorporacao;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\ReservaMetalThursday;
@@ -82,9 +81,13 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
 
                         'artista_id' => (int) $artista->getKey(),
 
-                        'ligacao' => 'https://example.com/faixa',
-
-                        'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+                        'ligacoes' => [
+                            [
+                                'url' => 'https://example.com/faixa',
+                                'etiqueta' => 'Ouvir',
+                                'incorporar' => false,
+                            ],
+                        ],
 
                         'ano' => 2026,
                     ],
@@ -108,8 +111,6 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
                 'ordem' => 1,
 
                 'titulo' => 'Faixa da semana',
-
-                'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
 
                 'ano' => 2026,
 
@@ -585,9 +586,13 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
 
                     'artista_id' => (int) $artista->getKey(),
 
-                    'ligacao' => 'https://example.com/album-historico',
-
-                    'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+                    'ligacoes' => [
+                        [
+                            'url' => 'https://example.com/album-historico',
+                            'etiqueta' => 'Ouvir',
+                            'incorporar' => false,
+                        ],
+                    ],
 
                     'ano' => 2020,
                 ],
@@ -628,9 +633,13 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
 
                         'artista_id' => (int) $artista->getKey(),
 
-                        'ligacao' => 'https://example.com/album-historico',
-
-                        'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+                        'ligacoes' => [
+                            [
+                                'url' => 'https://example.com/album-historico',
+                                'etiqueta' => 'Ouvir',
+                                'incorporar' => false,
+                            ],
+                        ],
 
                         'ano' => 2020,
                     ],
@@ -703,9 +712,13 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
 
                     'artista_id' => (int) $artistaAtivo->getKey(),
 
-                    'ligacao' => 'https://example.com/seccao-existente',
-
-                    'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+                    'ligacoes' => [
+                        [
+                            'url' => 'https://example.com/seccao-existente',
+                            'etiqueta' => 'Ouvir',
+                            'incorporar' => false,
+                        ],
+                    ],
 
                     'ano' => 2020,
                 ],
@@ -747,9 +760,13 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
 
                             'artista_id' => (int) $artistaAtivo->getKey(),
 
-                            'ligacao' => 'https://example.com/seccao-existente',
-
-                            'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+                            'ligacoes' => [
+                                [
+                                    'url' => 'https://example.com/seccao-existente',
+                                    'etiqueta' => 'Ouvir',
+                                    'incorporar' => false,
+                                ],
+                            ],
 
                             'ano' => 2020,
                         ],
@@ -764,9 +781,13 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
 
                             'artista_id' => (int) $artistaEliminado->getKey(),
 
-                            'ligacao' => 'https://example.com/nova-seccao',
-
-                            'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+                            'ligacoes' => [
+                                [
+                                    'url' => 'https://example.com/nova-seccao',
+                                    'etiqueta' => 'Ouvir',
+                                    'incorporar' => false,
+                                ],
+                            ],
 
                             'ano' => 2021,
                         ],
@@ -859,9 +880,13 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
 
                     'artista_id' => (int) $artistaHistorico->getKey(),
 
-                    'ligacao' => 'https://example.com/historica',
-
-                    'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+                    'ligacoes' => [
+                        [
+                            'url' => 'https://example.com/historica',
+                            'etiqueta' => 'Ouvir',
+                            'incorporar' => false,
+                        ],
+                    ],
 
                     'ano' => 2020,
                 ],
@@ -876,9 +901,13 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
 
                     'artista_id' => (int) $outroArtista->getKey(),
 
-                    'ligacao' => 'https://example.com/outra',
-
-                    'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+                    'ligacoes' => [
+                        [
+                            'url' => 'https://example.com/outra',
+                            'etiqueta' => 'Ouvir',
+                            'incorporar' => false,
+                        ],
+                    ],
 
                     'ano' => 2021,
                 ],
@@ -930,9 +959,13 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
 
                             'artista_id' => (int) $artistaHistorico->getKey(),
 
-                            'ligacao' => 'https://example.com/historica',
-
-                            'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+                            'ligacoes' => [
+                                [
+                                    'url' => 'https://example.com/historica',
+                                    'etiqueta' => 'Ouvir',
+                                    'incorporar' => false,
+                                ],
+                            ],
 
                             'ano' => 2020,
                         ],
@@ -947,9 +980,13 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
 
                             'artista_id' => (int) $artistaHistorico->getKey(),
 
-                            'ligacao' => 'https://example.com/outra',
-
-                            'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+                            'ligacoes' => [
+                                [
+                                    'url' => 'https://example.com/outra',
+                                    'etiqueta' => 'Ouvir',
+                                    'incorporar' => false,
+                                ],
+                            ],
 
                             'ano' => 2021,
                         ],
@@ -1342,9 +1379,13 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
 
                     'lancamento_id' => (int) $lancamento->getKey(),
 
-                    'ligacao' => 'https://example.com/inicial',
-
-                    'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+                    'ligacoes' => [
+                        [
+                            'url' => 'https://example.com/inicial',
+                            'etiqueta' => 'Ouvir',
+                            'incorporar' => false,
+                        ],
+                    ],
 
                     'ano' => 2026,
                 ],
@@ -1385,9 +1426,13 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
 
                         'lancamento_id' => null,
 
-                        'ligacao' => 'https://example.com/sem-lancamento',
-
-                        'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+                        'ligacoes' => [
+                            [
+                                'url' => 'https://example.com/sem-lancamento',
+                                'etiqueta' => 'Ouvir',
+                                'incorporar' => false,
+                            ],
+                        ],
 
                         'ano' => 2026,
                     ],
@@ -1485,9 +1530,13 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
 
                     'lancamento_id' => (int) $lancamentoInicial->getKey(),
 
-                    'ligacao' => 'https://example.com/inicial',
-
-                    'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+                    'ligacoes' => [
+                        [
+                            'url' => 'https://example.com/inicial',
+                            'etiqueta' => 'Ouvir',
+                            'incorporar' => false,
+                        ],
+                    ],
 
                     'ano' => 2026,
                 ],
@@ -1528,9 +1577,13 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
 
                         'lancamento_id' => (int) $novoLancamento->getKey(),
 
-                        'ligacao' => 'https://example.com/novo',
-
-                        'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+                        'ligacoes' => [
+                            [
+                                'url' => 'https://example.com/novo',
+                                'etiqueta' => 'Ouvir',
+                                'incorporar' => false,
+                            ],
+                        ],
 
                         'ano' => 2026,
                     ],
@@ -1623,9 +1676,13 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
 
                     'lancamento_id' => (int) $lancamento->getKey(),
 
-                    'ligacao' => 'https://example.com/historico',
-
-                    'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+                    'ligacoes' => [
+                        [
+                            'url' => 'https://example.com/historico',
+                            'etiqueta' => 'Ouvir',
+                            'incorporar' => false,
+                        ],
+                    ],
 
                     'ano' => 2026,
                 ],
@@ -1671,9 +1728,13 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
 
                         'lancamento_id' => $identificadorLancamento,
 
-                        'ligacao' => 'https://example.com/historico',
-
-                        'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+                        'ligacoes' => [
+                            [
+                                'url' => 'https://example.com/historico',
+                                'etiqueta' => 'Ouvir',
+                                'incorporar' => false,
+                            ],
+                        ],
 
                         'ano' => 2026,
                     ],
@@ -1757,9 +1818,13 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
 
                     'lancamento_id' => (int) $lancamentoHistorico->getKey(),
 
-                    'ligacao' => 'https://example.com/historica',
-
-                    'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+                    'ligacoes' => [
+                        [
+                            'url' => 'https://example.com/historica',
+                            'etiqueta' => 'Ouvir',
+                            'incorporar' => false,
+                        ],
+                    ],
 
                     'ano' => 2026,
                 ],
@@ -1776,9 +1841,13 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
 
                     'lancamento_id' => null,
 
-                    'ligacao' => 'https://example.com/outra',
-
-                    'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+                    'ligacoes' => [
+                        [
+                            'url' => 'https://example.com/outra',
+                            'etiqueta' => 'Ouvir',
+                            'incorporar' => false,
+                        ],
+                    ],
 
                     'ano' => 2026,
                 ],
@@ -1837,9 +1906,13 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
 
                             'lancamento_id' => $identificadorLancamento,
 
-                            'ligacao' => 'https://example.com/historica',
-
-                            'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+                            'ligacoes' => [
+                                [
+                                    'url' => 'https://example.com/historica',
+                                    'etiqueta' => 'Ouvir',
+                                    'incorporar' => false,
+                                ],
+                            ],
 
                             'ano' => 2026,
                         ],
@@ -1856,9 +1929,13 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
 
                             'lancamento_id' => $identificadorLancamento,
 
-                            'ligacao' => 'https://example.com/outra',
-
-                            'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+                            'ligacoes' => [
+                                [
+                                    'url' => 'https://example.com/outra',
+                                    'etiqueta' => 'Ouvir',
+                                    'incorporar' => false,
+                                ],
+                            ],
 
                             'ano' => 2026,
                         ],
@@ -1970,9 +2047,13 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
 
                             'lancamento_id' => $identificadorLancamento,
 
-                            'ligacao' => 'https://example.com/lancamento',
-
-                            'tipo_incorporacao' => TipoIncorporacao::Ligacao->value,
+                            'ligacoes' => [
+                                [
+                                    'url' => 'https://example.com/lancamento',
+                                    'etiqueta' => 'Ouvir',
+                                    'incorporar' => false,
+                                ],
+                            ],
 
                             'ano' => 2026,
                         ],
@@ -2047,9 +2128,7 @@ final class ServicoPersistenciaMetalThursdayTest extends TestCase
 
             'artista_id' => null,
 
-            'ligacao' => null,
-
-            'tipo_incorporacao' => null,
+            'ligacoes' => [],
 
             'ano' => null,
         ];

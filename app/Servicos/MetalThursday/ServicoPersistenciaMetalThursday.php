@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Servicos\MetalThursday;
 
-use App\Enumeracoes\TipoIncorporacao;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
@@ -54,6 +53,7 @@ final class ServicoPersistenciaMetalThursday
     public function __construct(
         private readonly ServicoReservasMetalThursday $servicoReservas,
         private readonly ServicoPersistenciaLancamentoSecao $servicoLancamentos = new ServicoPersistenciaLancamentoSecao,
+        private readonly ServicoLigacoesSecaoMetalThursday $servicoLigacoes = new ServicoLigacoesSecaoMetalThursday,
     ) {}
 
     /**
@@ -188,7 +188,7 @@ final class ServicoPersistenciaMetalThursday
                 $metalThursdayCriada = $metalThursday
                     ->refresh()
                     ->load(
-                        'seccoes',
+                        'seccoes.ligacoes',
                     );
 
                 return new MetalThursdayCriada(
@@ -357,12 +357,17 @@ final class ServicoPersistenciaMetalThursday
                     );
 
                     $seccao->saveOrFail();
+
+                    $this->servicoLigacoes->sincronizar(
+                        $seccao,
+                        $dadosSeccao['ligacoes'],
+                    );
                 }
 
                 return $metalThursdayBloqueada
                     ->refresh()
                     ->load(
-                        'seccoes',
+                        'seccoes.ligacoes',
                     );
             },
             self::TENTATIVAS_TRANSACAO,
@@ -387,8 +392,7 @@ final class ServicoPersistenciaMetalThursday
      *         artista_id: int|null,
      *         lancamento_id: int|null,
      *         titulo: string|null,
-     *         ligacao: string|null,
-     *         tipo_incorporacao: TipoIncorporacao|null,
+     *         ligacoes: list<array{etiqueta: string|null, url: string, incorporar: bool}>,
      *         ano: int|null,
      *         descricao: string
      *     }>
@@ -439,6 +443,13 @@ final class ServicoPersistenciaMetalThursday
                 $indice,
             );
 
+            $ligacoes = $this->servicoLigacoes->normalizarDados(
+                $dadosSeccao['ligacoes']
+                    ?? [],
+                $prefixoCampo.'.ligacoes',
+                true,
+            );
+
             $seccoes[] = [
                 'id' => $this->normalizarIdentificadorOpcional(
                     $dadosSeccao['id']
@@ -471,16 +482,7 @@ final class ServicoPersistenciaMetalThursday
                     $prefixoCampo.'.titulo',
                     SeccaoMetalThursday::COMPRIMENTO_MAXIMO_TITULO,
                 ),
-                'ligacao' => $this->normalizarLigacao(
-                    $dadosSeccao['ligacao']
-                        ?? null,
-                    $prefixoCampo.'.ligacao',
-                ),
-                'tipo_incorporacao' => $this->normalizarTipoIncorporacao(
-                    $dadosSeccao['tipo_incorporacao']
-                        ?? null,
-                    $prefixoCampo.'.tipo_incorporacao',
-                ),
+                'ligacoes' => $ligacoes,
                 'ano' => $this->normalizarAno(
                     $dadosSeccao['ano']
                         ?? null,
@@ -607,6 +609,11 @@ final class ServicoPersistenciaMetalThursday
         );
 
         $seccao->saveOrFail();
+
+        $this->servicoLigacoes->sincronizar(
+            $seccao,
+            $dados['ligacoes'],
+        );
     }
 
     /**
@@ -658,10 +665,6 @@ final class ServicoPersistenciaMetalThursday
                 ->dissociate();
 
             $seccao->titulo = null;
-
-            $seccao->ligacao = null;
-
-            $seccao->tipo_incorporacao = null;
 
             $seccao->ano = null;
 
@@ -723,52 +726,6 @@ final class ServicoPersistenciaMetalThursday
             $seccao->ano =
                 $dados['ano'];
         }
-
-        $seccao->ligacao =
-            $dados['ligacao'];
-
-        $seccao->tipo_incorporacao =
-            $this->resolverTipoIncorporacao(
-                $dados['ligacao'],
-                $dados['tipo_incorporacao'],
-            );
-    }
-
-    /**
-     * Resolve o tipo de incorporação persistido.
-     *
-     * Sem ligação não pode existir um tipo de incorporação. Quando existe uma
-     * ligação, o tipo deve ser indicado explicitamente.
-     *
-     * @param  string|null  $ligacao  Ligação recebida.
-     * @param  TipoIncorporacao|null  $tipoRecebido  Tipo recebido.
-     * @return TipoIncorporacao|null Tipo persistível ou nulo.
-     *
-     * @throws InvalidArgumentException Quando a combinação não é válida.
-     *
-     * @since 2.0.0
-     */
-    private function resolverTipoIncorporacao(
-        ?string $ligacao,
-        ?TipoIncorporacao $tipoRecebido,
-    ): ?TipoIncorporacao {
-        if ($ligacao === null) {
-            if ($tipoRecebido !== null) {
-                throw new InvalidArgumentException(
-                    'Não pode ser indicado um tipo de incorporação sem uma ligação.',
-                );
-            }
-
-            return null;
-        }
-
-        if (! $tipoRecebido instanceof TipoIncorporacao) {
-            throw new InvalidArgumentException(
-                'Uma ligação exige um tipo de incorporação explícito.',
-            );
-        }
-
-        return $tipoRecebido;
     }
 
     /**
@@ -926,14 +883,10 @@ final class ServicoPersistenciaMetalThursday
         $camposObrigatorios = $tipoSeccao->identificador === 'lancamento'
             ? [
                 'artista_id' => 'O artista é obrigatório numa secção de lançamento.',
-                'ligacao' => 'A ligação é obrigatória numa secção de lançamento.',
-                'tipo_incorporacao' => 'O tipo de incorporação é obrigatório numa secção de lançamento.',
             ]
             : [
                 'titulo' => 'O título é obrigatório numa secção detalhada.',
                 'artista_id' => 'O artista é obrigatório numa secção detalhada.',
-                'ligacao' => 'A ligação é obrigatória numa secção detalhada.',
-                'tipo_incorporacao' => 'O tipo de incorporação é obrigatório numa secção detalhada.',
                 'ano' => 'O ano é obrigatório numa secção detalhada.',
             ];
 
@@ -966,8 +919,6 @@ final class ServicoPersistenciaMetalThursday
                 'artista_id',
                 'lancamento_id',
                 'lancamento',
-                'ligacao',
-                'tipo_incorporacao',
                 'ano',
             ] as $campo
         ) {
@@ -975,6 +926,12 @@ final class ServicoPersistenciaMetalThursday
                 continue;
             }
 
+            throw new InvalidArgumentException(
+                'Uma secção sem detalhes não pode conter informação musical detalhada.',
+            );
+        }
+
+        if ($dados['ligacoes'] !== []) {
             throw new InvalidArgumentException(
                 'Uma secção sem detalhes não pode conter informação musical detalhada.',
             );
@@ -1881,185 +1838,6 @@ final class ServicoPersistenciaMetalThursday
         }
 
         return $descricao;
-    }
-
-    /**
-     * Normaliza e valida uma ligação HTTP ou HTTPS.
-     *
-     * @param  mixed  $valor  Valor recebido.
-     * @param  string  $campo  Nome do campo.
-     * @return string|null Ligação válida ou nula.
-     *
-     * @throws InvalidArgumentException Quando a ligação não é válida.
-     *
-     * @since 2.0.0
-     */
-    private function normalizarLigacao(
-        mixed $valor,
-        string $campo,
-    ): ?string {
-        if (
-            $valor === null
-            || $valor === ''
-        ) {
-            return null;
-        }
-
-        if (
-            ! is_string($valor)
-            || preg_match(
-                '//u',
-                $valor,
-            ) !== 1
-        ) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'O campo %s deve conter uma ligação válida.',
-                    $campo,
-                ),
-            );
-        }
-
-        $ligacao = trim(
-            $valor,
-            ' ',
-        );
-
-        if ($ligacao === '') {
-            return null;
-        }
-
-        if (
-            mb_strlen(
-                $ligacao,
-            ) > SeccaoMetalThursday::COMPRIMENTO_MAXIMO_LIGACAO
-            || str_contains(
-                $ligacao,
-                '\\',
-            )
-            || preg_match(
-                '/[\x00-\x20\x7F]/',
-                $ligacao,
-            ) === 1
-            || filter_var(
-                $ligacao,
-                FILTER_VALIDATE_URL,
-            ) === false
-        ) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'O campo %s não contém uma ligação válida.',
-                    $campo,
-                ),
-            );
-        }
-
-        $componentes = parse_url(
-            $ligacao,
-        );
-
-        if (
-            ! is_array($componentes)
-            || ! isset(
-                $componentes['scheme'],
-                $componentes['host'],
-            )
-            || isset(
-                $componentes['user'],
-            )
-            || isset(
-                $componentes['pass'],
-            )
-            || trim(
-                (string) $componentes['host'],
-            ) === ''
-        ) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'O campo %s não contém uma ligação válida.',
-                    $campo,
-                ),
-            );
-        }
-
-        $esquema = mb_strtolower(
-            (string) $componentes['scheme'],
-        );
-
-        if (
-            ! in_array(
-                $esquema,
-                [
-                    'http',
-                    'https',
-                ],
-                true,
-            )
-        ) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'O campo %s deve utilizar HTTP ou HTTPS.',
-                    $campo,
-                ),
-            );
-        }
-
-        return $ligacao;
-    }
-
-    /**
-     * Normaliza o tipo de incorporação recebido.
-     *
-     * Apenas os valores finais persistidos pela enumeração são aceites.
-     *
-     * @param  mixed  $valor  Valor recebido.
-     * @param  string  $campo  Nome do campo.
-     * @return TipoIncorporacao|null Tipo normalizado ou nulo.
-     *
-     * @throws InvalidArgumentException Quando o valor não é válido.
-     *
-     * @since 2.0.0
-     */
-    private function normalizarTipoIncorporacao(
-        mixed $valor,
-        string $campo,
-    ): ?TipoIncorporacao {
-        if (
-            $valor === null
-            || $valor === ''
-        ) {
-            return null;
-        }
-
-        if ($valor instanceof TipoIncorporacao) {
-            return $valor;
-        }
-
-        if (! is_string($valor)) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'O campo %s não contém um tipo de incorporação válido.',
-                    $campo,
-                ),
-            );
-        }
-
-        $tipo = TipoIncorporacao::tryFrom(
-            trim(
-                $valor,
-            ),
-        );
-
-        if ($tipo instanceof TipoIncorporacao) {
-            return $tipo;
-        }
-
-        throw new InvalidArgumentException(
-            sprintf(
-                'O campo %s não contém um tipo de incorporação válido.',
-                $campo,
-            ),
-        );
     }
 
     /**

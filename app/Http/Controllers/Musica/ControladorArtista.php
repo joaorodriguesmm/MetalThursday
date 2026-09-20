@@ -459,8 +459,6 @@ final class ControladorArtista extends Controller
                             'metal-thursday.detalhes',
                             $metalThursday,
                         ),
-
-                        'ligacao' => $seccao->ligacao,
                     ];
                 },
             )
@@ -691,7 +689,6 @@ final class ControladorArtista extends Controller
                 $tabelaSeccoes.'.tipo_seccao_id',
                 $tabelaSeccoes.'.titulo',
                 $tabelaSeccoes.'.descricao',
-                $tabelaSeccoes.'.ligacao',
                 $tabelaSeccoes.'.ano',
             ])
             ->join(
@@ -724,6 +721,7 @@ final class ControladorArtista extends Controller
                 'metalThursday:id,autor_id,data,deleted_at',
                 'metalThursday.autor:id,nome',
                 'tipoSeccao:id,nome',
+                'ligacoes:id,seccao_metal_thursday_id,plataforma,etiqueta,url,ordem',
             ])
             ->orderByDesc(
                 $aliasOrdenacao.'.data',

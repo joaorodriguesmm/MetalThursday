@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\MetalThursday;
 
-use App\Enumeracoes\TipoIncorporacao;
 use App\Enumeracoes\TipoLancamento;
 use App\Models\Autenticacao\Utilizador;
+use App\Models\MetalThursday\LigacaoSeccaoMetalThursday;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
@@ -165,7 +165,7 @@ final class GuardarRascunhoMetalThursdayRequest extends FormRequest
 
             'seccoes.*' => [
                 'bail',
-                'array:id,tipo_seccao_id,titulo,descricao,artista_id,lancamento_id,lancamento,ligacao,tipo_incorporacao,ano',
+                'array:id,tipo_seccao_id,titulo,descricao,artista_id,lancamento_id,lancamento,ligacoes,ano',
             ],
 
             'seccoes.*.id' => [
@@ -304,23 +304,45 @@ final class GuardarRascunhoMetalThursdayRequest extends FormRequest
                 'min:1',
             ],
 
-            'seccoes.*.ligacao' => [
+            'seccoes.*.ligacoes' => [
+                'bail',
+                'nullable',
+                'array',
+                'list',
+                'max:'.LigacaoSeccaoMetalThursday::NUMERO_MAXIMO_POR_SECCAO,
+            ],
+
+            'seccoes.*.ligacoes.*' => [
+                'bail',
+                'array:url,etiqueta,incorporar',
+            ],
+
+            'seccoes.*.ligacoes.*.url' => [
                 'bail',
                 'nullable',
                 'string',
                 $this->criarRegraTextoLinha(
-                    'A ligação da secção contém texto inválido.',
-                    'A ligação da secção contém caracteres inválidos.',
+                    'O URL da ligação contém texto inválido.',
+                    'O URL da ligação contém caracteres inválidos.',
                 ),
-                'max:'.SeccaoMetalThursday::COMPRIMENTO_MAXIMO_LIGACAO,
+                'max:'.LigacaoSeccaoMetalThursday::COMPRIMENTO_MAXIMO_URL,
             ],
 
-            'seccoes.*.tipo_incorporacao' => [
+            'seccoes.*.ligacoes.*.etiqueta' => [
                 'bail',
                 'nullable',
-                Rule::enum(
-                    TipoIncorporacao::class,
+                'string',
+                $this->criarRegraTextoLinha(
+                    'A etiqueta da ligação contém texto inválido.',
+                    'A etiqueta da ligação contém caracteres inválidos.',
                 ),
+                'max:'.LigacaoSeccaoMetalThursday::COMPRIMENTO_MAXIMO_ETIQUETA,
+            ],
+
+            'seccoes.*.ligacoes.*.incorporar' => [
+                'bail',
+                'nullable',
+                'boolean',
             ],
 
             'seccoes.*.ano' => [
@@ -439,15 +461,6 @@ final class GuardarRascunhoMetalThursdayRequest extends FormRequest
 
             'seccoes.*.lancamento.faixas.*.ordem.min' => 'A ordem de uma das faixas não é válida.',
 
-            'seccoes.*.ligacao.string' => 'A ligação da secção não é válida.',
-
-            'seccoes.*.ligacao.max' => sprintf(
-                'A ligação da secção não pode ter mais de %d caracteres.',
-                SeccaoMetalThursday::COMPRIMENTO_MAXIMO_LIGACAO,
-            ),
-
-            'seccoes.*.tipo_incorporacao.enum' => 'O tipo de incorporação selecionado não é válido.',
-
             'seccoes.*.ano.integer' => 'O ano deve ser um número inteiro.',
         ];
     }
@@ -510,15 +523,11 @@ final class GuardarRascunhoMetalThursdayRequest extends FormRequest
                     ?? null,
             );
 
-            $seccao['ligacao'] = $this->normalizarTextoOpcional(
-                $seccao['ligacao']
-                    ?? null,
-            );
-
-            $seccao['tipo_incorporacao'] = $this->normalizarTextoOpcional(
-                $seccao['tipo_incorporacao']
-                    ?? null,
-            );
+            if (array_key_exists('ligacoes', $seccao)) {
+                $seccao['ligacoes'] = $this->normalizarLigacoes(
+                    $seccao['ligacoes'],
+                );
+            }
 
             $seccao['ano'] = $this->normalizarIdentificador(
                 $seccao['ano']
@@ -530,6 +539,87 @@ final class GuardarRascunhoMetalThursdayRequest extends FormRequest
         }
 
         return $seccoes;
+    }
+
+    /**
+     * Normaliza a lista de ligações preservada num rascunho.
+     *
+     * Um rascunho pode conter URLs e etiquetas ainda incompletos. A validação
+     * limita apenas a estrutura e os comprimentos, deixando a completude para
+     * a publicação final.
+     *
+     * @param  mixed  $valor  Valor recebido.
+     * @return mixed Lista normalizada ou valor original.
+     *
+     * @since 2.0.0
+     */
+    private function normalizarLigacoes(
+        mixed $valor,
+    ): mixed {
+        if (! is_array($valor)) {
+            return $valor;
+        }
+
+        $ligacoes = [];
+
+        foreach (array_values($valor) as $ligacao) {
+            if (! is_array($ligacao)) {
+                $ligacoes[] = $ligacao;
+
+                continue;
+            }
+
+            $ligacao['url'] = $this->normalizarTextoOpcional(
+                $ligacao['url']
+                    ?? null,
+            );
+
+            $ligacao['etiqueta'] = $this->normalizarTextoLinhaOpcional(
+                $ligacao['etiqueta']
+                    ?? null,
+            );
+
+            $ligacao['incorporar'] = $this->normalizarBooleano(
+                $ligacao['incorporar']
+                    ?? false,
+            );
+
+            $ligacoes[] = $ligacao;
+        }
+
+        return $ligacoes;
+    }
+
+    /**
+     * Normaliza os booleanos enviados pelos controlos do editor.
+     *
+     * @param  mixed  $valor  Valor recebido.
+     * @return mixed Booleano normalizado ou valor original.
+     *
+     * @since 2.0.0
+     */
+    private function normalizarBooleano(
+        mixed $valor,
+    ): mixed {
+        if (is_bool($valor)) {
+            return $valor;
+        }
+
+        if (
+            $valor === 0
+            || $valor === '0'
+        ) {
+            return false;
+        }
+
+        if (
+            $valor === 1
+            || $valor === '1'
+        ) {
+            return true;
+        }
+
+        return $valor;
     }
 
     /**

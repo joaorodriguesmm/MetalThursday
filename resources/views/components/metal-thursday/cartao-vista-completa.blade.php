@@ -142,11 +142,13 @@
                         </strong>
                     </h3>
 
-                    @if ($seccaoPreparada['temLigacao'])
-                        <div class="mt-3">
-                            <x-incorporacao
-                                :seccao="$seccaoPreparada['modelo']"
-                            />
+                    @if ($seccaoPreparada['temLigacoes'])
+                        <div class="d-flex flex-column gap-3 mt-3">
+                            @foreach ($seccaoPreparada['ligacoes'] as $ligacao)
+                                <x-incorporacao
+                                    :ligacao="$ligacao"
+                                />
+                            @endforeach
                         </div>
                     @endif
 

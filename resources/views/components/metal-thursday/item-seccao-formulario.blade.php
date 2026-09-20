@@ -571,203 +571,407 @@
             hidden
         @endif
     >
-        <div class="col-12 grupo-campo-formulario mb-3">
-            <label
-                class="form-label"
-                for="{{ $identificadores['ligacao'] }}"
-            >
-                <strong>
-                    Ligação
+        <div
+            class="col-12 grupo-campo-formulario mb-3"
+            data-editor-ligacoes-seccao
+            data-nome-base-campo="{{ $nomeBaseCampo }}"
+            data-maximo-ligacoes="{{ $numeroMaximoLigacoes }}"
+        >
+            <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-2">
+                <div>
+                    <strong>Ligações</strong>
 
-                    <span
-                        class="text-danger"
-                        aria-hidden="true"
-                    >
-                        *
+                    <span class="badge text-bg-secondary ms-1">
+                        Opcional
                     </span>
-                </strong>
-            </label>
 
-            <button
-                class="btn border-0 bg-transparent text-muted p-0 align-baseline"
-                type="button"
-                data-bs-toggle="tooltip"
-                data-bs-title="Ligação para ouvir o álbum ou a música."
-                aria-label="Ajuda sobre a ligação"
-            >
-                <i
-                    class="bi bi-info-circle"
-                    aria-hidden="true"
-                ></i>
-            </button>
-
-            <div class="input-group">
-                <input
-                    id="{{ $identificadores['ligacao'] }}"
-                    class="form-control campo-ligacao @error($chavesErro['ligacao']) is-invalid @enderror"
-                    type="url"
-                    name="{{ $nomeBaseCampo }}[ligacao]"
-                    value="{{ $valores['ligacao'] }}"
-                    placeholder="https://..."
-                    maxlength="{{ $comprimentoMaximoLigacao }}"
-                    inputmode="url"
-                    autocomplete="url"
-                    aria-describedby="erro-{{ $identificadores['ligacao'] }}"
-                    @if ($exigeDetalhes)
-                        required
-                    @endif
-                    @error($chavesErro['ligacao'])
-                        aria-invalid="true"
-                    @enderror
-                >
+                    <button
+                        class="btn border-0 bg-transparent text-muted p-0 align-baseline ms-1"
+                        type="button"
+                        data-bs-toggle="tooltip"
+                        data-bs-title="Podes adicionar várias ligações. Spotify, Apple Music e YouTube são detetados automaticamente; as restantes usam uma etiqueta personalizada."
+                        aria-label="Ajuda sobre as ligações"
+                    >
+                        <i
+                            class="bi bi-info-circle"
+                            aria-hidden="true"
+                        ></i>
+                    </button>
+                </div>
 
                 <button
-                    class="btn btn-secondary botao-testar-incorporacao"
+                    class="btn btn-sm btn-secondary d-inline-flex align-items-center gap-2"
                     type="button"
-                    aria-controls="{{
-                        $identificadores['resultadosIncorporacao']
-                    }}"
+                    data-acao-ligacao-seccao="adicionar"
                 >
-                    Testar incorporação
+                    <i
+                        class="bi bi-plus-lg"
+                        aria-hidden="true"
+                    ></i>
+
+                    Adicionar ligação
                 </button>
             </div>
 
             <div
-                id="erro-{{ $identificadores['ligacao'] }}"
-                class="invalid-feedback @error($chavesErro['ligacao']) d-block @enderror"
+                class="small text-muted mb-3"
+                data-estado-ligacoes-seccao
                 aria-live="polite"
                 aria-atomic="true"
             >
-                @error($chavesErro['ligacao'])
-                    {{ $message }}
-                @enderror
+                {{ count($ligacoes) }} de {{ $numeroMaximoLigacoes }} ligações.
             </div>
 
-            <input
-                id="{{ $identificadores['tipoIncorporacao'] }}"
-                class="campo-tipo-incorporacao"
-                type="hidden"
-                name="{{ $nomeBaseCampo }}[tipo_incorporacao]"
-                value="{{ $valores['tipoIncorporacao'] }}"
-            >
-
-            <div
-                id="erro-{{ $identificadores['tipoIncorporacao'] }}"
-                class="invalid-feedback @error($chavesErro['tipoIncorporacao']) d-block @enderror"
-                aria-live="polite"
-                aria-atomic="true"
-            >
-                @error($chavesErro['tipoIncorporacao'])
-                    {{ $message }}
-                @enderror
-            </div>
-
-            <div
-                id="{{ $identificadores['resultadosIncorporacao'] }}"
-                class="resultados-teste-incorporacao mt-3 border-top pt-3"
-                hidden
-            >
-                <div
-                    id="{{ $identificadores['estadoTesteIncorporacao'] }}"
-                    class="estado-teste-incorporacao small mb-2"
-                    aria-live="polite"
-                    aria-atomic="true"
-                ></div>
-
-                <div
-                    class="opcao-incorporacao opcao-incorporacao-video mb-3"
-                    hidden
-                >
-                    <div class="form-check">
-                        <input
-                            id="{{ $identificadores['escolhaVideo'] }}"
-                            class="form-check-input escolha-incorporacao"
-                            type="radio"
-                            name="escolha_incorporacao_{{ $indice }}"
-                            value="{{ $tiposIncorporacao['videoYouTube'] }}"
-                            @checked(
-                                $valores['tipoIncorporacao']
-                                === $tiposIncorporacao['videoYouTube']
-                            )
-                        >
-
-                        <label
-                            class="form-check-label"
-                            for="{{ $identificadores['escolhaVideo'] }}"
-                        >
-                            <strong>
-                                Usar como vídeo
-                            </strong>
-                        </label>
-                    </div>
+            <div data-lista-ligacoes-seccao>
+                @foreach ($ligacoes as $indiceLigacao => $ligacao)
+                    @php
+                        $idBaseLigacao = "seccoes-{$indice}-ligacao-{$indiceLigacao}";
+                        $chaveUrlLigacao = "seccoes.{$indice}.ligacoes.{$indiceLigacao}.url";
+                        $chaveEtiquetaLigacao = "seccoes.{$indice}.ligacoes.{$indiceLigacao}.etiqueta";
+                    @endphp
 
                     <div
-                        class="contentor-previsualizacao-incorporacao previsualizacao-video mt-2"
-                    ></div>
-                </div>
+                        class="border rounded p-3 mb-2"
+                        data-ligacao-seccao
+                        data-indice-ligacao="{{ $indiceLigacao }}"
+                    >
+                        <div class="row g-3 align-items-start">
+                            <div class="col-xl-5 col-lg-6">
+                                <label
+                                    class="form-label small mb-1"
+                                    for="{{ $idBaseLigacao }}-url"
+                                    data-etiqueta-url-ligacao
+                                >
+                                    URL
+                                </label>
 
-                <div
-                    class="opcao-incorporacao opcao-incorporacao-lista-reproducao mb-3"
-                    hidden
-                >
-                    <div class="form-check">
-                        <input
-                            id="{{
-                                $identificadores['escolhaListaReproducao']
-                            }}"
-                            class="form-check-input escolha-incorporacao"
-                            type="radio"
-                            name="escolha_incorporacao_{{ $indice }}"
-                            value="{{
-                                $tiposIncorporacao['listaReproducaoYouTube']
-                            }}"
-                            @checked(
-                                $valores['tipoIncorporacao']
-                                ===
-                                $tiposIncorporacao['listaReproducaoYouTube']
-                            )
-                        >
+                                <input
+                                    id="{{ $idBaseLigacao }}-url"
+                                    class="form-control @error($chaveUrlLigacao) is-invalid @enderror"
+                                    type="url"
+                                    name="{{ $nomeBaseCampo }}[ligacoes][{{ $indiceLigacao }}][url]"
+                                    value="{{ $ligacao['url'] }}"
+                                    placeholder="https://..."
+                                    maxlength="{{ $comprimentoMaximoLigacao }}"
+                                    inputmode="url"
+                                    autocomplete="url"
+                                    aria-describedby="{{ $idBaseLigacao }}-erro-url"
+                                    data-campo-url-ligacao
+                                    required
+                                    @error($chaveUrlLigacao)
+                                        aria-invalid="true"
+                                    @enderror
+                                >
 
-                        <label
-                            class="form-check-label"
-                            for="{{
-                                $identificadores['escolhaListaReproducao']
-                            }}"
-                        >
-                            <strong>
-                                Usar como lista de reprodução
-                            </strong>
-                        </label>
+                                <div
+                                    id="{{ $idBaseLigacao }}-erro-url"
+                                    class="invalid-feedback @error($chaveUrlLigacao) d-block @enderror"
+                                    data-erro-url-ligacao
+                                    aria-live="polite"
+                                    aria-atomic="true"
+                                >
+                                    @error($chaveUrlLigacao)
+                                        {{ $message }}
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <div
+                                class="col-xl-3 col-lg-6"
+                                data-contentor-etiqueta-ligacao
+                                hidden
+                            >
+                                <label
+                                    class="form-label small mb-1"
+                                    for="{{ $idBaseLigacao }}-etiqueta"
+                                    data-etiqueta-etiqueta-ligacao
+                                >
+                                    Etiqueta
+                                </label>
+
+                                <input
+                                    id="{{ $idBaseLigacao }}-etiqueta"
+                                    class="form-control @error($chaveEtiquetaLigacao) is-invalid @enderror"
+                                    type="text"
+                                    name="{{ $nomeBaseCampo }}[ligacoes][{{ $indiceLigacao }}][etiqueta]"
+                                    value="{{ $ligacao['etiqueta'] }}"
+                                    maxlength="{{ $comprimentoMaximoEtiquetaLigacao }}"
+                                    placeholder="Ex.: Comprar, Crítica, Site oficial"
+                                    aria-describedby="{{ $idBaseLigacao }}-erro-etiqueta"
+                                    data-campo-etiqueta-ligacao
+                                    @error($chaveEtiquetaLigacao)
+                                        aria-invalid="true"
+                                    @enderror
+                                >
+
+                                <div
+                                    id="{{ $idBaseLigacao }}-erro-etiqueta"
+                                    class="invalid-feedback @error($chaveEtiquetaLigacao) d-block @enderror"
+                                    data-erro-etiqueta-ligacao
+                                    aria-live="polite"
+                                    aria-atomic="true"
+                                >
+                                    @error($chaveEtiquetaLigacao)
+                                        {{ $message }}
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <div class="col-md-3 col-xl-2">
+                                <div class="form-label small mb-1">
+                                    Plataforma
+                                </div>
+
+                                <span
+                                    class="badge text-bg-secondary"
+                                    data-plataforma-ligacao
+                                >
+                                    Por detetar
+                                </span>
+                            </div>
+
+                            <div class="col-md-5 col-xl-2">
+                                <input
+                                    type="hidden"
+                                    name="{{ $nomeBaseCampo }}[ligacoes][{{ $indiceLigacao }}][incorporar]"
+                                    value="0"
+                                    data-campo-incorporar-ligacao-oculto
+                                >
+
+                                <div class="form-check form-switch mb-1">
+                                    <input
+                                        id="{{ $idBaseLigacao }}-incorporar"
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        name="{{ $nomeBaseCampo }}[ligacoes][{{ $indiceLigacao }}][incorporar]"
+                                        value="1"
+                                        data-campo-incorporar-ligacao
+                                        @checked($ligacao['incorporar'])
+                                    >
+
+                                    <label
+                                        class="form-check-label"
+                                        for="{{ $idBaseLigacao }}-incorporar"
+                                        data-etiqueta-incorporar-ligacao
+                                    >
+                                        Incorporar
+                                    </label>
+                                </div>
+
+                                <div class="small text-muted">
+                                    Quando suportado.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end align-items-center gap-1 mt-3">
+                            <button
+                                class="btn btn-sm btn-secondary"
+                                type="button"
+                                data-acao-ligacao-seccao="subir"
+                                aria-label="Subir ligação"
+                                title="Subir ligação"
+                                @disabled($loop->first)
+                            >
+                                <i
+                                    class="bi bi-arrow-up"
+                                    aria-hidden="true"
+                                ></i>
+                            </button>
+
+                            <button
+                                class="btn btn-sm btn-secondary"
+                                type="button"
+                                data-acao-ligacao-seccao="descer"
+                                aria-label="Descer ligação"
+                                title="Descer ligação"
+                                @disabled($loop->last)
+                            >
+                                <i
+                                    class="bi bi-arrow-down"
+                                    aria-hidden="true"
+                                ></i>
+                            </button>
+
+                            <button
+                                class="btn btn-sm btn-danger"
+                                type="button"
+                                data-acao-ligacao-seccao="remover"
+                                aria-label="Remover ligação"
+                                title="Remover ligação"
+                            >
+                                <i
+                                    class="bi bi-trash"
+                                    aria-hidden="true"
+                                ></i>
+                            </button>
+                        </div>
                     </div>
-
-                    <div
-                        class="contentor-previsualizacao-incorporacao previsualizacao-lista-reproducao mt-2"
-                    ></div>
-                </div>
-
-                <div class="opcao-incorporacao opcao-incorporacao-ligacao">
-                    <div class="form-check">
-                        <input
-                            id="{{ $identificadores['escolhaLigacao'] }}"
-                            class="form-check-input escolha-incorporacao"
-                            type="radio"
-                            name="escolha_incorporacao_{{ $indice }}"
-                            value="{{ $tiposIncorporacao['ligacao'] }}"
-                            @checked(
-                                $valores['tipoIncorporacao']
-                                === $tiposIncorporacao['ligacao']
-                            )
-                        >
-
-                        <label
-                            class="form-check-label"
-                            for="{{ $identificadores['escolhaLigacao'] }}"
-                        >
-                            Usar como ligação simples
-                        </label>
-                    </div>
-                </div>
+                @endforeach
             </div>
+
+            <template data-modelo-ligacao-seccao>
+                <div
+                    class="border rounded p-3 mb-2"
+                    data-ligacao-seccao
+                    data-indice-ligacao="__INDICE_LIGACAO__"
+                >
+                    <div class="row g-3 align-items-start">
+                        <div class="col-xl-5 col-lg-6">
+                            <label
+                                class="form-label small mb-1"
+                                for="seccoes-{{ $indice }}-ligacao-__INDICE_LIGACAO__-url"
+                                data-etiqueta-url-ligacao
+                            >
+                                URL
+                            </label>
+
+                            <input
+                                id="seccoes-{{ $indice }}-ligacao-__INDICE_LIGACAO__-url"
+                                class="form-control"
+                                type="url"
+                                name="{{ $nomeBaseCampo }}[ligacoes][__INDICE_LIGACAO__][url]"
+                                value=""
+                                placeholder="https://..."
+                                maxlength="{{ $comprimentoMaximoLigacao }}"
+                                inputmode="url"
+                                autocomplete="url"
+                                aria-describedby="seccoes-{{ $indice }}-ligacao-__INDICE_LIGACAO__-erro-url"
+                                data-campo-url-ligacao
+                                required
+                            >
+
+                            <div
+                                id="seccoes-{{ $indice }}-ligacao-__INDICE_LIGACAO__-erro-url"
+                                class="invalid-feedback"
+                                data-erro-url-ligacao
+                                aria-live="polite"
+                                aria-atomic="true"
+                            ></div>
+                        </div>
+
+                        <div
+                            class="col-xl-3 col-lg-6"
+                            data-contentor-etiqueta-ligacao
+                            hidden
+                        >
+                            <label
+                                class="form-label small mb-1"
+                                for="seccoes-{{ $indice }}-ligacao-__INDICE_LIGACAO__-etiqueta"
+                                data-etiqueta-etiqueta-ligacao
+                            >
+                                Etiqueta
+                            </label>
+
+                            <input
+                                id="seccoes-{{ $indice }}-ligacao-__INDICE_LIGACAO__-etiqueta"
+                                class="form-control"
+                                type="text"
+                                name="{{ $nomeBaseCampo }}[ligacoes][__INDICE_LIGACAO__][etiqueta]"
+                                value=""
+                                maxlength="{{ $comprimentoMaximoEtiquetaLigacao }}"
+                                placeholder="Ex.: Comprar, Crítica, Site oficial"
+                                aria-describedby="seccoes-{{ $indice }}-ligacao-__INDICE_LIGACAO__-erro-etiqueta"
+                                data-campo-etiqueta-ligacao
+                            >
+
+                            <div
+                                id="seccoes-{{ $indice }}-ligacao-__INDICE_LIGACAO__-erro-etiqueta"
+                                class="invalid-feedback"
+                                data-erro-etiqueta-ligacao
+                                aria-live="polite"
+                                aria-atomic="true"
+                            ></div>
+                        </div>
+
+                        <div class="col-md-3 col-xl-2">
+                            <div class="form-label small mb-1">
+                                Plataforma
+                            </div>
+
+                            <span
+                                class="badge text-bg-secondary"
+                                data-plataforma-ligacao
+                            >
+                                Por detetar
+                            </span>
+                        </div>
+
+                        <div class="col-md-5 col-xl-2">
+                            <input
+                                type="hidden"
+                                name="{{ $nomeBaseCampo }}[ligacoes][__INDICE_LIGACAO__][incorporar]"
+                                value="0"
+                                data-campo-incorporar-ligacao-oculto
+                            >
+
+                            <div class="form-check form-switch mb-1">
+                                <input
+                                    id="seccoes-{{ $indice }}-ligacao-__INDICE_LIGACAO__-incorporar"
+                                    class="form-check-input"
+                                    type="checkbox"
+                                    name="{{ $nomeBaseCampo }}[ligacoes][__INDICE_LIGACAO__][incorporar]"
+                                    value="1"
+                                    data-campo-incorporar-ligacao
+                                >
+
+                                <label
+                                    class="form-check-label"
+                                    for="seccoes-{{ $indice }}-ligacao-__INDICE_LIGACAO__-incorporar"
+                                    data-etiqueta-incorporar-ligacao
+                                >
+                                    Incorporar
+                                </label>
+                            </div>
+
+                            <div class="small text-muted">
+                                Quando suportado.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end align-items-center gap-1 mt-3">
+                        <button
+                            class="btn btn-sm btn-secondary"
+                            type="button"
+                            data-acao-ligacao-seccao="subir"
+                            aria-label="Subir ligação"
+                            title="Subir ligação"
+                        >
+                            <i
+                                class="bi bi-arrow-up"
+                                aria-hidden="true"
+                            ></i>
+                        </button>
+
+                        <button
+                            class="btn btn-sm btn-secondary"
+                            type="button"
+                            data-acao-ligacao-seccao="descer"
+                            aria-label="Descer ligação"
+                            title="Descer ligação"
+                        >
+                            <i
+                                class="bi bi-arrow-down"
+                                aria-hidden="true"
+                            ></i>
+                        </button>
+
+                        <button
+                            class="btn btn-sm btn-danger"
+                            type="button"
+                            data-acao-ligacao-seccao="remover"
+                            aria-label="Remover ligação"
+                            title="Remover ligação"
+                        >
+                            <i
+                                class="bi bi-trash"
+                                aria-hidden="true"
+                            ></i>
+                        </button>
+                    </div>
+                </div>
+            </template>
         </div>
 
         <div class="col-12 grupo-campo-formulario coluna-ano-seccao mb-3">

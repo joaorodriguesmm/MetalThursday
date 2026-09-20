@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Servicos\Incorporacoes;
 
-use App\Enumeracoes\TipoIncorporacao;
-use App\Models\MetalThursday\SeccaoMetalThursday;
+use App\Enumeracoes\PlataformaLigacao;
+use App\Models\MetalThursday\LigacaoSeccaoMetalThursday;
 use Illuminate\Support\HtmlString;
 
 /**
@@ -72,98 +72,418 @@ final class RenderizadorIncorporacoes
     private const COMPRIMENTO_MAXIMO_IDENTIFICADOR_LISTA = 150;
 
     /**
-     * Renderiza a incorporação e a ligação externa de uma secção.
+     * Renderiza uma ligação pertencente à nova coleção de uma secção.
      *
-     * Quando a ligação não é válida, não é produzido qualquer conteúdo.
+     * A incorporação concreta é disponibilizada para YouTube, YouTube Music,
+     * Spotify e Apple Music quando o URL possui um formato reconhecido.
      *
-     * Quando o tipo específico não corresponde a uma ligação reconhecida do
-     * YouTube, continua a ser apresentada apenas a ligação externa validada.
-     *
-     * @param  SeccaoMetalThursday  $seccao  Secção apresentada.
+     * @param  LigacaoSeccaoMetalThursday  $ligacaoSecao  Ligação apresentada.
      * @return HtmlString Conteúdo HTML validado.
      *
      * @since 2.0.0
      */
-    public function renderizar(
-        SeccaoMetalThursday $seccao,
+    public function renderizarLigacao(
+        LigacaoSeccaoMetalThursday $ligacaoSecao,
     ): HtmlString {
         $ligacao = $this->normalizarLigacao(
-            $seccao->ligacao,
+            $ligacaoSecao->url,
         );
 
         if ($ligacao === null) {
             return new HtmlString('');
         }
 
-        $tipoIncorporacao =
-            $seccao->tipo_incorporacao
-            ?? TipoIncorporacao::Ligacao;
+        $incorporacao = '';
 
-        $incorporacao = match ($tipoIncorporacao) {
-            TipoIncorporacao::VideoYouTube => $this->renderizarVideoYouTube(
-                $ligacao,
-            ),
+        if ($ligacaoSecao->incorporar) {
+            if ($ligacaoSecao->plataforma === PlataformaLigacao::YouTube) {
+                $incorporacao =
+                    $this->renderizarVideoYouTube(
+                        $ligacao,
+                    );
 
-            TipoIncorporacao::ListaReproducaoYouTube => $this->renderizarListaReproducaoYouTube(
-                $ligacao,
-            ),
-
-            TipoIncorporacao::Ligacao => '',
-        };
+                if ($incorporacao === '') {
+                    $incorporacao =
+                        $this->renderizarListaReproducaoYouTube(
+                            $ligacao,
+                        );
+                }
+            } elseif ($ligacaoSecao->plataforma === PlataformaLigacao::Spotify) {
+                $incorporacao =
+                    $this->renderizarSpotify(
+                        $ligacao,
+                    );
+            } elseif ($ligacaoSecao->plataforma === PlataformaLigacao::AppleMusic) {
+                $incorporacao =
+                    $this->renderizarAppleMusic(
+                        $ligacao,
+                    );
+            }
+        }
 
         return new HtmlString(
             $incorporacao
                 .$this->renderizarLigacaoExterna(
                     $ligacao,
+                    $this->obterEtiquetaLigacaoExterna(
+                        $ligacaoSecao,
+                    ),
                 ),
         );
     }
 
     /**
-     * Obtém as definições utilizadas pela interface para reconhecer ligações.
+     * Renderiza conteúdo incorporável do Spotify.
      *
-     * Apenas os tipos que possuem uma expressão regular de reconhecimento são
-     * disponibilizados. A ligação externa comum não necessita de deteção no
-     * JavaScript.
+     * Apenas ligações canónicas de `open.spotify.com` são transformadas em
+     * incorporações. Ligações curtas e formatos desconhecidos continuam a ser
+     * apresentados como ligação externa.
      *
-     * @return list<array{
-     *     tipo: string,
-     *     etiqueta: string,
-     *     expressao_regular: string
-     * }> Definições das incorporações reconhecidas.
+     * @param  string  $ligacao  Ligação validada.
+     * @return string HTML da incorporação ou texto vazio.
      *
      * @since 2.0.0
      */
-    public function definicoesParaJavaScript(): array
-    {
-        $definicoes = [];
+    private function renderizarSpotify(
+        string $ligacao,
+    ): string {
+        $conteudo =
+            $this->extrairConteudoSpotify(
+                $ligacao,
+            );
 
-        foreach (
-            [
-                TipoIncorporacao::VideoYouTube,
-                TipoIncorporacao::ListaReproducaoYouTube,
-            ] as $tipo
-        ) {
-            $expressaoRegular =
-                $tipo->expressaoRegularJavaScript();
-
-            if (
-                ! is_string($expressaoRegular)
-                || $expressaoRegular === ''
-            ) {
-                continue;
-            }
-
-            $definicoes[] = [
-                'tipo' => $tipo->value,
-
-                'etiqueta' => $tipo->etiqueta(),
-
-                'expressao_regular' => $expressaoRegular,
-            ];
+        if ($conteudo === null) {
+            return '';
         }
 
-        return $definicoes;
+        $origem = sprintf(
+            'https://open.spotify.com/embed/%s/%s',
+            rawurlencode(
+                $conteudo['tipo'],
+            ),
+            rawurlencode(
+                $conteudo['identificador'],
+            ),
+        );
+
+        $origemEscapada =
+            $this->escaparAtributo(
+                $origem,
+            );
+
+        return <<<HTML
+<div class="w-100">
+    <iframe
+        src="{$origemEscapada}"
+        title="Spotify"
+        width="100%"
+        height="352"
+        loading="lazy"
+        frameborder="0"
+        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+        referrerpolicy="strict-origin-when-cross-origin"
+        allowfullscreen
+    ></iframe>
+</div>
+HTML;
+    }
+
+    /**
+     * Extrai o tipo e o identificador de uma ligação canónica do Spotify.
+     *
+     * São aceites os tipos atualmente suportados pelo gerador de incorporações
+     * do Spotify. O prefixo regional `intl-*` e o segmento `embed` são
+     * tolerados para permitir URLs produzidos pelo próprio serviço.
+     *
+     * @param  string  $ligacao  Ligação validada.
+     * @return array{tipo: string, identificador: string}|null Conteúdo ou nulo.
+     *
+     * @since 2.0.0
+     */
+    private function extrairConteudoSpotify(
+        string $ligacao,
+    ): ?array {
+        $componentes = parse_url(
+            $ligacao,
+        );
+
+        if (
+            ! is_array($componentes)
+            || ! isset(
+                $componentes['host'],
+                $componentes['path'],
+            )
+            || mb_strtolower(
+                (string) $componentes['host'],
+            ) !== 'open.spotify.com'
+        ) {
+            return null;
+        }
+
+        $segmentos = array_values(
+            array_filter(
+                explode(
+                    '/',
+                    trim(
+                        (string) $componentes['path'],
+                        '/',
+                    ),
+                ),
+                static fn (string $segmento): bool => $segmento !== '',
+            ),
+        );
+
+        if (
+            isset($segmentos[0])
+            && preg_match(
+                '/^intl-[a-z]{2}(?:-[a-z]{2})?$/i',
+                $segmentos[0],
+            ) === 1
+        ) {
+            array_shift(
+                $segmentos,
+            );
+        }
+
+        if (($segmentos[0] ?? null) === 'embed') {
+            array_shift(
+                $segmentos,
+            );
+        }
+
+        if (count($segmentos) !== 2) {
+            return null;
+        }
+
+        [$tipo, $identificador] = $segmentos;
+
+        if (
+            ! in_array(
+                $tipo,
+                [
+                    'album',
+                    'artist',
+                    'episode',
+                    'playlist',
+                    'show',
+                    'track',
+                ],
+                true,
+            )
+            || preg_match(
+                '/^[A-Za-z0-9]{10,64}$/',
+                $identificador,
+            ) !== 1
+        ) {
+            return null;
+        }
+
+        return [
+            'tipo' => $tipo,
+            'identificador' => $identificador,
+        ];
+    }
+
+    /**
+     * Renderiza conteúdo incorporável do Apple Music.
+     *
+     * O leitor utiliza o domínio `embed.music.apple.com`. Apenas álbuns,
+     * listas de reprodução e músicas com caminhos reconhecidos são
+     * transformados; os restantes URLs continuam como ligações externas.
+     *
+     * @param  string  $ligacao  Ligação validada.
+     * @return string HTML da incorporação ou texto vazio.
+     *
+     * @since 2.0.0
+     */
+    private function renderizarAppleMusic(
+        string $ligacao,
+    ): string {
+        $conteudo =
+            $this->extrairConteudoAppleMusic(
+                $ligacao,
+            );
+
+        if ($conteudo === null) {
+            return '';
+        }
+
+        $origem =
+            'https://embed.music.apple.com'
+            .$conteudo['caminho'];
+
+        if ($conteudo['identificador_musica'] !== null) {
+            $origem .= '?i='.rawurlencode(
+                $conteudo['identificador_musica'],
+            );
+        }
+
+        $origemEscapada =
+            $this->escaparAtributo(
+                $origem,
+            );
+
+        $altura = $conteudo['musica']
+            ? 175
+            : 450;
+
+        return <<<HTML
+<div class="w-100">
+    <iframe
+        src="{$origemEscapada}"
+        title="Apple Music"
+        width="100%"
+        height="{$altura}"
+        loading="lazy"
+        frameborder="0"
+        allow="autoplay *; encrypted-media *; clipboard-write"
+        referrerpolicy="strict-origin-when-cross-origin"
+        sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation-by-user-activation"
+    ></iframe>
+</div>
+HTML;
+    }
+
+    /**
+     * Extrai conteúdo incorporável de uma ligação Apple Music.
+     *
+     * São aceites caminhos com código de país e conteúdo `album`, `playlist`
+     * ou `song`. O identificador final é validado de acordo com o tipo. Num
+     * álbum, o parâmetro `i` identifica uma música individual.
+     *
+     * @param  string  $ligacao  Ligação validada.
+     * @return array{
+     *     caminho: string,
+     *     identificador_musica: string|null,
+     *     musica: bool
+     * }|null Conteúdo incorporável ou nulo.
+     *
+     * @since 2.0.0
+     */
+    private function extrairConteudoAppleMusic(
+        string $ligacao,
+    ): ?array {
+        $componentes = parse_url(
+            $ligacao,
+        );
+
+        if (
+            ! is_array($componentes)
+            || ! isset(
+                $componentes['host'],
+                $componentes['path'],
+            )
+            || mb_strtolower(
+                (string) $componentes['host'],
+            ) !== 'music.apple.com'
+        ) {
+            return null;
+        }
+
+        $caminho = (string) $componentes['path'];
+
+        $segmentos = array_values(
+            array_filter(
+                explode(
+                    '/',
+                    trim(
+                        $caminho,
+                        '/',
+                    ),
+                ),
+                static fn (string $segmento): bool => $segmento !== '',
+            ),
+        );
+
+        if (
+            count($segmentos) < 3
+            || count($segmentos) > 4
+            || preg_match(
+                '/^[a-z]{2}$/i',
+                $segmentos[0],
+            ) !== 1
+        ) {
+            return null;
+        }
+
+        $tipo = mb_strtolower(
+            $segmentos[1],
+        );
+
+        if (
+            ! in_array(
+                $tipo,
+                [
+                    'album',
+                    'playlist',
+                    'song',
+                ],
+                true,
+            )
+        ) {
+            return null;
+        }
+
+        $identificador = $segmentos[array_key_last(
+            $segmentos,
+        )];
+
+        $identificadorValido = match ($tipo) {
+            'album',
+            'song' => preg_match(
+                '/^[0-9]+$/',
+                $identificador,
+            ) === 1,
+
+            'playlist' => preg_match(
+                '/^pl\.[A-Za-z0-9._-]+$/',
+                $identificador,
+            ) === 1,
+
+            default => false,
+        };
+
+        if (! $identificadorValido) {
+            return null;
+        }
+
+        $identificadorMusica = null;
+
+        if (isset($componentes['query'])) {
+            $parametros = [];
+
+            parse_str(
+                (string) $componentes['query'],
+                $parametros,
+            );
+
+            if (array_key_exists(
+                'i',
+                $parametros,
+            )) {
+                $valor = $parametros['i'];
+
+                if (
+                    $tipo !== 'album'
+                    || ! is_string($valor)
+                    || preg_match(
+                        '/^[0-9]+$/',
+                        $valor,
+                    ) !== 1
+                ) {
+                    return null;
+                }
+
+                $identificadorMusica = $valor;
+            }
+        }
+
+        return [
+            'caminho' => $caminho,
+            'identificador_musica' => $identificadorMusica,
+            'musica' => $tipo === 'song'
+                || $identificadorMusica !== null,
+        ];
     }
 
     /**
@@ -279,10 +599,16 @@ HTML;
      */
     private function renderizarLigacaoExterna(
         string $ligacao,
+        string $etiqueta = 'Abrir ligação externa',
     ): string {
         $ligacaoEscapada =
             $this->escaparAtributo(
                 $ligacao,
+            );
+
+        $etiquetaEscapada =
+            $this->escaparAtributo(
+                $etiqueta,
             );
 
         return <<<HTML
@@ -293,17 +619,52 @@ HTML;
         rel="noopener noreferrer external"
         class="btn btn-sm btn-secondary"
     >
-        Abrir ligação externa
+        {$etiquetaEscapada}
     </a>
 </div>
 HTML;
     }
 
     /**
+     * Obtém a etiqueta apresentada no botão de uma nova ligação.
+     *
+     * @param  LigacaoSeccaoMetalThursday  $ligacao  Ligação apresentada.
+     * @return string Etiqueta segura a apresentar.
+     *
+     * @since 2.0.0
+     */
+    private function obterEtiquetaLigacaoExterna(
+        LigacaoSeccaoMetalThursday $ligacao,
+    ): string {
+        if ($ligacao->plataforma !== PlataformaLigacao::Outro) {
+            return 'Abrir no '.$ligacao->plataforma->nome();
+        }
+
+        $etiqueta = $ligacao->etiqueta;
+
+        if (
+            ! is_string($etiqueta)
+            || preg_match(
+                '//u',
+                $etiqueta,
+            ) !== 1
+            || trim(
+                $etiqueta,
+            ) === ''
+        ) {
+            return 'Abrir ligação externa';
+        }
+
+        return trim(
+            $etiqueta,
+        );
+    }
+
+    /**
      * Valida e normaliza uma ligação HTTP ou HTTPS.
      *
      * Esta validação é defensiva. A ligação já deve ter sido validada pelo
-     * atributo definitivo do modelo {@see SeccaoMetalThursday}, mas o serviço
+     * atributo definitivo do modelo {@see LigacaoSeccaoMetalThursday}, mas o serviço
      * nunca produz HTML com base num valor que não tenha confirmado.
      *
      * @param  mixed  $valor  Valor recebido.
@@ -335,7 +696,7 @@ HTML;
             $ligacao === ''
             || mb_strlen(
                 $ligacao,
-            ) > SeccaoMetalThursday::COMPRIMENTO_MAXIMO_LIGACAO
+            ) > LigacaoSeccaoMetalThursday::COMPRIMENTO_MAXIMO_URL
             || str_contains(
                 $ligacao,
                 '\\',
