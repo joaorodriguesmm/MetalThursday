@@ -68,13 +68,12 @@ return new class extends Migration
 
                 $tabela->timestamps();
 
-                $tabela->index(
+                $tabela->unique(
                     [
                         'seccao_metal_thursday_id',
                         'ordem',
-                        'id',
                     ],
-                    'ligacoes_seccao_metal_thursday_seccao_ordem_indice',
+                    'ligacoes_seccao_ordem_unica',
                 );
             },
         );

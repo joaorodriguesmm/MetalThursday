@@ -440,7 +440,6 @@ HTML;
                 $identificador,
             ) === 1,
 
-            default => false,
         };
 
         if (! $identificadorValido) {

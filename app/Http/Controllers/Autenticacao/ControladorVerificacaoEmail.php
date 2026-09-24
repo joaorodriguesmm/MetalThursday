@@ -10,7 +10,6 @@ use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use LogicException;
 use RuntimeException;
 use SensitiveParameter;
 
@@ -93,8 +92,6 @@ final class ControladorVerificacaoEmail extends Controller
      * @param  string  $hash  Hash recebido na ligação.
      * @return RedirectResponse Redirecionamento para a autenticação.
      *
-     * @throws LogicException Quando a operação produz um resultado interno
-     *                        desconhecido.
      * @throws RuntimeException Quando a verificação não pode ser persistida.
      *
      * @since 1.0.0
@@ -185,10 +182,6 @@ final class ControladorVerificacaoEmail extends Controller
             )->with(
                 'sucesso',
                 'E-mail verificado com sucesso. Já podes iniciar sessão.',
-            ),
-
-            default => throw new LogicException(
-                'A verificação do endereço de e-mail produziu um resultado desconhecido.',
             ),
         };
     }

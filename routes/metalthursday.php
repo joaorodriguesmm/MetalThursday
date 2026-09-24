@@ -142,6 +142,9 @@ Route::middleware([
         Route::controller(
             ControladorImportacaoLancamento::class,
         )
+            ->middleware(
+                'throttle:integracao-discogs',
+            )
             ->prefix(
                 'lancamentos/importacao',
             )
@@ -180,6 +183,9 @@ Route::middleware([
         Route::controller(
             ControladorImportacaoArtista::class,
         )
+            ->middleware(
+                'throttle:integracao-artistas',
+            )
             ->prefix(
                 'artistas/importacao',
             )

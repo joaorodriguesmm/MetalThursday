@@ -1,5 +1,5 @@
-import axios from 'axios';
-import { Tooltip } from 'bootstrap';
+import axios from './ClienteHttp';
+import Tooltip from 'bootstrap/js/dist/tooltip';
 import GestorAlertas from './GestorAlertas';
 
 /**

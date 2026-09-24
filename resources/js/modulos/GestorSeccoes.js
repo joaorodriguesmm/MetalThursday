@@ -1,4 +1,4 @@
-import { Tooltip } from 'bootstrap';
+import Tooltip from 'bootstrap/js/dist/tooltip';
 
 /**
  * Gere a adição, a remoção e a configuração dinâmica de secções.

@@ -105,3 +105,89 @@ jobs:
 
       - name: Validar JavaScript e compilar assets
         run: npm run validar
+
+  browser:
+    name: Browser e acessibilidade
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      mariadb:
+        image: mariadb:11.8.8
+        env:
+          MARIADB_ROOT_PASSWORD: metalthursday_ci
+          MARIADB_DATABASE: metalthursday_testes
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      APP_ENV: testing
+      APP_URL: http://127.0.0.1:8001
+      BCRYPT_ROUNDS: 4
+      CACHE_STORE: array
+      DB_CONNECTION: mariadb
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: metalthursday_testes
+      DB_USERNAME: root
+      DB_PASSWORD: metalthursday_ci
+      MAIL_MAILER: memoria
+      QUEUE_CONNECTION: sync
+      SESSION_DRIVER: file
+
+    steps:
+      - name: Obter o código
+        uses: actions/checkout@v7
+
+      - name: Configurar o PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, pdo_mysql
+          coverage: none
+          tools: composer:v2
+        env:
+          fail-fast: true
+
+      - name: Configurar o Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Instalar dependências PHP
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Instalar dependências JavaScript
+        run: npm ci --strict-allow-scripts
+
+      - name: Preparar o ambiente de testes
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Compilar assets
+        run: npm run compilar
+
+      - name: Preparar a base de dados
+        run: php artisan migrate:fresh --force --env=testing
+
+      - name: Instalar o Chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: Executar testes de browser
+        run: npm run testar:browser
+
+      - name: Guardar diagnóstico de falhas
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: playwright-resultados
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7

@@ -298,6 +298,45 @@ final class ServicoMusicBrainzTest extends TestCase
     }
 
     /**
+     * Confirma que o limite do fornecedor não desencadeia uma nova tentativa.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_repete_pedido_quando_musicbrainz_atinge_limite(): void
+    {
+        Http::fakeSequence()
+            ->push(
+                [
+                    'error' => 'rate-limit',
+                ],
+                429,
+            )
+            ->push(
+                [
+                    'artists' => [],
+                ],
+                200,
+            );
+
+        $this->expectException(
+            RuntimeException::class,
+        );
+
+        try {
+            app(
+                ServicoMusicBrainz::class,
+            )->pesquisarArtistas(
+                'Moonspell',
+            );
+        } finally {
+            Http::assertSentCount(
+                1,
+            );
+        }
+    }
+
+    /**
      * Confirma que um MBID inválido nunca é enviado à API.
      *
      * @since 2.0.0

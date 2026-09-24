@@ -4,27 +4,24 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\MetalThursday;
 
-use App\Enumeracoes\DirecaoOrdenacao;
-use App\Enumeracoes\OrdenacaoMetalThursday;
 use App\Filtros\FiltrosMetalThursday;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\MetalThursday\ExigirCriacaoAdministrativaMetalThursday;
 use App\Http\Requests\MetalThursday\GuardarMetalThursdayRequest;
 use App\Http\Requests\MetalThursday\GuardarRascunhoMetalThursdayRequest;
 use App\Models\Autenticacao\Utilizador;
-use App\Models\Geografia\OrigemGeografica;
 use App\Models\Interacoes\Comentario;
-use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\RascunhoMetalThursday;
 use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
-use App\Models\MetalThursday\TipoSeccao;
-use App\Models\Musica\Artista;
-use App\Models\Musica\Genero;
 use App\Notifications\NotificacaoUtilizadorNomeado;
 use App\Resultados\MetalThursday\MetalThursdayCriada;
+use App\Servicos\MetalThursday\ServicoConfiguracaoInterfaceMetalThursday;
+use App\Servicos\MetalThursday\ServicoControlosListagemMetalThursday;
 use App\Servicos\MetalThursday\ServicoNotificacaoPublicacaoMetalThursday;
+use App\Servicos\MetalThursday\ServicoOpcoesMetalThursday;
+use App\Servicos\MetalThursday\ServicoParametrosListagemMetalThursday;
 use App\Servicos\MetalThursday\ServicoPersistenciaMetalThursday;
 use App\Servicos\MetalThursday\ServicoPreparacaoMetalThursday;
 use App\Servicos\MetalThursday\ServicoReservasMetalThursday;
@@ -32,8 +29,6 @@ use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
@@ -83,74 +78,6 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
     }
 
     /**
-     * Identificador da vista completa.
-     *
-     * @var string
-     *
-     * @since 2.0.0
-     */
-    private const VISTA_COMPLETA = 'completa';
-
-    /**
-     * Identificador da vista simplificada.
-     *
-     * @var string
-     *
-     * @since 2.0.0
-     */
-    private const VISTA_SIMPLIFICADA = 'simplificada';
-
-    /**
-     * Tipos de filtros dinâmicos reconhecidos pela interface.
-     *
-     * @var array<int, string>
-     *
-     * @since 2.0.0
-     */
-    private const TIPOS_FILTROS = [
-        'selecao',
-        'data',
-        'sim_nao',
-    ];
-
-    /**
-     * Chaves das coleções que podem alimentar filtros de seleção.
-     *
-     * @var array<int, string>
-     *
-     * @since 2.0.0
-     */
-    private const CHAVES_DADOS_FILTROS = [
-        'edicoes',
-        'utilizadores',
-        'artistas',
-        'generos',
-    ];
-
-    /**
-     * Opções permitidas para o número de registos por página.
-     *
-     * @var array<int, int>
-     *
-     * @since 2.0.0
-     */
-    private const OPCOES_POR_PAGINA = [
-        5,
-        10,
-        20,
-        50,
-    ];
-
-    /**
-     * Número predefinido de registos por página.
-     *
-     * @var int
-     *
-     * @since 2.0.0
-     */
-    private const POR_PAGINA_PREDEFINIDO = 10;
-
-    /**
      * Primeira estrela apresentada no controlo de avaliação.
      *
      * Cada estrela permite selecionar o valor inteiro ou o respetivo meio
@@ -197,6 +124,12 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
      *                                                                                   responsável
      *                                                                                   pela notificação
      *                                                                                   da publicação.
+     * @param  ServicoOpcoesMetalThursday  $servicoOpcoes  Serviço responsável
+     *                                                     pelas opções de leitura.
+     * @param  ServicoConfiguracaoInterfaceMetalThursday  $servicoConfiguracaoInterface
+     *                                                                                   Serviço responsável
+     *                                                                                   pela configuração
+     *                                                                                   de frontend.
      *
      * @since 2.0.0
      */
@@ -205,6 +138,8 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
         private readonly ServicoReservasMetalThursday $servicoReservas,
         private readonly ServicoPreparacaoMetalThursday $servicoPreparacao,
         private readonly ServicoNotificacaoPublicacaoMetalThursday $servicoNotificacaoPublicacao,
+        private readonly ServicoOpcoesMetalThursday $servicoOpcoes,
+        private readonly ServicoConfiguracaoInterfaceMetalThursday $servicoConfiguracaoInterface,
     ) {}
 
     /**
@@ -219,6 +154,8 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
     public function indice(
         Request $pedido,
         FiltrosMetalThursday $filtros,
+        ServicoParametrosListagemMetalThursday $servicoParametrosListagem,
+        ServicoControlosListagemMetalThursday $servicoControlosListagem,
     ): View {
         $this->authorize(
             'viewAny',
@@ -226,12 +163,12 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
         );
 
         $porPagina =
-            $this->obterNumeroPorPagina(
+            $servicoParametrosListagem->obterNumeroPorPagina(
                 $pedido,
             );
 
         $tipoVista =
-            $this->obterTipoVista(
+            $servicoParametrosListagem->obterTipoVista(
                 $pedido,
             );
 
@@ -241,7 +178,10 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
         $registosMetalThursday = null;
         $seccoesSimplificadas = null;
 
-        if ($tipoVista === self::VISTA_SIMPLIFICADA) {
+        if (
+            $tipoVista
+            === ServicoParametrosListagemMetalThursday::VISTA_SIMPLIFICADA
+        ) {
             $seccoesSimplificadas =
                 $filtros
                     ->aplicar(
@@ -266,7 +206,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
         }
 
         $dadosControlosListagem =
-            $this->obterDadosControlosListagem(
+            $servicoControlosListagem->obterDados(
                 $pedido,
                 $tipoVista,
                 $porPagina,
@@ -279,9 +219,11 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
 
                 'seccoesSimplificadas' => $seccoesSimplificadas,
 
-                'configuracaoListagemMetalThursday' => $this->obterConfiguracaoListagemMetalThursday(
-                    $dadosControlosListagem['gruposFiltrosDisponiveis'],
-                ),
+                'configuracaoListagemMetalThursday' => $this
+                    ->servicoConfiguracaoInterface
+                    ->obterConfiguracaoListagemMetalThursday(
+                        $dadosControlosListagem['gruposFiltrosDisponiveis'],
+                    ),
 
                 ...$dadosControlosListagem,
 
@@ -317,7 +259,9 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                     $pedido,
                 ),
 
-                'configuracaoFormularioMetalThursday' => $this->obterConfiguracaoFormulario(),
+                'configuracaoFormularioMetalThursday' => $this
+                    ->servicoConfiguracaoInterface
+                    ->obterConfiguracaoFormulario(),
             ],
         );
     }
@@ -393,7 +337,9 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                     $dadosRascunho,
                 ),
 
-                'configuracaoFormularioMetalThursday' => $this->obterConfiguracaoFormulario(),
+                'configuracaoFormularioMetalThursday' => $this
+                    ->servicoConfiguracaoInterface
+                    ->obterConfiguracaoFormulario(),
             ],
         );
     }
@@ -693,7 +639,9 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                     $metalThursday,
                 ),
 
-                'configuracaoFormularioMetalThursday' => $this->obterConfiguracaoFormulario(),
+                'configuracaoFormularioMetalThursday' => $this
+                    ->servicoConfiguracaoInterface
+                    ->obterConfiguracaoFormulario(),
             ],
         );
     }
@@ -1028,7 +976,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                 $identificadorUtilizador,
             ): void {
                 $this->configurarComentariosParaApresentacao(
-                    $relacao->getQuery(),
+                    $relacao,
                     $identificadorUtilizador,
                 );
             },
@@ -1066,7 +1014,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                             $identificadorUtilizador,
                         ): void {
                             $this->configurarComentariosParaApresentacao(
-                                $relacaoComentarios->getQuery(),
+                                $relacaoComentarios,
                                 $identificadorUtilizador,
                             );
                         },
@@ -1136,52 +1084,41 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                 ? $metalThursday->autor
                 : $utilizadorAutenticado,
 
-            'edicoes' => $this->obterEdicoesParaSelecao(),
+            'edicoes' => $this
+                ->servicoOpcoes
+                ->obterEdicoesParaSelecao(),
 
-            'utilizadoresAutores' => $this->obterUtilizadoresParaSelecao(),
+            'utilizadoresAutores' => $this
+                ->servicoOpcoes
+                ->obterUtilizadoresParaSelecao(),
 
-            'utilizadoresElegiveisNomeacao' => $this->obterUtilizadoresElegiveisNomeacao(
-                $metalThursday,
-            ),
+            'utilizadoresElegiveisNomeacao' => $this
+                ->servicoOpcoes
+                ->obterUtilizadoresElegiveisNomeacao(
+                    $metalThursday,
+                ),
 
             'reservaPendente' => $reservaPendente,
 
             'reservaSeguinte' => $reservaSeguinte,
 
-            'tiposSeccao' => TipoSeccao::query()
-                ->select([
-                    'id',
-                    'identificador',
-                    'nome',
-                    'descricao',
-                    'exige_detalhes',
-                ])
-                ->orderBy(
-                    'ordem',
-                )
-                ->orderBy(
-                    'id',
-                )
-                ->get(),
+            'tiposSeccao' => $this
+                ->servicoOpcoes
+                ->obterTiposSeccao(),
 
-            'artistas' => $this->obterArtistasParaSelecao(
-                $metalThursday,
-            ),
+            'artistas' => $this
+                ->servicoOpcoes
+                ->obterArtistasParaSelecao(
+                    $metalThursday,
+                ),
 
-            'origensGeograficas' => OrigemGeografica::query()
-                ->select([
-                    'id',
-                    'nome',
-                ])
-                ->orderBy(
-                    'nome',
-                )
-                ->orderBy(
-                    'id',
-                )
-                ->get(),
+            'origensGeograficas' => $this
+                ->servicoOpcoes
+                ->obterOrigensGeograficas(),
 
-            'generos' => $this->obterGenerosParaSelecao(),
+            'generos' => $this
+                ->servicoOpcoes
+                ->obterGenerosParaSelecao(),
         ];
     }
 
@@ -1262,302 +1199,6 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                 self::ULTIMA_ESTRELA_AVALIACAO,
             ),
         ];
-    }
-
-    /**
-     * Obtém as edições disponíveis para seleção.
-     *
-     * @return Collection<int, Edicao> Edições.
-     *
-     * @since 2.0.0
-     */
-    private function obterEdicoesParaSelecao(): Collection
-    {
-        return Edicao::query()
-            ->select([
-                'id',
-                'nome',
-                'data_inicio',
-                'data_fim',
-            ])
-            ->orderByDesc(
-                'data_inicio',
-            )
-            ->orderByDesc(
-                'id',
-            )
-            ->get();
-    }
-
-    /**
-     * Obtém os utilizadores disponíveis para seleção geral.
-     *
-     * A disponibilidade voluntária para nomeação não condiciona a seleção
-     * como autor nem a utilização nos filtros da listagem.
-     *
-     * @return Collection<int, Utilizador> Utilizadores.
-     *
-     * @since 2.0.0
-     */
-    private function obterUtilizadoresParaSelecao(): Collection
-    {
-        return Utilizador::query()
-            ->comAcessoAtivo()
-            ->selecionaveis()
-            ->select([
-                'id',
-                'nome',
-            ])
-            ->reorder(
-                'nome',
-            )
-            ->orderBy(
-                'id',
-            )
-            ->get();
-    }
-
-    /**
-     * Obtém os utilizadores disponíveis para uma nova nomeação.
-     *
-     * Durante a edição, o nomeado atualmente persistido continua disponível
-     * para permitir conservar uma nomeação anteriormente válida, mesmo que
-     * tenha entretanto deixado de ser elegível para novas nomeações.
-     *
-     * @param  MetalThursday|null  $metalThursday  Registo atualmente editado.
-     * @return Collection<int, Utilizador> Utilizadores.
-     *
-     * @since 2.0.0
-     */
-    private function obterUtilizadoresElegiveisNomeacao(
-        ?MetalThursday $metalThursday = null,
-    ): Collection {
-        $construtorElegiveis = Utilizador::query()
-            ->elegiveisParaNomeacao()
-            ->select([
-                'id',
-            ])
-            ->reorder();
-
-        $construtor = Utilizador::query()
-            ->whereIn(
-                'id',
-                $construtorElegiveis,
-            );
-
-        $identificadorNomeadoAtual =
-            $metalThursday?->proximo_nomeado_id;
-
-        if (
-            is_numeric(
-                $identificadorNomeadoAtual,
-            )
-            && (int) $identificadorNomeadoAtual > 0
-        ) {
-            $construtor->orWhere(
-                'utilizadores.id',
-                (int) $identificadorNomeadoAtual,
-            );
-        }
-
-        return $construtor
-            ->select([
-                'id',
-                'nome',
-            ])
-            ->orderBy(
-                'nome',
-            )
-            ->orderBy(
-                'id',
-            )
-            ->get();
-    }
-
-    /**
-     * Obtém os artistas disponíveis para seleção.
-     *
-     * Durante a edição, os artistas já associados às secções permanecem
-     * disponíveis mesmo que tenham sido entretanto eliminados logicamente. Os
-     * restantes artistas eliminados continuam excluídos.
-     *
-     * A origem geográfica, o ano de início e os géneros são carregados
-     * antecipadamente porque integram o rótulo contextual apresentado nas
-     * opções.
-     *
-     * @param  MetalThursday|null  $metalThursday  Registo atualmente editado.
-     * @return Collection<int, Artista> Artistas.
-     *
-     * @throws LogicException Quando as secções esperadas não estão carregadas ou
-     *                        possuem um tipo inesperado.
-     *
-     * @since 2.0.0
-     */
-    private function obterArtistasParaSelecao(
-        ?MetalThursday $metalThursday = null,
-    ): Collection {
-        $identificadoresArtistasAtuais = [];
-
-        if ($metalThursday instanceof MetalThursday) {
-            if (! $metalThursday->relationLoaded('seccoes')) {
-                throw new LogicException(
-                    'A relação "seccoes" deve estar carregada para preparar os artistas da edição.',
-                );
-            }
-
-            foreach ($metalThursday->getRelation('seccoes') as $seccao) {
-                if (! $seccao instanceof SeccaoMetalThursday) {
-                    throw new LogicException(
-                        'A relação "seccoes" contém um modelo inesperado.',
-                    );
-                }
-
-                if (
-                    is_numeric(
-                        $seccao->artista_id,
-                    )
-                    && (int) $seccao->artista_id > 0
-                ) {
-                    $identificadoresArtistasAtuais[] =
-                        (int) $seccao->artista_id;
-                }
-            }
-
-            $identificadoresArtistasAtuais = array_values(
-                array_unique(
-                    $identificadoresArtistasAtuais,
-                ),
-            );
-        }
-
-        $construtor = Artista::query();
-
-        if ($identificadoresArtistasAtuais !== []) {
-            $construtor
-                ->withTrashed()
-                ->where(
-                    static function (
-                        Builder $construtorArtistas,
-                    ) use (
-                        $identificadoresArtistasAtuais,
-                    ): void {
-                        $construtorArtistas
-                            ->whereNull(
-                                'artistas.deleted_at',
-                            )
-                            ->orWhereIn(
-                                'artistas.id',
-                                $identificadoresArtistasAtuais,
-                            );
-                    },
-                );
-        }
-
-        return $construtor
-            ->select([
-                'id',
-                'nome',
-                'origem_geografica_id',
-                'ano_inicio_atividade',
-            ])
-            ->with([
-                'origemGeografica:id,nome',
-                'generos:id,nome',
-            ])
-            ->orderBy(
-                'nome',
-            )
-            ->orderBy(
-                'id',
-            )
-            ->get();
-    }
-
-    /**
-     * Obtém os géneros disponíveis para seleção.
-     *
-     * @return Collection<int, Genero> Géneros.
-     *
-     * @since 2.0.0
-     */
-    private function obterGenerosParaSelecao(): Collection
-    {
-        return Genero::query()
-            ->select([
-                'id',
-                'nome',
-            ])
-            ->orderBy(
-                'nome',
-            )
-            ->orderBy(
-                'id',
-            )
-            ->get();
-    }
-
-    /**
-     * Obtém o número de elementos por página.
-     *
-     * @param  Request  $pedido  Pedido HTTP.
-     * @return int Número permitido.
-     *
-     * @since 2.0.0
-     */
-    private function obterNumeroPorPagina(
-        Request $pedido,
-    ): int {
-        $numero = filter_var(
-            $pedido->query(
-                'por_pagina',
-                self::POR_PAGINA_PREDEFINIDO,
-            ),
-            FILTER_VALIDATE_INT,
-        );
-
-        if (
-            $numero === false
-            || ! in_array(
-                $numero,
-                self::OPCOES_POR_PAGINA,
-                true,
-            )
-        ) {
-            return self::POR_PAGINA_PREDEFINIDO;
-        }
-
-        return $numero;
-    }
-
-    /**
-     * Obtém o tipo da vista pedida.
-     *
-     * @param  Request  $pedido  Pedido HTTP.
-     * @return string Tipo da vista.
-     *
-     * @since 2.0.0
-     */
-    private function obterTipoVista(
-        Request $pedido,
-    ): string {
-        $valor = $pedido->query(
-            'vista',
-            self::VISTA_COMPLETA,
-        );
-
-        if (! is_string($valor)) {
-            return self::VISTA_COMPLETA;
-        }
-
-        return match (mb_strtolower(
-            trim(
-                $valor,
-            ),
-        )) {
-            self::VISTA_SIMPLIFICADA => self::VISTA_SIMPLIFICADA,
-
-            default => self::VISTA_COMPLETA,
-        };
     }
 
     /**
@@ -1764,347 +1405,33 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
      * acompanha cada comentário através do escopo de apresentação, mas os
      * respetivos modelos são obtidos apenas quando o utilizador expande o ramo.
      *
-     * @param  Builder<Comentario>  $construtor  Consulta dos comentários.
+     * @param  Relation  $relacao  Relação dos comentários.
      * @param  int  $identificadorUtilizador  Utilizador autenticado.
+     *
+     * @throws LogicException Quando a relação não utiliza o modelo esperado.
      *
      * @since 2.0.0
      */
     private function configurarComentariosParaApresentacao(
-        Builder $construtor,
+        Relation $relacao,
         int $identificadorUtilizador,
     ): void {
+        $construtor =
+            $relacao->getQuery();
+
+        if (! $construtor->getModel() instanceof Comentario) {
+            throw new LogicException(
+                'A relação de comentários utiliza um modelo inválido.',
+            );
+        }
+
+        /** @var Builder<Comentario> $construtor */
         $construtor
             ->principais()
             ->comDadosApresentacao(
                 $identificadorUtilizador,
             )
             ->ordenadosMaisRecentes();
-    }
-
-    /**
-     * Prepara os controlos utilizados na listagem de MetalThursdays.
-     *
-     * @param  Request  $pedido  Pedido HTTP atual.
-     * @param  string  $tipoVista  Tipo de vista selecionado.
-     * @param  int  $porPagina  Número de resultados por página.
-     * @return array{
-     *     gruposFiltrosDisponiveis: array<int, array{
-     *         rotulo: string,
-     *         filtros: array<int, array{
-     *             chave: string,
-     *             rotulo: string,
-     *             parametro: string,
-     *             tipo: 'selecao'|'data'|'sim_nao',
-     *             chaveDados: string|null
-     *         }>
-     *     }>,
-     *     nomeParametroPesquisa: string,
-     *     pesquisaAtual: string,
-     *     opcoesPorPagina: array<int, int>,
-     *     porPagina: int,
-     *     nomeParametroVista: string,
-     *     vistaAtual: string,
-     *     vistaCompleta: string,
-     *     vistaSimplificada: string,
-     *     nomeParametroPorPagina: string,
-     *     nomeParametroOrdenacao: string,
-     *     ordenacaoAtual: string,
-     *     opcoesOrdenacao: array<int, array{
-     *         chave: string,
-     *         valor: string
-     *     }>,
-     *     nomeParametroDirecaoOrdenacao: string,
-     *     direcaoOrdenacaoAtual: string,
-     *     opcoesDirecaoOrdenacao: array<int, array{
-     *         chave: string,
-     *         valor: string
-     *     }>,
-     *     textoBotaoAlternarVista: string,
-     *     ligacaoLimparFiltros: string
-     * } Dados preparados.
-     *
-     * @since 2.0.0
-     */
-    private function obterDadosControlosListagem(
-        Request $pedido,
-        string $tipoVista,
-        int $porPagina,
-    ): array {
-        $pesquisaRecebida = $pedido->query(
-            FiltrosMetalThursday::PARAMETRO_PESQUISA,
-        );
-
-        $pesquisaAtual = is_string(
-            $pesquisaRecebida,
-        )
-            ? $pesquisaRecebida
-            : '';
-
-        $ordenacao =
-            OrdenacaoMetalThursday::tentarCriar(
-                $pedido->query(
-                    'ordenar_por',
-                ),
-            )
-            ?? OrdenacaoMetalThursday::Data;
-
-        $direcaoOrdenacao =
-            DirecaoOrdenacao::tentarCriar(
-                $pedido->query(
-                    'direcao_ordenacao',
-                ),
-            )
-            ?? DirecaoOrdenacao::Descendente;
-
-        $vistaAtual =
-            $tipoVista === self::VISTA_SIMPLIFICADA
-            ? self::VISTA_SIMPLIFICADA
-            : self::VISTA_COMPLETA;
-
-        return [
-            'gruposFiltrosDisponiveis' => $this->obterGruposFiltrosDisponiveis(),
-
-            'nomeParametroPesquisa' => FiltrosMetalThursday::PARAMETRO_PESQUISA,
-
-            'pesquisaAtual' => $pesquisaAtual,
-
-            'opcoesPorPagina' => self::OPCOES_POR_PAGINA,
-
-            'porPagina' => $porPagina,
-
-            'nomeParametroVista' => 'vista',
-
-            'vistaAtual' => $vistaAtual,
-
-            'vistaCompleta' => self::VISTA_COMPLETA,
-
-            'vistaSimplificada' => self::VISTA_SIMPLIFICADA,
-
-            'nomeParametroPorPagina' => 'por_pagina',
-
-            'nomeParametroOrdenacao' => 'ordenar_por',
-
-            'ordenacaoAtual' => $ordenacao->value,
-
-            'opcoesOrdenacao' => [
-                [
-                    'chave' => OrdenacaoMetalThursday::Data->value,
-
-                    'valor' => 'Data',
-                ],
-                [
-                    'chave' => OrdenacaoMetalThursday::Classificacao->value,
-
-                    'valor' => 'Avaliação média',
-                ],
-                [
-                    'chave' => OrdenacaoMetalThursday::MinhaClassificacao->value,
-
-                    'valor' => 'A minha avaliação',
-                ],
-            ],
-
-            'nomeParametroDirecaoOrdenacao' => 'direcao_ordenacao',
-
-            'direcaoOrdenacaoAtual' => $direcaoOrdenacao->value,
-
-            'opcoesDirecaoOrdenacao' => [
-                [
-                    'chave' => DirecaoOrdenacao::Ascendente->value,
-
-                    'valor' => 'Ascendente',
-                ],
-                [
-                    'chave' => DirecaoOrdenacao::Descendente->value,
-
-                    'valor' => 'Descendente',
-                ],
-            ],
-
-            'textoBotaoAlternarVista' => $vistaAtual === self::VISTA_SIMPLIFICADA
-                ? 'Ver vista completa'
-                : 'Ver vista simplificada',
-
-            'ligacaoLimparFiltros' => route(
-                'inicio',
-                [
-                    'vista' => $vistaAtual,
-                ],
-            ),
-        ];
-    }
-
-    /**
-     * Obtém os grupos de filtros disponíveis para apresentação.
-     *
-     * Entradas inválidas, chaves repetidas e grupos sem filtros válidos não
-     * são apresentados.
-     *
-     * @return array<int, array{
-     *     rotulo: string,
-     *     filtros: array<int, array{
-     *         chave: string,
-     *         rotulo: string,
-     *         parametro: string,
-     *         tipo: 'selecao'|'data'|'sim_nao',
-     *         chaveDados: string|null
-     *     }>
-     * }> Grupos normalizados.
-     *
-     * @since 2.0.0
-     */
-    private function obterGruposFiltrosDisponiveis(): array
-    {
-        $configuracao =
-            config(
-                'filtros.metal_thursday',
-                [],
-            );
-
-        if (! is_array($configuracao)) {
-            return [];
-        }
-
-        $gruposNormalizados = [];
-        $chavesUtilizadas = [];
-
-        foreach ($configuracao as $grupo) {
-            if (! is_array($grupo)) {
-                continue;
-            }
-
-            $rotuloGrupo =
-                is_string(
-                    $grupo['rotulo']
-                        ?? null,
-                )
-                ? trim(
-                    $grupo['rotulo'],
-                )
-                : '';
-
-            $filtrosConfigurados =
-                $grupo['filtros']
-                ?? [];
-
-            if (! is_array($filtrosConfigurados)) {
-                continue;
-            }
-
-            $filtrosNormalizados = [];
-
-            foreach ($filtrosConfigurados as $filtro) {
-                if (! is_array($filtro)) {
-                    continue;
-                }
-
-                $chave =
-                    is_string(
-                        $filtro['chave']
-                            ?? null,
-                    )
-                    ? trim(
-                        $filtro['chave'],
-                    )
-                    : '';
-
-                $rotulo =
-                    is_string(
-                        $filtro['rotulo']
-                            ?? null,
-                    )
-                    ? trim(
-                        $filtro['rotulo'],
-                    )
-                    : '';
-
-                $parametro =
-                    is_string(
-                        $filtro['parametro']
-                            ?? null,
-                    )
-                    ? trim(
-                        $filtro['parametro'],
-                    )
-                    : '';
-
-                $tipo =
-                    is_string(
-                        $filtro['tipo']
-                            ?? null,
-                    )
-                    ? trim(
-                        $filtro['tipo'],
-                    )
-                    : '';
-
-                $chaveDadosRecebida =
-                    $filtro['chaveDados']
-                    ?? null;
-
-                $chaveDados =
-                    is_string($chaveDadosRecebida)
-                    ? trim($chaveDadosRecebida)
-                    : null;
-
-                if (
-                    $chave === ''
-                    || $rotulo === ''
-                    || $parametro === ''
-                    || isset($chavesUtilizadas[$chave])
-                    || ! in_array(
-                        $tipo,
-                        self::TIPOS_FILTROS,
-                        true,
-                    )
-                ) {
-                    continue;
-                }
-
-                if ($tipo === 'selecao') {
-                    if (
-                        $chaveDados === null
-                        || ! in_array(
-                            $chaveDados,
-                            self::CHAVES_DADOS_FILTROS,
-                            true,
-                        )
-                    ) {
-                        continue;
-                    }
-                } else {
-                    $chaveDados = null;
-                }
-
-                $chavesUtilizadas[$chave] = true;
-
-                $filtrosNormalizados[] = [
-                    'chave' => $chave,
-
-                    'rotulo' => $rotulo,
-
-                    'parametro' => $parametro,
-
-                    'tipo' => $tipo,
-
-                    'chaveDados' => $chaveDados,
-                ];
-            }
-
-            if ($filtrosNormalizados === []) {
-                continue;
-            }
-
-            $gruposNormalizados[] = [
-                'rotulo' => $rotuloGrupo !== ''
-                    ? $rotuloGrupo
-                    : 'Filtros',
-
-                'filtros' => $filtrosNormalizados,
-            ];
-        }
-
-        return $gruposNormalizados;
     }
 
     /**
@@ -2227,10 +1554,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
 
             if (
                 ! is_int($indice)
-                && (
-                    ! is_string($indice)
-                    || ! ctype_digit($indice)
-                )
+                && ! ctype_digit($indice)
             ) {
                 continue;
             }
@@ -2251,207 +1575,5 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
         );
 
         return $seccoesNormalizadas;
-    }
-
-    /**
-     * Obtém a configuração necessária aos formulários dinâmicos.
-     *
-     * @return array{
-     *     enderecos: array{
-     *         guardarEdicao: string,
-     *         guardarArtista: string,
-     *         guardarGenero: string,
-     *         pesquisarLancamentos: string,
-     *         importarLancamento: string,
-     *         obterUtilizadorHaMaisTempoSemNomeacao: string
-     *     }
-     * } Configuração dos formulários.
-     *
-     * @since 2.0.0
-     */
-    private function obterConfiguracaoFormulario(): array
-    {
-        return [
-            'enderecos' => [
-                'guardarEdicao' => route(
-                    'edicoes.guardar',
-                ),
-
-                'guardarArtista' => route(
-                    'artistas.guardar',
-                ),
-
-                'guardarGenero' => route(
-                    'generos.guardar',
-                ),
-
-                'pesquisarLancamentos' => route(
-                    'lancamentos.importacao.pesquisar',
-                ),
-
-                'importarLancamento' => route(
-                    'lancamentos.importacao.importar',
-                    [
-                        'identificadorDiscogs' => '__IDENTIFICADOR_DISCOGS__',
-                    ],
-                ),
-
-                'obterUtilizadorHaMaisTempoSemNomeacao' => route(
-                    'utilizadores.ha-mais-tempo-sem-nomeacao',
-                ),
-            ],
-        ];
-    }
-
-    /**
-     * Prepara a configuração utilizada pelo JavaScript da listagem.
-     *
-     * @param  array<int, array{
-     *     rotulo: string,
-     *     filtros: array<int, array{
-     *         chave: string,
-     *         rotulo: string,
-     *         parametro: string,
-     *         tipo: 'selecao'|'data'|'sim_nao',
-     *         chaveDados: string|null
-     *     }>
-     * }>  $gruposFiltrosDisponiveis  Grupos de filtros disponíveis.
-     * @return array{
-     *     dadosFiltros: array{
-     *         edicoes: array<int, array{
-     *             identificador: int,
-     *             nome: string
-     *         }>,
-     *         utilizadores: array<int, array{
-     *             identificador: int,
-     *             nome: string
-     *         }>,
-     *         artistas: array<int, array{
-     *             identificador: int,
-     *             nome: string
-     *         }>,
-     *         generos: array<int, array{
-     *             identificador: int,
-     *             nome: string
-     *         }>
-     *     },
-     *     filtrosDisponiveis: array<string, array{
-     *         chave: string,
-     *         rotulo: string,
-     *         parametro: string,
-     *         tipo: 'selecao'|'data'|'sim_nao',
-     *         chaveDados: string|null
-     *     }>,
-     *     vistas: array{
-     *         completa: string,
-     *         simplificada: string
-     *     }
-     * } Configuração preparada.
-     *
-     * @since 2.0.0
-     */
-    private function obterConfiguracaoListagemMetalThursday(
-        array $gruposFiltrosDisponiveis,
-    ): array {
-        $filtrosPorChave = [];
-
-        foreach ($gruposFiltrosDisponiveis as $grupo) {
-            foreach ($grupo['filtros'] as $filtro) {
-                $filtrosPorChave[$filtro['chave']] =
-                    $filtro;
-            }
-        }
-
-        return [
-            'dadosFiltros' => [
-                'edicoes' => $this->serializarOpcoesSelecao(
-                    $this->obterEdicoesParaSelecao(),
-                ),
-
-                'utilizadores' => $this->serializarOpcoesSelecao(
-                    $this->obterUtilizadoresParaSelecao(),
-                ),
-
-                'artistas' => $this->serializarOpcoesSelecao(
-                    $this->obterArtistasParaSelecao(),
-                ),
-
-                'generos' => $this->serializarOpcoesSelecao(
-                    $this->obterGenerosParaSelecao(),
-                ),
-            ],
-
-            'filtrosDisponiveis' => $filtrosPorChave,
-
-            'vistas' => [
-                'completa' => self::VISTA_COMPLETA,
-
-                'simplificada' => self::VISTA_SIMPLIFICADA,
-            ],
-        ];
-    }
-
-    /**
-     * Converte modelos nomeados em opções simples para o JavaScript.
-     *
-     * @param  Collection<int, Model>  $modelos  Modelos convertidos.
-     * @return array<int, array{
-     *     identificador: int,
-     *     nome: string
-     * }> Opções preparadas.
-     *
-     * @throws LogicException Quando um modelo não possui identificador ou nome
-     *                        válidos.
-     *
-     * @since 2.0.0
-     */
-    private function serializarOpcoesSelecao(
-        Collection $modelos,
-    ): array {
-        $opcoes = [];
-
-        foreach ($modelos as $modelo) {
-            $identificador =
-                $modelo->getKey();
-
-            $nome =
-                $modelo->getAttribute(
-                    'nome',
-                );
-
-            if (
-                ! is_numeric($identificador)
-                || (int) $identificador < 1
-            ) {
-                throw new LogicException(
-                    sprintf(
-                        'O modelo %s não possui um identificador válido.',
-                        $modelo::class,
-                    ),
-                );
-            }
-
-            if (
-                ! is_string($nome)
-                || trim($nome) === ''
-            ) {
-                throw new LogicException(
-                    sprintf(
-                        'O modelo %s não possui um nome válido.',
-                        $modelo::class,
-                    ),
-                );
-            }
-
-            $opcoes[] = [
-                'identificador' => (int) $identificador,
-
-                'nome' => trim(
-                    $nome,
-                ),
-            ];
-        }
-
-        return $opcoes;
     }
 }

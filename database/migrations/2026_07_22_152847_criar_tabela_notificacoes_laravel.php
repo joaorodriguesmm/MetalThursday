@@ -18,7 +18,8 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Cria a tabela das notificações persistidas.
+     * Cria a tabela das notificações persistidas com os índices das consultas
+     * reais da aplicação.
      *
      * @since 2.0.0
      */
@@ -41,9 +42,13 @@ return new class extends Migration
                     255,
                 );
 
-                $tabela->morphs(
-                    'notifiable',
-                    'notificacoes_notificavel_indice',
+                $tabela->string(
+                    'notifiable_type',
+                    255,
+                );
+
+                $tabela->unsignedBigInteger(
+                    'notifiable_id',
                 );
 
                 $tabela->text(
@@ -57,6 +62,25 @@ return new class extends Migration
                     ->nullable();
 
                 $tabela->timestamps();
+
+                $tabela->index(
+                    [
+                        'notifiable_type',
+                        'notifiable_id',
+                        'read_at',
+                    ],
+                    'notificacoes_destinatario_leitura_indice',
+                );
+
+                $tabela->index(
+                    [
+                        'notifiable_type',
+                        'notifiable_id',
+                        'created_at',
+                        'id',
+                    ],
+                    'notificacoes_destinatario_criacao_indice',
+                );
             },
         );
     }

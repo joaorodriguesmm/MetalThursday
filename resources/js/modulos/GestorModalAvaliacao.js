@@ -1,8 +1,6 @@
-import axios from 'axios';
-import {
-    Modal,
-    Tooltip,
-} from 'bootstrap';
+import axios from './ClienteHttp';
+import Modal from 'bootstrap/js/dist/modal';
+import Tooltip from 'bootstrap/js/dist/tooltip';
 import GestorAlertas from './GestorAlertas';
 
 /**

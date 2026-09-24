@@ -111,14 +111,14 @@ final class Avatar extends Component
 
         $nomeUtilizador = trim(
             (string) (
-                $utilizador?->nome
+                $utilizador->nome
                 ?? ''
             ),
         );
 
         $this->urlFotografia = trim(
             (string) (
-                $utilizador?->url_fotografia
+                $utilizador->url_fotografia
                 ?? ''
             ),
         );

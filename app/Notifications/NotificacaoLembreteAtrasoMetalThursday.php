@@ -159,7 +159,7 @@ final class NotificacaoLembreteAtrasoMetalThursday extends NotificacaoAplicacao
      */
     protected function obterTextoAcao(
         Utilizador $utilizador,
-    ): ?string {
+    ): string {
         return 'Preparar MetalThursday';
     }
 
@@ -173,7 +173,7 @@ final class NotificacaoLembreteAtrasoMetalThursday extends NotificacaoAplicacao
      */
     protected function obterUrlAcao(
         Utilizador $utilizador,
-    ): ?string {
+    ): string {
         return route(
             'metal-thursday.reservas.preparar',
             [

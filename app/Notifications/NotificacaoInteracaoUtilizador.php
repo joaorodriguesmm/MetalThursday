@@ -320,7 +320,7 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      */
     protected function obterTextoAcao(
         Utilizador $utilizador,
-    ): ?string {
+    ): string {
         return 'Ver atividade';
     }
 
@@ -334,7 +334,7 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      */
     protected function obterUrlAcao(
         Utilizador $utilizador,
-    ): ?string {
+    ): string {
         if ($this->identificadorMetalThursday === null) {
             return route(
                 'inicio',
@@ -596,18 +596,25 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
         $metalThursday =
             $seccao->metalThursday;
 
-        return [
-            'identificador_metal_thursday' => $metalThursday instanceof MetalThursday
-                ? $this->normalizarIdentificador(
-                    $metalThursday->getKey(),
-                )
-                : null,
+        $identificadorMetalThursday = null;
+        $identificadorAutorMetalThursday = null;
 
-            'identificador_autor_metal_thursday' => $metalThursday instanceof MetalThursday
-                ? $this->normalizarIdentificador(
+        if ($metalThursday instanceof MetalThursday) {
+            $identificadorMetalThursday =
+                $this->normalizarIdentificador(
+                    $metalThursday->getKey(),
+                );
+
+            $identificadorAutorMetalThursday =
+                $this->normalizarIdentificador(
                     $metalThursday->autor_id,
-                )
-                : null,
+                );
+        }
+
+        return [
+            'identificador_metal_thursday' => $identificadorMetalThursday,
+
+            'identificador_autor_metal_thursday' => $identificadorAutorMetalThursday,
 
             'descricao_contexto' => $this->obterDescricaoSeccao(
                 $seccao,

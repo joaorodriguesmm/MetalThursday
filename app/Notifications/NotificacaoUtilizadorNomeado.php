@@ -210,7 +210,7 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
      */
     protected function obterTextoAcao(
         Utilizador $utilizador,
-    ): ?string {
+    ): string {
         return $this->identificadorMetalThursday === null
             ? 'Preparar MetalThursday'
             : 'Ver MetalThursday';
@@ -230,7 +230,7 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
      */
     protected function obterUrlAcao(
         Utilizador $utilizador,
-    ): ?string {
+    ): string {
         if ($this->identificadorMetalThursday === null) {
             return route(
                 'metal-thursday.reservas.preparar',

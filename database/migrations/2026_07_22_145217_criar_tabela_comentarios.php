@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Cria a tabela dos comentários.
+     * Cria a tabela dos comentários no estado funcional completo.
      *
      * @since 2.0.0
      */
@@ -42,6 +42,18 @@ return new class extends Migration
                 $tabela->text(
                     'conteudo',
                 );
+
+                $tabela
+                    ->timestamp(
+                        'editado_em',
+                    )
+                    ->nullable();
+
+                $tabela
+                    ->timestamp(
+                        'conteudo_eliminado_em',
+                    )
+                    ->nullable();
 
                 $tabela
                     ->string(
@@ -74,16 +86,22 @@ return new class extends Migration
                     [
                         'tipo_comentavel',
                         'comentavel_id',
+                        'comentario_pai_id',
+                        'deleted_at',
+                        'created_at',
+                        'id',
                     ],
-                    'comentarios_comentavel_indice',
+                    'comentarios_comentavel_principal_ordem_indice',
                 );
 
                 $tabela->index(
                     [
                         'comentario_pai_id',
+                        'deleted_at',
                         'created_at',
+                        'id',
                     ],
-                    'comentarios_pai_data_indice',
+                    'comentarios_respostas_ordem_indice',
                 );
 
                 $tabela

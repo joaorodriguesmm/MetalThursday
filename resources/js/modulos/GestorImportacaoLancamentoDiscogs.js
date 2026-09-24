@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from './ClienteHttp';
 import EditorLancamentoDiscogs from './EditorLancamentoDiscogs';
 
 /**

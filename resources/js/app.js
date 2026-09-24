@@ -1,17 +1,18 @@
 /**
  * Ponto de entrada principal do JavaScript global da aplicação.
  *
- * Carrega o JavaScript completo do Bootstrap e inicializa os comportamentos
- * que devem estar disponíveis em todas as páginas.
+ * Carrega os componentes JavaScript globais necessários e inicializa os
+ * comportamentos que devem estar disponíveis em todas as páginas.
  *
  * @since 1.0.0
  */
 
-import './bootstrap';
-import 'bootstrap';
+import 'bootstrap/js/dist/alert';
+import 'bootstrap/js/dist/collapse';
+import 'bootstrap/js/dist/dropdown';
 
-import GestorInteracoes from './modulos/GestorInteracoes';
-import LimpadorFormulariosModais from './modulos/LimpadorFormulariosModais';
+import { iniciarModulosGlobais }
+    from './modulos/CarregadorModulosGlobais';
 
 /**
  * Seletores utilizados pelos comportamentos globais.
@@ -24,18 +25,6 @@ const SELETORES = Object.freeze({
     ligacaoTerminarSessao: '[data-terminar-sessao]',
     formularioTerminarSessao: '#formulario-terminar-sessao',
 });
-
-/**
- * Inicia os módulos globais da aplicação.
- *
- * @returns {void}
- *
- * @since 1.0.0
- */
-function iniciarModulosGlobais() {
-    new GestorInteracoes();
-    new LimpadorFormulariosModais();
-}
 
 /**
  * Inicia o comportamento dos elementos que terminam a sessão.
@@ -82,7 +71,7 @@ function iniciarTerminoSessao() {
  * @since 1.0.0
  */
 function iniciarAplicacao() {
-    iniciarModulosGlobais();
+    void iniciarModulosGlobais();
     iniciarTerminoSessao();
 }
 

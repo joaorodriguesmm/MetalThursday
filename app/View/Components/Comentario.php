@@ -128,7 +128,7 @@ final class Comentario extends Component
         $nomeUtilizador =
             trim(
                 (string) (
-                    $this->utilizador?->nome
+                    $this->utilizador->nome
                     ?? ''
                 ),
             );

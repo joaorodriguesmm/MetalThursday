@@ -194,7 +194,7 @@ final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
      */
     protected function obterTextoAcao(
         Utilizador $utilizador,
-    ): ?string {
+    ): string {
         return 'Ver MetalThursday';
     }
 
@@ -208,7 +208,7 @@ final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
      */
     protected function obterUrlAcao(
         Utilizador $utilizador,
-    ): ?string {
+    ): string {
         return route(
             'metal-thursday.detalhes',
             [

@@ -7,6 +7,7 @@ namespace App\Regras\Musica;
 use Closure;
 use Illuminate\Contracts\Validation\DataAwareRule;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Translation\PotentiallyTranslatedString;
 
 /**
  * Garante que o ano de fim de atividade não antecede o ano de início.
@@ -38,7 +39,7 @@ final class AnoFimAtividadeValido implements DataAwareRule, ValidationRule
      *
      * @param  string  $attribute  Atributo validado.
      * @param  mixed  $value  Valor recebido.
-     * @param  Closure(string): void  $fail  Função de falha.
+     * @param  Closure(string, string|null=): PotentiallyTranslatedString  $fail  Função de falha.
      *
      * @since 2.0.0
      */

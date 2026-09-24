@@ -220,7 +220,6 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
                 true;
         }
 
-        /** @var list<int> $identificadores */
         return $identificadores;
     }
 

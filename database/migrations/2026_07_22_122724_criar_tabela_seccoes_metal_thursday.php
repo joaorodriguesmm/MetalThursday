@@ -76,6 +76,17 @@ return new class extends Migration
                     ->nullOnDelete();
 
                 $tabela
+                    ->foreignId(
+                        'lancamento_id',
+                    )
+                    ->nullable()
+                    ->constrained(
+                        table: 'lancamentos',
+                    )
+                    ->cascadeOnUpdate()
+                    ->nullOnDelete();
+
+                $tabela
                     ->unsignedSmallInteger(
                         'ano',
                     )

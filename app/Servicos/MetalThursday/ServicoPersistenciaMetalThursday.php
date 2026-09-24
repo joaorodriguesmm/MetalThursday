@@ -694,7 +694,17 @@ final class ServicoPersistenciaMetalThursday
                 ->associate(
                     $lancamento,
                 );
-        } elseif (in_array($tipoSeccao->identificador, ['texto', 'musica'], true)) {
+
+            $seccao->titulo =
+                $lancamento->titulo;
+
+            $seccao->ano =
+                $lancamento->ano_original;
+
+            return;
+        }
+
+        if (in_array($tipoSeccao->identificador, ['texto', 'musica'], true)) {
             $this->servicoLancamentos->garantirAusencia(
                 $dados,
                 $tipoSeccao,
@@ -713,19 +723,11 @@ final class ServicoPersistenciaMetalThursday
                 );
         }
 
-        if ($tipoSeccao->identificador === 'lancamento') {
-            $seccao->titulo =
-                $lancamento->titulo;
+        $seccao->titulo =
+            $dados['titulo'];
 
-            $seccao->ano =
-                $lancamento->ano_original;
-        } else {
-            $seccao->titulo =
-                $dados['titulo'];
-
-            $seccao->ano =
-                $dados['ano'];
-        }
+        $seccao->ano =
+            $dados['ano'];
     }
 
     /**

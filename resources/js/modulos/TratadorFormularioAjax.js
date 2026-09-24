@@ -1,5 +1,5 @@
-import axios from 'axios';
-import { Modal } from 'bootstrap';
+import axios from './ClienteHttp';
+import Modal from 'bootstrap/js/dist/modal';
 import GestorAlertas from './GestorAlertas';
 
 /**

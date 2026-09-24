@@ -79,8 +79,7 @@ final class TabelaVistaSimplificada extends Component
     /**
      * Cria uma nova instância do componente.
      *
-     * @param  LengthAwarePaginator<int, SeccaoMetalThursday>
-     *         $seccoesSimplificadas Secções paginadas.
+     * @param  LengthAwarePaginator<int, SeccaoMetalThursday>  $seccoesSimplificadas  Secções paginadas.
      *
      * @throws LogicException Quando os modelos ou as relações necessárias
      *                        não possuem o tipo esperado.
@@ -116,8 +115,7 @@ final class TabelaVistaSimplificada extends Component
     /**
      * Prepara todas as linhas da tabela.
      *
-     * @param  LengthAwarePaginator<int, SeccaoMetalThursday>
-     *         $seccoes Secções paginadas.
+     * @param  LengthAwarePaginator<int, SeccaoMetalThursday>  $seccoes  Secções paginadas.
      * @return array<int, array<string, mixed>> Linhas preparadas.
      *
      * @throws LogicException Quando o paginador contém um modelo inesperado.

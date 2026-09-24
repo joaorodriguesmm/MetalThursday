@@ -27,3 +27,6 @@ Thumbs.db
 
 /storage/*.key
 /storage/pail
+
+/playwright-report
+/test-results

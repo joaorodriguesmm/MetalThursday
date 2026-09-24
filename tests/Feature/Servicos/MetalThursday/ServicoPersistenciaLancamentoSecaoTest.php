@@ -287,6 +287,121 @@ final class ServicoPersistenciaLancamentoSecaoTest extends TestCase
     }
 
     /**
+     * Confirma que duas faixas existentes podem trocar de posição sem colidir
+     * transitoriamente com a restrição única da ordem.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function reordena_faixas_existentes_sem_colisao_transitoria(): void
+    {
+        $tipoSeccao = TipoSeccao::factory()
+            ->comDados(
+                'lancamento',
+                'Lançamento',
+                'Lançamento musical.',
+            )
+            ->comDetalhes()
+            ->create();
+
+        $lancamento = Lancamento::factory()
+            ->create();
+
+        $primeiraMusica = Musica::factory()
+            ->create([
+                'titulo' => 'Primeira faixa',
+            ]);
+
+        $segundaMusica = Musica::factory()
+            ->create([
+                'titulo' => 'Segunda faixa',
+            ]);
+
+        $primeiraFaixa = FaixaLancamento::factory()
+            ->create([
+                'lancamento_id' => $lancamento->getKey(),
+                'musica_id' => $primeiraMusica->getKey(),
+                'posicao' => '1',
+                'ordem' => 1,
+            ]);
+
+        $segundaFaixa = FaixaLancamento::factory()
+            ->create([
+                'lancamento_id' => $lancamento->getKey(),
+                'musica_id' => $segundaMusica->getKey(),
+                'posicao' => '2',
+                'ordem' => 2,
+            ]);
+
+        $servico = app(
+            ServicoPersistenciaLancamentoSecao::class,
+        );
+
+        $dadosLancamento = $servico->normalizarDados(
+            [
+                'titulo' => $lancamento->titulo,
+                'tipo' => null,
+                'ano_original' => null,
+                'faixas' => [
+                    [
+                        'id' => $segundaFaixa->getKey(),
+                        'musica_id' => $segundaMusica->getKey(),
+                        'titulo' => 'Segunda faixa',
+                        'posicao' => '1',
+                    ],
+                    [
+                        'id' => $primeiraFaixa->getKey(),
+                        'musica_id' => $primeiraMusica->getKey(),
+                        'titulo' => 'Primeira faixa',
+                        'posicao' => '2',
+                    ],
+                ],
+            ],
+            'seccoes.0.lancamento',
+        );
+
+        self::assertIsArray(
+            $dadosLancamento,
+        );
+
+        DB::transaction(
+            fn (): Lancamento => $servico->sincronizar(
+                [
+                    'lancamento_id' => (int) $lancamento->getKey(),
+                    'lancamento' => $dadosLancamento,
+                ],
+                $tipoSeccao,
+            ),
+        );
+
+        self::assertSame(
+            [
+                (int) $segundaFaixa->getKey(),
+                (int) $primeiraFaixa->getKey(),
+            ],
+            $lancamento
+                ->faixas()
+                ->pluck(
+                    'id',
+                )
+                ->all(),
+        );
+
+        self::assertSame(
+            [
+                1,
+                2,
+            ],
+            $lancamento
+                ->faixas()
+                ->pluck(
+                    'ordem',
+                )
+                ->all(),
+        );
+    }
+
+    /**
      * Confirma que uma faixa de outro lançamento não pode ser transferida.
      *
      * @since 2.0.0

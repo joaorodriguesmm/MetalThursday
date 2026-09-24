@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from '../modulos/ClienteHttp';
 
 /**
  * Gere os campos enriquecidos do perfil de artista.

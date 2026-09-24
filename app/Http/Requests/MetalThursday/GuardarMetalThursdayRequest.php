@@ -1462,14 +1462,12 @@ final class GuardarMetalThursdayRequest extends FormRequest
             return;
         }
 
-        if ($ligacoes !== null) {
-            $validador
-                ->errors()
-                ->add(
-                    $prefixo.'.ligacoes',
-                    'O tipo selecionado não permite ligações.',
-                );
-        }
+        $validador
+            ->errors()
+            ->add(
+                $prefixo.'.ligacoes',
+                'O tipo selecionado não permite ligações.',
+            );
     }
 
     /**

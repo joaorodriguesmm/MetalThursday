@@ -9,9 +9,12 @@ use App\Models\Autenticacao\Utilizador;
 use App\Models\Comum\Ligacao;
 use App\Models\Musica\Artista;
 use App\Regras\Autenticacao\RequisitosPalavraPasse;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -52,6 +55,7 @@ final class AppServiceProvider extends ServiceProvider
         $this->configurarMapaPolimorfico();
         $this->configurarRelacoesDinamicas();
         $this->configurarRequisitosPalavraPasse();
+        $this->configurarLimitadoresIntegracoes();
         $this->configurarPaginacao();
     }
 
@@ -126,6 +130,81 @@ final class AppServiceProvider extends ServiceProvider
         Password::defaults(
             static fn (): Password => RequisitosPalavraPasse::regra(),
         );
+    }
+
+    /**
+     * Configura os limites HTTP das integrações externas por utilizador.
+     *
+     * Estes limites protegem os endpoints internos contra rajadas de um único
+     * utilizador. Os limites próprios dos fornecedores continuam a ser
+     * coordenados separadamente por LimitadorPedidosExternos.
+     *
+     * @since 2.0.0
+     */
+    private function configurarLimitadoresIntegracoes(): void
+    {
+        RateLimiter::for(
+            'integracao-discogs',
+            static fn (Request $pedido): Limit => Limit::perMinute(
+                max(
+                    1,
+                    (int) config(
+                        'integracoes.limites_pedidos_http.discogs_por_minuto',
+                        20,
+                    ),
+                ),
+            )->by(
+                self::obterChaveLimitadorIntegracao(
+                    'discogs',
+                    $pedido,
+                ),
+            ),
+        );
+
+        RateLimiter::for(
+            'integracao-artistas',
+            static fn (Request $pedido): Limit => Limit::perMinute(
+                max(
+                    1,
+                    (int) config(
+                        'integracoes.limites_pedidos_http.artistas_por_minuto',
+                        12,
+                    ),
+                ),
+            )->by(
+                self::obterChaveLimitadorIntegracao(
+                    'artistas',
+                    $pedido,
+                ),
+            ),
+        );
+    }
+
+    /**
+     * Obtém a chave de segmentação de um limitador de integração.
+     *
+     * @since 2.0.0
+     */
+    private static function obterChaveLimitadorIntegracao(
+        string $integracao,
+        Request $pedido,
+    ): string {
+        $identificadorUtilizador =
+            $pedido
+                ->user(
+                    'sessao',
+                )
+                ?->getAuthIdentifier();
+
+        if ($identificadorUtilizador !== null) {
+            return $integracao
+                .':utilizador:'
+                .(string) $identificadorUtilizador;
+        }
+
+        return $integracao
+            .':ip:'
+            .$pedido->ip();
     }
 
     /**

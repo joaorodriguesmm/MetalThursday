@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -46,8 +47,37 @@ return new class extends Migration
                     )
                     ->cascadeOnDelete();
 
+                $tabela
+                    ->string(
+                        'posicao',
+                        100,
+                    )
+                    ->nullable();
+
+                $tabela
+                    ->unsignedInteger(
+                        'ordem',
+                    )
+                    ->nullable();
+
                 $tabela->timestamps();
+
+                $tabela->unique(
+                    [
+                        'lancamento_id',
+                        'ordem',
+                    ],
+                    'faixas_lancamento_ordem_unica',
+                );
             },
+        );
+
+        DB::statement(
+            <<<'SQL'
+            ALTER TABLE `faixas_lancamento`
+                ADD CONSTRAINT `faixas_lancamento_ordem_valida`
+                CHECK (`ordem` IS NULL OR `ordem` >= 1)
+            SQL,
         );
     }
 

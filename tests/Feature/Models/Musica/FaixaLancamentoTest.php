@@ -7,6 +7,7 @@ namespace Tests\Feature\Models\Musica;
 use App\Models\Musica\FaixaLancamento;
 use App\Models\Musica\Lancamento;
 use App\Models\Musica\Musica;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -378,6 +379,35 @@ final class FaixaLancamentoTest extends TestCase
                 'ordem' => 12,
             ],
         );
+    }
+
+    /**
+     * Confirma que uma ordem conhecida tem de começar em um.
+     *
+     * O valor nulo continua válido para faixas cuja posição na tracklist não
+     * é conhecida.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function rejeita_ordem_zero(): void
+    {
+        $lancamento = Lancamento::factory()
+            ->create();
+
+        $musica = Musica::factory()
+            ->create();
+
+        $this->expectException(
+            QueryException::class,
+        );
+
+        FaixaLancamento::factory()
+            ->create([
+                'lancamento_id' => $lancamento->getKey(),
+                'musica_id' => $musica->getKey(),
+                'ordem' => 0,
+            ]);
     }
 
     /**

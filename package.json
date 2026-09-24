@@ -12,7 +12,9 @@
         "compilar": "vite build",
         "validar:javascript": "eslint . --max-warnings=0",
         "corrigir:javascript": "eslint . --fix",
-        "validar": "npm run validar:javascript && npm run compilar"
+        "validar": "npm run validar:javascript && npm run testar:javascript && npm run compilar",
+        "testar:javascript": "vitest run",
+        "testar:browser": "playwright test"
     },
     "dependencies": {
         "@popperjs/core": "^2.11.8",
@@ -23,13 +25,17 @@
         "tom-select": "^2.6.2"
     },
     "devDependencies": {
+        "@axe-core/playwright": "^4.13.0",
         "@eslint/js": "^10.0.1",
+        "@playwright/test": "^1.63.0",
         "concurrently": "^10.0.4",
         "eslint": "^10.8.1",
         "globals": "^17.10.0",
+        "jsdom": "^30.1.1",
         "laravel-vite-plugin": "^3.2.0",
         "sass": "^1.102.0",
-        "vite": "^8.2.1"
+        "vite": "^8.2.1",
+        "vitest": "^5.0.1"
     },
     "allowScripts": {
         "@parcel/watcher@2.6.0": true,

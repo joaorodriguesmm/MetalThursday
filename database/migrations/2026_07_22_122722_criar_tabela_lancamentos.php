@@ -10,15 +10,15 @@ use Illuminate\Support\Facades\Schema;
  * Cria a tabela dos lançamentos musicais.
  *
  * O título não constitui a identidade do lançamento e pode ser repetido. O
- * tipo é opcional porque a ausência de valor representa informação
- * desconhecida ou não indicada.
+ * tipo, o ano original e a identificação Discogs são opcionais quando essa
+ * informação não é conhecida ou não se aplica.
  *
  * @since 2.0.0
  */
 return new class extends Migration
 {
     /**
-     * Cria a tabela dos lançamentos.
+     * Cria a tabela dos lançamentos no estado funcional completo.
      *
      * @since 2.0.0
      */
@@ -50,6 +50,21 @@ return new class extends Migration
                         ],
                     )
                     ->nullable();
+
+                $tabela
+                    ->unsignedSmallInteger(
+                        'ano_original',
+                    )
+                    ->nullable();
+
+                $tabela
+                    ->unsignedBigInteger(
+                        'discogs_release_id',
+                    )
+                    ->nullable()
+                    ->unique(
+                        'lancamentos_discogs_release_id_unico',
+                    );
 
                 $tabela
                     ->foreignId(

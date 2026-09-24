@@ -9,7 +9,6 @@ use App\Http\Requests\Autenticacao\AutenticarUtilizadorRequest;
 use App\Models\Autenticacao\Utilizador;
 use App\Regras\Autenticacao\RequisitosPalavraPasse;
 use Illuminate\Auth\AuthenticationException;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -80,10 +79,7 @@ final class ControladorSessaoAutenticada extends Controller
             );
         }
 
-        if (
-            $utilizador instanceof MustVerifyEmail
-            && ! $utilizador->hasVerifiedEmail()
-        ) {
+        if (! $utilizador->hasVerifiedEmail()) {
             $email =
                 $utilizador->email;
 

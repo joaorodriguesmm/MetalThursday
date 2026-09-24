@@ -191,7 +191,6 @@ final class ServicoTheAudioDB
                     ! in_array(
                         $ultimaResposta->status(),
                         [
-                            429,
                             502,
                             503,
                             504,

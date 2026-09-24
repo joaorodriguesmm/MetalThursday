@@ -878,7 +878,6 @@ final class ServicoDiscogs
         return in_array(
             $resposta->status(),
             [
-                429,
                 502,
                 503,
                 504,

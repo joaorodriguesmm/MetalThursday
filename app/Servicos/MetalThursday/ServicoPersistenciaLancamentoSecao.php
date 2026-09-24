@@ -285,7 +285,12 @@ final class ServicoPersistenciaLancamentoSecao
 
         $identificadoresMantidos = [];
 
-        foreach ($faixasRecebidas as $indice => $dadosFaixa) {
+        /*
+         * Valida os identificadores antes de libertar as ordens atuais. Assim,
+         * pedidos inválidos são rejeitados sem alterações intermédias quando o
+         * serviço é utilizado isoladamente.
+         */
+        foreach ($faixasRecebidas as $dadosFaixa) {
             $identificadorFaixa =
                 $dadosFaixa['id'];
 
@@ -296,6 +301,72 @@ final class ServicoPersistenciaLancamentoSecao
                     );
                 }
 
+                continue;
+            }
+
+            if (isset($identificadoresMantidos[$identificadorFaixa])) {
+                throw new InvalidArgumentException(
+                    'A mesma faixa foi enviada mais do que uma vez.',
+                );
+            }
+
+            $faixa =
+                $faixasExistentes->get(
+                    $identificadorFaixa,
+                );
+
+            if (! $faixa instanceof FaixaLancamento) {
+                throw new InvalidArgumentException(
+                    'Foi indicada uma faixa que não pertence ao lançamento editado.',
+                );
+            }
+
+            if (
+                $dadosFaixa['musica_id'] !== null
+                && $dadosFaixa['musica_id'] !== (int) $faixa->musica_id
+            ) {
+                throw new InvalidArgumentException(
+                    'A música associada a uma faixa existente não pode ser substituída por identificador.',
+                );
+            }
+
+            $identificadoresMantidos[$identificadorFaixa] =
+                true;
+        }
+
+        /*
+         * A ordem é única por lançamento. Libertam-se primeiro as posições
+         * conhecidas para evitar colisões transitórias quando duas faixas
+         * trocam de posição ou uma nova ocupa a posição de outra removida.
+         * O MariaDB permite vários valores NULL nesta restrição única.
+         */
+        FaixaLancamento::query()
+            ->where(
+                'lancamento_id',
+                $lancamento->getKey(),
+            )
+            ->whereNotNull(
+                'ordem',
+            )
+            ->update([
+                'ordem' => null,
+            ]);
+
+        $faixasExistentes->each(
+            static function (FaixaLancamento $faixa): void {
+                $faixa->ordem = null;
+
+                $faixa->syncOriginalAttribute(
+                    'ordem',
+                );
+            },
+        );
+
+        foreach ($faixasRecebidas as $indice => $dadosFaixa) {
+            $identificadorFaixa =
+                $dadosFaixa['id'];
+
+            if ($identificadorFaixa === null) {
                 $musica = new Musica;
                 $faixa = new FaixaLancamento;
 
@@ -305,12 +376,6 @@ final class ServicoPersistenciaLancamentoSecao
                         $lancamento,
                     );
             } else {
-                if (isset($identificadoresMantidos[$identificadorFaixa])) {
-                    throw new InvalidArgumentException(
-                        'A mesma faixa foi enviada mais do que uma vez.',
-                    );
-                }
-
                 $faixa =
                     $faixasExistentes->get(
                         $identificadorFaixa,
@@ -318,16 +383,7 @@ final class ServicoPersistenciaLancamentoSecao
 
                 if (! $faixa instanceof FaixaLancamento) {
                     throw new InvalidArgumentException(
-                        'Foi indicada uma faixa que não pertence ao lançamento editado.',
-                    );
-                }
-
-                if (
-                    $dadosFaixa['musica_id'] !== null
-                    && $dadosFaixa['musica_id'] !== (int) $faixa->musica_id
-                ) {
-                    throw new InvalidArgumentException(
-                        'A música associada a uma faixa existente não pode ser substituída por identificador.',
+                        'Foi indicada uma faixa que deixou de estar disponível durante a sincronização.',
                     );
                 }
 
@@ -343,9 +399,6 @@ final class ServicoPersistenciaLancamentoSecao
                         'A música associada a uma das faixas deixou de estar disponível.',
                     );
                 }
-
-                $identificadoresMantidos[$identificadorFaixa] =
-                    true;
             }
 
             $musica->titulo =

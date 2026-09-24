@@ -44,6 +44,12 @@ return new class extends Migration
                     );
 
                 $tabela
+                    ->timestamp(
+                        'publicacao_notificada_em',
+                    )
+                    ->nullable();
+
+                $tabela
                     ->foreignId(
                         'edicao_id',
                     )
@@ -100,6 +106,14 @@ return new class extends Migration
                 $tabela->timestamps();
 
                 $tabela->softDeletes();
+
+                $tabela->index(
+                    [
+                        'publicacao_notificada_em',
+                        'data',
+                    ],
+                    'metal_thursdays_publicacao_notificada_data_idx',
+                );
 
                 $tabela->index(
                     [

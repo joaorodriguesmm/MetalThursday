@@ -621,25 +621,28 @@ final class ControladorGenero extends Controller
      */
     private function bloquearHierarquiaAtiva(): array
     {
-        return Genero::query()
-            ->select([
-                'id',
-            ])
-            ->orderBy(
-                'id',
-            )
-            ->lockForUpdate()
-            ->pluck(
-                'id',
-            )
-            ->mapWithKeys(
-                static fn (
-                    mixed $identificador,
-                ): array => [
-                    (int) $identificador => true,
-                ],
-            )
-            ->all();
+        $identificadores =
+            Genero::query()
+                ->select([
+                    'id',
+                ])
+                ->orderBy(
+                    'id',
+                )
+                ->lockForUpdate()
+                ->pluck(
+                    'id',
+                );
+
+        $identificadoresAtivos = [];
+
+        foreach ($identificadores as $identificador) {
+            $identificadoresAtivos[
+                (int) $identificador
+            ] = true;
+        }
+
+        return $identificadoresAtivos;
     }
 
     /**

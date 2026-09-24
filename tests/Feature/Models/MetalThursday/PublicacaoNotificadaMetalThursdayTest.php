@@ -6,7 +6,7 @@ namespace Tests\Feature\Models\MetalThursday;
 
 use App\Models\MetalThursday\MetalThursday;
 use Carbon\CarbonImmutable;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use PHPUnit\Framework\Attributes\Test;
@@ -19,7 +19,7 @@ use Tests\TestCase;
  */
 final class PublicacaoNotificadaMetalThursdayTest extends TestCase
 {
-    use DatabaseMigrations;
+    use RefreshDatabase;
 
     /**
      * Confirma que a coluna necessária à publicação temporal existe.
@@ -39,9 +39,6 @@ final class PublicacaoNotificadaMetalThursdayTest extends TestCase
 
     /**
      * Confirma que uma nova MetalThursday fica pendente de notificação.
-     *
-     * O preenchimento dos registos antigos ocorre apenas durante a execução
-     * da migração. Registos criados posteriormente devem começar a nulo.
      *
      * @since 2.0.0
      */
@@ -93,82 +90,28 @@ final class PublicacaoNotificadaMetalThursdayTest extends TestCase
     }
 
     /**
-     * Confirma que uma MetalThursday que já existia antes da introdução do
-     * marcador fica assinalada durante a migração.
-     *
-     * Este comportamento impede que registos históricos ou futuras
-     * MetalThursdays criadas pelo fluxo antigo originem notificações
-     * retroativas quando o novo processamento agendado entrar em funcionamento.
+     * Confirma que a baseline inclui o índice utilizado para localizar
+     * publicações ainda por notificar.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function migracao_marca_metal_thursday_preexistente_como_ja_notificada(): void
+    public function possui_indice_de_publicacoes_por_notificar(): void
     {
-        $caminhoMigracao =
-            'database/migrations/2026_08_29_081000_adicionar_publicacao_notificada_em_a_metal_thursdays.php';
-
-        $this
-            ->artisan(
-                'migrate:rollback',
-                [
-                    '--path' => $caminhoMigracao,
-
-                    '--force' => true,
-                ],
-            )
-            ->assertSuccessful();
-
-        self::assertFalse(
-            Schema::hasColumn(
-                'metal_thursdays',
-                MetalThursday::COLUNA_PUBLICACAO_NOTIFICADA_EM,
-            ),
+        $indice = DB::selectOne(
+            <<<'SQL'
+                SELECT
+                    INDEX_NAME AS nome
+                FROM information_schema.STATISTICS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = 'metal_thursdays'
+                  AND INDEX_NAME = 'metal_thursdays_publicacao_notificada_data_idx'
+                LIMIT 1
+                SQL,
         );
-
-        $metalThursday =
-            MetalThursday::factory()
-                ->create();
-
-        $identificadorMetalThursday =
-            $metalThursday->getKey();
 
         self::assertNotNull(
-            $identificadorMetalThursday,
-        );
-
-        $this
-            ->artisan(
-                'migrate',
-                [
-                    '--path' => $caminhoMigracao,
-
-                    '--force' => true,
-                ],
-            )
-            ->assertSuccessful();
-
-        self::assertTrue(
-            Schema::hasColumn(
-                'metal_thursdays',
-                MetalThursday::COLUNA_PUBLICACAO_NOTIFICADA_EM,
-            ),
-        );
-
-        $publicacaoNotificadaEm =
-            DB::table(
-                'metal_thursdays',
-            )
-                ->where(
-                    'id',
-                    $identificadorMetalThursday,
-                )
-                ->value(
-                    MetalThursday::COLUNA_PUBLICACAO_NOTIFICADA_EM,
-                );
-
-        self::assertNotNull(
-            $publicacaoNotificadaEm,
+            $indice,
         );
     }
 }

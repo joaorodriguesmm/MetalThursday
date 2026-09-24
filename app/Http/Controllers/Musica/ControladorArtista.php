@@ -448,7 +448,7 @@ final class ControladorArtista extends Controller
 
                         'ano' => $seccao->ano,
 
-                        'autor' => $metalThursday->autor?->nome
+                        'autor' => $metalThursday->autor->nome
                             ?? 'Utilizador removido',
 
                         'data' => $metalThursday->data->format(
@@ -960,21 +960,27 @@ final class ControladorArtista extends Controller
             'identificadorOrigemGeograficaSelecionada' => $this->normalizarIdentificadorFormulario(
                 $pedido->old(
                     'origem_geografica_id',
-                    $artista?->origem_geografica_id,
+                    $artista?->origem_geografica_id === null
+                        ? null
+                        : (string) $artista->origem_geografica_id,
                 ),
             ),
 
             'anoInicioAtividadeArtista' => $this->normalizarTextoFormulario(
                 $pedido->old(
                     'ano_inicio_atividade',
-                    $artista?->ano_inicio_atividade,
+                    $artista?->ano_inicio_atividade === null
+                        ? null
+                        : (string) $artista->ano_inicio_atividade,
                 ),
             ),
 
             'anoFimAtividadeArtista' => $this->normalizarTextoFormulario(
                 $pedido->old(
                     'ano_fim_atividade',
-                    $artista?->ano_fim_atividade,
+                    $artista?->ano_fim_atividade === null
+                        ? null
+                        : (string) $artista->ano_fim_atividade,
                 ),
             ),
 
@@ -1011,7 +1017,9 @@ final class ControladorArtista extends Controller
             'identificadorDiscogsArtista' => $this->normalizarIdentificadorFormulario(
                 $pedido->old(
                     'discogs_id',
-                    $artista?->discogs_id,
+                    $artista?->discogs_id === null
+                        ? null
+                        : (string) $artista->discogs_id,
                 ),
             ),
 

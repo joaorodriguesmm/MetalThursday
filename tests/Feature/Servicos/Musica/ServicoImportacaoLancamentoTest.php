@@ -251,6 +251,85 @@ final class ServicoImportacaoLancamentoTest extends TestCase
     }
 
     /**
+     * Confirma que uma importação reutiliza um lançamento criado por outro
+     * pedido enquanto a consulta ao Discogs estava em curso.
+     *
+     * O cenário simula a janela de concorrência entre a consulta inicial à
+     * base de dados e a persistência local da resposta externa.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function reutiliza_lancamento_criado_concorrentemente_durante_consulta_discogs(): void
+    {
+        $lancamentoConcorrente = null;
+
+        Http::fake(
+            static function () use (
+                &$lancamentoConcorrente,
+            ) {
+                $lancamentoConcorrente =
+                    Lancamento::factory()
+                        ->create([
+                            'titulo' => 'Título persistido por outro pedido',
+                            'tipo' => TipoLancamento::AlbumEstudio,
+                            'ano_original' => 1986,
+                            'discogs_release_id' => 249504,
+                        ]);
+
+                return Http::response(
+                    [
+                        'id' => 249504,
+                        'title' => 'Master Of Puppets',
+                        'year' => 1986,
+                        'formats' => [
+                            [
+                                'name' => 'Vinyl',
+                                'descriptions' => ['Album'],
+                            ],
+                        ],
+                        'artists' => [],
+                        'tracklist' => [],
+                    ],
+                    200,
+                );
+            },
+        );
+
+        $lancamento =
+            app(
+                ServicoImportacaoLancamento::class,
+            )->importar(
+                249504,
+            );
+
+        self::assertInstanceOf(
+            Lancamento::class,
+            $lancamentoConcorrente,
+        );
+
+        self::assertSame(
+            $lancamentoConcorrente->getKey(),
+            $lancamento->getKey(),
+        );
+
+        self::assertSame(
+            'Título persistido por outro pedido',
+            $lancamento->titulo,
+        );
+
+        self::assertSame(
+            1,
+            Lancamento::withTrashed()
+                ->where(
+                    'discogs_release_id',
+                    249504,
+                )
+                ->count(),
+        );
+    }
+
+    /**
      * Confirma que metadados em falta são completados numa importação antiga.
      *
      * Valores já existentes continuam preservados para não substituir

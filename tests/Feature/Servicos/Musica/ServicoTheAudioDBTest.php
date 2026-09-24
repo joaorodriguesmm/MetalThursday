@@ -203,4 +203,43 @@ final class ServicoTheAudioDBTest extends TestCase
             $artista,
         );
     }
+
+    /**
+     * Confirma que o limite do fornecedor não desencadeia uma nova tentativa.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_repete_pedido_quando_theaudiodb_atinge_limite(): void
+    {
+        Http::fake([
+            'https://www.theaudiodb.com/api/v1/json/123/artist-mb.php*' => Http::sequence()
+                ->push(
+                    [],
+                    429,
+                )
+                ->push(
+                    [
+                        'artists' => null,
+                    ],
+                    200,
+                ),
+        ]);
+
+        $this->expectException(
+            \RuntimeException::class,
+        );
+
+        try {
+            app(
+                ServicoTheAudioDB::class,
+            )->obterArtistaPorMusicBrainz(
+                '65f4f0c5-ef9e-490c-aee3-909e7ae6b2ab',
+            );
+        } finally {
+            Http::assertSentCount(
+                1,
+            );
+        }
+    }
 }

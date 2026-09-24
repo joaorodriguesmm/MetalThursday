@@ -164,7 +164,7 @@ final class ServicoFotografiasUtilizador
          * verificação da existência e a tentativa de eliminação.
          */
         if (
-            ! $disco->exists(
+            $disco->missing(
                 $caminhoNormalizado,
             )
         ) {

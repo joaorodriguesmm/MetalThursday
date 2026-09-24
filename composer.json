@@ -17,6 +17,7 @@
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
+        "larastan/larastan": "^3.12",
         "laravel/pint": "^1.24",
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.6",
@@ -49,6 +50,7 @@
             "Composer\\Config::disableProcessTimeout",
             "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"npm run desenvolver\" --names=servidor,fila,vite --kill-others"
         ],
+        "analisar:php": "phpstan analyse --memory-limit=2G",
         "formatar": "pint",
         "testar": [
             "@php artisan config:clear --ansi",
@@ -57,6 +59,7 @@
     },
     "scripts-descriptions": {
         "desenvolver": "Inicia o servidor, a fila e o Vite no ambiente local.",
+        "analisar:php": "Executa a análise estática do código PHP com PHPStan e Larastan.",
         "formatar": "Formata os ficheiros PHP com o Laravel Pint.",
         "testar": "Executa os testes automatizados no ambiente de testes."
     },

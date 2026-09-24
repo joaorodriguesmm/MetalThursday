@@ -125,7 +125,7 @@ final class FiltrosMetalThursday
     /**
      * Construtor de consultas ao qual são aplicados os filtros.
      *
-     * @var Builder<Model>
+     * @var Builder<covariant Model>
      *
      * @since 1.0.0
      */
@@ -156,9 +156,9 @@ final class FiltrosMetalThursday
     /**
      * Aplica a pesquisa textual, os filtros e a ordenação à consulta.
      *
-     * @param  Builder<Model>  $construtor  Construtor da consulta.
-     * @return Builder<Model> Consulta com pesquisa, filtros e ordenação
-     *                        aplicados.
+     * @param  Builder<covariant Model>  $construtor  Construtor da consulta.
+     * @return Builder<covariant Model> Consulta com pesquisa, filtros e
+     *                                  ordenação aplicados.
      *
      * @since 1.0.0
      */
@@ -280,7 +280,7 @@ final class FiltrosMetalThursday
      * O agrupamento explícito impede que os operadores OR interfiram com as
      * restrições introduzidas pelas relações Eloquent ou pelos global scopes.
      *
-     * @param  Builder<Model>  $construtor  Consulta das secções.
+     * @param  Builder<covariant Model>  $construtor  Consulta das secções.
      * @param  string  $padrao  Padrão LIKE preparado.
      *
      * @since 2.0.0
@@ -343,7 +343,7 @@ final class FiltrosMetalThursday
      * O nome da coluna é sempre obtido internamente através dos modelos
      * suportados. O valor pesquisado nunca é interpolado diretamente no SQL.
      *
-     * @param  Builder<Model>  $construtor  Consulta modificada.
+     * @param  Builder<covariant Model>  $construtor  Consulta modificada.
      * @param  string  $coluna  Coluna qualificada.
      * @param  string  $padrao  Padrão LIKE preparado.
      * @param  bool  $usarOu  Indica se deve ser utilizado OR.
@@ -979,10 +979,6 @@ final class FiltrosMetalThursday
             $genero
                 ->obterIdentificadoresComDescendentes();
 
-        if ($identificadoresGeneros === []) {
-            return;
-        }
-
         if ($this->eConsultaDeMetalThursdays()) {
             $this->construtor->whereHas(
                 'seccoes.artista.generos',
@@ -1106,7 +1102,7 @@ final class FiltrosMetalThursday
      * Nas consultas de secções, a restrição é aplicada através da relação
      * `metalThursday`.
      *
-     * @param  Closure(Builder<Model>): Builder<Model>  $restricao  Restrição.
+     * @param  Closure(Builder<covariant Model>): Builder<covariant Model>  $restricao  Restrição.
      *
      * @since 2.0.0
      */
@@ -1256,7 +1252,7 @@ final class FiltrosMetalThursday
         }
 
         if (
-            $data === false
+            $data === null
             || $data->format('Y-m-d')
             !== $valorNormalizado
         ) {

@@ -1,4 +1,4 @@
-import { Tooltip } from 'bootstrap';
+import Tooltip from 'bootstrap/js/dist/tooltip';
 
 /**
  * Inicializa os tooltips fornecidos pelo Bootstrap.

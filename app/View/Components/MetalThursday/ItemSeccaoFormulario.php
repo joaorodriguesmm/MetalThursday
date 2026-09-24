@@ -472,7 +472,7 @@ final class ItemSeccaoFormulario extends Component
 
                 return [
                     'titulo' => $lancamento->titulo,
-                    'tipo' => $lancamento->tipo?->value
+                    'tipo' => $lancamento->tipo->value
                         ?? '',
                     'ano_original' => $this->normalizarTexto(
                         $lancamento->ano_original,
@@ -578,16 +578,19 @@ final class ItemSeccaoFormulario extends Component
         Request $pedido,
         SeccaoMetalThursday|array|null $seccao,
     ): array {
-        $marcadorAusencia = new \stdClass;
+        $chaveLigacoes =
+            "{$this->prefixoCampo}.ligacoes";
 
-        $ligacoesAntigas = $pedido->old(
-            "{$this->prefixoCampo}.ligacoes",
-            $marcadorAusencia,
-        );
-
-        if ($ligacoesAntigas !== $marcadorAusencia) {
+        if (
+            $pedido->hasSession()
+            && $pedido->session()->hasOldInput(
+                $chaveLigacoes,
+            )
+        ) {
             return $this->normalizarLigacoesFormulario(
-                $ligacoesAntigas,
+                $pedido->old(
+                    $chaveLigacoes,
+                ),
             );
         }
 

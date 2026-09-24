@@ -14,8 +14,12 @@ import {
  */
 const FICHEIROS_JAVASCRIPT = Object.freeze([
     'eslint.config.js',
+    'playwright.config.js',
     'vite.config.js',
+    'vitest.config.js',
     'resources/js/**/*.js',
+    'tests/Browser/**/*.js',
+    'tests/JavaScript/**/*.js',
 ]);
 
 /**
@@ -109,7 +113,9 @@ export default defineConfig([
 
         files: [
             'eslint.config.js',
+            'playwright.config.js',
             'vite.config.js',
+            'vitest.config.js',
         ],
 
         languageOptions: {
@@ -122,6 +128,7 @@ export default defineConfig([
 
         files: [
             'resources/js/**/*.js',
+            'tests/JavaScript/**/*.js',
         ],
 
         languageOptions: {

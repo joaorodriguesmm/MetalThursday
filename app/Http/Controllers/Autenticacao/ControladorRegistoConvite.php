@@ -281,7 +281,7 @@ final class ControladorRegistoConvite extends Controller
      * formulário. A validação definitiva pertence ao Form Request.
      *
      * @param  Request  $pedido  Pedido HTTP atual.
-     * @return Collection<int, string> Identificadores selecionados.
+     * @return Collection<int, decimal-int-string&non-falsy-string> Identificadores selecionados.
      *
      * @since 2.0.0
      */

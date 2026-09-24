@@ -106,6 +106,12 @@ return new class extends Migration
                     )
                     ->nullable();
 
+                $tabela
+                    ->foreignId(
+                        'revogado_por_id',
+                    )
+                    ->nullable();
+
                 $tabela->timestamps();
 
                 $tabela->unique(
@@ -129,6 +135,11 @@ return new class extends Migration
                     'convites_criado_por_indice',
                 );
 
+                $tabela->index(
+                    'revogado_por_id',
+                    'convites_revogado_por_indice',
+                );
+
                 $tabela
                     ->foreign(
                         'criado_por_id',
@@ -144,6 +155,18 @@ return new class extends Migration
                 $tabela
                     ->foreign(
                         'utilizado_por_id',
+                    )
+                    ->references(
+                        'id',
+                    )
+                    ->on(
+                        'utilizadores',
+                    )
+                    ->restrictOnDelete();
+
+                $tabela
+                    ->foreign(
+                        'revogado_por_id',
                     )
                     ->references(
                         'id',
@@ -224,6 +247,24 @@ return new class extends Migration
                 CHECK (
                     `utilizado_em` IS NULL
                     OR `revogado_em` IS NULL
+                )
+            SQL,
+        );
+
+        DB::statement(
+            <<<'SQL'
+            ALTER TABLE `convites`
+                ADD CONSTRAINT `convites_revogacao_responsavel_coerente_verificacao`
+                CHECK (
+                    (
+                        `revogado_em` IS NULL
+                        AND `revogado_por_id` IS NULL
+                    )
+                    OR
+                    (
+                        `revogado_em` IS NOT NULL
+                        AND `revogado_por_id` IS NOT NULL
+                    )
                 )
             SQL,
         );

@@ -743,4 +743,44 @@ final class ServicoDiscogsTest extends TestCase
             2,
         );
     }
+
+    /**
+     * Confirma que o limite do fornecedor não desencadeia uma nova tentativa.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_repete_pedido_quando_discogs_atinge_limite(): void
+    {
+        Http::fake([
+            'https://api.discogs.com/releases/249504' => Http::sequence()
+                ->push(
+                    [],
+                    429,
+                )
+                ->push(
+                    [
+                        'id' => 249504,
+                        'title' => 'Master Of Puppets',
+                    ],
+                    200,
+                ),
+        ]);
+
+        $this->expectException(
+            \RuntimeException::class,
+        );
+
+        try {
+            app(
+                ServicoDiscogs::class,
+            )->obterLancamento(
+                249504,
+            );
+        } finally {
+            Http::assertSentCount(
+                1,
+            );
+        }
+    }
 }

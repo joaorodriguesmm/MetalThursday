@@ -12,6 +12,7 @@ const ENTRADAS_APLICACAO = Object.freeze([
     'resources/sass/app.scss',
 
     'resources/js/app.js',
+    'resources/js/convidado.js',
 
     'resources/js/paginas/criarMetalThursday.js',
     'resources/js/paginas/detalhesMetalThursday.js',
