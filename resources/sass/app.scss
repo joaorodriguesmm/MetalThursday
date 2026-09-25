@@ -8,6 +8,7 @@
  */
 
 @use "sass:color";
+@use "@fontsource/metal-mania/400.css" as fonte-metal-mania;
 
 /**
  * Cores principais da aplicação.
@@ -239,15 +240,6 @@ $cinzento-texto-suave:
 
 @use "sweetalert2/src/sweetalert2.scss"
     as estilos-sweetalert;
-
-/**
- * Fonte utilizada nos títulos.
- *
- * Esta é uma importação CSS remota e não uma importação de módulos Sass.
- */
-@import url(
-    "https://fonts.googleapis.com/css2?family=Metal+Mania&display=swap"
-);
 
 /**
  * Cabeçalhos.
