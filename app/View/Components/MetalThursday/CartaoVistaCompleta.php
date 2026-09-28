@@ -27,6 +27,33 @@ use LogicException;
  * carregadas pelo controlador, impedindo consultas implícitas durante a
  * apresentação do cartão e das respetivas secções.
  *
+ * @phpstan-type DadosInteracoes array{
+ *     pontuacaoUtilizador: float,
+ *     textoAvaliacao: string,
+ *     ouvido: bool,
+ *     textoAudicao: string,
+ *     quantidadeComentarios: int,
+ *     quantidadeAudicoes: int,
+ *     quantidadeAvaliacoes: int,
+ *     mediaAvaliacoes: string,
+ *     descricaoAudicoes: HtmlString,
+ *     descricaoAvaliacoes: HtmlString
+ * }
+ * @phpstan-type SeccaoPreparada array{
+ *     modelo: SeccaoMetalThursday,
+ *     identificador: int,
+ *     tipoInteracao: string,
+ *     temDetalhes: bool,
+ *     titulo: string|null,
+ *     descricao: string|null,
+ *     tituloApresentacao: string,
+ *     nomeAvaliavel: string,
+ *     ligacoes: Collection<int, LigacaoSeccaoMetalThursday>,
+ *     temLigacoes: bool,
+ *     identificadorComentarios: string,
+ *     interacoes: DadosInteracoes|null
+ * }
+ *
  * @since 1.0.0
  */
 final class CartaoVistaCompleta extends Component
@@ -101,18 +128,7 @@ final class CartaoVistaCompleta extends Component
     /**
      * Dados das interações da MetalThursday.
      *
-     * @var array{
-     *     pontuacaoUtilizador: float,
-     *     textoAvaliacao: string,
-     *     ouvido: bool,
-     *     textoAudicao: string,
-     *     quantidadeComentarios: int,
-     *     quantidadeAudicoes: int,
-     *     quantidadeAvaliacoes: int,
-     *     mediaAvaliacoes: string,
-     *     descricaoAudicoes: HtmlString,
-     *     descricaoAvaliacoes: HtmlString
-     * }
+     * @var DadosInteracoes|array{}
      *
      * @since 2.0.0
      */
@@ -121,31 +137,7 @@ final class CartaoVistaCompleta extends Component
     /**
      * Secções preparadas para apresentação.
      *
-     * @var array<int, array{
-     *     modelo: SeccaoMetalThursday,
-     *     identificador: int,
-     *     tipoInteracao: string,
-     *     temDetalhes: bool,
-     *     titulo: string|null,
-     *     descricao: string|null,
-     *     tituloApresentacao: string,
-     *     nomeAvaliavel: string,
-     *     ligacoes: Collection<int, LigacaoSeccaoMetalThursday>,
-     *     temLigacoes: bool,
-     *     identificadorComentarios: string,
-     *     interacoes: array{
-     *         pontuacaoUtilizador: float,
-     *         textoAvaliacao: string,
-     *         ouvido: bool,
-     *         textoAudicao: string,
-     *         quantidadeComentarios: int,
-     *         quantidadeAudicoes: int,
-     *         quantidadeAvaliacoes: int,
-     *         mediaAvaliacoes: string,
-     *         descricaoAudicoes: HtmlString,
-     *         descricaoAvaliacoes: HtmlString
-     *     }|null
-     * }>
+     * @var list<SeccaoPreparada>
      *
      * @since 2.0.0
      */
@@ -285,7 +277,7 @@ final class CartaoVistaCompleta extends Component
      * Prepara as secções da MetalThursday.
      *
      * @param  Collection<int, Model>  $seccoes  Secções carregadas.
-     * @return array<int, array<string, mixed>> Secções preparadas.
+     * @return list<SeccaoPreparada> Secções preparadas.
      *
      * @throws LogicException Quando uma secção ou relação possui um tipo
      *                        inesperado.
@@ -353,6 +345,7 @@ final class CartaoVistaCompleta extends Component
                 }
             }
 
+            /** @var Collection<int, LigacaoSeccaoMetalThursday> $ligacoes */
             if ($this->interacoesDisponiveis) {
                 $this->obterColecaoCarregada(
                     $seccao,
@@ -420,7 +413,7 @@ final class CartaoVistaCompleta extends Component
      * @param  string  $textoSemAvaliacao  Texto do botão sem avaliação.
      * @param  string  $textoOuvido  Texto quando está ouvido.
      * @param  string  $textoNaoOuvido  Texto quando não está ouvido.
-     * @return array<string, mixed> Dados das interações.
+     * @return DadosInteracoes Dados das interações.
      *
      * @since 2.0.0
      */

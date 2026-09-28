@@ -884,7 +884,7 @@ HTML;
      * @return array{
      *     host: string,
      *     segmentos: list<string>,
-     *     consulta: array<string, mixed>
+     *     consulta: array<array-key, array<mixed>|string>
      * }|null Componentes reconhecidos ou nulos.
      *
      * @since 2.0.0

@@ -28,6 +28,34 @@ use LogicException;
  * O componente transforma os modelos paginados em linhas prontas para
  * apresentação, sem executar consultas adicionais durante a renderização.
  *
+ * @phpstan-type LinhaVistaSimplificada array{
+ *     identificador: int,
+ *     dataIso: string|null,
+ *     dataApresentacao: string,
+ *     nomeAutor: string,
+ *     nomeArtista: string,
+ *     nomeOrigemGeografica: string,
+ *     titulo: string,
+ *     nomeTipoSeccao: string|null,
+ *     ano: string,
+ *     nomesGeneros: string,
+ *     ligacoes: list<array{
+ *         url: string,
+ *         etiqueta: string
+ *     }>,
+ *     avaliacao: array{
+ *         media: string,
+ *         quantidade: int,
+ *         descricao: HtmlString,
+ *         descricaoAcessivel: string
+ *     },
+ *     audicoes: array{
+ *         quantidade: int,
+ *         descricao: HtmlString,
+ *         descricaoAcessivel: string
+ *     }
+ * }
+ *
  * @since 1.0.0
  */
 final class TabelaVistaSimplificada extends Component
@@ -44,33 +72,7 @@ final class TabelaVistaSimplificada extends Component
     /**
      * Linhas preparadas para apresentação.
      *
-     * @var array<int, array{
-     *     identificador: int,
-     *     dataIso: string|null,
-     *     dataApresentacao: string,
-     *     nomeAutor: string,
-     *     nomeArtista: string,
-     *     nomeOrigemGeografica: string,
-     *     titulo: string,
-     *     nomeTipoSeccao: string|null,
-     *     ano: string,
-     *     nomesGeneros: string,
-     *     ligacoes: list<array{
-     *         url: string,
-     *         etiqueta: string
-     *     }>,
-     *     avaliacao: array{
-     *         media: string,
-     *         quantidade: int,
-     *         descricao: HtmlString,
-     *         descricaoAcessivel: string
-     *     },
-     *     audicoes: array{
-     *         quantidade: int,
-     *         descricao: HtmlString,
-     *         descricaoAcessivel: string
-     *     }
-     * }>
+     * @var list<LinhaVistaSimplificada>
      *
      * @since 2.0.0
      */
@@ -116,7 +118,7 @@ final class TabelaVistaSimplificada extends Component
      * Prepara todas as linhas da tabela.
      *
      * @param  LengthAwarePaginator<int, SeccaoMetalThursday>  $seccoes  Secções paginadas.
-     * @return array<int, array<string, mixed>> Linhas preparadas.
+     * @return list<LinhaVistaSimplificada> Linhas preparadas.
      *
      * @throws LogicException Quando o paginador contém um modelo inesperado.
      *
@@ -147,7 +149,7 @@ final class TabelaVistaSimplificada extends Component
      * Prepara uma linha da tabela.
      *
      * @param  SeccaoMetalThursday  $seccao  Secção apresentada.
-     * @return array<string, mixed> Linha preparada.
+     * @return LinhaVistaSimplificada Linha preparada.
      *
      * @since 2.0.0
      */

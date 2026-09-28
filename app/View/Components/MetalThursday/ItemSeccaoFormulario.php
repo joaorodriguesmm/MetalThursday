@@ -23,6 +23,19 @@ use LogicException;
  * O componente constrói os nomes e identificadores dos campos, recupera os
  * valores antigos do pedido e determina se o tipo selecionado exige detalhes.
  *
+ * @phpstan-type DadosLancamentoFormulario array{
+ *     titulo: string,
+ *     tipo: string,
+ *     ano_original: string,
+ *     faixas: list<array{
+ *         id: string,
+ *         musica_id: string,
+ *         titulo: string,
+ *         posicao: string,
+ *         ordem: string
+ *     }>
+ * }
+ *
  * @since 1.0.0
  */
 final class ItemSeccaoFormulario extends Component
@@ -128,18 +141,7 @@ final class ItemSeccaoFormulario extends Component
     /**
      * Dados editáveis do lançamento associado à secção.
      *
-     * @var array{
-     *     titulo: string,
-     *     tipo: string,
-     *     ano_original: string,
-     *     faixas: list<array{
-     *         id: string,
-     *         musica_id: string,
-     *         titulo: string,
-     *         posicao: string,
-     *         ordem: string
-     *     }>
-     * }
+     * @var DadosLancamentoFormulario
      *
      * @since 2.0.0
      */
@@ -406,7 +408,7 @@ final class ItemSeccaoFormulario extends Component
      *
      * @param  Request  $pedido  Pedido HTTP atual.
      * @param  SeccaoMetalThursday|array<string, mixed>|null  $seccao  Secção atual.
-     * @return array<string, mixed> Dados normalizados para o formulário.
+     * @return DadosLancamentoFormulario Dados normalizados para o formulário.
      *
      * @since 2.0.0
      */
@@ -494,7 +496,7 @@ final class ItemSeccaoFormulario extends Component
      * Normaliza dados de lançamento provenientes de sessão ou rascunho.
      *
      * @param  array<string, mixed>  $dados  Dados recebidos.
-     * @return array<string, mixed> Dados seguros para renderização.
+     * @return DadosLancamentoFormulario Dados seguros para renderização.
      *
      * @since 2.0.0
      */

@@ -94,7 +94,7 @@ final class RequisitosPalavraPasse
     /**
      * Obtém as regras aplicáveis a uma palavra-passe obrigatória.
      *
-     * @return array<int, string|Password> Regras de validação.
+     * @return list<string|Password> Regras de validação.
      *
      * @since 2.0.0
      */

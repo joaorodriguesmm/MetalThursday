@@ -346,7 +346,7 @@ class Genero extends Model
             $this->getTable(),
         );
 
-        /** @var list<object{id: int|string}> $resultados */
+        /** @var non-empty-list<object{id: int|string}> $resultados */
         $resultados = DB::select(
             $consulta,
             [

@@ -290,27 +290,28 @@ final class CartaoAparicaoMetalThursday extends Component
     private function prepararLigacoes(
         Collection $ligacoes,
     ): array {
-        return $ligacoes
-            ->map(
-                function (
-                    LigacaoSeccaoMetalThursday $ligacao,
-                ): array {
-                    $etiqueta =
-                        $ligacao->plataforma === PlataformaLigacao::Outro
-                            ? $this->normalizarTexto(
-                                $ligacao->etiqueta,
-                            )
-                            ?? 'Ligação externa'
-                            : $ligacao->plataforma->nome();
+        return array_values(
+            $ligacoes
+                ->map(
+                    function (
+                        LigacaoSeccaoMetalThursday $ligacao,
+                    ): array {
+                        $etiqueta =
+                            $ligacao->plataforma === PlataformaLigacao::Outro
+                                ? $this->normalizarTexto(
+                                    $ligacao->etiqueta,
+                                )
+                                ?? 'Ligação externa'
+                                : $ligacao->plataforma->nome();
 
-                    return [
-                        'url' => $ligacao->url,
-                        'etiqueta' => $etiqueta,
-                    ];
-                },
-            )
-            ->values()
-            ->all();
+                        return [
+                            'url' => $ligacao->url,
+                            'etiqueta' => $etiqueta,
+                        ];
+                    },
+                )
+                ->all(),
+        );
     }
 
     /**
