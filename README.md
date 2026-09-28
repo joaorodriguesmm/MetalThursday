@@ -61,14 +61,22 @@ Para gerar os assets destinados a produção sem iniciar o ambiente de desenvolv
 npm run compilar
 ```
 
+## 🌐 Produção
+
+Os requisitos operacionais, configuração do ambiente, fila, scheduler e
+sequência de deployment estão documentados em
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
 ## ✅ Validação
 
 Antes de integrar alterações, podem ser executadas as principais validações locais:
 
 ```bash
 ./vendor/bin/pint --test
+composer analisar:php
 composer testar
 npm run validar
+npm run testar:browser
 ```
 
 ## 📂 Estrutura do projeto

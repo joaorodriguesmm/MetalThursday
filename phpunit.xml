@@ -34,6 +34,8 @@
         <env name="BCRYPT_ROUNDS" value="4" force="true"/>
         <env name="CACHE_STORE" value="array" force="true"/>
         <env name="DB_CONNECTION" value="mariadb" force="true"/>
+        <env name="DB_HOST" value="127.0.0.1" force="true"/>
+        <env name="DB_PORT" value="3306" force="true"/>
         <env name="DB_DATABASE" value="metalthursday_testes" force="true"/>
         <env name="FILESYSTEM_DISK" value="privado" force="true"/>
         <env name="LOG_CHANNEL" value="pilha" force="true"/>

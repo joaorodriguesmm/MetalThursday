@@ -29,6 +29,7 @@ use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
@@ -1405,7 +1406,11 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
      * acompanha cada comentário através do escopo de apresentação, mas os
      * respetivos modelos são obtidos apenas quando o utilizador expande o ramo.
      *
-     * @param  Relation  $relacao  Relação dos comentários.
+     * @param  Relation<
+     *     Comentario,
+     *     MetalThursday|SeccaoMetalThursday,
+     *     Collection<int, Comentario>
+     * >  $relacao  Relação dos comentários.
      * @param  int  $identificadorUtilizador  Utilizador autenticado.
      *
      * @throws LogicException Quando a relação não utiliza o modelo esperado.

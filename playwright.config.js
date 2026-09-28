@@ -41,6 +41,13 @@ export default defineConfig({
                 ...devices['Desktop Chrome'],
             },
         },
+        {
+            name: 'chromium-mobile',
+
+            use: {
+                ...devices['Pixel 5'],
+            },
+        },
     ],
 
     webServer: {

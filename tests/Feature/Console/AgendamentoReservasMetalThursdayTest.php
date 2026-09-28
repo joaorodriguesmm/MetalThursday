@@ -178,6 +178,22 @@ final class AgendamentoReservasMetalThursdayTest extends TestCase
             $evento,
         );
 
+        self::assertSame(
+            '0 0 * * 5',
+            $evento->expression,
+        );
+
+        self::assertSame(
+            (string) config(
+                'app.timezone',
+            ),
+            $evento->timezone,
+        );
+
+        self::assertTrue(
+            $evento->withoutOverlapping,
+        );
+
         $evento->run(
             $this->app,
         );

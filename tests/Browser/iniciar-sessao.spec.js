@@ -96,3 +96,77 @@ test(
         );
     },
 );
+
+/**
+ * Confirma num browser real o ciclo completo de uma tentativa de autenticação
+ * inválida, incluindo o redirecionamento, a mensagem genérica e os valores
+ * repostos pelo servidor.
+ *
+ * @since 2.0.0
+ */
+test(
+    'rejeita credenciais invalidas sem expor a palavra-passe',
+    async ({
+        page,
+    }) => {
+        const campoEmail =
+            page.getByLabel(
+                'E-mail *',
+                {
+                    exact: true,
+                },
+            );
+
+        const campoPalavraPasse =
+            page.getByLabel(
+                'Palavra-passe *',
+                {
+                    exact: true,
+                },
+            );
+
+        await page.goto(
+            '/entrar',
+        );
+
+        await campoEmail.fill(
+            'utilizador-inexistente@example.com',
+        );
+
+        await campoPalavraPasse.fill(
+            'PalavraPasseIncorreta!123',
+        );
+
+        await page.getByRole(
+            'button',
+            {
+                name: 'Iniciar sessão',
+            },
+        ).click();
+
+        await expect(
+            page,
+        ).toHaveURL(
+            /\/entrar$/u,
+        );
+
+        await expect(
+            page.getByText(
+                'As credenciais indicadas estão incorretas.',
+                {
+                    exact: true,
+                },
+            ),
+        ).toBeVisible();
+
+        await expect(
+            campoEmail,
+        ).toHaveValue(
+            'utilizador-inexistente@example.com',
+        );
+
+        await expect(
+            campoPalavraPasse,
+        ).toHaveValue('');
+    },
+);

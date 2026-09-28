@@ -76,6 +76,9 @@ jobs:
       - name: Verificar formatação PHP
         run: ./vendor/bin/pint --test
 
+      - name: Analisar código PHP
+        run: composer analisar:php
+
       - name: Validar migrações
         run: php artisan migrate:fresh --force --env=testing
 

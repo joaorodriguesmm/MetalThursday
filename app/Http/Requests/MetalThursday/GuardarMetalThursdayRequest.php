@@ -7,6 +7,8 @@ namespace App\Http\Requests\MetalThursday;
 use App\Enumeracoes\PapelUtilizador;
 use App\Enumeracoes\PlataformaLigacao;
 use App\Enumeracoes\TipoLancamento;
+use App\Http\Requests\MetalThursday\Suporte\NormalizadorDadosMetalThursday;
+use App\Http\Requests\MetalThursday\Suporte\RegrasTextoMetalThursday;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\LigacaoSeccaoMetalThursday;
@@ -1910,148 +1912,9 @@ final class GuardarMetalThursdayRequest extends FormRequest
     private function normalizarSeccoes(
         mixed $valor,
     ): mixed {
-        if (! is_array($valor)) {
-            return $valor;
-        }
-        $seccoes = [];
-        foreach (array_values($valor) as $seccao) {
-            if (! is_array($seccao)) {
-                $seccoes[] =
-                    $seccao;
-
-                continue;
-            }
-            $seccao['id'] =
-                $this->normalizarIdentificador(
-                    $seccao['id']
-                        ?? null,
-                );
-            $seccao['tipo_seccao_id'] =
-                $this->normalizarIdentificador(
-                    $seccao['tipo_seccao_id']
-                        ?? null,
-                );
-            $seccao['titulo'] =
-                $this->normalizarTextoLinhaOpcional(
-                    $seccao['titulo']
-                        ?? null,
-                );
-            $seccao['descricao'] =
-                $this->normalizarTextoMultilinha(
-                    $seccao['descricao']
-                        ?? null,
-                );
-            $seccao['artista_id'] =
-                $this->normalizarIdentificador(
-                    $seccao['artista_id']
-                        ?? null,
-                );
-            $seccao['lancamento_id'] =
-                $this->normalizarIdentificador(
-                    $seccao['lancamento_id']
-                        ?? null,
-                );
-
-            if (array_key_exists('ligacoes', $seccao)) {
-                $seccao['ligacoes'] =
-                    $this->normalizarLigacoes(
-                        $seccao['ligacoes'],
-                    );
-            }
-
-            $seccao['ano'] =
-                $this->normalizarIdentificador(
-                    $seccao['ano']
-                        ?? null,
-                );
-            $seccoes[] =
-                $seccao;
-        }
-
-        return $seccoes;
-    }
-
-    /**
-     * Normaliza a lista opcional de ligações de uma secção.
-     *
-     * Campos desconhecidos são preservados para que as regras estruturais os
-     * possam rejeitar explicitamente.
-     *
-     * @param  mixed  $valor  Valor recebido.
-     * @return mixed Lista normalizada ou valor original.
-     *
-     * @since 2.0.0
-     */
-    private function normalizarLigacoes(
-        mixed $valor,
-    ): mixed {
-        if (! is_array($valor)) {
-            return $valor;
-        }
-
-        $ligacoes = [];
-
-        foreach (array_values($valor) as $ligacao) {
-            if (! is_array($ligacao)) {
-                $ligacoes[] = $ligacao;
-
-                continue;
-            }
-
-            $ligacao['url'] = $this->normalizarTextoOpcional(
-                $ligacao['url']
-                    ?? null,
-            );
-
-            $ligacao['etiqueta'] = $this->normalizarTextoLinhaOpcional(
-                $ligacao['etiqueta']
-                    ?? null,
-            );
-
-            $ligacao['incorporar'] = $this->normalizarBooleano(
-                $ligacao['incorporar']
-                    ?? false,
-            );
-
-            $ligacoes[] = $ligacao;
-        }
-
-        return $ligacoes;
-    }
-
-    /**
-     * Normaliza os valores booleanos aceites pelos controlos HTML.
-     *
-     * Valores desconhecidos são preservados para que a regra `boolean` os
-     * rejeite.
-     *
-     * @param  mixed  $valor  Valor recebido.
-     * @return mixed Booleano normalizado ou valor original.
-     *
-     * @since 2.0.0
-     */
-    private function normalizarBooleano(
-        mixed $valor,
-    ): mixed {
-        if (is_bool($valor)) {
-            return $valor;
-        }
-
-        if (
-            $valor === 0
-            || $valor === '0'
-        ) {
-            return false;
-        }
-
-        if (
-            $valor === 1
-            || $valor === '1'
-        ) {
-            return true;
-        }
-
-        return $valor;
+        return NormalizadorDadosMetalThursday::normalizarSeccoes(
+            $valor,
+        );
     }
 
     /**
@@ -2100,20 +1963,9 @@ final class GuardarMetalThursdayRequest extends FormRequest
     private function normalizarIdentificador(
         mixed $valor,
     ): mixed {
-        if (
-            $valor === null
-            || $valor === ''
-        ) {
-            return null;
-        }
-        if (
-            is_string($valor)
-            && ctype_digit($valor)
-        ) {
-            return (int) $valor;
-        }
-
-        return $valor;
+        return NormalizadorDadosMetalThursday::normalizarIdentificador(
+            $valor,
+        );
     }
 
     /**
@@ -2130,31 +1982,9 @@ final class GuardarMetalThursdayRequest extends FormRequest
     private function normalizarTextoLinhaOpcional(
         mixed $valor,
     ): mixed {
-        if (! is_string($valor)) {
-            return $valor;
-        }
-        if (
-            preg_match(
-                '/[\x00-\x1F\x7F]/',
-                $valor,
-            ) === 1
-        ) {
-            return $valor;
-        }
-        $texto = preg_replace(
-            '/\s+/u',
-            ' ',
-            trim(
-                $valor,
-            ),
+        return NormalizadorDadosMetalThursday::normalizarTextoLinhaOpcional(
+            $valor,
         );
-        if (! is_string($texto)) {
-            return $valor;
-        }
-
-        return $texto !== ''
-            ? $texto
-            : null;
     }
 
     /**
@@ -2171,59 +2001,9 @@ final class GuardarMetalThursdayRequest extends FormRequest
     private function normalizarTextoOpcional(
         mixed $valor,
     ): mixed {
-        if (! is_string($valor)) {
-            return $valor;
-        }
-        $texto = trim(
+        return NormalizadorDadosMetalThursday::normalizarTextoOpcional(
             $valor,
-            ' ',
         );
-
-        return $texto !== ''
-            ? $texto
-            : null;
-    }
-
-    /**
-     * Normaliza um texto com várias linhas.
-     *
-     * Tabulações e quebras de linha são permitidas. Os restantes caracteres
-     * de controlo permanecem inalterados para que a validação os rejeite.
-     *
-     * @param  mixed  $valor  Valor recebido.
-     * @return mixed Texto normalizado ou valor original.
-     *
-     * @since 2.0.0
-     */
-    private function normalizarTextoMultilinha(
-        mixed $valor,
-    ): mixed {
-        if (! is_string($valor)) {
-            return $valor;
-        }
-        if (
-            preg_match(
-                '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/',
-                $valor,
-            ) === 1
-        ) {
-            return $valor;
-        }
-        $texto = trim(
-            str_replace(
-                [
-                    "\r\n",
-                    "\r",
-                ],
-                "\n",
-                $valor,
-            ),
-            " \t\n",
-        );
-
-        return $texto !== ''
-            ? $texto
-            : null;
     }
 
     /**
@@ -2240,43 +2020,10 @@ final class GuardarMetalThursdayRequest extends FormRequest
         string $mensagemTextoInvalido,
         string $mensagemCaracteresInvalidos,
     ): Closure {
-        return static function (
-            string $atributo,
-            mixed $valor,
-            Closure $falhar,
-        ) use (
+        return RegrasTextoMetalThursday::criarRegraTextoLinha(
             $mensagemTextoInvalido,
             $mensagemCaracteresInvalidos,
-        ): void {
-            if (
-                $valor === null
-                || ! is_string($valor)
-            ) {
-                return;
-            }
-            if (
-                preg_match(
-                    '//u',
-                    $valor,
-                ) !== 1
-            ) {
-                $falhar(
-                    $mensagemTextoInvalido,
-                );
-
-                return;
-            }
-            if (
-                preg_match(
-                    '/[\x00-\x1F\x7F]/',
-                    $valor,
-                ) === 1
-            ) {
-                $falhar(
-                    $mensagemCaracteresInvalidos,
-                );
-            }
-        };
+        );
     }
 
     /**
@@ -2296,40 +2043,10 @@ final class GuardarMetalThursdayRequest extends FormRequest
         string $mensagemTextoInvalido,
         string $mensagemCaracteresInvalidos,
     ): Closure {
-        return static function (
-            string $atributo,
-            mixed $valor,
-            Closure $falhar,
-        ) use (
+        return RegrasTextoMetalThursday::criarRegraTextoMultilinha(
             $mensagemTextoInvalido,
             $mensagemCaracteresInvalidos,
-        ): void {
-            if (! is_string($valor)) {
-                return;
-            }
-            if (
-                preg_match(
-                    '//u',
-                    $valor,
-                ) !== 1
-            ) {
-                $falhar(
-                    $mensagemTextoInvalido,
-                );
-
-                return;
-            }
-            if (
-                preg_match(
-                    '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/',
-                    $valor,
-                ) === 1
-            ) {
-                $falhar(
-                    $mensagemCaracteresInvalidos,
-                );
-            }
-        };
+        );
     }
 
     /**
