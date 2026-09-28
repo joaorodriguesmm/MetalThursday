@@ -20,7 +20,7 @@ O **MetalThursday** é a aplicação web de uma rubrica semanal, criada por um g
 
 ### Pré-requisitos
 
-- PHP >= 8.2
+- PHP >= 8.3
 - Composer
 - Node.js 22.13+ (22.x) ou 24.x
 - npm
