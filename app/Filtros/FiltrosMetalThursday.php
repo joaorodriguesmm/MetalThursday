@@ -356,11 +356,19 @@ final class FiltrosMetalThursday
         string $padrao,
         bool $usarOu = false,
     ): void {
-        $expressao = sprintf(
-            "%s LIKE ? ESCAPE '%s'",
-            $coluna,
-            self::CARACTERE_ESCAPE_PESQUISA,
-        );
+        $expressao = match ($coluna) {
+            'metal_thursdays.nome' => "metal_thursdays.nome LIKE ? ESCAPE '!'",
+
+            'seccoes_metal_thursday.titulo' => "seccoes_metal_thursday.titulo LIKE ? ESCAPE '!'",
+
+            'seccoes_metal_thursday.descricao' => "seccoes_metal_thursday.descricao LIKE ? ESCAPE '!'",
+
+            'artistas.nome' => "artistas.nome LIKE ? ESCAPE '!'",
+
+            default => throw new InvalidArgumentException(
+                'A coluna indicada não suporta pesquisa textual.',
+            ),
+        };
 
         if ($usarOu) {
             $construtor->orWhereRaw(
