@@ -682,7 +682,7 @@ final class ControladorArtista extends Controller
         $aliasOrdenacao =
             'metal_thursdays_ordenacao';
 
-        return SeccaoMetalThursday::query()
+        $construtor = SeccaoMetalThursday::query()
             ->select([
                 $tabelaSeccoes.'.id',
                 $tabelaSeccoes.'.metal_thursday_id',
@@ -706,17 +706,17 @@ final class ControladorArtista extends Controller
                 static fn (
                     Builder $construtor,
                 ): Builder => $construtor->publicadas(),
-            )
-            ->when(
-                $metalThursdayExcluida instanceof MetalThursday,
-                static fn (
-                    Builder $construtor,
-                ): Builder => $construtor->where(
-                    $tabelaSeccoes.'.metal_thursday_id',
-                    '!=',
-                    $metalThursdayExcluida->getKey(),
-                ),
-            )
+            );
+
+        if ($metalThursdayExcluida instanceof MetalThursday) {
+            $construtor->where(
+                $tabelaSeccoes.'.metal_thursday_id',
+                '!=',
+                $metalThursdayExcluida->getKey(),
+            );
+        }
+
+        return $construtor
             ->with([
                 'metalThursday:id,autor_id,data,deleted_at',
                 'metalThursday.autor:id,nome',

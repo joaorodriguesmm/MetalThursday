@@ -376,34 +376,34 @@ abstract class PedidoEdicaoRequest extends FormRequest
         $edicaoAtual =
             $this->obterEdicaoDaRota();
 
-        $construtor = Edicao::query()
-            ->when(
-                $edicaoAtual instanceof Edicao,
-                static fn (
-                    Builder $consulta,
-                ): Builder => $consulta->where(
-                    'id',
-                    '!=',
-                    $edicaoAtual->getKey(),
-                ),
-            )
-            ->where(
-                static function (
-                    Builder $consulta,
-                ) use (
-                    $dataInicio,
-                ): void {
-                    $consulta
-                        ->whereNull(
-                            'data_fim',
-                        )
-                        ->orWhere(
-                            'data_fim',
-                            '>=',
-                            $dataInicio,
-                        );
-                },
+        $construtor =
+            Edicao::query();
+
+        if ($edicaoAtual instanceof Edicao) {
+            $construtor->where(
+                'id',
+                '!=',
+                $edicaoAtual->getKey(),
             );
+        }
+
+        $construtor->where(
+            static function (
+                Builder $consulta,
+            ) use (
+                $dataInicio,
+            ): void {
+                $consulta
+                    ->whereNull(
+                        'data_fim',
+                    )
+                    ->orWhere(
+                        'data_fim',
+                        '>=',
+                        $dataInicio,
+                    );
+            },
+        );
 
         if ($dataFim !== null) {
             $construtor->where(

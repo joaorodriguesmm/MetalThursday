@@ -127,6 +127,9 @@ final class ControladorUtilizador extends Controller
                 ),
             );
 
+        $valorPapel =
+            $papel?->value;
+
         $estado =
             $this->normalizarEstado(
                 $pedido->query(
@@ -171,12 +174,12 @@ final class ControladorUtilizador extends Controller
                     ),
                 )
                 ->when(
-                    $papel !== null,
+                    $valorPapel !== null,
                     static fn (
                         Builder $construtor,
                     ): Builder => $construtor->where(
                         'papel',
-                        $papel->value,
+                        $valorPapel,
                     ),
                 )
                 ->when(
