@@ -383,11 +383,16 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
                 array $atributos,
             ): string {
                 try {
+                    $nome =
+                        $atributos['nome']
+                        ?? '';
+
+                    if (! is_string($nome)) {
+                        return '?';
+                    }
+
                     return NomeUtilizador::deTexto(
-                        (string) (
-                            $atributos['nome']
-                            ?? ''
-                        ),
+                        $nome,
                     )->iniciais();
                 } catch (InvalidArgumentException) {
                     return '?';
@@ -411,11 +416,16 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
                 array $atributos,
             ): string {
                 try {
+                    $nome =
+                        $atributos['nome']
+                        ?? '';
+
+                    if (! is_string($nome)) {
+                        return 'Utilizador';
+                    }
+
                     return NomeUtilizador::deTexto(
-                        (string) (
-                            $atributos['nome']
-                            ?? ''
-                        ),
+                        $nome,
                     )->primeiroNome();
                 } catch (InvalidArgumentException) {
                     return 'Utilizador';

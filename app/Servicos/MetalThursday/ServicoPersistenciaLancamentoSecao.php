@@ -39,7 +39,17 @@ final class ServicoPersistenciaLancamentoSecao
      *
      * @param  mixed  $dados  Dados recebidos.
      * @param  string  $campo  Caminho do campo para mensagens de erro.
-     * @return array<string, mixed>|null Dados normalizados ou nulo.
+     * @return array{
+     *     titulo: string,
+     *     tipo: TipoLancamento|null,
+     *     ano_original: int|null,
+     *     faixas: list<array{
+     *         id: int|null,
+     *         musica_id: int|null,
+     *         titulo: string,
+     *         posicao: string|null
+     *     }>
+     * }|null Dados normalizados ou nulo.
      *
      * @since 2.0.0
      */
@@ -184,6 +194,18 @@ final class ServicoPersistenciaLancamentoSecao
             );
         }
 
+        $dadosLancamentoNormalizados =
+            $this->normalizarDados(
+                $dadosLancamento,
+                'lancamento',
+            );
+
+        if ($dadosLancamentoNormalizados === null) {
+            throw new InvalidArgumentException(
+                'Uma secção de lançamento exige os respetivos dados editáveis.',
+            );
+        }
+
         if ($identificadorLancamento === null) {
             $lancamento = new Lancamento;
         } else {
@@ -211,19 +233,19 @@ final class ServicoPersistenciaLancamentoSecao
         }
 
         $lancamento->titulo =
-            $dadosLancamento['titulo'];
+            $dadosLancamentoNormalizados['titulo'];
 
         $lancamento->tipo =
-            $dadosLancamento['tipo'];
+            $dadosLancamentoNormalizados['tipo'];
 
         $lancamento->ano_original =
-            $dadosLancamento['ano_original'];
+            $dadosLancamentoNormalizados['ano_original'];
 
         $lancamento->saveOrFail();
 
         $this->sincronizarFaixas(
             $lancamento,
-            $dadosLancamento['faixas'],
+            $dadosLancamentoNormalizados['faixas'],
         );
 
         return $lancamento;
@@ -259,7 +281,12 @@ final class ServicoPersistenciaLancamentoSecao
      * Sincroniza as ocorrências da tracklist sem eliminar músicas do catálogo.
      *
      * @param  Lancamento  $lancamento  Lançamento bloqueado.
-     * @param  list<array<string, mixed>>  $faixasRecebidas  Tracklist revista.
+     * @param  list<array{
+     *     id: int|null,
+     *     musica_id: int|null,
+     *     titulo: string,
+     *     posicao: string|null
+     * }>  $faixasRecebidas  Tracklist revista.
      *
      * @since 2.0.0
      */
@@ -280,7 +307,7 @@ final class ServicoPersistenciaLancamentoSecao
             ->keyBy(
                 static fn (
                     FaixaLancamento $faixa,
-                ): int => (int) $faixa->getKey(),
+                ): int => $faixa->id,
             );
 
         $identificadoresMantidos = [];

@@ -17,6 +17,29 @@ use RuntimeException;
  * O serviço não persiste dados. A aplicação decide posteriormente quais os
  * valores obtidos que devem ser utilizados.
  *
+ * @phpstan-type DadosLancamentoDiscogs array{
+ *     discogs_release_id: int,
+ *     titulo: string,
+ *     ano: int|null,
+ *     ano_original: int|null,
+ *     tipo_sugerido: string|null,
+ *     pais: string|null,
+ *     formatos: list<string>,
+ *     artistas: list<array{
+ *         discogs_id: int,
+ *         nome: string
+ *     }>,
+ *     faixas: list<array{
+ *         titulo: string,
+ *         posicao: string|null,
+ *         ordem: int,
+ *         artistas: list<array{
+ *             discogs_id: int,
+ *             nome: string
+ *         }>
+ *     }>
+ * }
+ *
  * @since 2.0.0
  */
 final class ServicoDiscogs
@@ -175,7 +198,7 @@ final class ServicoDiscogs
      * Obtém uma edição concreta pelo identificador Discogs.
      *
      * @param  int  $identificador  Identificador da Release.
-     * @return array<string, mixed> Lançamento normalizado.
+     * @return DadosLancamentoDiscogs Lançamento normalizado.
      *
      * @throws RuntimeException Quando o identificador é inválido ou o Discogs
      *                          não devolve uma edição válida.
@@ -701,7 +724,7 @@ final class ServicoDiscogs
     ): Response {
         $enderecoBase =
             rtrim(
-                (string) config(
+                $this->obterConfiguracaoTexto(
                     'discogs.base_url',
                     'https://api.discogs.com',
                 ),
@@ -710,7 +733,7 @@ final class ServicoDiscogs
 
         $userAgent =
             trim(
-                (string) config(
+                $this->obterConfiguracaoTexto(
                     'discogs.user_agent',
                     '',
                 ),
@@ -727,7 +750,7 @@ final class ServicoDiscogs
         if ($requerAutenticacao) {
             $token =
                 trim(
-                    (string) config(
+                    $this->obterConfiguracaoTexto(
                         'discogs.token',
                         '',
                     ),
@@ -743,7 +766,7 @@ final class ServicoDiscogs
         $tentativas =
             max(
                 1,
-                (int) config(
+                $this->obterConfiguracaoInteira(
                     'discogs.tentativas',
                     3,
                 ),
@@ -752,7 +775,7 @@ final class ServicoDiscogs
         $intervaloRepeticao =
             max(
                 0,
-                (int) config(
+                $this->obterConfiguracaoInteira(
                     'discogs.intervalo_repeticao_ms',
                     1000,
                 ),
@@ -761,7 +784,7 @@ final class ServicoDiscogs
         $intervaloMinimoPedidos =
             max(
                 0,
-                (int) config(
+                $this->obterConfiguracaoInteira(
                     'discogs.intervalo_minimo_pedidos_ms',
                     1000,
                 ),
@@ -801,7 +824,7 @@ final class ServicoDiscogs
                         ->timeout(
                             max(
                                 1,
-                                (int) config(
+                                $this->obterConfiguracaoInteira(
                                     'discogs.timeout',
                                     10,
                                 ),
@@ -862,6 +885,60 @@ final class ServicoDiscogs
                 ),
             ),
         };
+    }
+
+    /**
+     * Obtém uma configuração textual do Discogs.
+     */
+    private function obterConfiguracaoTexto(
+        string $chave,
+        string $predefinido,
+    ): string {
+        $valor =
+            config(
+                $chave,
+                $predefinido,
+            );
+
+        if ($valor === null) {
+            return $predefinido;
+        }
+
+        if (! is_string($valor)) {
+            throw new RuntimeException(
+                sprintf(
+                    'A configuração %s do Discogs não é válida.',
+                    $chave,
+                ),
+            );
+        }
+
+        return $valor;
+    }
+
+    /**
+     * Obtém uma configuração inteira do Discogs.
+     */
+    private function obterConfiguracaoInteira(
+        string $chave,
+        int $predefinido,
+    ): int {
+        $valor =
+            config(
+                $chave,
+                $predefinido,
+            );
+
+        if (! is_int($valor)) {
+            throw new RuntimeException(
+                sprintf(
+                    'A configuração %s do Discogs não é válida.',
+                    $chave,
+                ),
+            );
+        }
+
+        return $valor;
     }
 
     /**

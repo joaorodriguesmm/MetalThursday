@@ -55,7 +55,7 @@ final class NotificacaoLembreteTarefaMetalThursday extends NotificacaoAplicacao
         );
 
         $this->identificadorReserva =
-            (int) $reserva->getKey();
+            $reserva->id;
 
         $data =
             $reserva->data;

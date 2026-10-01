@@ -73,11 +73,20 @@ final class ReservasPendentes extends Component
             );
         }
 
+        $fusoHorario =
+            config(
+                'app.timezone',
+            );
+
+        if (! is_string($fusoHorario)) {
+            throw new LogicException(
+                'O fuso horário da aplicação não é válido.',
+            );
+        }
+
         $hoje =
             CarbonImmutable::today(
-                config(
-                    'app.timezone',
-                ),
+                $fusoHorario,
             );
 
         $itensPorPublicar =
@@ -190,11 +199,9 @@ final class ReservasPendentes extends Component
                 instanceof RascunhoMetalThursday;
 
             $podePreparar =
-                is_numeric(
-                    $reserva->responsavel_id,
-                )
-                && (int) $reserva->responsavel_id
-                === (int) $utilizador->getKey();
+                $reserva->responsavel_id !== null
+                && $reserva->responsavel_id
+                === $utilizador->id;
 
             $itens[] = [
                 'idElemento' => 'reserva-metal-thursday-'.

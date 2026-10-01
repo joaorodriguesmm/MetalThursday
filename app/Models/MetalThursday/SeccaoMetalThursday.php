@@ -220,9 +220,23 @@ class SeccaoMetalThursday extends Model
     protected function ordem(): Attribute
     {
         return Attribute::make(
-            get: static fn (
+            get: static function (
                 mixed $valor,
-            ): int => (int) $valor,
+            ): int {
+                if (
+                    ! is_int($valor)
+                    && (
+                        ! is_string($valor)
+                        || ! ctype_digit($valor)
+                    )
+                ) {
+                    throw new InvalidArgumentException(
+                        'A ordem persistida da secção não é válida.',
+                    );
+                }
+
+                return (int) $valor;
+            },
 
             set: static function (
                 mixed $valor,
@@ -422,11 +436,27 @@ class SeccaoMetalThursday extends Model
     protected function ano(): Attribute
     {
         return Attribute::make(
-            get: static fn (
+            get: static function (
                 mixed $valor,
-            ): ?int => $valor === null
-                ? null
-                : (int) $valor,
+            ): ?int {
+                if ($valor === null) {
+                    return null;
+                }
+
+                if (
+                    ! is_int($valor)
+                    && (
+                        ! is_string($valor)
+                        || ! ctype_digit($valor)
+                    )
+                ) {
+                    throw new InvalidArgumentException(
+                        'O ano persistido da secção não é válido.',
+                    );
+                }
+
+                return (int) $valor;
+            },
 
             set: static function (
                 mixed $valor,

@@ -505,6 +505,12 @@ class MetalThursday extends Model
                 'app.timezone',
             );
 
+        if (! is_string($fusoHorario)) {
+            throw new LogicException(
+                'O fuso horário da aplicação não é válido.',
+            );
+        }
+
         $instante =
             $referencia instanceof CarbonInterface
             ? CarbonImmutable::instance(

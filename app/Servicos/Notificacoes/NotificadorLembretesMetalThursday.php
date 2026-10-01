@@ -235,14 +235,23 @@ final class NotificadorLembretesMetalThursday
     private function obterDataReferencia(
         ?CarbonInterface $referencia,
     ): CarbonImmutable {
+        $fusoHorario =
+            config(
+                'app.timezone',
+            );
+
+        if (! is_string($fusoHorario)) {
+            throw new \LogicException(
+                'O fuso horário da aplicação não é válido.',
+            );
+        }
+
         return CarbonImmutable::instance(
             $referencia
                 ?? now(),
         )
             ->setTimezone(
-                (string) config(
-                    'app.timezone',
-                ),
+                $fusoHorario,
             )
             ->startOfDay();
     }

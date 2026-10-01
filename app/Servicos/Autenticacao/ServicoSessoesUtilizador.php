@@ -7,6 +7,7 @@ namespace App\Servicos\Autenticacao;
 use App\Models\Autenticacao\Utilizador;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use LogicException;
 
 /**
  * Gere as sessões persistidas dos utilizadores.
@@ -42,15 +43,33 @@ final class ServicoSessoesUtilizador
                 $utilizador,
             );
 
-        return DB::connection(
+        $ligacao =
             config(
                 'session.connection',
-            ),
+            );
+
+        if (! is_string($ligacao) && $ligacao !== null) {
+            throw new LogicException(
+                'A ligação configurada para as sessões não é válida.',
+            );
+        }
+
+        $tabela =
+            config(
+                'session.table',
+            );
+
+        if (! is_string($tabela) || trim($tabela) === '') {
+            throw new LogicException(
+                'A tabela configurada para as sessões não é válida.',
+            );
+        }
+
+        return DB::connection(
+            $ligacao,
         )
             ->table(
-                (string) config(
-                    'session.table',
-                ),
+                $tabela,
             )
             ->where(
                 'user_id',

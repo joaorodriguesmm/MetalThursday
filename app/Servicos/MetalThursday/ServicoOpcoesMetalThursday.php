@@ -162,7 +162,18 @@ final class ServicoOpcoesMetalThursday
                 );
             }
 
-            foreach ($metalThursday->getRelation('seccoes') as $seccao) {
+            $seccoes =
+                $metalThursday->getRelation(
+                    'seccoes',
+                );
+
+            if (! $seccoes instanceof Collection) {
+                throw new LogicException(
+                    'A relação "seccoes" carregada não possui o tipo esperado.',
+                );
+            }
+
+            foreach ($seccoes as $seccao) {
                 if (! $seccao instanceof SeccaoMetalThursday) {
                     throw new LogicException(
                         'A relação "seccoes" contém um modelo inesperado.',
@@ -170,13 +181,11 @@ final class ServicoOpcoesMetalThursday
                 }
 
                 if (
-                    is_numeric(
-                        $seccao->artista_id,
-                    )
-                    && (int) $seccao->artista_id > 0
+                    $seccao->artista_id !== null
+                    && $seccao->artista_id > 0
                 ) {
                     $identificadoresArtistasAtuais[] =
-                        (int) $seccao->artista_id;
+                        $seccao->artista_id;
                 }
             }
 

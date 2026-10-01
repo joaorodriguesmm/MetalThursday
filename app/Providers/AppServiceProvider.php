@@ -17,6 +17,7 @@ use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use LogicException;
 
 /**
  * Regista e configura os serviços gerais da aplicação.
@@ -143,12 +144,13 @@ final class AppServiceProvider extends ServiceProvider
      */
     private function configurarLimitadoresIntegracoes(): void
     {
+
         RateLimiter::for(
             'integracao-discogs',
             static fn (Request $pedido): Limit => Limit::perMinute(
                 max(
                     1,
-                    (int) config(
+                    self::obterLimitePedidosHttp(
                         'integracoes.limites_pedidos_http.discogs_por_minuto',
                         20,
                     ),
@@ -166,7 +168,7 @@ final class AppServiceProvider extends ServiceProvider
             static fn (Request $pedido): Limit => Limit::perMinute(
                 max(
                     1,
-                    (int) config(
+                    self::obterLimitePedidosHttp(
                         'integracoes.limites_pedidos_http.artistas_por_minuto',
                         12,
                     ),
@@ -177,6 +179,36 @@ final class AppServiceProvider extends ServiceProvider
                     $pedido,
                 ),
             ),
+        );
+    }
+
+    /**
+     * Obtém um limite HTTP configurado no momento do pedido.
+     *
+     * A leitura tardia preserva alterações de configuração efetuadas após o
+     * arranque da aplicação, nomeadamente durante testes.
+     *
+     * @since 2.0.0
+     */
+    private static function obterLimitePedidosHttp(
+        string $chave,
+        int $predefinido,
+    ): int {
+        $limite =
+            config(
+                $chave,
+                $predefinido,
+            );
+
+        if (! is_int($limite)) {
+            throw new LogicException(
+                'O limite HTTP configurado para a integração não é válido.',
+            );
+        }
+
+        return max(
+            1,
+            $limite,
         );
     }
 
@@ -196,10 +228,13 @@ final class AppServiceProvider extends ServiceProvider
                 )
                 ?->getAuthIdentifier();
 
-        if ($identificadorUtilizador !== null) {
+        if (
+            is_int($identificadorUtilizador)
+            || is_string($identificadorUtilizador)
+        ) {
             return $integracao
                 .':utilizador:'
-                .(string) $identificadorUtilizador;
+                .$identificadorUtilizador;
         }
 
         return $integracao

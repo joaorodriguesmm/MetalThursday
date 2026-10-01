@@ -110,7 +110,7 @@ final class ControladorAvaliacao extends Controller
             $this->obterUtilizadorAutenticado();
 
         $identificadorUtilizador =
-            (int) $utilizador->getKey();
+            $utilizador->id;
 
         $pontuacao =
             $pedido->obterPontuacao();
@@ -254,7 +254,7 @@ final class ControladorAvaliacao extends Controller
             $this->obterUtilizadorAutenticado();
 
         $identificadorUtilizador =
-            (int) $utilizador->getKey();
+            $utilizador->id;
 
         $avaliavel =
             $this->resolverAvaliavel(

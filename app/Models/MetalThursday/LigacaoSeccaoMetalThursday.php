@@ -351,9 +351,23 @@ class LigacaoSeccaoMetalThursday extends Model
     protected function ordem(): Attribute
     {
         return Attribute::make(
-            get: static fn (
+            get: static function (
                 mixed $valor,
-            ): int => (int) $valor,
+            ): int {
+                if (
+                    ! is_int($valor)
+                    && (
+                        ! is_string($valor)
+                        || ! ctype_digit($valor)
+                    )
+                ) {
+                    throw new InvalidArgumentException(
+                        'A ordem persistida da ligação não é válida.',
+                    );
+                }
+
+                return (int) $valor;
+            },
 
             set: static function (
                 mixed $valor,

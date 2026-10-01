@@ -428,7 +428,7 @@ final class ServicoAcessoUtilizadores
             ->keyBy(
                 static fn (
                     Utilizador $utilizador,
-                ): int => (int) $utilizador->getKey(),
+                ): int => $utilizador->id,
             );
 
         $utilizadorBloqueado =

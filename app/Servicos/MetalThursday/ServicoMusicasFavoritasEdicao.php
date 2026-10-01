@@ -691,13 +691,13 @@ final class ServicoMusicasFavoritasEdicao
                     'id',
                 )
                 ->lockForUpdate()
-                ->pluck(
+                ->get([
                     'id',
-                )
+                ])
                 ->map(
                     static fn (
-                        mixed $identificador,
-                    ): int => (int) $identificador,
+                        Utilizador $utilizador,
+                    ): int => $utilizador->id,
                 )
                 ->all();
 
@@ -719,13 +719,13 @@ final class ServicoMusicasFavoritasEdicao
                 ->whereKey(
                     $identificadoresUtilizadores,
                 )
-                ->pluck(
+                ->get([
                     'id',
-                )
+                ])
                 ->map(
                     static fn (
-                        mixed $identificador,
-                    ): int => (int) $identificador,
+                        Utilizador $utilizador,
+                    ): int => $utilizador->id,
                 )
                 ->sort()
                 ->values()

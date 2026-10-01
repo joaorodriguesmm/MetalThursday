@@ -17,6 +17,25 @@ use RuntimeException;
  * O serviço não persiste dados. A aplicação decide posteriormente quais os
  * valores propostos ao utilizador e quais os dados efetivamente guardados.
  *
+ * @phpstan-type DadosArtistaMusicBrainz array{
+ *     mbid: string,
+ *     nome: string,
+ *     pontuacao: int|null,
+ *     tipo: string|null,
+ *     desambiguacao: string|null,
+ *     codigo_pais: string|null,
+ *     area: string|null,
+ *     area_inicio: string|null,
+ *     inicio: string|null,
+ *     fim: string|null,
+ *     ano_inicio: int|null,
+ *     ano_fim: int|null,
+ *     terminado: bool|null,
+ *     relacoes: list<array{tipo: string|null, url: string}>,
+ *     discogs_id: int|null,
+ *     url_musicbrainz: string
+ * }
+ *
  * @since 2.0.0
  */
 final class ServicoMusicBrainz
@@ -54,7 +73,7 @@ final class ServicoMusicBrainz
      * Pesquisa artistas pelo respetivo nome.
      *
      * @param  string  $termo  Nome pesquisado.
-     * @return list<array<string, mixed>> Artistas encontrados.
+     * @return list<DadosArtistaMusicBrainz> Artistas encontrados.
      *
      * @throws RuntimeException Quando a integração não está configurada ou o
      *                          MusicBrainz não pode ser consultado.
@@ -130,7 +149,7 @@ final class ServicoMusicBrainz
      * oficiais, redes sociais e identificadores noutras bases de dados.
      *
      * @param  string  $mbid  Identificador MusicBrainz.
-     * @return array<string, mixed> Artista normalizado.
+     * @return DadosArtistaMusicBrainz Artista normalizado.
      *
      * @throws RuntimeException Quando o MBID é inválido ou o MusicBrainz não
      *                          devolve uma ficha válida.
@@ -201,7 +220,7 @@ final class ServicoMusicBrainz
     ): Response {
         $enderecoBase =
             rtrim(
-                (string) config(
+                $this->obterConfiguracaoTexto(
                     'musicbrainz.base_url',
                     'https://musicbrainz.org',
                 ),
@@ -210,7 +229,7 @@ final class ServicoMusicBrainz
 
         $userAgent =
             trim(
-                (string) config(
+                $this->obterConfiguracaoTexto(
                     'musicbrainz.user_agent',
                     '',
                 ),
@@ -225,7 +244,7 @@ final class ServicoMusicBrainz
         $tentativas =
             max(
                 1,
-                (int) config(
+                $this->obterConfiguracaoInteira(
                     'musicbrainz.tentativas',
                     3,
                 ),
@@ -234,7 +253,7 @@ final class ServicoMusicBrainz
         $intervaloRepeticao =
             max(
                 0,
-                (int) config(
+                $this->obterConfiguracaoInteira(
                     'musicbrainz.intervalo_repeticao_ms',
                     1000,
                 ),
@@ -243,7 +262,7 @@ final class ServicoMusicBrainz
         $intervaloMinimoPedidos =
             max(
                 0,
-                (int) config(
+                $this->obterConfiguracaoInteira(
                     'musicbrainz.intervalo_minimo_pedidos_ms',
                     1000,
                 ),
@@ -273,7 +292,7 @@ final class ServicoMusicBrainz
                         ->timeout(
                             max(
                                 1,
-                                (int) config(
+                                $this->obterConfiguracaoInteira(
                                     'musicbrainz.timeout',
                                     10,
                                 ),
@@ -337,6 +356,56 @@ final class ServicoMusicBrainz
     }
 
     /**
+     * Obtém uma configuração textual do MusicBrainz.
+     */
+    private function obterConfiguracaoTexto(
+        string $chave,
+        string $predefinido,
+    ): string {
+        $valor =
+            config(
+                $chave,
+                $predefinido,
+            );
+
+        if (! is_string($valor)) {
+            throw new RuntimeException(
+                sprintf(
+                    'A configuração %s do MusicBrainz não é válida.',
+                    $chave,
+                ),
+            );
+        }
+
+        return $valor;
+    }
+
+    /**
+     * Obtém uma configuração inteira do MusicBrainz.
+     */
+    private function obterConfiguracaoInteira(
+        string $chave,
+        int $predefinido,
+    ): int {
+        $valor =
+            config(
+                $chave,
+                $predefinido,
+            );
+
+        if (! is_int($valor)) {
+            throw new RuntimeException(
+                sprintf(
+                    'A configuração %s do MusicBrainz não é válida.',
+                    $chave,
+                ),
+            );
+        }
+
+        return $valor;
+    }
+
+    /**
      * Determina se uma resposta deve ser repetida.
      *
      * @param  Response  $resposta  Resposta recebida.
@@ -361,8 +430,8 @@ final class ServicoMusicBrainz
     /**
      * Normaliza uma ficha de artista do MusicBrainz.
      *
-     * @param  array<string, mixed>  $artista  Dados originais.
-     * @return array<string, mixed>|null Artista normalizado.
+     * @param  array<mixed, mixed>  $artista  Dados originais.
+     * @return DadosArtistaMusicBrainz|null Artista normalizado.
      *
      * @since 2.0.0
      */

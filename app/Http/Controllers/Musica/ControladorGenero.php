@@ -621,7 +621,7 @@ final class ControladorGenero extends Controller
      */
     private function bloquearHierarquiaAtiva(): array
     {
-        $identificadores =
+        $generos =
             Genero::query()
                 ->select([
                     'id',
@@ -629,16 +629,13 @@ final class ControladorGenero extends Controller
                 ->orderBy(
                     'id',
                 )
-                ->lockForUpdate()
-                ->pluck(
-                    'id',
-                );
+                ->lockForUpdate()->get();
 
         $identificadoresAtivos = [];
 
-        foreach ($identificadores as $identificador) {
+        foreach ($generos as $genero) {
             $identificadoresAtivos[
-                (int) $identificador
+                $genero->id
             ] = true;
         }
 
@@ -800,7 +797,7 @@ final class ControladorGenero extends Controller
         }
 
         $identificadorGeneroAtual =
-            (int) $generoAtual->getKey();
+            $generoAtual->id;
 
         $outrosGeneros =
             $artista
@@ -808,7 +805,7 @@ final class ControladorGenero extends Controller
                 ->filter(
                     static fn (
                         Genero $genero,
-                    ): bool => (int) $genero->getKey()
+                    ): bool => $genero->id
                         !== $identificadorGeneroAtual,
                 )
                 ->values();
@@ -816,7 +813,7 @@ final class ControladorGenero extends Controller
         return [
             'modelo' => $artista,
 
-            'identificador' => (int) $artista->getKey(),
+            'identificador' => $artista->id,
 
             'nome' => $artista->nome,
 
@@ -890,7 +887,7 @@ final class ControladorGenero extends Controller
         Genero $genero,
     ): array {
         return [
-            'id' => (int) $genero->getKey(),
+            'id' => $genero->id,
 
             'nome' => $genero->nome,
 
@@ -927,7 +924,7 @@ final class ControladorGenero extends Controller
             }
 
             $dados[] = [
-                'id' => (int) $genero->getKey(),
+                'id' => $genero->id,
 
                 'nome' => $genero->nome,
             ];

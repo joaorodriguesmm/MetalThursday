@@ -460,7 +460,7 @@ final class ItemSeccaoFormulario extends Component
                     }
 
                     $faixas[] = [
-                        'id' => (string) $faixa->getKey(),
+                        'id' => (string) $faixa->id,
                         'musica_id' => (string) $faixa->musica_id,
                         'titulo' => $tituloMusica,
                         'posicao' => $this->normalizarTexto(
@@ -495,7 +495,7 @@ final class ItemSeccaoFormulario extends Component
     /**
      * Normaliza dados de lançamento provenientes de sessão ou rascunho.
      *
-     * @param  array<string, mixed>  $dados  Dados recebidos.
+     * @param  array<mixed, mixed>  $dados  Dados recebidos.
      * @return DadosLancamentoFormulario Dados seguros para renderização.
      *
      * @since 2.0.0
@@ -734,10 +734,21 @@ final class ItemSeccaoFormulario extends Component
                 $valorPredefinido,
             );
 
-        return $pedido->old(
-            "{$this->prefixoCampo}.{$campo}",
-            $valorModelo,
-        );
+        $chaveCampo =
+            "{$this->prefixoCampo}.{$campo}";
+
+        if (
+            $pedido->hasSession()
+            && $pedido->session()->hasOldInput(
+                $chaveCampo,
+            )
+        ) {
+            return $pedido->old(
+                $chaveCampo,
+            );
+        }
+
+        return $valorModelo;
     }
 
     /**
@@ -802,6 +813,16 @@ final class ItemSeccaoFormulario extends Component
             return '';
         }
 
+        if (is_string($valor)) {
+            return trim(
+                $valor,
+            );
+        }
+
+        if (is_int($valor)) {
+            return (string) $valor;
+        }
+
         return trim(
             (string) $valor,
         );
@@ -826,7 +847,7 @@ final class ItemSeccaoFormulario extends Component
 
         foreach ($tiposSeccao as $tipoSeccao) {
             if (
-                (string) $tipoSeccao->getKey()
+                (string) $tipoSeccao->id
                 !== $identificadorTipo
             ) {
                 continue;

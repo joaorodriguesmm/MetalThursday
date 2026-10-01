@@ -19,6 +19,9 @@ use RuntimeException;
  *
  * Nenhum dado é persistido por este serviço.
  *
+ * @phpstan-import-type DadosArtistaMusicBrainz from ServicoMusicBrainz
+ * @phpstan-import-type DadosArtistaTheAudioDB from ServicoTheAudioDB
+ *
  * @since 2.0.0
  */
 final class ServicoImportacaoArtista
@@ -200,7 +203,7 @@ final class ServicoImportacaoArtista
      * a importar os restantes dados provenientes do MusicBrainz.
      *
      * @param  string  $mbid  Identificador MusicBrainz.
-     * @return array<string, mixed>|null Resultado normalizado ou nulo.
+     * @return DadosArtistaTheAudioDB|null Resultado normalizado ou nulo.
      *
      * @since 2.0.0
      */
@@ -225,7 +228,7 @@ final class ServicoImportacaoArtista
     /**
      * Obtém a biografia proposta pelo TheAudioDB.
      *
-     * @param  array<string, mixed>|null  $theAudioDB  Dados TheAudioDB.
+     * @param  DadosArtistaTheAudioDB|null  $theAudioDB  Dados TheAudioDB.
      * @return string|null Biografia normalizada ou nulo.
      *
      * @since 2.0.0
@@ -256,7 +259,7 @@ final class ServicoImportacaoArtista
     /**
      * Obtém a imagem proposta pelo TheAudioDB.
      *
-     * @param  array<string, mixed>|null  $theAudioDB  Dados TheAudioDB.
+     * @param  DadosArtistaTheAudioDB|null  $theAudioDB  Dados TheAudioDB.
      * @return string|null Endereço externo da imagem ou nulo.
      *
      * @since 2.0.0
@@ -290,8 +293,8 @@ final class ServicoImportacaoArtista
      * A ausência de informação não é interpretada automaticamente como
      * atividade atual.
      *
-     * @param  array<string, mixed>  $musicBrainz  Dados MusicBrainz.
-     * @param  array<string, mixed>|null  $theAudioDB  Dados TheAudioDB.
+     * @param  DadosArtistaMusicBrainz  $musicBrainz  Dados MusicBrainz.
+     * @param  DadosArtistaTheAudioDB|null  $theAudioDB  Dados TheAudioDB.
      * @return string|null Estado proposto.
      *
      * @since 2.0.0
@@ -300,16 +303,24 @@ final class ServicoImportacaoArtista
         array $musicBrainz,
         ?array $theAudioDB,
     ): ?string {
+        $terminadoMusicBrainz =
+            $musicBrainz['terminado'];
+
+        $dissolvidoTheAudioDB =
+            $theAudioDB === null
+            ? null
+            : $theAudioDB['dissolvido'];
+
         if (
-            ($musicBrainz['terminado'] ?? null) === true
-            || ($theAudioDB['dissolvido'] ?? null) === true
+            $terminadoMusicBrainz === true
+            || $dissolvidoTheAudioDB === true
         ) {
             return EstadoAtividadeArtista::Terminado->value;
         }
 
         if (
-            ($musicBrainz['terminado'] ?? null) === false
-            || ($theAudioDB['dissolvido'] ?? null) === false
+            $terminadoMusicBrainz === false
+            || $dissolvidoTheAudioDB === false
         ) {
             return EstadoAtividadeArtista::Ativo->value;
         }
@@ -325,8 +336,8 @@ final class ServicoImportacaoArtista
      * Discogs são excluídos porque possuem associações próprias através dos
      * respetivos identificadores.
      *
-     * @param  array<string, mixed>  $musicBrainz  Dados MusicBrainz.
-     * @param  array<string, mixed>|null  $theAudioDB  Dados TheAudioDB.
+     * @param  DadosArtistaMusicBrainz  $musicBrainz  Dados MusicBrainz.
+     * @param  DadosArtistaTheAudioDB|null  $theAudioDB  Dados TheAudioDB.
      * @return list<array{titulo: string, url: string}> Ligações propostas.
      *
      * @since 2.0.0

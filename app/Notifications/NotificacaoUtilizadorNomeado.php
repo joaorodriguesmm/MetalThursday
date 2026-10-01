@@ -86,7 +86,7 @@ final class NotificacaoUtilizadorNomeado extends NotificacaoAplicacao
         );
 
         $this->identificadorReserva =
-            (int) $reserva->getKey();
+            $reserva->id;
 
         $this->prazo =
             $this->obterPrazo(

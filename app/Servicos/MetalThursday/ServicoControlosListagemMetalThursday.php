@@ -42,7 +42,35 @@ final class ServicoControlosListagemMetalThursday
     /**
      * Obtém os dados apresentados pelos controlos da listagem.
      *
-     * @return array<string, mixed> Dados preparados.
+     * @return array{
+     *     gruposFiltrosDisponiveis: array<int, array{
+     *         rotulo: string,
+     *         filtros: array<int, array{
+     *             chave: string,
+     *             rotulo: string,
+     *             parametro: string,
+     *             tipo: 'selecao'|'data'|'sim_nao',
+     *             chaveDados: string|null
+     *         }>
+     *     }>,
+     *     nomeParametroPesquisa: string,
+     *     pesquisaAtual: string,
+     *     opcoesPorPagina: list<int>,
+     *     porPagina: int,
+     *     nomeParametroVista: string,
+     *     vistaAtual: string,
+     *     vistaCompleta: string,
+     *     vistaSimplificada: string,
+     *     nomeParametroPorPagina: string,
+     *     nomeParametroOrdenacao: string,
+     *     ordenacaoAtual: string,
+     *     opcoesOrdenacao: list<array{chave: string, valor: string}>,
+     *     nomeParametroDirecaoOrdenacao: string,
+     *     direcaoOrdenacaoAtual: string,
+     *     opcoesDirecaoOrdenacao: list<array{chave: string, valor: string}>,
+     *     textoBotaoAlternarVista: string,
+     *     ligacaoLimparFiltros: string
+     * } Dados preparados.
      *
      * @since 2.0.0
      */

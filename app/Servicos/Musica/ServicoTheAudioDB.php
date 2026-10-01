@@ -16,6 +16,22 @@ use RuntimeException;
  * A consulta é efetuada através do MBID selecionado no MusicBrainz, evitando
  * correspondências frágeis baseadas apenas no nome do artista.
  *
+ * @phpstan-type DadosArtistaTheAudioDB array{
+ *     id: int|null,
+ *     nome: string|null,
+ *     mbid: string|null,
+ *     pais: string|null,
+ *     codigo_pais: string|null,
+ *     ano_inicio: int|null,
+ *     ano_fim: int|null,
+ *     dissolvido: bool|null,
+ *     biografia: string|null,
+ *     idioma_biografia: 'pt'|'en'|null,
+ *     imagem: string|null,
+ *     logo: string|null,
+ *     ligacoes: list<array{titulo: string, url: string}>
+ * }
+ *
  * @since 2.0.0
  */
 final class ServicoTheAudioDB
@@ -37,7 +53,7 @@ final class ServicoTheAudioDB
      * Obtém um artista através do identificador MusicBrainz.
      *
      * @param  string  $mbid  Identificador MusicBrainz.
-     * @return array<string, mixed>|null Artista normalizado ou nulo.
+     * @return DadosArtistaTheAudioDB|null Artista normalizado ou nulo.
      *
      * @throws RuntimeException Quando o MBID ou a configuração são inválidos,
      *                          ou quando o serviço não pode ser consultado.
@@ -54,7 +70,7 @@ final class ServicoTheAudioDB
 
         $chave =
             trim(
-                (string) config(
+                $this->obterConfiguracaoTexto(
                     'theaudiodb.api_key',
                     '123',
                 ),
@@ -121,7 +137,7 @@ final class ServicoTheAudioDB
     ): Response {
         $enderecoBase =
             rtrim(
-                (string) config(
+                $this->obterConfiguracaoTexto(
                     'theaudiodb.base_url',
                     'https://www.theaudiodb.com',
                 ),
@@ -131,7 +147,7 @@ final class ServicoTheAudioDB
         $tentativas =
             max(
                 1,
-                (int) config(
+                $this->obterConfiguracaoInteira(
                     'theaudiodb.tentativas',
                     2,
                 ),
@@ -140,7 +156,7 @@ final class ServicoTheAudioDB
         $intervaloRepeticao =
             max(
                 0,
-                (int) config(
+                $this->obterConfiguracaoInteira(
                     'theaudiodb.intervalo_repeticao_ms',
                     500,
                 ),
@@ -149,7 +165,7 @@ final class ServicoTheAudioDB
         $intervaloMinimoPedidos =
             max(
                 0,
-                (int) config(
+                $this->obterConfiguracaoInteira(
                     'theaudiodb.intervalo_minimo_pedidos_ms',
                     2000,
                 ),
@@ -176,7 +192,7 @@ final class ServicoTheAudioDB
                         ->timeout(
                             max(
                                 1,
-                                (int) config(
+                                $this->obterConfiguracaoInteira(
                                     'theaudiodb.timeout',
                                     10,
                                 ),
@@ -236,10 +252,60 @@ final class ServicoTheAudioDB
     }
 
     /**
+     * Obtém uma configuração textual do TheAudioDB.
+     */
+    private function obterConfiguracaoTexto(
+        string $chave,
+        string $predefinido,
+    ): string {
+        $valor =
+            config(
+                $chave,
+                $predefinido,
+            );
+
+        if (! is_string($valor)) {
+            throw new RuntimeException(
+                sprintf(
+                    'A configuração %s do TheAudioDB não é válida.',
+                    $chave,
+                ),
+            );
+        }
+
+        return $valor;
+    }
+
+    /**
+     * Obtém uma configuração inteira do TheAudioDB.
+     */
+    private function obterConfiguracaoInteira(
+        string $chave,
+        int $predefinido,
+    ): int {
+        $valor =
+            config(
+                $chave,
+                $predefinido,
+            );
+
+        if (! is_int($valor)) {
+            throw new RuntimeException(
+                sprintf(
+                    'A configuração %s do TheAudioDB não é válida.',
+                    $chave,
+                ),
+            );
+        }
+
+        return $valor;
+    }
+
+    /**
      * Normaliza a ficha do artista.
      *
-     * @param  array<string, mixed>  $artista  Ficha original.
-     * @return array<string, mixed> Ficha normalizada.
+     * @param  array<mixed, mixed>  $artista  Ficha original.
+     * @return DadosArtistaTheAudioDB Ficha normalizada.
      *
      * @since 2.0.0
      */

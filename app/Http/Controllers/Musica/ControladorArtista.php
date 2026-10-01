@@ -226,18 +226,41 @@ final class ControladorArtista extends Controller
                     $dados,
                 );
 
+                $identificadorOrigemGeografica =
+                    $dados['origem_geografica_id']
+                    ?? null;
+
+                if (
+                    ! is_int($identificadorOrigemGeografica)
+                    && $identificadorOrigemGeografica !== null
+                ) {
+                    throw new LogicException(
+                        'O identificador da origem geográfica validada não é válido.',
+                    );
+                }
+
                 $artista
                     ->origemGeografica()
                     ->associate(
-                        $dados['origem_geografica_id'],
+                        $identificadorOrigemGeografica,
                     );
 
                 $artista->saveOrFail();
 
+                $identificadoresGeneros =
+                    $dados['generos']
+                    ?? [];
+
+                if (! is_array($identificadoresGeneros)) {
+                    throw new LogicException(
+                        'Os identificadores dos géneros validados não são válidos.',
+                    );
+                }
+
                 $artista
                     ->generos()
                     ->sync(
-                        $dados['generos'],
+                        $identificadoresGeneros,
                     );
 
                 if ($ligacoes !== []) {
@@ -440,7 +463,7 @@ final class ControladorArtista extends Controller
                     }
 
                     return [
-                        'identificador' => (int) $seccao->getKey(),
+                        'identificador' => $seccao->id,
 
                         'tipo' => $tipoSeccao->nome,
 
@@ -544,16 +567,39 @@ final class ControladorArtista extends Controller
                     $dados,
                 );
 
+                $identificadorOrigemGeografica =
+                    $dados['origem_geografica_id']
+                    ?? null;
+
+                if (
+                    ! is_int($identificadorOrigemGeografica)
+                    && $identificadorOrigemGeografica !== null
+                ) {
+                    throw new LogicException(
+                        'O identificador da origem geográfica validada não é válido.',
+                    );
+                }
+
                 $artistaBloqueado
                     ->origemGeografica()
                     ->associate(
-                        $dados['origem_geografica_id'],
+                        $identificadorOrigemGeografica,
                     );
+
+                $identificadoresGeneros =
+                    $dados['generos']
+                    ?? [];
+
+                if (! is_array($identificadoresGeneros)) {
+                    throw new LogicException(
+                        'Os identificadores dos géneros validados não são válidos.',
+                    );
+                }
 
                 $alteracoesGeneros = $artistaBloqueado
                     ->generos()
                     ->sync(
-                        $dados['generos'],
+                        $identificadoresGeneros,
                     );
 
                 $ligacoesAlteradas = $this->sincronizarLigacoesSeNecessario(
@@ -746,36 +792,140 @@ final class ControladorArtista extends Controller
         Artista $artista,
         array $dados,
     ): void {
-        $artista->nome =
-            $dados['nome'];
+        $nome =
+            $dados['nome']
+            ?? null;
 
-        $artista->ano_inicio_atividade =
+        if (! is_string($nome)) {
+            throw new LogicException(
+                'O nome validado do artista não é válido.',
+            );
+        }
+
+        $artista->nome =
+            $nome;
+
+        $anoInicioAtividade =
             $dados['ano_inicio_atividade']
             ?? null;
 
-        $artista->ano_fim_atividade =
+        if (
+            ! is_int($anoInicioAtividade)
+            && $anoInicioAtividade !== null
+        ) {
+            throw new LogicException(
+                'O ano de início de atividade validado não é válido.',
+            );
+        }
+
+        $artista->ano_inicio_atividade =
+            $anoInicioAtividade;
+
+        $anoFimAtividade =
             $dados['ano_fim_atividade']
             ?? null;
 
-        $artista->estado_atividade =
+        if (
+            ! is_int($anoFimAtividade)
+            && $anoFimAtividade !== null
+        ) {
+            throw new LogicException(
+                'O ano de fim de atividade validado não é válido.',
+            );
+        }
+
+        $artista->ano_fim_atividade =
+            $anoFimAtividade;
+
+        $estadoAtividade =
             $dados['estado_atividade']
             ?? null;
 
-        $artista->biografia =
+        if (
+            ! is_string($estadoAtividade)
+            && $estadoAtividade !== null
+        ) {
+            throw new LogicException(
+                'O estado de atividade validado não é válido.',
+            );
+        }
+
+        $estadoAtividadeNormalizado =
+            $estadoAtividade !== null
+            ? EstadoAtividadeArtista::tryFrom(
+                $estadoAtividade,
+            )
+            : null;
+
+        if (
+            $estadoAtividade !== null
+            && ! $estadoAtividadeNormalizado instanceof EstadoAtividadeArtista
+        ) {
+            throw new LogicException(
+                'O estado de atividade validado não é reconhecido.',
+            );
+        }
+
+        $artista->estado_atividade =
+            $estadoAtividadeNormalizado;
+
+        $biografia =
             $dados['biografia']
             ?? null;
 
-        $artista->imagem =
+        if (! is_string($biografia) && $biografia !== null) {
+            throw new LogicException(
+                'A biografia validada do artista não é válida.',
+            );
+        }
+
+        $artista->biografia =
+            $biografia;
+
+        $imagem =
             $dados['imagem']
             ?? null;
 
-        $artista->musicbrainz_id =
+        if (! is_string($imagem) && $imagem !== null) {
+            throw new LogicException(
+                'A imagem validada do artista não é válida.',
+            );
+        }
+
+        $artista->imagem =
+            $imagem;
+
+        $identificadorMusicBrainz =
             $dados['musicbrainz_id']
             ?? null;
 
-        $artista->discogs_id =
+        if (
+            ! is_string($identificadorMusicBrainz)
+            && $identificadorMusicBrainz !== null
+        ) {
+            throw new LogicException(
+                'O identificador MusicBrainz validado não é válido.',
+            );
+        }
+
+        $artista->musicbrainz_id =
+            $identificadorMusicBrainz;
+
+        $identificadorDiscogs =
             $dados['discogs_id']
             ?? null;
+
+        if (
+            ! is_int($identificadorDiscogs)
+            && $identificadorDiscogs !== null
+        ) {
+            throw new LogicException(
+                'O identificador Discogs validado não é válido.',
+            );
+        }
+
+        $artista->discogs_id =
+            $identificadorDiscogs;
     }
 
     /**
@@ -1102,12 +1252,12 @@ final class ControladorArtista extends Controller
         $origemGeografica = $artista->origemGeografica;
 
         return [
-            'id' => (int) $artista->getKey(),
+            'id' => $artista->id,
             'nome' => $artista->nome,
             'ano_inicio_atividade' => $artista->ano_inicio_atividade,
             'origem_geografica' => $origemGeografica instanceof OrigemGeografica
                 ? [
-                    'id' => (int) $origemGeografica->getKey(),
+                    'id' => $origemGeografica->id,
                     'nome' => $origemGeografica->nome,
                 ]
                 : null,
@@ -1172,7 +1322,7 @@ final class ControladorArtista extends Controller
             }
 
             $generos[] = [
-                'id' => (int) $genero->getKey(),
+                'id' => $genero->id,
 
                 'nome' => $genero->nome,
             ];
@@ -1186,7 +1336,7 @@ final class ControladorArtista extends Controller
             }
 
             $ligacoes[] = [
-                'id' => (int) $ligacao->getKey(),
+                'id' => $ligacao->id,
 
                 'titulo' => $ligacao->titulo,
 
@@ -1200,19 +1350,19 @@ final class ControladorArtista extends Controller
             $artista->estado_atividade;
 
         return [
-            'id' => (int) $artista->getKey(),
+            'id' => $artista->id,
 
             'nome' => $artista->nome,
 
             'rotulo_selecao' => $artista->obterRotuloSelecao(),
 
             'origem_geografica_id' => $origemGeografica instanceof OrigemGeografica
-                ? (int) $origemGeografica->getKey()
+                ? $origemGeografica->id
                 : null,
 
             'origem_geografica' => $origemGeografica instanceof OrigemGeografica
                 ? [
-                    'id' => (int) $origemGeografica->getKey(),
+                    'id' => $origemGeografica->id,
 
                     'nome' => $origemGeografica->nome,
                 ]

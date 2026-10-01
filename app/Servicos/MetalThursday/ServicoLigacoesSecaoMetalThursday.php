@@ -162,13 +162,37 @@ final class ServicoLigacoesSecaoMetalThursday
                 );
             }
 
+            $url =
+                $dadosLigacao['url']
+                ?? null;
+
+            if (! is_string($url)) {
+                throw new InvalidArgumentException(
+                    sprintf(
+                        'O campo %s.url não contém um endereço válido.',
+                        $campoLigacao,
+                    ),
+                );
+            }
+
+            $etiqueta =
+                $dadosLigacao['etiqueta']
+                ?? null;
+
+            if (! is_string($etiqueta) && $etiqueta !== null) {
+                throw new InvalidArgumentException(
+                    sprintf(
+                        'O campo %s.etiqueta não contém texto válido.',
+                        $campoLigacao,
+                    ),
+                );
+            }
+
             $ligacao = new LigacaoSeccaoMetalThursday;
 
-            $ligacao->url = $dadosLigacao['url']
-                ?? null;
+            $ligacao->url = $url;
 
-            $ligacao->etiqueta = $dadosLigacao['etiqueta']
-                ?? null;
+            $ligacao->etiqueta = $etiqueta;
 
             $incorporar = $this->normalizarBooleano(
                 $dadosLigacao['incorporar']

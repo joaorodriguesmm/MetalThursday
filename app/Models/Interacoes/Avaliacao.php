@@ -138,9 +138,27 @@ class Avaliacao extends Model
     protected function pontuacao(): Attribute
     {
         return Attribute::make(
-            get: static fn (
+            get: static function (
                 mixed $valor,
-            ): float => (float) $valor,
+            ): float {
+                if (
+                    ! is_int($valor)
+                    && ! is_float($valor)
+                    && ! is_string($valor)
+                ) {
+                    throw new InvalidArgumentException(
+                        'A pontuação persistida da avaliação não é válida.',
+                    );
+                }
+
+                if (! is_numeric($valor)) {
+                    throw new InvalidArgumentException(
+                        'A pontuação persistida da avaliação não é numérica.',
+                    );
+                }
+
+                return (float) $valor;
+            },
 
             set: static function (
                 mixed $valor,

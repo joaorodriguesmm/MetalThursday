@@ -10,6 +10,7 @@ use App\Models\MetalThursday\ReservaMetalThursday;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use InvalidArgumentException;
+use LogicException;
 
 /**
  * Recorda por e-mail o responsável de uma reserva de MetalThursday que
@@ -67,7 +68,7 @@ final class NotificacaoLembreteAtrasoMetalThursday extends NotificacaoAplicacao
         );
 
         $this->identificadorReserva =
-            (int) $reserva->getKey();
+            $reserva->id;
 
         $data =
             $reserva->data;
@@ -193,13 +194,22 @@ final class NotificacaoLembreteAtrasoMetalThursday extends NotificacaoAplicacao
     private function normalizarDataReferencia(
         CarbonInterface $referencia,
     ): CarbonImmutable {
+        $fusoHorario =
+            config(
+                'app.timezone',
+            );
+
+        if (! is_string($fusoHorario)) {
+            throw new LogicException(
+                'O fuso horário da aplicação não é válido.',
+            );
+        }
+
         return CarbonImmutable::instance(
             $referencia,
         )
             ->setTimezone(
-                (string) config(
-                    'app.timezone',
-                ),
+                $fusoHorario,
             )
             ->startOfDay();
     }

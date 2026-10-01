@@ -100,7 +100,7 @@ final class ControladorAudicao extends Controller
             $this->obterUtilizadorAutenticado();
 
         $identificadorUtilizador =
-            (int) $utilizador->getKey();
+            $utilizador->id;
 
         $audivel =
             $this->resolverAudivel(

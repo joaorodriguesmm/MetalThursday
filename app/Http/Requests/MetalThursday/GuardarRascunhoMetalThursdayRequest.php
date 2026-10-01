@@ -78,8 +78,8 @@ final class GuardarRascunhoMetalThursdayRequest extends FormRequest
             || ! is_numeric(
                 $reserva->responsavel_id,
             )
-            || (int) $reserva->responsavel_id
-            !== (int) $utilizador->getKey()
+            || $reserva->responsavel_id
+            !== $utilizador->id
         ) {
             return false;
         }

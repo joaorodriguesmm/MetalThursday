@@ -210,13 +210,13 @@ final class ServicoPermissoesEmail
                     $identificadores,
                 )
                 ->lockForUpdate()
-                ->pluck(
+                ->get([
                     'id',
-                )
+                ])
                 ->map(
                     static fn (
-                        mixed $identificador,
-                    ): int => (int) $identificador,
+                        PermissaoEmail $permissao,
+                    ): int => $permissao->id,
                 )
                 ->all();
 

@@ -271,13 +271,10 @@ final class ServicoApresentacaoDetalhesEdicao
         foreach ($grupos as $grupo) {
             $posicoesRegistadas =
                 $grupo['escolhas']
-                    ->pluck(
-                        'posicao',
-                    )
                     ->map(
                         static fn (
-                            mixed $posicao,
-                        ): int => (int) $posicao,
+                            MusicaFavoritaEdicao $escolha,
+                        ): int => $escolha->posicao,
                     )
                     ->sort()
                     ->values()

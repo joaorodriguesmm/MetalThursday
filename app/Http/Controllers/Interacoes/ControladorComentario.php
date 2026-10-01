@@ -111,7 +111,7 @@ final class ControladorComentario extends Controller
             $this->obterUtilizadorAutenticado();
 
         $identificadorUtilizador =
-            (int) $utilizador->getKey();
+            $utilizador->id;
 
         $conteudo =
             $pedido->obterConteudo();
@@ -246,7 +246,7 @@ final class ControladorComentario extends Controller
             );
 
         $identificadorUtilizador =
-            (int) $utilizador->getKey();
+            $utilizador->id;
 
         $respostas =
             $comentario
@@ -276,7 +276,7 @@ final class ControladorComentario extends Controller
                 ->all();
 
         return response()->json([
-            'comentario_id' => (int) $comentario->getKey(),
+            'comentario_id' => $comentario->id,
 
             'numero_respostas' => count(
                 $respostasSerializadas,
@@ -314,7 +314,7 @@ final class ControladorComentario extends Controller
             $this->obterUtilizadorAutenticado();
 
         $identificadorUtilizador =
-            (int) $utilizador->getKey();
+            $utilizador->id;
 
         $conteudo =
             $pedido->obterConteudo();
@@ -377,7 +377,7 @@ final class ControladorComentario extends Controller
 
                                 'conteudo' => $conteudo,
 
-                                'comentario_pai_id' => (int) $comentarioRespondido->getKey(),
+                                'comentario_pai_id' => $comentarioRespondido->id,
                             ]);
 
                     return [
@@ -608,8 +608,7 @@ final class ControladorComentario extends Controller
                     }
 
                     $identificadorComentario =
-                        (int) $comentarioBloqueado
-                            ->getKey();
+                        $comentarioBloqueado->id;
 
                     $identificadorPai =
                         $comentarioBloqueado
@@ -681,7 +680,7 @@ final class ControladorComentario extends Controller
 
             'numero_conteudos_removidos' => 1,
 
-            'comentario_id' => (int) $comentario->getKey(),
+            'comentario_id' => $comentario->id,
 
             'comentario_pai_id' => $resultado['comentario_pai_id'],
 
@@ -871,8 +870,7 @@ final class ControladorComentario extends Controller
                     'comentarios_removidos_ids' => $identificadoresRemovidos,
 
                     'pai_atualizado' => [
-                        'id' => (int) $comentarioPai
-                            ->getKey(),
+                        'id' => $comentarioPai->id,
 
                         'numero_respostas' => $numeroRespostas,
                     ],
@@ -884,8 +882,7 @@ final class ControladorComentario extends Controller
                     ->comentario_pai_id;
 
             $identificadoresRemovidos[] =
-                (int) $comentarioPai
-                    ->getKey();
+                $comentarioPai->id;
 
             $comentarioPai
                 ->deleteOrFail();
@@ -957,7 +954,7 @@ final class ControladorComentario extends Controller
                 ->temConteudoEliminado();
 
         return [
-            'id' => (int) $comentario->getKey(),
+            'id' => $comentario->id,
 
             'conteudo' => $conteudoEliminado
                 ? 'Comentário eliminado'
@@ -992,7 +989,7 @@ final class ControladorComentario extends Controller
             'utilizador' => ! $conteudoEliminado
                 && $utilizador instanceof Utilizador
                 ? [
-                    'id' => (int) $utilizador->getKey(),
+                    'id' => $utilizador->id,
 
                     'nome' => $utilizador->nome,
 

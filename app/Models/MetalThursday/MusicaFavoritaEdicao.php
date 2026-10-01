@@ -144,9 +144,23 @@ class MusicaFavoritaEdicao extends Model
     protected function posicao(): Attribute
     {
         return Attribute::make(
-            get: static fn (
+            get: static function (
                 mixed $valor,
-            ): int => (int) $valor,
+            ): int {
+                if (
+                    ! is_int($valor)
+                    && (
+                        ! is_string($valor)
+                        || ! ctype_digit($valor)
+                    )
+                ) {
+                    throw new InvalidArgumentException(
+                        'A posição persistida da música favorita não é válida.',
+                    );
+                }
+
+                return (int) $valor;
+            },
 
             set: static function (
                 mixed $valor,

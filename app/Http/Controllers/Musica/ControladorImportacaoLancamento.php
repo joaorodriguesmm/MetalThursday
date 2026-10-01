@@ -131,7 +131,7 @@ final class ControladorImportacaoLancamento extends Controller
 
         return response()->json([
             'lancamento' => [
-                'id' => (int) $lancamento->getKey(),
+                'id' => $lancamento->id,
                 'discogs_release_id' => (int) $lancamento->discogs_release_id,
                 'titulo' => $lancamento->titulo,
                 'tipo' => $lancamento->tipo?->value,
@@ -143,7 +143,7 @@ final class ControladorImportacaoLancamento extends Controller
                         static fn (
                             FaixaLancamento $faixa,
                         ): array => [
-                            'id' => (int) $faixa->getKey(),
+                            'id' => $faixa->id,
                             'musica_id' => (int) $faixa->musica_id,
                             'titulo' => $faixa->musica?->titulo,
                             'posicao' => $faixa->posicao,

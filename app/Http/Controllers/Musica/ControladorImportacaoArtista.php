@@ -187,10 +187,10 @@ final class ControladorImportacaoArtista extends Controller
         }
 
         $artista['origem_geografica_id'] =
-            (int) $origemGeografica->getKey();
+            $origemGeografica->id;
 
         $artista['origem_geografica'] = [
-            'id' => (int) $origemGeografica->getKey(),
+            'id' => $origemGeografica->id,
 
             'nome' => $origemGeografica->nome,
 

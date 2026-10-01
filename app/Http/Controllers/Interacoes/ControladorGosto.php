@@ -122,7 +122,7 @@ final class ControladorGosto extends Controller
             $this->obterUtilizadorAutenticado();
 
         $identificadorUtilizador =
-            (int) $utilizador->getKey();
+            $utilizador->id;
 
         /**
          * @var array{

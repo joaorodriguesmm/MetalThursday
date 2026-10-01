@@ -261,13 +261,22 @@ final class CriarConviteRequest extends FormRequest
             );
         }
 
+        $fusoHorario =
+            config(
+                'app.timezone',
+                'UTC',
+            );
+
+        if (! is_string($fusoHorario)) {
+            throw new LogicException(
+                'O fuso horário da aplicação não é válido.',
+            );
+        }
+
         try {
             return CarbonImmutable::parse(
                 $valor,
-                (string) config(
-                    'app.timezone',
-                    'UTC',
-                ),
+                $fusoHorario,
             )->startOfMinute();
         } catch (Throwable $excecao) {
             throw new LogicException(

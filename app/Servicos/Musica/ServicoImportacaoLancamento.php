@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Servicos\Musica;
 
+use App\Enumeracoes\TipoLancamento;
 use App\Models\Musica\FaixaLancamento;
 use App\Models\Musica\Lancamento;
 use App\Models\Musica\Musica;
@@ -17,6 +18,8 @@ use RuntimeException;
  *
  * A integração Discogs é responsável pela consulta e normalização dos dados.
  * Este serviço decide quais desses dados pertencem ao catálogo persistido.
+ *
+ * @phpstan-import-type DadosLancamentoDiscogs from ServicoDiscogs
  *
  * @since 2.0.0
  */
@@ -125,54 +128,63 @@ final class ServicoImportacaoLancamento
         }
 
         try {
-            return Cache::lock(
-                self::PREFIXO_BLOQUEIO_IMPORTACAO
-                    .$identificadorDiscogs,
-                self::DURACAO_BLOQUEIO_SEGUNDOS,
-            )->block(
-                self::ESPERA_BLOQUEIO_SEGUNDOS,
-                function () use (
-                    $identificadorDiscogs,
-                    $dados,
-                ): Lancamento {
-                    return DB::transaction(
-                        function () use (
-                            $identificadorDiscogs,
-                            $dados,
-                        ): Lancamento {
-                            $existenteBloqueado =
-                                Lancamento::withTrashed()
-                                    ->where(
-                                        'discogs_release_id',
-                                        $identificadorDiscogs,
-                                    )
-                                    ->lockForUpdate()
-                                    ->first();
+            $resultado =
+                Cache::lock(
+                    self::PREFIXO_BLOQUEIO_IMPORTACAO
+                        .$identificadorDiscogs,
+                    self::DURACAO_BLOQUEIO_SEGUNDOS,
+                )->block(
+                    self::ESPERA_BLOQUEIO_SEGUNDOS,
+                    function () use (
+                        $identificadorDiscogs,
+                        $dados,
+                    ): Lancamento {
+                        return DB::transaction(
+                            function () use (
+                                $identificadorDiscogs,
+                                $dados,
+                            ): Lancamento {
+                                $existenteBloqueado =
+                                    Lancamento::withTrashed()
+                                        ->where(
+                                            'discogs_release_id',
+                                            $identificadorDiscogs,
+                                        )
+                                        ->lockForUpdate()
+                                        ->first();
 
-                            if (
-                                $existenteBloqueado
-                                instanceof Lancamento
-                            ) {
-                                return $this->reutilizarLancamento(
-                                    $existenteBloqueado,
+                                if (
+                                    $existenteBloqueado
+                                    instanceof Lancamento
+                                ) {
+                                    return $this->reutilizarLancamento(
+                                        $existenteBloqueado,
+                                        $dados,
+                                    );
+                                }
+
+                                if ($dados === null) {
+                                    throw new RuntimeException(
+                                        'Os dados do lançamento não estão disponíveis para concluir a importação.',
+                                    );
+                                }
+
+                                return $this->criarLancamento(
                                     $dados,
                                 );
-                            }
+                            },
+                            self::TENTATIVAS_TRANSACAO,
+                        );
+                    },
+                );
 
-                            if ($dados === null) {
-                                throw new RuntimeException(
-                                    'Os dados do lançamento não estão disponíveis para concluir a importação.',
-                                );
-                            }
+            if (! $resultado instanceof Lancamento) {
+                throw new RuntimeException(
+                    'A importação do lançamento não devolveu um lançamento válido.',
+                );
+            }
 
-                            return $this->criarLancamento(
-                                $dados,
-                            );
-                        },
-                        self::TENTATIVAS_TRANSACAO,
-                    );
-                },
-            );
+            return $resultado;
         } catch (LockTimeoutException $excecao) {
             throw new RuntimeException(
                 'Não foi possível coordenar a importação concorrente do lançamento.',
@@ -201,7 +213,7 @@ final class ServicoImportacaoLancamento
      * Discogs preenchem apenas valores ainda desconhecidos, preservando
      * correções efetuadas manualmente.
      *
-     * @param  array<string, mixed>|null  $dados  Dados normalizados do Discogs.
+     * @param  DadosLancamentoDiscogs|null  $dados  Dados normalizados do Discogs.
      *
      * @since 2.0.0
      */
@@ -219,12 +231,26 @@ final class ServicoImportacaoLancamento
 
         $alterado = false;
 
+        $tipoSugerido =
+            $dados['tipo_sugerido'];
+
         if (
             $lancamento->tipo === null
-            && ($dados['tipo_sugerido'] ?? null) !== null
+            && $tipoSugerido !== null
         ) {
+            $tipo =
+                TipoLancamento::tryFrom(
+                    $tipoSugerido,
+                );
+
+            if (! $tipo instanceof TipoLancamento) {
+                throw new RuntimeException(
+                    'O Discogs devolveu um tipo de lançamento inválido.',
+                );
+            }
+
             $lancamento->tipo =
-                $dados['tipo_sugerido'];
+                $tipo;
 
             $alterado = true;
         }
@@ -249,7 +275,7 @@ final class ServicoImportacaoLancamento
     /**
      * Persiste um lançamento novo e a respetiva tracklist.
      *
-     * @param  array<string, mixed>  $dados  Dados normalizados do Discogs.
+     * @param  DadosLancamentoDiscogs  $dados  Dados normalizados do Discogs.
      *
      * @since 2.0.0
      */

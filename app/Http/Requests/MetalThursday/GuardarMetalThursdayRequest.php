@@ -1189,7 +1189,7 @@ final class GuardarMetalThursdayRequest extends FormRequest
             ->keyBy(
                 static fn (
                     TipoSeccao $tipo,
-                ): int => (int) $tipo->getKey(),
+                ): int => $tipo->id,
             );
         $identificadoresSeccoes = [];
         foreach ($seccoes as $indice => $seccao) {

@@ -338,9 +338,23 @@ class TipoSeccao extends Model
     protected function ordem(): Attribute
     {
         return Attribute::make(
-            get: static fn (
+            get: static function (
                 mixed $valor,
-            ): int => (int) $valor,
+            ): int {
+                if (
+                    ! is_int($valor)
+                    && (
+                        ! is_string($valor)
+                        || ! ctype_digit($valor)
+                    )
+                ) {
+                    throw new InvalidArgumentException(
+                        'A ordem persistida do tipo de secção não é válida.',
+                    );
+                }
+
+                return (int) $valor;
+            },
 
             set: static function (
                 mixed $valor,

@@ -301,7 +301,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                 $reservaMetalThursday->responsavel_id,
             )
             || (int) $reservaMetalThursday->responsavel_id
-            !== (int) $utilizadorAutenticado->getKey()
+            !== $utilizadorAutenticado->id
         ) {
             abort(
                 Response::HTTP_FORBIDDEN,
@@ -492,11 +492,20 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
             );
         }
 
+        $fusoHorario =
+            config(
+                'app.timezone',
+            );
+
+        if (! is_string($fusoHorario)) {
+            throw new LogicException(
+                'O fuso horário da aplicação não é válido.',
+            );
+        }
+
         $hoje =
             CarbonImmutable::now(
-                config(
-                    'app.timezone',
-                ),
+                $fusoHorario,
             )->format(
                 'Y-m-d',
             );
@@ -955,7 +964,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
      * evoluam com relações ou agregados diferentes por engano.
      *
      * @param  int  $identificadorUtilizador  Utilizador autenticado.
-     * @return array<int|string, mixed> Relações e restrições de eager loading.
+     * @return array<int|string, string|\Closure(Relation<*, *, *>): void> Relações e restrições de eager loading.
      *
      * @since 2.0.0
      */
@@ -1571,8 +1580,19 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                 continue;
             }
 
+            $seccaoNormalizada = [];
+
+            foreach ($seccao as $chave => $valor) {
+                if (! is_string($chave)) {
+                    continue;
+                }
+
+                $seccaoNormalizada[$chave] =
+                    $valor;
+            }
+
             $seccoesNormalizadas[$indiceNormalizado] =
-                $seccao;
+                $seccaoNormalizada;
         }
 
         ksort(

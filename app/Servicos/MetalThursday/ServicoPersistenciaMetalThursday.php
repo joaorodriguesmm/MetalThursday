@@ -29,6 +29,41 @@ use Throwable;
  * persistidos atomicamente. Durante uma atualização, a MetalThursday e as
  * secções existentes são bloqueadas para impedir alterações concorrentes.
  *
+ * @phpstan-type DadosLancamentoNormalizados array{
+ *     titulo: string,
+ *     tipo: \App\Enumeracoes\TipoLancamento|null,
+ *     ano_original: int|null,
+ *     faixas: list<array{
+ *         id: int|null,
+ *         musica_id: int|null,
+ *         titulo: string,
+ *         posicao: string|null
+ *     }>
+ * }
+ * @phpstan-type DadosSeccaoNormalizada array{
+ *     id: int|null,
+ *     tipo_seccao_id: int,
+ *     artista_id: int|null,
+ *     lancamento_id: int|null,
+ *     lancamento: DadosLancamentoNormalizados|null,
+ *     titulo: string|null,
+ *     ligacoes: list<array{
+ *         etiqueta: string|null,
+ *         url: string,
+ *         incorporar: bool
+ *     }>,
+ *     ano: int|null,
+ *     descricao: string
+ * }
+ * @phpstan-type DadosMetalThursdayNormalizados array{
+ *     edicao_id: int,
+ *     data: string,
+ *     nome: string|null,
+ *     autor_id: int|null,
+ *     proximo_nomeado_id: int|null,
+ *     seccoes: list<DadosSeccaoNormalizada>
+ * }
+ *
  * @since 2.0.0
  */
 final class ServicoPersistenciaMetalThursday
@@ -262,7 +297,7 @@ final class ServicoPersistenciaMetalThursday
                     ->keyBy(
                         static fn (
                             SeccaoMetalThursday $seccao,
-                        ): int => (int) $seccao->getKey(),
+                        ): int => $seccao->id,
                     );
 
                 $this->garantirIdentificadoresSeccoesValidos(
@@ -380,23 +415,7 @@ final class ServicoPersistenciaMetalThursday
      * Apenas os nomes finais em português são aceites.
      *
      * @param  array<string, mixed>  $dados  Dados recebidos.
-     * @return array{
-     *     edicao_id: int,
-     *     data: string,
-     *     nome: string|null,
-     *     autor_id: int|null,
-     *     proximo_nomeado_id: int|null,
-     *     seccoes: list<array{
-     *         id: int|null,
-     *         tipo_seccao_id: int,
-     *         artista_id: int|null,
-     *         lancamento_id: int|null,
-     *         titulo: string|null,
-     *         ligacoes: list<array{etiqueta: string|null, url: string, incorporar: bool}>,
-     *         ano: int|null,
-     *         descricao: string
-     *     }>
-     * } Dados normalizados.
+     * @return DadosMetalThursdayNormalizados Dados normalizados.
      *
      * @throws InvalidArgumentException Quando algum valor não é válido.
      *
@@ -530,7 +549,7 @@ final class ServicoPersistenciaMetalThursday
      * Preenche os atributos principais de uma MetalThursday.
      *
      * @param  MetalThursday  $metalThursday  Modelo a preencher.
-     * @param  array<string, mixed>  $dados  Dados normalizados.
+     * @param  DadosMetalThursdayNormalizados  $dados  Dados normalizados.
      *
      * @since 2.0.0
      */
@@ -545,7 +564,9 @@ final class ServicoPersistenciaMetalThursday
             );
 
         $metalThursday->data =
-            $dados['data'];
+            CarbonImmutable::parse(
+                $dados['data'],
+            );
 
         $metalThursday->nome =
             $dados['nome'];
@@ -580,7 +601,7 @@ final class ServicoPersistenciaMetalThursday
      *
      * @param  int  $identificadorMetalThursday  Identificador da
      *                                           MetalThursday.
-     * @param  array<string, mixed>  $dados  Dados normalizados.
+     * @param  DadosSeccaoNormalizada  $dados  Dados normalizados.
      * @param  TipoSeccao  $tipoSeccao  Tipo da secção.
      * @param  int  $ordem  Posição da secção.
      *
@@ -624,7 +645,7 @@ final class ServicoPersistenciaMetalThursday
      * versão anterior da secção. A descrição permanece sempre obrigatória.
      *
      * @param  SeccaoMetalThursday  $seccao  Secção a preencher.
-     * @param  array<string, mixed>  $dados  Dados normalizados.
+     * @param  DadosSeccaoNormalizada  $dados  Dados normalizados.
      * @param  TipoSeccao  $tipoSeccao  Tipo da secção.
      * @param  int  $ordem  Posição da secção.
      *
@@ -733,7 +754,7 @@ final class ServicoPersistenciaMetalThursday
     /**
      * Bloqueia e confirma a edição principal.
      *
-     * @param  array<string, mixed>  $dados  Dados normalizados.
+     * @param  DadosMetalThursdayNormalizados  $dados  Dados normalizados.
      *
      * @throws InvalidArgumentException Quando a edição não existe ou a data não
      *                                  lhe pertence.
@@ -765,7 +786,7 @@ final class ServicoPersistenciaMetalThursday
     /**
      * Bloqueia e confirma os utilizadores das relações principais.
      *
-     * @param  array<string, mixed>  $dados  Dados normalizados.
+     * @param  DadosMetalThursdayNormalizados  $dados  Dados normalizados.
      *
      * @throws InvalidArgumentException Quando algum utilizador não existe.
      *
@@ -805,13 +826,13 @@ final class ServicoPersistenciaMetalThursday
                 'id',
             )
             ->lockForUpdate()
-            ->pluck(
+            ->get([
                 'id',
-            )
+            ])
             ->map(
                 static fn (
-                    mixed $identificador,
-                ): int => (int) $identificador,
+                    Utilizador $utilizador,
+                ): int => $utilizador->id,
             )
             ->all();
 
@@ -871,7 +892,7 @@ final class ServicoPersistenciaMetalThursday
     /**
      * Confirma os detalhes obrigatórios de uma secção detalhada.
      *
-     * @param  array<string, mixed>  $dados  Dados normalizados da secção.
+     * @param  DadosSeccaoNormalizada  $dados  Dados normalizados da secção.
      * @param  TipoSeccao  $tipoSeccao  Tipo da secção.
      *
      * @throws InvalidArgumentException Quando falta algum detalhe obrigatório.
@@ -906,7 +927,7 @@ final class ServicoPersistenciaMetalThursday
     /**
      * Confirma que um tipo simples não recebeu detalhes musicais.
      *
-     * @param  array<string, mixed>  $dados  Dados normalizados da secção.
+     * @param  DadosSeccaoNormalizada  $dados  Dados normalizados da secção.
      *
      * @throws InvalidArgumentException Quando existe um detalhe incompatível.
      *
@@ -943,7 +964,7 @@ final class ServicoPersistenciaMetalThursday
     /**
      * Obtém e bloqueia os tipos utilizados pelas secções.
      *
-     * @param  list<array<string, mixed>>  $seccoes  Secções normalizadas.
+     * @param  list<DadosSeccaoNormalizada>  $seccoes  Secções normalizadas.
      * @return ColecaoEloquent<int, TipoSeccao> Tipos indexados pelo
      *                                          identificador.
      *
@@ -982,7 +1003,7 @@ final class ServicoPersistenciaMetalThursday
             ->keyBy(
                 static fn (
                     TipoSeccao $tipoSeccao,
-                ): int => (int) $tipoSeccao->getKey(),
+                ): int => $tipoSeccao->id,
             );
 
         if (
@@ -1038,7 +1059,7 @@ final class ServicoPersistenciaMetalThursday
      * Um artista eliminado não pode ser associado a uma secção nova nem
      * transferido para outra secção.
      *
-     * @param  list<array<string, mixed>>  $seccoes  Secções recebidas.
+     * @param  list<DadosSeccaoNormalizada>  $seccoes  Secções recebidas.
      * @param  ColecaoEloquent<int, TipoSeccao>  $tiposSeccao  Tipos utilizados.
      * @param  ColecaoEloquent<int, SeccaoMetalThursday>|null  $seccoesExistentes
      *                                                                             Secções atuais.
@@ -1111,7 +1132,7 @@ final class ServicoPersistenciaMetalThursday
             ->keyBy(
                 static fn (
                     Artista $artista,
-                ): int => (int) $artista->getKey(),
+                ): int => $artista->id,
             );
 
         foreach ($associacoes as $associacao) {
@@ -1181,7 +1202,7 @@ final class ServicoPersistenciaMetalThursday
      * Um lançamento eliminado não pode ser associado a uma secção nova nem
      * transferido para outra secção.
      *
-     * @param  list<array<string, mixed>>  $seccoes  Secções recebidas.
+     * @param  list<DadosSeccaoNormalizada>  $seccoes  Secções recebidas.
      * @param  ColecaoEloquent<int, TipoSeccao>  $tiposSeccao  Tipos utilizados.
      * @param  ColecaoEloquent<int, SeccaoMetalThursday>|null  $seccoesExistentes
      *                                                                             Secções atuais.
@@ -1254,7 +1275,7 @@ final class ServicoPersistenciaMetalThursday
             ->keyBy(
                 static fn (
                     Lancamento $lancamento,
-                ): int => (int) $lancamento->getKey(),
+                ): int => $lancamento->id,
             );
 
         foreach ($associacoes as $associacao) {
@@ -1317,7 +1338,7 @@ final class ServicoPersistenciaMetalThursday
     /**
      * Confirma que as secções recebidas pertencem à MetalThursday.
      *
-     * @param  list<array<string, mixed>>  $seccoes  Secções recebidas.
+     * @param  list<DadosSeccaoNormalizada>  $seccoes  Secções recebidas.
      * @param  ColecaoEloquent<int, SeccaoMetalThursday>  $existentes  Secções
      *                                                                 atuais.
      *
@@ -1383,13 +1404,10 @@ final class ServicoPersistenciaMetalThursday
         }
 
         $maiorOrdemExistente = $seccoes
-            ->pluck(
-                'ordem',
-            )
             ->map(
                 static fn (
-                    mixed $ordem,
-                ): int => (int) $ordem,
+                    SeccaoMetalThursday $seccao,
+                ): int => $seccao->ordem,
             )
             ->max();
 
@@ -1418,7 +1436,7 @@ final class ServicoPersistenciaMetalThursday
     /**
      * Elimina logicamente as secções que deixaram de ser enviadas.
      *
-     * @param  list<array<string, mixed>>  $seccoes  Secções recebidas.
+     * @param  list<DadosSeccaoNormalizada>  $seccoes  Secções recebidas.
      * @param  ColecaoEloquent<int, SeccaoMetalThursday>  $existentes  Secções
      *                                                                 atuais.
      *
@@ -1912,7 +1930,7 @@ final class ServicoPersistenciaMetalThursday
      * qualquer alteração. Assim, uma publicação tardia não consegue substituir
      * uma decisão já tomada pelo fallback.
      *
-     * @param  array<string, mixed>  $dados  Dados normalizados.
+     * @param  DadosMetalThursdayNormalizados  $dados  Dados normalizados.
      * @return ReservaMetalThursday|null Reserva criada ou nulo quando não foi
      *                                   criado um novo slot.
      *
@@ -1946,7 +1964,7 @@ final class ServicoPersistenciaMetalThursday
      * forma, o campo legado da MetalThursday pode espelhar a decisão persistida
      * em `reservas_metal_thursday`.
      *
-     * @param  array<string, mixed>  $dados  Dados normalizados.
+     * @param  DadosMetalThursdayNormalizados  $dados  Dados normalizados.
      * @return ReservaMetalThursday|null Reserva efetiva ou nulo quando o slot
      *                                   ainda não existe.
      *
@@ -1976,9 +1994,9 @@ final class ServicoPersistenciaMetalThursday
      * verdade, incluindo quando o fallback já tinha decidido outro responsável
      * ou quando o slot existe sem responsável atribuído.
      *
-     * @param  array<string, mixed>  $dados  Dados normalizados.
+     * @param  DadosMetalThursdayNormalizados  $dados  Dados normalizados.
      * @param  ReservaMetalThursday|null  $reservaSeguinte  Reserva efetiva.
-     * @return array<string, mixed> Dados preparados para persistência.
+     * @return DadosMetalThursdayNormalizados Dados preparados para persistência.
      *
      * @since 2.0.0
      */
@@ -2005,9 +2023,9 @@ final class ServicoPersistenciaMetalThursday
      * como editável, mas o serviço mantém esta proteção independentemente do
      * pedido recebido.
      *
-     * @param  array<string, mixed>  $dados  Dados normalizados.
+     * @param  DadosMetalThursdayNormalizados  $dados  Dados normalizados.
      * @param  MetalThursday  $metalThursday  Registo bloqueado.
-     * @return array<string, mixed> Dados preparados para persistência.
+     * @return DadosMetalThursdayNormalizados Dados preparados para persistência.
      *
      * @since 2.0.0
      */
@@ -2056,7 +2074,7 @@ final class ServicoPersistenciaMetalThursday
      * coincidir com esse utilizador. Um slot sem responsável pode ser tratado
      * administrativamente.
      *
-     * @param  array<string, mixed>  $dados  Dados normalizados.
+     * @param  DadosMetalThursdayNormalizados  $dados  Dados normalizados.
      * @return ReservaMetalThursday|null Reserva encontrada ou nulo.
      *
      * @throws InvalidArgumentException Quando a reserva não pode ser cumprida
