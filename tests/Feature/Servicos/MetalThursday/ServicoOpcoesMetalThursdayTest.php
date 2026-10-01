@@ -256,6 +256,58 @@ final class ServicoOpcoesMetalThursdayTest extends TestCase
     }
 
     #[Test]
+    public function artistas_para_filtro_da_listagem_carregam_apenas_identificador_e_nome(): void
+    {
+        $artistaZulu = Artista::factory()
+            ->comNome(
+                'Zulu',
+            )
+            ->create();
+
+        $artistaAlfa = Artista::factory()
+            ->comNome(
+                'Alfa',
+            )
+            ->create();
+
+        $artistaEliminado = Artista::factory()
+            ->comNome(
+                'Eliminado',
+            )
+            ->create();
+
+        $artistaEliminado->delete();
+
+        $artistas = (new ServicoOpcoesMetalThursday)
+            ->obterArtistasParaFiltroListagem();
+
+        self::assertSame(
+            [
+                $artistaAlfa->getKey(),
+                $artistaZulu->getKey(),
+            ],
+            $artistas->modelKeys(),
+        );
+
+        foreach ($artistas as $artista) {
+            self::assertSame(
+                [
+                    'id',
+                    'nome',
+                ],
+                array_keys(
+                    $artista->getAttributes(),
+                ),
+            );
+
+            self::assertSame(
+                [],
+                $artista->getRelations(),
+            );
+        }
+    }
+
+    #[Test]
     public function selecao_de_artistas_preserva_atual_eliminado_e_exclui_restantes_eliminados(): void
     {
         $artistaAtivo = Artista::factory()
@@ -281,7 +333,7 @@ final class ServicoOpcoesMetalThursdayTest extends TestCase
 
         $seccao = new SeccaoMetalThursday;
         $seccao->artista_id =
-            $artistaAtualEliminado->getKey();
+            $artistaAtualEliminado->id;
 
         $metalThursday = new MetalThursday;
         $metalThursday->setRelation(

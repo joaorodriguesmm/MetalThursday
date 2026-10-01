@@ -132,6 +132,33 @@ final class ServicoOpcoesMetalThursday
     }
 
     /**
+     * Obtém os artistas apresentados no filtro da listagem.
+     *
+     * Este catálogo carrega apenas os atributos utilizados pelo filtro.
+     * Os dados contextuais necessários aos formulários continuam a ser
+     * obtidos através de {@see obterArtistasParaSelecao()}.
+     *
+     * @return Collection<int, Artista>
+     *
+     * @since 2.0.0
+     */
+    public function obterArtistasParaFiltroListagem(): Collection
+    {
+        return Artista::query()
+            ->select([
+                'id',
+                'nome',
+            ])
+            ->orderBy(
+                'nome',
+            )
+            ->orderBy(
+                'id',
+            )
+            ->get();
+    }
+
+    /**
      * Obtém os artistas disponíveis para seleção.
      *
      * Durante a edição, os artistas já associados às secções permanecem
