@@ -587,6 +587,94 @@ class MetalThursday extends Model
     }
 
     /**
+     * Carrega em lote o número sequencial das MetalThursdays recebidas.
+     *
+     * O cálculo é executado numa única consulta apenas para os registos
+     * apresentados. Coleções vazias não originam qualquer consulta.
+     *
+     * @param  Collection<int, MetalThursday>  $registos  Registos a completar.
+     *
+     * @since 2.0.0
+     */
+    public static function carregarNumerosSemanaNaEdicao(
+        Collection $registos,
+    ): void {
+        if ($registos->isEmpty()) {
+            return;
+        }
+
+        $identificadores =
+            $registos
+                ->filter(
+                    static fn (
+                        self $metalThursday,
+                    ): bool => $metalThursday->exists
+                        && ! $metalThursday->trashed(),
+                )
+                ->map(
+                    static fn (
+                        self $metalThursday,
+                    ): int => $metalThursday->id,
+                )
+                ->values()
+                ->all();
+
+        if ($identificadores === []) {
+            foreach ($registos as $metalThursday) {
+                $metalThursday->setAttribute(
+                    self::COLUNA_NUMERO_SEMANA_NA_EDICAO,
+                    null,
+                );
+
+                $metalThursday->syncOriginalAttribute(
+                    self::COLUNA_NUMERO_SEMANA_NA_EDICAO,
+                );
+            }
+
+            return;
+        }
+
+        $registosNumerados =
+            self::query()
+                ->select([
+                    'id',
+                ])
+                ->comNumeroSemanaNaEdicao()
+                ->whereKey(
+                    $identificadores,
+                )
+                ->get()
+                ->keyBy(
+                    'id',
+                );
+
+        foreach ($registos as $metalThursday) {
+            $registoNumerado =
+                $registosNumerados->get(
+                    $metalThursday->id,
+                );
+
+            $valor =
+                $registoNumerado instanceof self
+                ? $registoNumerado->getAttribute(
+                    self::COLUNA_NUMERO_SEMANA_NA_EDICAO,
+                )
+                : null;
+
+            $metalThursday->setAttribute(
+                self::COLUNA_NUMERO_SEMANA_NA_EDICAO,
+                is_numeric($valor)
+                    ? (int) $valor
+                    : null,
+            );
+
+            $metalThursday->syncOriginalAttribute(
+                self::COLUNA_NUMERO_SEMANA_NA_EDICAO,
+            );
+        }
+    }
+
+    /**
      * Carrega explicitamente o número sequencial desta MetalThursday na
      * respetiva edição.
      *

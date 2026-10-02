@@ -18,6 +18,7 @@ use App\Models\Musica\Lancamento;
 use App\Servicos\MetalThursday\ServicoPersistenciaMetalThursday;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -1512,11 +1513,22 @@ final class ControladorMetalThursdayTest extends TestCase
             '2026-01-08',
         );
 
-        $this->get(
-            route(
-                'inicio',
-            ),
-        )
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        try {
+            $resposta = $this->get(
+                route(
+                    'inicio',
+                ),
+            );
+
+            $consultas = DB::getQueryLog();
+        } finally {
+            DB::disableQueryLog();
+        }
+
+        $resposta
             ->assertOk()
             ->assertSee(
                 'Semana 1',
@@ -1524,6 +1536,60 @@ final class ControladorMetalThursdayTest extends TestCase
             ->assertSee(
                 'Semana 2',
             );
+
+        $consultasJanela =
+            array_values(
+                array_filter(
+                    $consultas,
+                    static fn (
+                        array $consulta,
+                    ): bool => str_contains(
+                        mb_strtolower(
+                            $consulta['query'],
+                        ),
+                        'count(*) over()',
+                    ),
+                ),
+            );
+
+        $consultasNumeroSemana =
+            array_values(
+                array_filter(
+                    $consultas,
+                    static fn (
+                        array $consulta,
+                    ): bool => str_contains(
+                        mb_strtolower(
+                            $consulta['query'],
+                        ),
+                        'metal_thursdays_anteriores',
+                    ),
+                ),
+            );
+
+        self::assertCount(
+            1,
+            $consultasJanela,
+        );
+
+        self::assertStringNotContainsString(
+            'metal_thursdays_anteriores',
+            mb_strtolower(
+                $consultasJanela[0]['query'],
+            ),
+        );
+
+        self::assertCount(
+            1,
+            $consultasNumeroSemana,
+        );
+
+        self::assertStringNotContainsString(
+            'count(*) over()',
+            mb_strtolower(
+                $consultasNumeroSemana[0]['query'],
+            ),
+        );
     }
 
     /**

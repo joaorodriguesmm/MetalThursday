@@ -119,6 +119,135 @@ final class MetalThursdayTest extends TestCase
     }
 
     /**
+     * Confirma que a posição de vários registos é carregada numa só consulta.
+     *
+     * O carregamento deve respeitar edições diferentes, ignorar registos
+     * eliminados e manter o alias fora dos atributos modificados.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function carrega_numeros_semana_em_lote_numa_unica_consulta(): void
+    {
+        $edicao = $this->criarEdicao(
+            'Edição Principal em Lote',
+            '2026-03-01',
+            '2026-03-31',
+        );
+
+        $outraEdicao = $this->criarEdicao(
+            'Outra Edição em Lote',
+            '2026-04-01',
+            '2026-04-30',
+        );
+
+        $primeira = $this->criarMetalThursday(
+            $edicao,
+            '2026-03-05',
+        );
+
+        $eliminada = $this->criarMetalThursday(
+            $edicao,
+            '2026-03-12',
+        );
+
+        $terceira = $this->criarMetalThursday(
+            $edicao,
+            '2026-03-19',
+        );
+
+        $outra = $this->criarMetalThursday(
+            $outraEdicao,
+            '2026-04-02',
+        );
+
+        $eliminada->deleteOrFail();
+
+        $registos = MetalThursday::query()
+            ->whereKey([
+                $primeira->id,
+                $terceira->id,
+                $outra->id,
+            ])
+            ->orderBy(
+                'id',
+            )
+            ->get();
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        try {
+            MetalThursday::carregarNumerosSemanaNaEdicao(
+                $registos,
+            );
+
+            $consultas = DB::getQueryLog();
+        } finally {
+            DB::disableQueryLog();
+        }
+
+        self::assertSame(
+            [
+                1,
+                2,
+                1,
+            ],
+            $registos
+                ->pluck(
+                    MetalThursday::COLUNA_NUMERO_SEMANA_NA_EDICAO,
+                )
+                ->all(),
+        );
+
+        self::assertCount(
+            1,
+            $consultas,
+        );
+
+        foreach ($registos as $metalThursday) {
+            self::assertFalse(
+                $metalThursday->isDirty(
+                    MetalThursday::COLUNA_NUMERO_SEMANA_NA_EDICAO,
+                ),
+            );
+        }
+    }
+
+    /**
+     * Confirma que uma coleção vazia não executa qualquer consulta.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function carregamento_em_lote_vazio_nao_executa_consultas(): void
+    {
+        $registos = MetalThursday::query()
+            ->whereRaw(
+                '1 = 0',
+            )
+            ->get();
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        try {
+            MetalThursday::carregarNumerosSemanaNaEdicao(
+                $registos,
+            );
+
+            $consultas = DB::getQueryLog();
+        } finally {
+            DB::disableQueryLog();
+        }
+
+        self::assertCount(
+            0,
+            $consultas,
+        );
+    }
+
+    /**
      * Confirma que o carregamento explícito executa apenas uma consulta.
      *
      * Leituras repetidas do atributo devem reutilizar o valor carregado e o

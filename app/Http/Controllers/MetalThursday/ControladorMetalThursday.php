@@ -218,6 +218,14 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                         $porPagina,
                         $pedido,
                     );
+
+            /** @var Collection<int, MetalThursday> $registosPagina */
+            $registosPagina =
+                $registosMetalThursday->getCollection();
+
+            MetalThursday::carregarNumerosSemanaNaEdicao(
+                $registosPagina,
+            );
         }
 
         return view(
@@ -817,7 +825,6 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
     ): Builder {
         return MetalThursday::query()
             ->publicadas()
-            ->comNumeroSemanaNaEdicao()
             ->withCount([
                 'comentariosComConteudo as comentarios_count',
                 'avaliacoes',
