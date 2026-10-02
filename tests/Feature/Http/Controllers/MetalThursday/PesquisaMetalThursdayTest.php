@@ -12,6 +12,7 @@ use App\Models\MetalThursday\TipoSeccao;
 use App\Models\Musica\Artista;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Pagination\LengthAwarePaginator;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -597,14 +598,62 @@ final class PesquisaMetalThursdayTest extends TestCase
             ),
         )
             ->assertOk()
+            ->assertViewHas(
+                'seccoesSimplificadas',
+                static function (
+                    mixed $valor,
+                ) use (
+                    $seccaoCorrespondente,
+                ): bool {
+                    if (! $valor instanceof LengthAwarePaginator) {
+                        return false;
+                    }
+
+                    $seccaoApresentada =
+                        $valor
+                            ->getCollection()
+                            ->first();
+
+                    if (
+                        ! $seccaoApresentada instanceof SeccaoMetalThursday
+                        || ! $seccaoApresentada->is(
+                            $seccaoCorrespondente,
+                        )
+                    ) {
+                        return false;
+                    }
+
+                    $atributos =
+                        $seccaoApresentada->getAttributes();
+
+                    return ! array_key_exists(
+                        'avaliacoes_count',
+                        $atributos,
+                    )
+                        && ! array_key_exists(
+                            'audicoes_count',
+                            $atributos,
+                        )
+                        && ! array_key_exists(
+                            'avaliacoes_avg_pontuacao',
+                            $atributos,
+                        )
+                        && $seccaoApresentada->relationLoaded(
+                            'avaliacoes',
+                        )
+                        && $seccaoApresentada->relationLoaded(
+                            'audicoes',
+                        );
+                },
+            )
             ->assertSeeHtml(
                 'id="seccao-simplificada-'
-                    .$seccaoCorrespondente->getKey()
+                    .$seccaoCorrespondente->id
                     .'"',
             )
             ->assertDontSeeHtml(
                 'id="seccao-simplificada-'
-                    .$seccaoDiferente->getKey()
+                    .$seccaoDiferente->id
                     .'"',
             );
     }
@@ -659,30 +708,193 @@ final class PesquisaMetalThursdayTest extends TestCase
                 'Terceira descrição.',
             );
 
+        $primeiraSeccao
+            ->avaliacoes()
+            ->create([
+                'utilizador_id' => $utilizador->getKey(),
+                'pontuacao' => 9.5,
+            ]);
+
+        $segundaSeccao
+            ->avaliacoes()
+            ->create([
+                'utilizador_id' => $utilizador->getKey(),
+                'pontuacao' => 4.0,
+            ]);
+
         $this->get(
             route(
                 'inicio',
                 [
                     'vista' => 'simplificada',
                     'pesquisa' => 'especial doom',
+                    'ordenar_por' => 'classificacao',
                 ],
             ),
         )
             ->assertOk()
+            ->assertViewHas(
+                'seccoesSimplificadas',
+                static function (
+                    mixed $valor,
+                ) use (
+                    $primeiraSeccao,
+                ): bool {
+                    if (! $valor instanceof LengthAwarePaginator) {
+                        return false;
+                    }
+
+                    $seccaoApresentada =
+                        $valor
+                            ->getCollection()
+                            ->first(
+                                static fn (mixed $seccao): bool => $seccao instanceof SeccaoMetalThursday
+                                    && $seccao->is($primeiraSeccao),
+                            );
+
+                    if (! $seccaoApresentada instanceof SeccaoMetalThursday) {
+                        return false;
+                    }
+
+                    $atributos =
+                        $seccaoApresentada->getAttributes();
+
+                    return ! array_key_exists(
+                        'avaliacoes_count',
+                        $atributos,
+                    )
+                        && ! array_key_exists(
+                            'audicoes_count',
+                            $atributos,
+                        )
+                        && array_key_exists(
+                            'avaliacoes_avg_pontuacao',
+                            $atributos,
+                        )
+                        && is_numeric(
+                            $atributos[
+                                'avaliacoes_avg_pontuacao'
+                            ],
+                        )
+                        && (float) $atributos[
+                            'avaliacoes_avg_pontuacao'
+                        ] === 9.5
+                        && $seccaoApresentada->relationLoaded(
+                            'avaliacoes',
+                        )
+                        && $seccaoApresentada->relationLoaded(
+                            'audicoes',
+                        );
+                },
+            )
             ->assertSeeHtml(
                 'id="seccao-simplificada-'
-                    .$primeiraSeccao->getKey()
+                    .$primeiraSeccao->id
                     .'"',
             )
             ->assertSeeHtml(
                 'id="seccao-simplificada-'
-                    .$segundaSeccao->getKey()
+                    .$segundaSeccao->id
                     .'"',
             )
             ->assertDontSeeHtml(
                 'id="seccao-simplificada-'
-                    .$seccaoDiferente->getKey()
+                    .$seccaoDiferente->id
                     .'"',
+            );
+
+        $this->get(
+            route(
+                'inicio',
+                [
+                    'vista' => 'simplificada',
+                    'pesquisa' => 'especial doom',
+                    'ordenar_por' => 'minha_classificacao',
+                ],
+            ),
+        )
+            ->assertOk()
+            ->assertViewHas(
+                'seccoesSimplificadas',
+                static function (
+                    mixed $valor,
+                ) use (
+                    $primeiraSeccao,
+                    $segundaSeccao,
+                ): bool {
+                    if (! $valor instanceof LengthAwarePaginator) {
+                        return false;
+                    }
+
+                    $seccoes =
+                        $valor
+                            ->getCollection()
+                            ->values();
+
+                    $primeiraApresentada =
+                        $seccoes->get(0);
+
+                    $segundaApresentada =
+                        $seccoes->get(1);
+
+                    if (
+                        ! $primeiraApresentada instanceof SeccaoMetalThursday
+                        || ! $segundaApresentada instanceof SeccaoMetalThursday
+                        || ! $primeiraApresentada->is($primeiraSeccao)
+                        || ! $segundaApresentada->is($segundaSeccao)
+                    ) {
+                        return false;
+                    }
+
+                    $atributosPrimeira =
+                        $primeiraApresentada->getAttributes();
+
+                    $atributosSegunda =
+                        $segundaApresentada->getAttributes();
+
+                    return ! array_key_exists(
+                        'avaliacoes_count',
+                        $atributosPrimeira,
+                    )
+                        && ! array_key_exists(
+                            'audicoes_count',
+                            $atributosPrimeira,
+                        )
+                        && ! array_key_exists(
+                            'avaliacoes_avg_pontuacao',
+                            $atributosPrimeira,
+                        )
+                        && array_key_exists(
+                            'classificacao_utilizador',
+                            $atributosPrimeira,
+                        )
+                        && array_key_exists(
+                            'classificacao_utilizador',
+                            $atributosSegunda,
+                        )
+                        && is_numeric(
+                            $atributosPrimeira[
+                                'classificacao_utilizador'
+                            ],
+                        )
+                        && is_numeric(
+                            $atributosSegunda[
+                                'classificacao_utilizador'
+                            ],
+                        )
+                        && (float) $atributosPrimeira[
+                            'classificacao_utilizador'
+                        ] === 9.5
+                        && (float) $atributosSegunda[
+                            'classificacao_utilizador'
+                        ] === 4.0
+                        && $primeiraApresentada->relationLoaded(
+                            'avaliacoes',
+                        )
+                        && $primeiraApresentada->relationLoaded(
+                            'audicoes',
+                        );
+                },
             );
     }
 

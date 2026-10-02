@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\MetalThursday;
 
+use App\Enumeracoes\OrdenacaoMetalThursday;
 use App\Filtros\FiltrosMetalThursday;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\MetalThursday\ExigirCriacaoAdministrativaMetalThursday;
@@ -173,6 +174,13 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                 $pedido,
             );
 
+        $dadosControlosListagem =
+            $servicoControlosListagem->obterDados(
+                $pedido,
+                $tipoVista,
+                $porPagina,
+            );
+
         $identificadorUtilizador =
             $this->obterIdentificadorUtilizadorAutenticado();
 
@@ -186,7 +194,11 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
             $seccoesSimplificadas =
                 $filtros
                     ->aplicar(
-                        $this->criarConsultaSimplificada(),
+                        $this->criarConsultaSimplificada(
+                            $dadosControlosListagem[
+                                'ordenacaoAtual'
+                            ] === OrdenacaoMetalThursday::Classificacao->value,
+                        ),
                     )
                     ->paginate(
                         $porPagina,
@@ -205,13 +217,6 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                     )
                     ->withQueryString();
         }
-
-        $dadosControlosListagem =
-            $servicoControlosListagem->obterDados(
-                $pedido,
-                $tipoVista,
-                $porPagina,
-            );
 
         return view(
             'metal-thursday.indice',
@@ -833,13 +838,20 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
      * Apenas são consideradas secções pertencentes a MetalThursdays já
      * publicadas.
      *
+     * A média das avaliações só é calculada antecipadamente quando participa
+     * na ordenação. Os restantes agregados são obtidos das relações já
+     * carregadas para os registos da página.
+     *
+     * @param  bool  $incluirMediaAvaliacoes  Indica se a média é necessária
+     *                                        antes da paginação.
      * @return Builder<SeccaoMetalThursday> Consulta preparada.
      *
      * @since 2.0.0
      */
-    private function criarConsultaSimplificada(): Builder
-    {
-        return SeccaoMetalThursday::query()
+    private function criarConsultaSimplificada(
+        bool $incluirMediaAvaliacoes,
+    ): Builder {
+        $consulta = SeccaoMetalThursday::query()
             ->whereHas(
                 'metalThursday',
                 static fn (
@@ -854,14 +866,6 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                 'titulo',
                 'ano',
             ])
-            ->withCount([
-                'avaliacoes',
-                'audicoes',
-            ])
-            ->withAvg(
-                'avaliacoes',
-                'pontuacao',
-            )
             ->with([
                 'metalThursday:id,autor_id,data',
                 'metalThursday.autor:id,nome',
@@ -882,6 +886,15 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                     true,
                 ),
             );
+
+        if ($incluirMediaAvaliacoes) {
+            $consulta->withAvg(
+                'avaliacoes',
+                'pontuacao',
+            );
+        }
+
+        return $consulta;
     }
 
     /**

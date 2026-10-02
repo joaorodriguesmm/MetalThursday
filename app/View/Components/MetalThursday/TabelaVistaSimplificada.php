@@ -569,10 +569,13 @@ final class TabelaVistaSimplificada extends Component
         SeccaoMetalThursday $seccao,
         Collection $avaliacoes,
     ): float {
+        $atributos =
+            $seccao->getAttributes();
+
         $mediaCarregada =
-            $seccao->getAttribute(
-                'avaliacoes_avg_pontuacao',
-            );
+            $atributos[
+                'avaliacoes_avg_pontuacao'
+            ] ?? null;
 
         if (is_numeric($mediaCarregada)) {
             return max(
@@ -609,10 +612,13 @@ final class TabelaVistaSimplificada extends Component
         string $atributo,
         Collection $colecao,
     ): int {
+        $atributos =
+            $modelo->getAttributes();
+
         $valor =
-            $modelo->getAttribute(
-                $atributo,
-            );
+            $atributos[
+                $atributo
+            ] ?? null;
 
         return is_numeric($valor)
             ? max(
