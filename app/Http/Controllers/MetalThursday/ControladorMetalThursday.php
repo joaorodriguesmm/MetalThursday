@@ -22,6 +22,7 @@ use App\Servicos\MetalThursday\ServicoConfiguracaoInterfaceMetalThursday;
 use App\Servicos\MetalThursday\ServicoControlosListagemMetalThursday;
 use App\Servicos\MetalThursday\ServicoNotificacaoPublicacaoMetalThursday;
 use App\Servicos\MetalThursday\ServicoOpcoesMetalThursday;
+use App\Servicos\MetalThursday\ServicoPaginacaoListagemMetalThursday;
 use App\Servicos\MetalThursday\ServicoParametrosListagemMetalThursday;
 use App\Servicos\MetalThursday\ServicoPersistenciaMetalThursday;
 use App\Servicos\MetalThursday\ServicoPreparacaoMetalThursday;
@@ -158,6 +159,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
         FiltrosMetalThursday $filtros,
         ServicoParametrosListagemMetalThursday $servicoParametrosListagem,
         ServicoControlosListagemMetalThursday $servicoControlosListagem,
+        ServicoPaginacaoListagemMetalThursday $servicoPaginacaoListagem,
     ): View {
         $this->authorize(
             'viewAny',
@@ -192,30 +194,30 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
             === ServicoParametrosListagemMetalThursday::VISTA_SIMPLIFICADA
         ) {
             $seccoesSimplificadas =
-                $filtros
-                    ->aplicar(
-                        $this->criarConsultaSimplificada(
-                            $dadosControlosListagem[
-                                'ordenacaoAtual'
-                            ] === OrdenacaoMetalThursday::Classificacao->value,
+                $servicoPaginacaoListagem
+                    ->paginar(
+                        $filtros->aplicar(
+                            $this->criarConsultaSimplificada(
+                                $dadosControlosListagem[
+                                    'ordenacaoAtual'
+                                ] === OrdenacaoMetalThursday::Classificacao->value,
+                            ),
                         ),
-                    )
-                    ->paginate(
                         $porPagina,
-                    )
-                    ->withQueryString();
+                        $pedido,
+                    );
         } else {
             $registosMetalThursday =
-                $filtros
-                    ->aplicar(
-                        $this->criarConsultaCompleta(
-                            $identificadorUtilizador,
+                $servicoPaginacaoListagem
+                    ->paginar(
+                        $filtros->aplicar(
+                            $this->criarConsultaCompleta(
+                                $identificadorUtilizador,
+                            ),
                         ),
-                    )
-                    ->paginate(
                         $porPagina,
-                    )
-                    ->withQueryString();
+                        $pedido,
+                    );
         }
 
         return view(

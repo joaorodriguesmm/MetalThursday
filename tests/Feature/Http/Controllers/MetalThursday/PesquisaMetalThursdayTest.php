@@ -899,6 +899,75 @@ final class PesquisaMetalThursdayTest extends TestCase
     }
 
     /**
+     * Confirma que uma página sem registos preserva o total nas duas vistas.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function paginacao_preserva_total_em_pagina_sem_resultados_nas_duas_vistas(): void
+    {
+        $utilizador = $this->autenticarUtilizador();
+
+        $edicao = $this->criarEdicao();
+
+        foreach (
+            [
+                '2026-01-08',
+                '2026-01-15',
+                '2026-01-22',
+            ] as $indice => $data
+        ) {
+            $metalThursday =
+                $this->criarMetalThursday(
+                    $edicao,
+                    $utilizador,
+                    $data,
+                    'Resultado de paginação '.($indice + 1),
+                );
+
+            $this->criarSeccaoDetalhada(
+                $metalThursday,
+                'Alvo paginacao '.($indice + 1),
+                'Descrição para validar a paginação.',
+            );
+        }
+
+        foreach (
+            [
+                'completa' => 'registosMetalThursday',
+                'simplificada' => 'seccoesSimplificadas',
+            ] as $vista => $chavePaginador
+        ) {
+            $this->get(
+                route(
+                    'inicio',
+                    [
+                        'vista' => $vista,
+                        'por_pagina' => 5,
+                        'pesquisa' => 'alvo paginacao',
+                        'page' => 2,
+                    ],
+                ),
+            )
+                ->assertOk()
+                ->assertViewHas(
+                    $chavePaginador,
+                    static function (
+                        mixed $valor,
+                    ): bool {
+                        return $valor instanceof LengthAwarePaginator
+                            && $valor->total() === 3
+                            && $valor->currentPage() === 2
+                            && $valor->lastPage() === 1
+                            && $valor->count() === 0
+                            && $valor->firstItem() === null
+                            && $valor->lastItem() === null;
+                    },
+                );
+        }
+    }
+
+    /**
      * Confirma que conteúdo semelhante a SQL não altera a consulta.
      *
      * @since 2.0.0
