@@ -152,11 +152,7 @@ final class ServicoConfiguracaoInterfaceMetalThursday
 
                 'artistas' => $this
                     ->servicoOpcoes
-                    ->serializarOpcoesSelecao(
-                        $this
-                            ->servicoOpcoes
-                            ->obterArtistasParaFiltroListagem(),
-                    ),
+                    ->obterArtistasParaFiltroListagem(),
 
                 'generos' => $this
                     ->servicoOpcoes

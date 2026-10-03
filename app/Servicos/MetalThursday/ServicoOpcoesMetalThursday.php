@@ -134,17 +134,21 @@ final class ServicoOpcoesMetalThursday
     /**
      * Obtém os artistas apresentados no filtro da listagem.
      *
-     * Este catálogo carrega apenas os atributos utilizados pelo filtro.
-     * Os dados contextuais necessários aos formulários continuam a ser
-     * obtidos através de {@see obterArtistasParaSelecao()}.
+     * O catálogo é convertido diretamente em opções simples, evitando a
+     * hidratação de modelos Eloquent que a interface da listagem não utiliza.
+     * Os dados contextuais necessários aos formulários continuam a ser obtidos
+     * através de {@see obterArtistasParaSelecao()}.
      *
-     * @return Collection<int, Artista>
+     * @return list<array{identificador: int, nome: string}>
+     *
+     * @throws LogicException Quando um registo não possui identificador ou
+     *                        nome válidos.
      *
      * @since 2.0.0
      */
-    public function obterArtistasParaFiltroListagem(): Collection
+    public function obterArtistasParaFiltroListagem(): array
     {
-        return Artista::query()
+        $registos = Artista::query()
             ->select([
                 'id',
                 'nome',
@@ -155,7 +159,44 @@ final class ServicoOpcoesMetalThursday
             ->orderBy(
                 'id',
             )
+            ->toBase()
             ->get();
+
+        $opcoes = [];
+
+        foreach ($registos as $registo) {
+            $atributos =
+                (array) $registo;
+
+            $identificador =
+                $atributos['id']
+                ?? null;
+
+            $nome =
+                $atributos['nome']
+                ?? null;
+
+            if (
+                ! is_numeric($identificador)
+                || (int) $identificador < 1
+                || ! is_string($nome)
+                || trim($nome) === ''
+            ) {
+                throw new LogicException(
+                    'Um artista do filtro da listagem não possui dados válidos.',
+                );
+            }
+
+            $opcoes[] = [
+                'identificador' => (int) $identificador,
+
+                'nome' => trim(
+                    $nome,
+                ),
+            ];
+        }
+
+        return $opcoes;
     }
 
     /**

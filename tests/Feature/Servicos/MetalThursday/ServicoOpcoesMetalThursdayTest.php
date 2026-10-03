@@ -256,7 +256,7 @@ final class ServicoOpcoesMetalThursdayTest extends TestCase
     }
 
     #[Test]
-    public function artistas_para_filtro_da_listagem_carregam_apenas_identificador_e_nome(): void
+    public function artistas_para_filtro_da_listagem_devolvem_opcoes_simples_ordenadas(): void
     {
         $artistaZulu = Artista::factory()
             ->comNome(
@@ -283,28 +283,17 @@ final class ServicoOpcoesMetalThursdayTest extends TestCase
 
         self::assertSame(
             [
-                $artistaAlfa->getKey(),
-                $artistaZulu->getKey(),
-            ],
-            $artistas->modelKeys(),
-        );
-
-        foreach ($artistas as $artista) {
-            self::assertSame(
                 [
-                    'id',
-                    'nome',
+                    'identificador' => $artistaAlfa->getKey(),
+                    'nome' => 'Alfa',
                 ],
-                array_keys(
-                    $artista->getAttributes(),
-                ),
-            );
-
-            self::assertSame(
-                [],
-                $artista->getRelations(),
-            );
-        }
+                [
+                    'identificador' => $artistaZulu->getKey(),
+                    'nome' => 'Zulu',
+                ],
+            ],
+            $artistas,
+        );
     }
 
     #[Test]
