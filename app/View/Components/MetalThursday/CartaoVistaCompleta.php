@@ -927,10 +927,14 @@ final class CartaoVistaCompleta extends Component
         string $atributoContagem,
         string $relacao,
     ): int {
+        $atributos =
+            $modelo->getAttributes();
+
         $valor =
-            $modelo->getAttribute(
-                $atributoContagem,
-            );
+            $atributos[
+                $atributoContagem
+            ]
+            ?? null;
 
         $contagem =
             $this->normalizarInteiroNaoNegativo(
@@ -962,10 +966,14 @@ final class CartaoVistaCompleta extends Component
         Model $modelo,
         Collection $avaliacoes,
     ): float {
+        $atributos =
+            $modelo->getAttributes();
+
         $mediaCarregada =
-            $modelo->getAttribute(
-                'avaliacoes_avg_pontuacao',
-            );
+            $atributos[
+                'avaliacoes_avg_pontuacao'
+            ]
+            ?? null;
 
         if (is_numeric($mediaCarregada)) {
             return (float) $mediaCarregada;

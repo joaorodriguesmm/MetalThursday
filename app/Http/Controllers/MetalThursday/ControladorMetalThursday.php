@@ -213,6 +213,9 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                         $filtros->aplicar(
                             $this->criarConsultaCompleta(
                                 $identificadorUtilizador,
+                                $dadosControlosListagem[
+                                    'ordenacaoAtual'
+                                ] === OrdenacaoMetalThursday::Classificacao->value,
                             ),
                         ),
                         $porPagina,
@@ -815,30 +818,44 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
     /**
      * Cria a consulta da vista completa.
      *
+     * As contagens de avaliações e audições são obtidas das relações já
+     * carregadas para os registos da página. A média das avaliações só é
+     * calculada antecipadamente quando participa na ordenação.
+     *
+     * A contagem de comentários permanece na consulta porque a relação
+     * apresentada contém apenas comentários principais e pode incluir
+     * marcadores estruturais sem conteúdo.
+     *
      * @param  int  $identificadorUtilizador  Utilizador autenticado.
+     * @param  bool  $incluirMediaAvaliacoes  Indica se a média é necessária
+     *                                        antes da paginação.
      * @return Builder<MetalThursday> Consulta preparada.
      *
      * @since 2.0.0
      */
     private function criarConsultaCompleta(
         int $identificadorUtilizador,
+        bool $incluirMediaAvaliacoes,
     ): Builder {
-        return MetalThursday::query()
+        $consulta = MetalThursday::query()
             ->publicadas()
             ->withCount([
                 'comentariosComConteudo as comentarios_count',
-                'avaliacoes',
-                'audicoes',
             ])
-            ->withAvg(
-                'avaliacoes',
-                'pontuacao',
-            )
             ->with(
                 $this->obterRelacoesApresentacao(
                     $identificadorUtilizador,
                 ),
             );
+
+        if ($incluirMediaAvaliacoes) {
+            $consulta->withAvg(
+                'avaliacoes',
+                'pontuacao',
+            );
+        }
+
+        return $consulta;
     }
 
     /**

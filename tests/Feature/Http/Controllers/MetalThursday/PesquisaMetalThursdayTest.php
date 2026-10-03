@@ -899,6 +899,153 @@ final class PesquisaMetalThursdayTest extends TestCase
     }
 
     /**
+     * Confirma que a vista completa calcula antes da paginação apenas os
+     * agregados necessários à apresentação e à ordenação.
+     *
+     * As contagens de avaliações e audições são derivadas das relações já
+     * carregadas. A média só permanece como agregado SQL quando é utilizada
+     * para ordenar por classificação.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function vista_completa_calcula_apenas_agregados_necessarios_antes_da_paginacao(): void
+    {
+        $utilizador = $this->autenticarUtilizador();
+
+        $edicao = $this->criarEdicao();
+
+        $primeira =
+            $this->criarMetalThursday(
+                $edicao,
+                $utilizador,
+                '2026-01-08',
+                'Primeira MetalThursday',
+            );
+
+        $segunda =
+            $this->criarMetalThursday(
+                $edicao,
+                $utilizador,
+                '2026-01-15',
+                'Segunda MetalThursday',
+            );
+
+        $primeira
+            ->avaliacoes()
+            ->create([
+                'utilizador_id' => $utilizador->getKey(),
+                'pontuacao' => 9.5,
+            ]);
+
+        $segunda
+            ->avaliacoes()
+            ->create([
+                'utilizador_id' => $utilizador->getKey(),
+                'pontuacao' => 4.0,
+            ]);
+
+        $primeira
+            ->audicoes()
+            ->create([
+                'utilizador_id' => $utilizador->getKey(),
+            ]);
+
+        foreach (
+            [
+                'data' => [
+                    'parametros' => [],
+                    'inclui_media' => false,
+                    'inclui_classificacao_utilizador' => false,
+                ],
+                'classificacao' => [
+                    'parametros' => [
+                        'ordenar_por' => 'classificacao',
+                    ],
+                    'inclui_media' => true,
+                    'inclui_classificacao_utilizador' => false,
+                ],
+                'minha_classificacao' => [
+                    'parametros' => [
+                        'ordenar_por' => 'minha_classificacao',
+                    ],
+                    'inclui_media' => false,
+                    'inclui_classificacao_utilizador' => true,
+                ],
+            ] as $cenario
+        ) {
+            $this->get(
+                route(
+                    'inicio',
+                    [
+                        'vista' => 'completa',
+                        ...$cenario['parametros'],
+                    ],
+                ),
+            )
+                ->assertOk()
+                ->assertViewHas(
+                    'registosMetalThursday',
+                    static function (
+                        mixed $valor,
+                    ) use (
+                        $cenario,
+                    ): bool {
+                        if (! $valor instanceof LengthAwarePaginator) {
+                            return false;
+                        }
+
+                        foreach (
+                            $valor->getCollection() as $metalThursday
+                        ) {
+                            if (! $metalThursday instanceof MetalThursday) {
+                                return false;
+                            }
+
+                            $atributos =
+                                $metalThursday->getAttributes();
+
+                            if (
+                                ! array_key_exists(
+                                    'comentarios_count',
+                                    $atributos,
+                                )
+                                || array_key_exists(
+                                    'avaliacoes_count',
+                                    $atributos,
+                                )
+                                || array_key_exists(
+                                    'audicoes_count',
+                                    $atributos,
+                                )
+                                || array_key_exists(
+                                    'avaliacoes_avg_pontuacao',
+                                    $atributos,
+                                ) !== $cenario['inclui_media']
+                                || array_key_exists(
+                                    'classificacao_utilizador',
+                                    $atributos,
+                                ) !== $cenario[
+                                    'inclui_classificacao_utilizador'
+                                ]
+                                || ! $metalThursday->relationLoaded(
+                                    'avaliacoes',
+                                )
+                                || ! $metalThursday->relationLoaded(
+                                    'audicoes',
+                                )
+                            ) {
+                                return false;
+                            }
+                        }
+
+                        return true;
+                    },
+                );
+        }
+    }
+
+    /**
      * Confirma que uma página sem registos preserva o total nas duas vistas.
      *
      * @since 2.0.0
