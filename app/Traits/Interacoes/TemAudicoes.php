@@ -26,6 +26,14 @@ use LogicException;
 trait TemAudicoes
 {
     /**
+     * Alias do estado escalar de audição do utilizador autenticado.
+     *
+     * @since 2.0.0
+     */
+    public const COLUNA_OUVIDO_PELO_UTILIZADOR_AUTENTICADO =
+        'ouvido_pelo_utilizador_autenticado';
+
+    /**
      * Obtém os registos de audição associados ao modelo.
      *
      * @return MorphMany<Audicao, $this> Relação com as audições.
@@ -84,10 +92,10 @@ trait TemAudicoes
      *
      * Quando não existe autenticação válida, é devolvido falso.
      *
-     * Para um utilizador autenticado, a relação
-     * `audicaoUtilizadorAutenticado` deve ser carregada explicitamente pela
-     * consulta responsável pela apresentação do modelo. O accessor nunca
-     * executa consultas ocultas.
+     * Para um utilizador autenticado, a consulta pode carregar previamente o
+     * estado escalar `ouvido_pelo_utilizador_autenticado`. Na ausência desse
+     * atributo, a relação `audicaoUtilizadorAutenticado` deve estar
+     * explicitamente carregada. O accessor nunca executa consultas ocultas.
      *
      * @return Attribute<bool, never> Estado da audição do utilizador.
      *
@@ -105,6 +113,20 @@ trait TemAudicoes
 
                 if ($identificadorUtilizador === null) {
                     return false;
+                }
+
+                $atributos =
+                    $this->getAttributes();
+
+                if (
+                    array_key_exists(
+                        self::COLUNA_OUVIDO_PELO_UTILIZADOR_AUTENTICADO,
+                        $atributos,
+                    )
+                ) {
+                    return (bool) $atributos[
+                        self::COLUNA_OUVIDO_PELO_UTILIZADOR_AUTENTICADO
+                    ];
                 }
 
                 if (

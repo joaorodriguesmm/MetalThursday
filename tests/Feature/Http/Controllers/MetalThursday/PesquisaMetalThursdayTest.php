@@ -1046,6 +1046,122 @@ final class PesquisaMetalThursdayTest extends TestCase
     }
 
     /**
+     * Confirma que a vista completa carrega o estado do utilizador nas secções
+     * através de atributos escalares, sem relações redundantes.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function vista_completa_carrega_estado_do_utilizador_das_seccoes_com_atributos_escalares(): void
+    {
+        $utilizador = $this->autenticarUtilizador();
+
+        $edicao = $this->criarEdicao();
+
+        $metalThursday =
+            $this->criarMetalThursday(
+                $edicao,
+                $utilizador,
+                '2026-01-08',
+                'MetalThursday com estado escalar',
+            );
+
+        $seccao =
+            $this->criarSeccaoDetalhada(
+                $metalThursday,
+                'Secção com estado escalar',
+                'Descrição da secção.',
+            );
+
+        $seccao
+            ->avaliacoes()
+            ->create([
+                'utilizador_id' => $utilizador->getKey(),
+                'pontuacao' => 8.5,
+            ]);
+
+        $seccao
+            ->audicoes()
+            ->create([
+                'utilizador_id' => $utilizador->getKey(),
+            ]);
+
+        $this->get(
+            route(
+                'inicio',
+                [
+                    'vista' => 'completa',
+                ],
+            ),
+        )
+            ->assertOk()
+            ->assertViewHas(
+                'registosMetalThursday',
+                static function (
+                    mixed $valor,
+                ) use (
+                    $seccao,
+                ): bool {
+                    if (! $valor instanceof LengthAwarePaginator) {
+                        return false;
+                    }
+
+                    foreach ($valor->getCollection() as $metalThursday) {
+                        if (! $metalThursday instanceof MetalThursday) {
+                            continue;
+                        }
+
+                        $seccaoApresentada =
+                            $metalThursday
+                                ->seccoes
+                                ->first(
+                                    static fn (
+                                        mixed $item,
+                                    ): bool => $item instanceof SeccaoMetalThursday
+                                        && $item->is(
+                                            $seccao,
+                                        ),
+                                );
+
+                        if (! $seccaoApresentada instanceof SeccaoMetalThursday) {
+                            continue;
+                        }
+
+                        $atributos =
+                            $seccaoApresentada->getAttributes();
+
+                        return array_key_exists(
+                            'pontuacao_utilizador_autenticado',
+                            $atributos,
+                        )
+                            && array_key_exists(
+                                'ouvido_pelo_utilizador_autenticado',
+                                $atributos,
+                            )
+                            && (float) $atributos[
+                                'pontuacao_utilizador_autenticado'
+                            ] === 8.5
+                            && (bool) $atributos[
+                                'ouvido_pelo_utilizador_autenticado'
+                            ]
+                            && ! $seccaoApresentada->relationLoaded(
+                                'avaliacaoUtilizadorAutenticado',
+                            )
+                            && ! $seccaoApresentada->relationLoaded(
+                                'audicaoUtilizadorAutenticado',
+                            )
+                            && $seccaoApresentada
+                                ->pontuacao_utilizador_autenticado === 8.5
+                            && $seccaoApresentada
+                                ->ouvido_pelo_utilizador_autenticado;
+                    }
+
+                    return false;
+                },
+            );
+    }
+
+    /**
      * Confirma que uma página sem registos preserva o total nas duas vistas.
      *
      * @since 2.0.0

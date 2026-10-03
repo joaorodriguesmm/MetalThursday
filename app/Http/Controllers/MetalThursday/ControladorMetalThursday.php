@@ -1048,14 +1048,31 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                         'avaliacoes',
                         'pontuacao',
                     )
+                    ->withMax(
+                        [
+                            'avaliacoes as '.SeccaoMetalThursday::COLUNA_PONTUACAO_UTILIZADOR_AUTENTICADO => static fn (
+                                Builder $construtorAvaliacoes,
+                            ): Builder => $construtorAvaliacoes->where(
+                                'utilizador_id',
+                                $identificadorUtilizador,
+                            ),
+                        ],
+                        'pontuacao',
+                    )
+                    ->withExists([
+                        'audicoes as '.SeccaoMetalThursday::COLUNA_OUVIDO_PELO_UTILIZADOR_AUTENTICADO => static fn (
+                            Builder $construtorAudicoes,
+                        ): Builder => $construtorAudicoes->where(
+                            'utilizador_id',
+                            $identificadorUtilizador,
+                        ),
+                    ])
                     ->with([
                         'tipoSeccao:id,nome,exige_detalhes',
                         'artista:id,nome',
                         'ligacoes',
                         'avaliacoes.utilizador:id,nome',
                         'audicoes.utilizador:id,nome',
-                        'avaliacaoUtilizadorAutenticado',
-                        'audicaoUtilizadorAutenticado',
 
                         'comentarios' => function (
                             Relation $relacaoComentarios,

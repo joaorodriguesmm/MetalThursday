@@ -6,6 +6,7 @@ namespace Tests\Feature\Traits\Interacoes;
 
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\MetalThursday;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -150,6 +151,102 @@ final class InteracoesUtilizadorAutenticadoTest extends TestCase
 
         self::assertTrue(
             $metalThursday->ouvido_pelo_utilizador_autenticado,
+        );
+
+        self::assertSame(
+            [],
+            $consultas,
+        );
+    }
+
+    /**
+     * Confirma que atributos escalares previamente carregados evitam as
+     * relações específicas do utilizador e não originam consultas ocultas.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function atributos_escalares_pre_carregados_evitam_relacoes_sem_consultas_ocultas(): void
+    {
+        $utilizador = Utilizador::factory()
+            ->create();
+
+        $metalThursday = MetalThursday::factory()
+            ->create();
+
+        $metalThursday
+            ->avaliacoes()
+            ->create([
+                'utilizador_id' => $utilizador->getKey(),
+
+                'pontuacao' => 8.5,
+            ]);
+
+        $metalThursday
+            ->audicoes()
+            ->create([
+                'utilizador_id' => $utilizador->getKey(),
+            ]);
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $metalThursdayCarregada =
+            MetalThursday::query()
+                ->withMax(
+                    [
+                        'avaliacoes as pontuacao_utilizador_autenticado' => static fn (
+                            Builder $construtor,
+                        ): Builder => $construtor->where(
+                            'utilizador_id',
+                            $utilizador->getKey(),
+                        ),
+                    ],
+                    'pontuacao',
+                )
+                ->withExists([
+                    'audicoes as ouvido_pelo_utilizador_autenticado' => static fn (
+                        Builder $construtor,
+                    ): Builder => $construtor->where(
+                        'utilizador_id',
+                        $utilizador->getKey(),
+                    ),
+                ])
+                ->findOrFail(
+                    $metalThursday->getKey(),
+                );
+
+        self::assertFalse(
+            $metalThursdayCarregada->relationLoaded(
+                'avaliacaoUtilizadorAutenticado',
+            ),
+        );
+
+        self::assertFalse(
+            $metalThursdayCarregada->relationLoaded(
+                'audicaoUtilizadorAutenticado',
+            ),
+        );
+
+        $consultas = [];
+
+        DB::listen(
+            static function (
+                QueryExecuted $consulta,
+            ) use (&$consultas): void {
+                $consultas[] = $consulta->sql;
+            },
+        );
+
+        self::assertSame(
+            8.5,
+            $metalThursdayCarregada->pontuacao_utilizador_autenticado,
+        );
+
+        self::assertTrue(
+            $metalThursdayCarregada->ouvido_pelo_utilizador_autenticado,
         );
 
         self::assertSame(

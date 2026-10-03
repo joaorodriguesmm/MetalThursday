@@ -26,6 +26,14 @@ use LogicException;
 trait TemAvaliacoes
 {
     /**
+     * Alias do valor escalar da avaliação do utilizador autenticado.
+     *
+     * @since 2.0.0
+     */
+    public const COLUNA_PONTUACAO_UTILIZADOR_AUTENTICADO =
+        'pontuacao_utilizador_autenticado';
+
+    /**
      * Obtém as avaliações associadas ao modelo.
      *
      * @return MorphMany<Avaliacao, $this> Relação com as avaliações.
@@ -84,10 +92,10 @@ trait TemAvaliacoes
      *
      * Quando não existe autenticação válida, é devolvida a pontuação zero.
      *
-     * Para um utilizador autenticado, a relação
-     * `avaliacaoUtilizadorAutenticado` deve ser carregada explicitamente pela
-     * consulta responsável pela apresentação do modelo. O accessor nunca
-     * executa consultas ocultas.
+     * Para um utilizador autenticado, a consulta pode carregar previamente o
+     * valor escalar `pontuacao_utilizador_autenticado`. Na ausência desse
+     * atributo, a relação `avaliacaoUtilizadorAutenticado` deve estar
+     * explicitamente carregada. O accessor nunca executa consultas ocultas.
      *
      * @return Attribute<float, never> Pontuação atribuída pelo utilizador.
      *
@@ -105,6 +113,27 @@ trait TemAvaliacoes
 
                 if ($identificadorUtilizador === null) {
                     return 0.0;
+                }
+
+                $atributos =
+                    $this->getAttributes();
+
+                if (
+                    array_key_exists(
+                        self::COLUNA_PONTUACAO_UTILIZADOR_AUTENTICADO,
+                        $atributos,
+                    )
+                ) {
+                    $pontuacao =
+                        $atributos[
+                            self::COLUNA_PONTUACAO_UTILIZADOR_AUTENTICADO
+                        ];
+
+                    return is_numeric(
+                        $pontuacao,
+                    )
+                        ? (float) $pontuacao
+                        : 0.0;
                 }
 
                 if (
