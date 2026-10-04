@@ -307,11 +307,6 @@ final class CartaoVistaCompleta extends Component
                     $seccao,
                 );
 
-            $artista =
-                $this->obterArtista(
-                    $seccao,
-                );
-
             $titulo =
                 $this->normalizarTexto(
                     $seccao->titulo,
@@ -323,10 +318,9 @@ final class CartaoVistaCompleta extends Component
                 );
 
             $nomeArtista =
-                $this->normalizarTexto(
-                    $artista?->nome,
-                )
-                ?? 'Artista indisponível';
+                $this->obterNomeArtista(
+                    $seccao,
+                );
 
             $temDetalhes =
                 (bool) $tipoSeccao->exige_detalhes;
@@ -787,6 +781,49 @@ final class CartaoVistaCompleta extends Component
         }
 
         return $tipoSeccao;
+    }
+
+    /**
+     * Obtém o nome do artista utilizado na apresentação da secção.
+     *
+     * As MetalThursdays publicadas recebem o nome através de um atributo
+     * escalar para evitar hidratar o modelo Artista. O percurso das
+     * MetalThursdays ainda preparadas mantém a relação como fallback.
+     *
+     * @param  SeccaoMetalThursday  $seccao  Secção consultada.
+     * @return string Nome preparado para apresentação.
+     *
+     * @since 2.0.0
+     */
+    private function obterNomeArtista(
+        SeccaoMetalThursday $seccao,
+    ): string {
+        $atributos =
+            $seccao->getAttributes();
+
+        if (
+            array_key_exists(
+                'nome_artista_apresentacao',
+                $atributos,
+            )
+        ) {
+            return $this->normalizarTexto(
+                $atributos[
+                    'nome_artista_apresentacao'
+                ],
+            )
+                ?? 'Artista indisponível';
+        }
+
+        $artista =
+            $this->obterArtista(
+                $seccao,
+            );
+
+        return $this->normalizarTexto(
+            $artista?->nome,
+        )
+            ?? 'Artista indisponível';
     }
 
     /**

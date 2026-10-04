@@ -17,6 +17,7 @@ use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\RascunhoMetalThursday;
 use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
+use App\Models\Musica\Artista;
 use App\Notifications\NotificacaoUtilizadorNomeado;
 use App\Resultados\MetalThursday\MetalThursdayCriada;
 use App\Servicos\MetalThursday\ServicoConfiguracaoInterfaceMetalThursday;
@@ -1104,6 +1105,18 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                     $relacao->getQuery();
 
                 $construtor
+                    ->addSelect([
+                        'nome_artista_apresentacao' => Artista::query()
+                            ->withTrashed()
+                            ->select(
+                                'nome',
+                            )
+                            ->whereColumn(
+                                'artistas.id',
+                                'seccoes_metal_thursday.artista_id',
+                            )
+                            ->limit(1),
+                    ])
                     ->withCount([
                         'comentariosComConteudo as comentarios_count',
                     ])
@@ -1128,7 +1141,6 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                     ])
                     ->with([
                         'tipoSeccao:id,nome,exige_detalhes',
-                        'artista:id,nome',
                         'ligacoes',
                         'avaliacoes.utilizador:id,nome',
                         'audicoes.utilizador:id,nome',

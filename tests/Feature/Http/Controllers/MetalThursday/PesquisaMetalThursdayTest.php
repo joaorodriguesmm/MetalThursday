@@ -1168,6 +1168,13 @@ final class PesquisaMetalThursdayTest extends TestCase
                                 'ouvido_pelo_utilizador_autenticado',
                                 $atributos,
                             )
+                            && array_key_exists(
+                                'nome_artista_apresentacao',
+                                $atributos,
+                            )
+                            && ! $seccaoApresentada->relationLoaded(
+                                'artista',
+                            )
                             && (float) $atributos[
                                 'pontuacao_utilizador_autenticado'
                             ] === 8.5
