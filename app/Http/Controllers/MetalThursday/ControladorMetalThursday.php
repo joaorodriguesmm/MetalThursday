@@ -1041,13 +1041,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                 $construtor
                     ->withCount([
                         'comentariosComConteudo as comentarios_count',
-                        'avaliacoes',
-                        'audicoes',
                     ])
-                    ->withAvg(
-                        'avaliacoes',
-                        'pontuacao',
-                    )
                     ->withMax(
                         [
                             'avaliacoes as '.SeccaoMetalThursday::COLUNA_PONTUACAO_UTILIZADOR_AUTENTICADO => static fn (

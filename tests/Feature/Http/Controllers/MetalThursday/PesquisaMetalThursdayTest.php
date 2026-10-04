@@ -1131,9 +1131,25 @@ final class PesquisaMetalThursdayTest extends TestCase
                             $seccaoApresentada->getAttributes();
 
                         return array_key_exists(
-                            'pontuacao_utilizador_autenticado',
+                            'comentarios_count',
                             $atributos,
                         )
+                            && ! array_key_exists(
+                                'avaliacoes_count',
+                                $atributos,
+                            )
+                            && ! array_key_exists(
+                                'audicoes_count',
+                                $atributos,
+                            )
+                            && ! array_key_exists(
+                                'avaliacoes_avg_pontuacao',
+                                $atributos,
+                            )
+                            && array_key_exists(
+                                'pontuacao_utilizador_autenticado',
+                                $atributos,
+                            )
                             && array_key_exists(
                                 'ouvido_pelo_utilizador_autenticado',
                                 $atributos,
@@ -1149,6 +1165,12 @@ final class PesquisaMetalThursdayTest extends TestCase
                             )
                             && ! $seccaoApresentada->relationLoaded(
                                 'audicaoUtilizadorAutenticado',
+                            )
+                            && $seccaoApresentada->relationLoaded(
+                                'avaliacoes',
+                            )
+                            && $seccaoApresentada->relationLoaded(
+                                'audicoes',
                             )
                             && $seccaoApresentada
                                 ->pontuacao_utilizador_autenticado === 8.5
