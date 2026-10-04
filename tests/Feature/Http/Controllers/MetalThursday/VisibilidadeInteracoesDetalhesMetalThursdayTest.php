@@ -185,6 +185,19 @@ final class VisibilidadeInteracoesDetalhesMetalThursdayTest extends TestCase
             'Comentário social publicado.',
         );
 
+        $metalThursday
+            ->avaliacoes()
+            ->create([
+                'utilizador_id' => $autor->getKey(),
+                'pontuacao' => 9.0,
+            ]);
+
+        $metalThursday
+            ->audicoes()
+            ->create([
+                'utilizador_id' => $autor->getKey(),
+            ]);
+
         $this
             ->actingAs(
                 $autor,
@@ -197,6 +210,50 @@ final class VisibilidadeInteracoesDetalhesMetalThursdayTest extends TestCase
                 ),
             )
             ->assertOk()
+            ->assertViewHas(
+                'metalThursday',
+                static function (
+                    mixed $valor,
+                ): bool {
+                    if (! $valor instanceof MetalThursday) {
+                        return false;
+                    }
+
+                    $atributos =
+                        $valor->getAttributes();
+
+                    return array_key_exists(
+                        'pontuacao_utilizador_autenticado',
+                        $atributos,
+                    )
+                        && array_key_exists(
+                            'ouvido_pelo_utilizador_autenticado',
+                            $atributos,
+                        )
+                        && (float) $atributos[
+                            'pontuacao_utilizador_autenticado'
+                        ] === 9.0
+                        && (bool) $atributos[
+                            'ouvido_pelo_utilizador_autenticado'
+                        ]
+                        && ! $valor->relationLoaded(
+                            'avaliacaoUtilizadorAutenticado',
+                        )
+                        && ! $valor->relationLoaded(
+                            'audicaoUtilizadorAutenticado',
+                        )
+                        && $valor->relationLoaded(
+                            'avaliacoes',
+                        )
+                        && $valor->relationLoaded(
+                            'audicoes',
+                        )
+                        && $valor
+                            ->pontuacao_utilizador_autenticado === 9.0
+                        && $valor
+                            ->ouvido_pelo_utilizador_autenticado;
+                },
+            )
             ->assertSee(
                 'Conteúdo musical preparado visível.',
             )

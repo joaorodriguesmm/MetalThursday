@@ -11,6 +11,7 @@ use App\Http\Middleware\MetalThursday\ExigirCriacaoAdministrativaMetalThursday;
 use App\Http\Requests\MetalThursday\GuardarMetalThursdayRequest;
 use App\Http\Requests\MetalThursday\GuardarRascunhoMetalThursdayRequest;
 use App\Models\Autenticacao\Utilizador;
+use App\Models\Interacoes\Avaliacao;
 use App\Models\Interacoes\Comentario;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\RascunhoMetalThursday;
@@ -225,6 +226,13 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
             /** @var Collection<int, MetalThursday> $registosPagina */
             $registosPagina =
                 $registosMetalThursday->getCollection();
+
+            foreach ($registosPagina as $metalThursday) {
+                $this->preencherEstadoInteracoesUtilizadorAutenticado(
+                    $metalThursday,
+                    $identificadorUtilizador,
+                );
+            }
 
             MetalThursday::carregarNumerosSemanaNaEdicao(
                 $registosPagina,
@@ -965,6 +973,65 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                     $identificadorUtilizador,
                 ),
             );
+
+        $this->preencherEstadoInteracoesUtilizadorAutenticado(
+            $metalThursday,
+            $identificadorUtilizador,
+        );
+    }
+
+    /**
+     * Preenche o estado de interação do utilizador autenticado a partir das
+     * relações completas já carregadas para apresentação.
+     *
+     * @param  MetalThursday  $metalThursday  MetalThursday apresentada.
+     * @param  int  $identificadorUtilizador  Utilizador autenticado.
+     *
+     * @throws LogicException Quando as relações necessárias não foram carregadas.
+     *
+     * @since 2.0.0
+     */
+    private function preencherEstadoInteracoesUtilizadorAutenticado(
+        MetalThursday $metalThursday,
+        int $identificadorUtilizador,
+    ): void {
+        if (
+            ! $metalThursday->relationLoaded(
+                'avaliacoes',
+            )
+            || ! $metalThursday->relationLoaded(
+                'audicoes',
+            )
+        ) {
+            throw new LogicException(
+                'As relações "avaliacoes" e "audicoes" devem estar carregadas antes de preencher o estado do utilizador autenticado.',
+            );
+        }
+
+        $avaliacao =
+            $metalThursday
+                ->avaliacoes
+                ->first(
+                    static fn (
+                        Avaliacao $avaliacao,
+                    ): bool => $avaliacao->utilizador_id
+                        === $identificadorUtilizador,
+                );
+
+        $metalThursday->setAttribute(
+            MetalThursday::COLUNA_PONTUACAO_UTILIZADOR_AUTENTICADO,
+            $avaliacao?->pontuacao,
+        );
+
+        $metalThursday->setAttribute(
+            MetalThursday::COLUNA_OUVIDO_PELO_UTILIZADOR_AUTENTICADO,
+            $metalThursday
+                ->audicoes
+                ->contains(
+                    'utilizador_id',
+                    $identificadorUtilizador,
+                ),
+        );
     }
 
     /**
@@ -1016,8 +1083,6 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
             'proximoNomeado:id,nome',
             'avaliacoes.utilizador:id,nome',
             'audicoes.utilizador:id,nome',
-            'avaliacaoUtilizadorAutenticado',
-            'audicaoUtilizadorAutenticado',
 
             'comentarios' => function (
                 Relation $relacao,

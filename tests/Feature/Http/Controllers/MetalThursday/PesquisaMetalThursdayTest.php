@@ -1028,6 +1028,20 @@ final class PesquisaMetalThursdayTest extends TestCase
                                 ) !== $cenario[
                                     'inclui_classificacao_utilizador'
                                 ]
+                                || ! array_key_exists(
+                                    'pontuacao_utilizador_autenticado',
+                                    $atributos,
+                                )
+                                || ! array_key_exists(
+                                    'ouvido_pelo_utilizador_autenticado',
+                                    $atributos,
+                                )
+                                || $metalThursday->relationLoaded(
+                                    'avaliacaoUtilizadorAutenticado',
+                                )
+                                || $metalThursday->relationLoaded(
+                                    'audicaoUtilizadorAutenticado',
+                                )
                                 || ! $metalThursday->relationLoaded(
                                     'avaliacoes',
                                 )
