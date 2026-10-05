@@ -228,6 +228,10 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
             $registosPagina =
                 $registosMetalThursday->getCollection();
 
+            $registosPagina->loadCount([
+                'comentariosComConteudo as comentarios_count',
+            ]);
+
             foreach ($registosPagina as $metalThursday) {
                 $this->preencherEstadoInteracoesUtilizadorAutenticado(
                     $metalThursday,
@@ -831,9 +835,9 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
      * carregadas para os registos da página. A média das avaliações só é
      * calculada antecipadamente quando participa na ordenação.
      *
-     * A contagem de comentários permanece na consulta porque a relação
-     * apresentada contém apenas comentários principais e pode incluir
-     * marcadores estruturais sem conteúdo.
+     * A contagem de comentários é carregada em lote depois da paginação,
+     * para evitar executar a subconsulta correlacionada sobre todos os
+     * registos considerados pela função de janela da paginação.
      *
      * @param  int  $identificadorUtilizador  Utilizador autenticado.
      * @param  bool  $incluirMediaAvaliacoes  Indica se a média é necessária
@@ -848,9 +852,6 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
     ): Builder {
         $consulta = MetalThursday::query()
             ->publicadas()
-            ->withCount([
-                'comentariosComConteudo as comentarios_count',
-            ])
             ->with(
                 $this->obterRelacoesApresentacao(
                     $identificadorUtilizador,

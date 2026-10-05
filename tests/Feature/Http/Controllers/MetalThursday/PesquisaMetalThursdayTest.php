@@ -13,6 +13,7 @@ use App\Models\Musica\Artista;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -899,17 +900,18 @@ final class PesquisaMetalThursdayTest extends TestCase
     }
 
     /**
-     * Confirma que a vista completa calcula antes da paginação apenas os
-     * agregados necessários à apresentação e à ordenação.
+     * Confirma que a vista completa adia agregados que só são necessários
+     * depois da paginação.
      *
-     * As contagens de avaliações e audições são derivadas das relações já
-     * carregadas. A média só permanece como agregado SQL quando é utilizada
-     * para ordenar por classificação.
+     * As contagens de comentários são carregadas apenas para os registos da
+     * página. As contagens de avaliações e audições são derivadas das relações
+     * já carregadas. A média só permanece na consulta paginada quando é
+     * necessária para ordenar por classificação.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function vista_completa_calcula_apenas_agregados_necessarios_antes_da_paginacao(): void
+    public function vista_completa_adia_agregados_desnecessarios_ate_depois_da_paginacao(): void
     {
         $utilizador = $this->autenticarUtilizador();
 
@@ -951,6 +953,17 @@ final class PesquisaMetalThursdayTest extends TestCase
                 'utilizador_id' => $utilizador->getKey(),
             ]);
 
+        $consultasExecutadas = [];
+
+        DB::listen(
+            static function ($consulta) use (
+                &$consultasExecutadas,
+            ): void {
+                $consultasExecutadas[] =
+                    $consulta->sql;
+            },
+        );
+
         foreach (
             [
                 'data' => [
@@ -974,6 +987,8 @@ final class PesquisaMetalThursdayTest extends TestCase
                 ],
             ] as $cenario
         ) {
+            $consultasExecutadas = [];
+
             $this->get(
                 route(
                     'inicio',
@@ -1056,6 +1071,52 @@ final class PesquisaMetalThursdayTest extends TestCase
                         return true;
                     },
                 );
+
+            $consultasPaginadas =
+                array_values(
+                    array_filter(
+                        $consultasExecutadas,
+                        static fn (
+                            string $sql,
+                        ): bool => str_contains(
+                            strtolower($sql),
+                            'count(*) over()',
+                        ),
+                    ),
+                );
+
+            self::assertCount(
+                1,
+                $consultasPaginadas,
+            );
+
+            self::assertStringNotContainsString(
+                'comentarios_count',
+                strtolower(
+                    $consultasPaginadas[0],
+                ),
+            );
+
+            self::assertTrue(
+                collect(
+                    $consultasExecutadas,
+                )->contains(
+                    static fn (
+                        string $sql,
+                    ): bool => str_contains(
+                        strtolower($sql),
+                        'comentarios_count',
+                    )
+                        && str_contains(
+                            strtolower($sql),
+                            'from `metal_thursdays`',
+                        )
+                        && ! str_contains(
+                            strtolower($sql),
+                            'count(*) over()',
+                        ),
+                ),
+            );
         }
     }
 
