@@ -253,7 +253,13 @@ function iniciarPaginaInicio() {
     const configuracao =
         obterConfiguracaoListagem();
 
-    new InicializadorTooltips();
+    new InicializadorTooltips(
+        document.body,
+        {
+            selector:
+                '[data-bs-toggle="tooltip"]',
+        },
+    );
 
     new GestorFiltrosDinamicos({
         seletorListaFiltros:
