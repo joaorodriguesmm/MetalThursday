@@ -39,6 +39,23 @@ use LogicException;
  *     descricaoAudicoes: HtmlString,
  *     descricaoAvaliacoes: HtmlString
  * }
+ * @phpstan-type AvaliacaoInteracoesListagem array{
+ *     nome: string|null,
+ *     pontuacao: float
+ * }
+ * @phpstan-type DadosInteracoesListagem array{
+ *     pontuacaoUtilizador: float,
+ *     ouvido: bool,
+ *     quantidadeAudicoes: int,
+ *     quantidadeAvaliacoes: int,
+ *     mediaAvaliacoes: float,
+ *     audicoes: list<string|null>,
+ *     avaliacoes: list<AvaliacaoInteracoesListagem>
+ * }
+ * @phpstan-type MapaInteracoesListagem array{
+ *     metal-thursday: array<int, DadosInteracoesListagem>,
+ *     seccao-metal-thursday: array<int, DadosInteracoesListagem>
+ * }
  * @phpstan-type SeccaoPreparada array{
  *     modelo: SeccaoMetalThursday,
  *     identificador: int,
@@ -133,6 +150,18 @@ final class CartaoVistaCompleta extends Component
     public readonly bool $interacoesDisponiveis;
 
     /**
+     * Dados leves das interações utilizados apenas pela listagem.
+     *
+     * A página de detalhes mantém o percurso baseado nas relações Eloquent
+     * completas quando este mapa não é fornecido.
+     *
+     * @var MapaInteracoesListagem|null
+     *
+     * @since 2.0.0
+     */
+    private readonly ?array $interacoesListagem;
+
+    /**
      * Dados das interações da MetalThursday.
      *
      * @var DadosInteracoes|array{}
@@ -168,6 +197,9 @@ final class CartaoVistaCompleta extends Component
      * Cria uma nova instância do componente.
      *
      * @param  MetalThursday  $registoMetalThursday  MetalThursday apresentada.
+     * @param  MapaInteracoesListagem|null  $interacoesListagem  Dados leves
+     *                                                           exclusivos da
+     *                                                           listagem.
      *
      * @throws LogicException Quando o modelo não está persistido ou uma
      *                        relação obrigatória não está carregada.
@@ -177,12 +209,16 @@ final class CartaoVistaCompleta extends Component
     public function __construct(
         MetalThursday $registoMetalThursday,
         bool $carregarComentariosAssincronamente = false,
+        ?array $interacoesListagem = null,
     ) {
         $this->registoMetalThursday =
             $registoMetalThursday;
 
         $this->carregarComentariosAssincronamente =
             $carregarComentariosAssincronamente;
+
+        $this->interacoesListagem =
+            $interacoesListagem;
 
         $this->interacoesDisponiveis =
             $registoMetalThursday->estaPublicada();
@@ -436,6 +472,23 @@ final class CartaoVistaCompleta extends Component
         string $textoOuvido,
         string $textoNaoOuvido,
     ): array {
+        $dadosInteracoesListagem =
+            $this->obterInteracoesListagem(
+                $modelo,
+            );
+
+        if ($dadosInteracoesListagem !== null) {
+            return $this->prepararInteracoesListagem(
+                $modelo,
+                $dadosInteracoesListagem,
+                $mensagemSemAudicoes,
+                $mensagemSemAvaliacoes,
+                $textoSemAvaliacao,
+                $textoOuvido,
+                $textoNaoOuvido,
+            );
+        }
+
         $audicoes =
             $this->obterColecaoCarregada(
                 $modelo,
@@ -525,6 +578,206 @@ final class CartaoVistaCompleta extends Component
                 $mensagemSemAvaliacoes,
             ),
         ];
+    }
+
+    /**
+     * Obtém os dados leves de uma entidade quando o cartão pertence à
+     * listagem.
+     *
+     * @param  MetalThursday|SeccaoMetalThursday  $modelo  Entidade preparada.
+     * @return DadosInteracoesListagem|null Dados leves ou nulo nos detalhes.
+     *
+     * @throws LogicException Quando o mapa da listagem não contém a entidade.
+     *
+     * @since 2.0.0
+     */
+    private function obterInteracoesListagem(
+        MetalThursday|SeccaoMetalThursday $modelo,
+    ): ?array {
+        if ($this->interacoesListagem === null) {
+            return null;
+        }
+
+        $tipo =
+            $modelo instanceof MetalThursday
+                ? TipoEntidadeInteracao::MetalThursday->value
+                : TipoEntidadeInteracao::SeccaoMetalThursday->value;
+
+        $identificador =
+            $this->obterIdentificador(
+                $modelo,
+                'entidade de interação',
+            );
+
+        $dados =
+            $this->interacoesListagem[
+                $tipo
+            ][
+                $identificador
+            ]
+            ?? null;
+
+        if ($dados === null) {
+            throw new LogicException(
+                'Os dados leves das interações não contêm a entidade apresentada.',
+            );
+        }
+
+        return $dados;
+    }
+
+    /**
+     * Prepara as interações a partir dos dados planos da listagem.
+     *
+     * @param  MetalThursday|SeccaoMetalThursday  $modelo  Entidade preparada.
+     * @param  DadosInteracoesListagem  $dados  Dados leves da entidade.
+     * @param  string  $mensagemSemAudicoes  Mensagem sem audições.
+     * @param  string  $mensagemSemAvaliacoes  Mensagem sem avaliações.
+     * @param  string  $textoSemAvaliacao  Texto do botão sem avaliação.
+     * @param  string  $textoOuvido  Texto quando está ouvido.
+     * @param  string  $textoNaoOuvido  Texto quando não está ouvido.
+     * @return DadosInteracoes Dados preparados.
+     *
+     * @since 2.0.0
+     */
+    private function prepararInteracoesListagem(
+        MetalThursday|SeccaoMetalThursday $modelo,
+        array $dados,
+        string $mensagemSemAudicoes,
+        string $mensagemSemAvaliacoes,
+        string $textoSemAvaliacao,
+        string $textoOuvido,
+        string $textoNaoOuvido,
+    ): array {
+        $pontuacaoUtilizador =
+            $dados['pontuacaoUtilizador'];
+
+        $ouvido =
+            $dados['ouvido'];
+
+        return [
+            'pontuacaoUtilizador' => $pontuacaoUtilizador,
+
+            'textoAvaliacao' => $pontuacaoUtilizador > 0
+                    ? 'A tua avaliação: '
+                        .$this->formatarPontuacao(
+                            $pontuacaoUtilizador,
+                        )
+                    : $textoSemAvaliacao,
+
+            'ouvido' => $ouvido,
+
+            'textoAudicao' => $ouvido
+                    ? $textoOuvido
+                    : $textoNaoOuvido,
+
+            'quantidadeComentarios' => $this->obterContagem(
+                $modelo,
+                'comentarios_count',
+                'comentarios',
+            ),
+
+            'quantidadeAudicoes' => $dados['quantidadeAudicoes'],
+
+            'quantidadeAvaliacoes' => $dados['quantidadeAvaliacoes'],
+
+            'mediaAvaliacoes' => $this->formatarPontuacao(
+                $dados['mediaAvaliacoes'],
+            ),
+
+            'descricaoAudicoes' => $this->criarDescricaoAudicoesListagem(
+                $dados['audicoes'],
+                $mensagemSemAudicoes,
+            ),
+
+            'descricaoAvaliacoes' => $this->criarDescricaoAvaliacoesListagem(
+                $dados['avaliacoes'],
+                $mensagemSemAvaliacoes,
+            ),
+        ];
+    }
+
+    /**
+     * Cria o indicador das audições a partir dos nomes planos da listagem.
+     *
+     * @param  list<string|null>  $audicoes  Nomes dos utilizadores.
+     * @param  string  $mensagemVazia  Mensagem apresentada sem audições.
+     * @return HtmlString Descrição segura.
+     *
+     * @since 2.0.0
+     */
+    private function criarDescricaoAudicoesListagem(
+        array $audicoes,
+        string $mensagemVazia,
+    ): HtmlString {
+        $linhas = [];
+
+        foreach ($audicoes as $nome) {
+            $linhas[] =
+                e(
+                    $this->normalizarTexto(
+                        $nome,
+                    )
+                        ?? 'Utilizador removido',
+                );
+        }
+
+        return new HtmlString(
+            $linhas !== []
+                ? implode(
+                    '<br>',
+                    $linhas,
+                )
+                : e(
+                    $mensagemVazia,
+                ),
+        );
+    }
+
+    /**
+     * Cria o indicador das avaliações a partir dos dados planos da listagem.
+     *
+     * @param  list<AvaliacaoInteracoesListagem>  $avaliacoes  Avaliações.
+     * @param  string  $mensagemVazia  Mensagem apresentada sem avaliações.
+     * @return HtmlString Descrição segura.
+     *
+     * @since 2.0.0
+     */
+    private function criarDescricaoAvaliacoesListagem(
+        array $avaliacoes,
+        string $mensagemVazia,
+    ): HtmlString {
+        $linhas = [];
+
+        foreach ($avaliacoes as $avaliacao) {
+            $nome =
+                $this->normalizarTexto(
+                    $avaliacao['nome'],
+                )
+                ?? 'Utilizador removido';
+
+            $linhas[] =
+                e(
+                    $nome,
+                )
+                .': '
+                .e(
+                    $this->formatarPontuacao(
+                        $avaliacao['pontuacao'],
+                    ),
+                );
+        }
+
+        return new HtmlString(
+            $linhas !== []
+                ? implode(
+                    '<br>',
+                    $linhas,
+                )
+                : e(
+                    $mensagemVazia,
+                ),
+        );
     }
 
     /**

@@ -900,18 +900,19 @@ final class PesquisaMetalThursdayTest extends TestCase
     }
 
     /**
-     * Confirma que a vista completa adia agregados que só são necessários
-     * depois da paginação.
+     * Confirma que a vista completa adia os dados de apresentação que não
+     * pertencem à consulta paginada.
      *
-     * As contagens de comentários são carregadas apenas para os registos da
-     * página. As contagens de avaliações e audições são derivadas das relações
-     * já carregadas. A média só permanece na consulta paginada quando é
-     * necessária para ordenar por classificação.
+     * A contagem dos comentários é carregada depois da paginação. As
+     * avaliações e audições da página são obtidas pelo serviço leve da
+     * listagem, sem hidratar as respetivas relações Eloquent. A média só
+     * permanece na consulta paginada quando é necessária para ordenar por
+     * classificação.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function vista_completa_adia_agregados_desnecessarios_ate_depois_da_paginacao(): void
+    public function vista_completa_adia_dados_de_apresentacao_ate_depois_da_paginacao(): void
     {
         $utilizador = $this->autenticarUtilizador();
 
@@ -1043,11 +1044,11 @@ final class PesquisaMetalThursdayTest extends TestCase
                                 ) !== $cenario[
                                     'inclui_classificacao_utilizador'
                                 ]
-                                || ! array_key_exists(
+                                || array_key_exists(
                                     'pontuacao_utilizador_autenticado',
                                     $atributos,
                                 )
-                                || ! array_key_exists(
+                                || array_key_exists(
                                     'ouvido_pelo_utilizador_autenticado',
                                     $atributos,
                                 )
@@ -1057,10 +1058,10 @@ final class PesquisaMetalThursdayTest extends TestCase
                                 || $metalThursday->relationLoaded(
                                     'audicaoUtilizadorAutenticado',
                                 )
-                                || ! $metalThursday->relationLoaded(
+                                || $metalThursday->relationLoaded(
                                     'avaliacoes',
                                 )
-                                || ! $metalThursday->relationLoaded(
+                                || $metalThursday->relationLoaded(
                                     'audicoes',
                                 )
                             ) {
@@ -1069,6 +1070,75 @@ final class PesquisaMetalThursdayTest extends TestCase
                         }
 
                         return true;
+                    },
+                );
+
+            $consultasExecutadas = [];
+
+            $this->get(
+                route(
+                    'inicio',
+                    [
+                        'vista' => 'completa',
+                        ...$cenario['parametros'],
+                    ],
+                ),
+            )
+                ->assertOk()
+                ->assertViewHas(
+                    'dadosInteracoesListagem',
+                    static function (
+                        mixed $valor,
+                    ) use (
+                        $primeira,
+                        $segunda,
+                    ): bool {
+                        if (! is_array($valor)) {
+                            return false;
+                        }
+
+                        $dadosPrimeira =
+                            $valor[
+                                'metal-thursday'
+                            ][
+                                $primeira->id
+                            ]
+                            ?? null;
+
+                        $dadosSegunda =
+                            $valor[
+                                'metal-thursday'
+                            ][
+                                $segunda->id
+                            ]
+                            ?? null;
+
+                        return is_array($dadosPrimeira)
+                            && is_array($dadosSegunda)
+                            && $dadosPrimeira[
+                                'pontuacaoUtilizador'
+                            ] === 9.5
+                            && $dadosPrimeira[
+                                'ouvido'
+                            ] === true
+                            && $dadosPrimeira[
+                                'quantidadeAvaliacoes'
+                            ] === 1
+                            && $dadosPrimeira[
+                                'quantidadeAudicoes'
+                            ] === 1
+                            && $dadosSegunda[
+                                'pontuacaoUtilizador'
+                            ] === 4.0
+                            && $dadosSegunda[
+                                'ouvido'
+                            ] === false
+                            && $dadosSegunda[
+                                'quantidadeAvaliacoes'
+                            ] === 1
+                            && $dadosSegunda[
+                                'quantidadeAudicoes'
+                            ] === 0;
                     },
                 );
 
@@ -1121,13 +1191,16 @@ final class PesquisaMetalThursdayTest extends TestCase
     }
 
     /**
-     * Confirma que a vista completa carrega o estado do utilizador nas secções
-     * através de atributos escalares, sem relações redundantes.
+     * Confirma que a vista completa carrega o estado das interações das
+     * secções através dos dados leves da listagem.
+     *
+     * Os modelos das secções não recebem atributos escalares nem relações
+     * completas de avaliações e audições.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function vista_completa_carrega_estado_do_utilizador_das_seccoes_com_atributos_escalares(): void
+    public function vista_completa_carrega_estado_das_seccoes_pelos_dados_leves(): void
     {
         $utilizador = $this->autenticarUtilizador();
 
@@ -1221,11 +1294,11 @@ final class PesquisaMetalThursdayTest extends TestCase
                                 'avaliacoes_avg_pontuacao',
                                 $atributos,
                             )
-                            && array_key_exists(
+                            && ! array_key_exists(
                                 'pontuacao_utilizador_autenticado',
                                 $atributos,
                             )
-                            && array_key_exists(
+                            && ! array_key_exists(
                                 'ouvido_pelo_utilizador_autenticado',
                                 $atributos,
                             )
@@ -1236,31 +1309,58 @@ final class PesquisaMetalThursdayTest extends TestCase
                             && ! $seccaoApresentada->relationLoaded(
                                 'artista',
                             )
-                            && (float) $atributos[
-                                'pontuacao_utilizador_autenticado'
-                            ] === 8.5
-                            && (bool) $atributos[
-                                'ouvido_pelo_utilizador_autenticado'
-                            ]
                             && ! $seccaoApresentada->relationLoaded(
                                 'avaliacaoUtilizadorAutenticado',
                             )
                             && ! $seccaoApresentada->relationLoaded(
                                 'audicaoUtilizadorAutenticado',
                             )
-                            && $seccaoApresentada->relationLoaded(
+                            && ! $seccaoApresentada->relationLoaded(
                                 'avaliacoes',
                             )
-                            && $seccaoApresentada->relationLoaded(
+                            && ! $seccaoApresentada->relationLoaded(
                                 'audicoes',
-                            )
-                            && $seccaoApresentada
-                                ->pontuacao_utilizador_autenticado === 8.5
-                            && $seccaoApresentada
-                                ->ouvido_pelo_utilizador_autenticado;
+                            );
                     }
 
                     return false;
+                },
+            )
+            ->assertViewHas(
+                'dadosInteracoesListagem',
+                static function (
+                    mixed $valor,
+                ) use (
+                    $seccao,
+                ): bool {
+                    if (! is_array($valor)) {
+                        return false;
+                    }
+
+                    $dados =
+                        $valor[
+                            'seccao-metal-thursday'
+                        ][
+                            $seccao->id
+                        ]
+                        ?? null;
+
+                    return is_array($dados)
+                        && $dados[
+                            'pontuacaoUtilizador'
+                        ] === 8.5
+                        && $dados[
+                            'ouvido'
+                        ] === true
+                        && $dados[
+                            'quantidadeAvaliacoes'
+                        ] === 1
+                        && $dados[
+                            'quantidadeAudicoes'
+                        ] === 1
+                        && $dados[
+                            'mediaAvaliacoes'
+                        ] === 8.5;
                 },
             );
     }

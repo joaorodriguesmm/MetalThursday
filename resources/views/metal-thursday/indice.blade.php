@@ -56,6 +56,7 @@
                     <x-metal-thursday.cartao-vista-completa
                         :registo-metal-thursday="$registoMetalThursday"
                         :carregar-comentarios-assincronamente="true"
+                        :interacoes-listagem="$dadosInteracoesListagem"
                     />
                 @empty
                     <div

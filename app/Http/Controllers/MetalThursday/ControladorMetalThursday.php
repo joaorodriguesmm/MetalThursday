@@ -22,6 +22,7 @@ use App\Notifications\NotificacaoUtilizadorNomeado;
 use App\Resultados\MetalThursday\MetalThursdayCriada;
 use App\Servicos\MetalThursday\ServicoConfiguracaoInterfaceMetalThursday;
 use App\Servicos\MetalThursday\ServicoControlosListagemMetalThursday;
+use App\Servicos\MetalThursday\ServicoInteracoesListagemMetalThursday;
 use App\Servicos\MetalThursday\ServicoNotificacaoPublicacaoMetalThursday;
 use App\Servicos\MetalThursday\ServicoOpcoesMetalThursday;
 use App\Servicos\MetalThursday\ServicoPaginacaoListagemMetalThursday;
@@ -162,6 +163,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
         ServicoParametrosListagemMetalThursday $servicoParametrosListagem,
         ServicoControlosListagemMetalThursday $servicoControlosListagem,
         ServicoPaginacaoListagemMetalThursday $servicoPaginacaoListagem,
+        ServicoInteracoesListagemMetalThursday $servicoInteracoesListagem,
     ): View {
         $this->authorize(
             'viewAny',
@@ -190,6 +192,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
 
         $registosMetalThursday = null;
         $seccoesSimplificadas = null;
+        $dadosInteracoesListagem = [];
 
         if (
             $tipoVista
@@ -228,12 +231,35 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                 'comentariosComConteudo as comentarios_count',
             ]);
 
+            /** @var list<int> $identificadoresMetalThursdays */
+            $identificadoresMetalThursdays = [];
+
+            /** @var list<int> $identificadoresSeccoes */
+            $identificadoresSeccoes = [];
+
             foreach ($registosPagina as $metalThursday) {
-                $this->preencherEstadoInteracoesUtilizadorAutenticado(
-                    $metalThursday,
+                $identificadoresMetalThursdays[] =
+                    $metalThursday->id;
+
+                foreach ($metalThursday->seccoes as $seccao) {
+                    if (! $seccao instanceof SeccaoMetalThursday) {
+                        throw new LogicException(
+                            'A relação "seccoes" contém um modelo inesperado.',
+                        );
+                    }
+
+                    $identificadoresSeccoes[] =
+                        $seccao->id;
+                }
+
+            }
+
+            $dadosInteracoesListagem =
+                $servicoInteracoesListagem->obter(
+                    $identificadoresMetalThursdays,
+                    $identificadoresSeccoes,
                     $identificadorUtilizador,
                 );
-            }
 
             MetalThursday::carregarNumerosSemanaNaEdicao(
                 $registosPagina,
@@ -246,6 +272,8 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                 'registosMetalThursday' => $registosMetalThursday,
 
                 'seccoesSimplificadas' => $seccoesSimplificadas,
+
+                'dadosInteracoesListagem' => $dadosInteracoesListagem,
 
                 'configuracaoListagemMetalThursday' => $this
                     ->servicoConfiguracaoInterface
@@ -827,9 +855,10 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
     /**
      * Cria a consulta da vista completa.
      *
-     * As contagens de avaliações e audições são obtidas das relações já
-     * carregadas para os registos da página. A média das avaliações só é
-     * calculada antecipadamente quando participa na ordenação.
+     * As avaliações e audições dos registos da página são carregadas depois
+     * da paginação pelo serviço leve da listagem, sem hidratar as respetivas
+     * relações Eloquent. A média das avaliações só é calculada
+     * antecipadamente quando participa na ordenação.
      *
      * A contagem de comentários é carregada em lote depois da paginação,
      * para evitar executar a subconsulta correlacionada sobre todos os
@@ -851,6 +880,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
             ->with(
                 $this->obterRelacoesApresentacao(
                     $identificadorUtilizador,
+                    false,
                     false,
                 ),
             );
@@ -1071,6 +1101,11 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
      * @param  int  $identificadorUtilizador  Utilizador autenticado.
      * @param  bool  $incluirComentarios  Indica se os comentários principais
      *                                    devem ser carregados antecipadamente.
+     * @param  bool  $incluirDadosInteracoesEloquent  Indica se o estado
+     *                                                escalar e as coleções
+     *                                                completas de avaliações
+     *                                                e audições devem ser
+     *                                                carregados por Eloquent.
      * @return array<int|string, string|\Closure(Relation<*, *, *>): void> Relações e restrições de eager loading.
      *
      * @since 2.0.0
@@ -1078,19 +1113,19 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
     private function obterRelacoesApresentacao(
         int $identificadorUtilizador,
         bool $incluirComentarios = true,
+        bool $incluirDadosInteracoesEloquent = true,
     ): array {
         $relacoes = [
             'edicao:id,nome',
             'autor:id,nome',
             'proximoNomeado:id,nome',
-            'avaliacoes.utilizador:id,nome',
-            'audicoes.utilizador:id,nome',
 
             'seccoes' => function (
                 Relation $relacao,
             ) use (
                 $identificadorUtilizador,
                 $incluirComentarios,
+                $incluirDadosInteracoesEloquent,
             ): void {
                 $construtor =
                     $relacao->getQuery();
@@ -1111,31 +1146,37 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                     ->withCount([
                         'comentariosComConteudo as comentarios_count',
                     ])
-                    ->withMax(
-                        [
-                            'avaliacoes as '.SeccaoMetalThursday::COLUNA_PONTUACAO_UTILIZADOR_AUTENTICADO => static fn (
-                                Builder $construtorAvaliacoes,
-                            ): Builder => $construtorAvaliacoes->where(
-                                'utilizador_id',
-                                $identificadorUtilizador,
-                            ),
-                        ],
-                        'pontuacao',
-                    )
-                    ->withExists([
-                        'audicoes as '.SeccaoMetalThursday::COLUNA_OUVIDO_PELO_UTILIZADOR_AUTENTICADO => static fn (
-                            Builder $construtorAudicoes,
-                        ): Builder => $construtorAudicoes->where(
-                            'utilizador_id',
-                            $identificadorUtilizador,
-                        ),
-                    ])
                     ->with([
                         'tipoSeccao:id,nome,exige_detalhes',
                         'ligacoes',
-                        'avaliacoes.utilizador:id,nome',
-                        'audicoes.utilizador:id,nome',
                     ]);
+
+                if ($incluirDadosInteracoesEloquent) {
+                    $construtor
+                        ->withMax(
+                            [
+                                'avaliacoes as '.SeccaoMetalThursday::COLUNA_PONTUACAO_UTILIZADOR_AUTENTICADO => static fn (
+                                    Builder $construtorAvaliacoes,
+                                ): Builder => $construtorAvaliacoes->where(
+                                    'utilizador_id',
+                                    $identificadorUtilizador,
+                                ),
+                            ],
+                            'pontuacao',
+                        )
+                        ->withExists([
+                            'audicoes as '.SeccaoMetalThursday::COLUNA_OUVIDO_PELO_UTILIZADOR_AUTENTICADO => static fn (
+                                Builder $construtorAudicoes,
+                            ): Builder => $construtorAudicoes->where(
+                                'utilizador_id',
+                                $identificadorUtilizador,
+                            ),
+                        ])
+                        ->with([
+                            'avaliacoes.utilizador:id,nome',
+                            'audicoes.utilizador:id,nome',
+                        ]);
+                }
 
                 if (! $incluirComentarios) {
                     return;
@@ -1155,6 +1196,14 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                 ]);
             },
         ];
+
+        if ($incluirDadosInteracoesEloquent) {
+            $relacoes[] =
+                'avaliacoes.utilizador:id,nome';
+
+            $relacoes[] =
+                'audicoes.utilizador:id,nome';
+        }
 
         if ($incluirComentarios) {
             $relacoes['comentarios'] = function (
