@@ -297,6 +297,47 @@ final class ServicoOpcoesMetalThursdayTest extends TestCase
     }
 
     #[Test]
+    public function generos_para_filtro_da_listagem_devolvem_opcoes_simples_ordenadas(): void
+    {
+        $generoZulu = Genero::factory()
+            ->comNome(
+                'Zulu Metal',
+            )
+            ->create();
+
+        $generoAlfa = Genero::factory()
+            ->comNome(
+                'Alfa Metal',
+            )
+            ->create();
+
+        $generoEliminado = Genero::factory()
+            ->comNome(
+                'Eliminado Metal',
+            )
+            ->create();
+
+        $generoEliminado->delete();
+
+        $generos = (new ServicoOpcoesMetalThursday)
+            ->obterGenerosParaFiltroListagem();
+
+        self::assertSame(
+            [
+                [
+                    'identificador' => $generoAlfa->getKey(),
+                    'nome' => 'Alfa Metal',
+                ],
+                [
+                    'identificador' => $generoZulu->getKey(),
+                    'nome' => 'Zulu Metal',
+                ],
+            ],
+            $generos,
+        );
+    }
+
+    #[Test]
     public function selecao_de_artistas_preserva_atual_eliminado_e_exclui_restantes_eliminados(): void
     {
         $artistaAtivo = Artista::factory()

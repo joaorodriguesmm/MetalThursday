@@ -156,11 +156,7 @@ final class ServicoConfiguracaoInterfaceMetalThursday
 
                 'generos' => $this
                     ->servicoOpcoes
-                    ->serializarOpcoesSelecao(
-                        $this
-                            ->servicoOpcoes
-                            ->obterGenerosParaSelecao(),
-                    ),
+                    ->obterGenerosParaFiltroListagem(),
             ],
 
             'filtrosDisponiveis' => $filtrosPorChave,
