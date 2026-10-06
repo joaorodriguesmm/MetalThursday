@@ -1,5 +1,8 @@
 import axios from './ClienteHttp';
 
+import InicializadorTooltips
+    from './InicializadorTooltips';
+
 import TratadorFormularioAjax
     from './TratadorFormularioAjax';
 
@@ -29,6 +32,16 @@ class InicializadorComentarios {
         'form.formulario-comentario',
         'form.formulario-resposta-comentario',
     ].join(', ');
+
+    /**
+     * Seletor dos botões que carregam uma secção de comentários sob pedido.
+     *
+     * @type {string}
+     *
+     * @since 2.0.0
+     */
+    static SELETOR_CARREGAMENTO_SECCAO =
+        'button[data-acao-comentarios="alternar-seccao"][data-endereco-comentarios]';
 
     /**
      * Seletor dos botões que expandem ou recolhem respostas.
@@ -93,6 +106,14 @@ class InicializadorComentarios {
          */
         this.formulariosInicializados =
             new WeakSet();
+
+        /**
+         * Carregamentos atualmente associados a cada secção de comentários.
+         *
+         * @type {WeakMap<HTMLButtonElement, Promise<void>>}
+         */
+        this.carregamentosSeccoes =
+            new WeakMap();
 
         /**
          * Carregamentos de respostas atualmente associados a cada alternador.
@@ -273,6 +294,35 @@ class InicializadorComentarios {
             return;
         }
 
+        const botaoSeccao =
+            evento.target.closest(
+                InicializadorComentarios
+                    .SELETOR_CARREGAMENTO_SECCAO,
+            );
+
+        if (
+            botaoSeccao
+            instanceof HTMLButtonElement
+            && this.contentor.contains(
+                botaoSeccao,
+            )
+        ) {
+            void this
+                .carregarSeccaoComentarios(
+                    botaoSeccao,
+                )
+                .catch(
+                    () => {
+                        /*
+                         * A falha já é apresentada no respetivo contentor.
+                         * O utilizador pode repetir a tentativa num novo clique.
+                         */
+                    },
+                );
+
+            return;
+        }
+
         const botao =
             evento.target.closest(
                 InicializadorComentarios
@@ -293,6 +343,235 @@ class InicializadorComentarios {
         void this.alternarRespostas(
             botao,
         );
+    }
+
+    /**
+     * Carrega a secção completa de comentários associada a um alternador.
+     *
+     * O primeiro pedido popula o contentor colapsável. Os acessos seguintes
+     * reutilizam o conteúdo já obtido.
+     *
+     * @param {HTMLButtonElement} botao Alternador da secção.
+     *
+     * @returns {Promise<void>}
+     *
+     * @throws {Error} Quando o contrato do alternador ou do contentor é
+     *     inválido.
+     *
+     * @since 2.0.0
+     */
+    async carregarSeccaoComentarios(
+        botao,
+    ) {
+        const identificadorContentor =
+            botao.getAttribute(
+                'aria-controls',
+            )?.trim()
+            ?? '';
+
+        const contentor =
+            identificadorContentor !== ''
+                ? document.getElementById(
+                    identificadorContentor,
+                )
+                : null;
+
+        if (
+            !(contentor
+                instanceof HTMLElement)
+            || !this.contentor.contains(
+                contentor,
+            )
+        ) {
+            throw new Error(
+                'Não foi possível localizar a secção de comentários.',
+            );
+        }
+
+        if (
+            contentor.dataset
+                .comentariosCarregados
+            === 'true'
+        ) {
+            return;
+        }
+
+        const carregamentoExistente =
+            this.carregamentosSeccoes.get(
+                botao,
+            );
+
+        if (carregamentoExistente) {
+            await carregamentoExistente;
+
+            return;
+        }
+
+        const carregamento =
+            this.executarCarregamentoSeccaoComentarios(
+                botao,
+                contentor,
+            );
+
+        this.carregamentosSeccoes.set(
+            botao,
+            carregamento,
+        );
+
+        try {
+            await carregamento;
+        } finally {
+            if (
+                this.carregamentosSeccoes.get(
+                    botao,
+                ) === carregamento
+            ) {
+                this.carregamentosSeccoes.delete(
+                    botao,
+                );
+            }
+        }
+    }
+
+    /**
+     * Executa o pedido da secção de comentários e inicializa o conteúdo
+     * recebido.
+     *
+     * @param {HTMLButtonElement} botao Alternador da secção.
+     * @param {HTMLElement} contentor Contentor colapsável.
+     *
+     * @returns {Promise<void>}
+     *
+     * @throws {Error} Quando o endereço ou a resposta não respeitam o
+     *     contrato esperado.
+     *
+     * @since 2.0.0
+     */
+    async executarCarregamentoSeccaoComentarios(
+        botao,
+        contentor,
+    ) {
+        const endereco =
+            this.normalizarEndereco(
+                botao.dataset
+                    .enderecoComentarios,
+            );
+
+        const contador =
+            botao.querySelector(
+                '[data-quantidade-comentarios]',
+            );
+
+        if (endereco === null) {
+            throw new Error(
+                'O endereço dos comentários é inválido.',
+            );
+        }
+
+        if (!(contador instanceof HTMLElement)) {
+            throw new Error(
+                'O contador dos comentários não está disponível.',
+            );
+        }
+
+        botao.disabled =
+            true;
+
+        botao.setAttribute(
+            'aria-busy',
+            'true',
+        );
+
+        try {
+            const resposta =
+                await axios.get(
+                    endereco,
+                );
+
+            const dados =
+                resposta.data;
+
+            const numeroComentarios =
+                this.eObjeto(
+                    dados,
+                )
+                    ? this.normalizarQuantidade(
+                        dados.numero_comentarios,
+                    )
+                    : null;
+
+            const htmlComentarios =
+                this.eObjeto(
+                    dados,
+                )
+                    ? dados.comentarios_html
+                    : null;
+
+            if (
+                numeroComentarios === null
+                || typeof htmlComentarios !== 'string'
+                || htmlComentarios.trim() === ''
+            ) {
+                throw new Error(
+                    'A resposta dos comentários é inválida.',
+                );
+            }
+
+            contentor.innerHTML =
+                htmlComentarios.trim();
+
+            contentor.dataset
+                .comentariosCarregados =
+                    'true';
+
+            contador.textContent =
+                String(
+                    numeroComentarios,
+                );
+
+            this.inicializarFormularios(
+                contentor,
+            );
+
+            new InicializadorTooltips(
+                contentor.querySelectorAll(
+                    '[data-bs-toggle="tooltip"]',
+                ),
+            );
+        } catch (erro) {
+            contentor.dataset
+                .comentariosCarregados =
+                    'false';
+
+            const aviso =
+                document.createElement(
+                    'p',
+                );
+
+            aviso.className =
+                'alert alert-danger mb-0';
+
+            aviso.setAttribute(
+                'role',
+                'alert',
+            );
+
+            aviso.textContent =
+                'Não foi possível carregar os comentários. Tenta novamente.';
+
+            contentor.replaceChildren(
+                aviso,
+            );
+
+            throw erro;
+        } finally {
+            botao.disabled =
+                false;
+
+            botao.removeAttribute(
+                'aria-busy',
+            );
+        }
     }
 
     /**

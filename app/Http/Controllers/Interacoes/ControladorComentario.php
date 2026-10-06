@@ -85,6 +85,76 @@ final class ControladorComentario extends Controller
     ) {}
 
     /**
+     * Lista os comentários principais de uma entidade para carregamento
+     * assíncrono.
+     *
+     * As respostas permanecem excluídas deste carregamento inicial e são
+     * obtidas apenas quando o respetivo ramo é expandido.
+     *
+     * @param  string  $tipoComentavel  Tipo da entidade comentada.
+     * @param  int  $identificadorComentavel  Identificador da entidade.
+     * @return JsonResponse Secção de comentários renderizada.
+     *
+     * @throws AuthenticationException Quando não existe autenticação válida.
+     * @throws NotFoundHttpException Quando a entidade não está disponível.
+     *
+     * @since 2.0.0
+     */
+    public function listarPrincipais(
+        string $tipoComentavel,
+        int $identificadorComentavel,
+    ): JsonResponse {
+        $utilizador =
+            $this->obterUtilizadorAutenticado();
+
+        $this->authorize(
+            'viewAny',
+            Comentario::class,
+        );
+
+        $comentavel =
+            $this->resolverComentavel(
+                $tipoComentavel,
+                $identificadorComentavel,
+            );
+
+        $this
+            ->servicoDisponibilidadeInteracoes
+            ->obterMetalThursdayPublicada(
+                $comentavel,
+            );
+
+        $identificadorUtilizador =
+            $utilizador->id;
+
+        $comentarios =
+            $comentavel
+                ->comentarios()
+                ->principais()
+                ->comDadosApresentacao(
+                    $identificadorUtilizador,
+                )
+                ->ordenadosMaisRecentes()
+                ->get();
+
+        $comentavel->setRelation(
+            'comentarios',
+            $comentarios,
+        );
+
+        return response()->json([
+            'numero_comentarios' => $comentavel
+                ->comentariosComConteudo()
+                ->count(),
+
+            'comentarios_html' => $this
+                ->renderizarSeccaoComentarios(
+                    $comentavel,
+                ),
+        ]);
+    }
+
+    /**
      * Publica um comentário numa MetalThursday ou numa secção.
      *
      * A entidade comentada é bloqueada durante a criação, impedindo que seja
@@ -896,6 +966,26 @@ final class ControladorComentario extends Controller
 
             'pai_atualizado' => null,
         ];
+    }
+
+    /**
+     * Renderiza a secção completa de comentários para carregamento assíncrono.
+     *
+     * @param  MetalThursday|SeccaoMetalThursday  $comentavel  Entidade
+     *                                                         comentada.
+     * @return string HTML renderizado.
+     *
+     * @since 2.0.0
+     */
+    private function renderizarSeccaoComentarios(
+        MetalThursday|SeccaoMetalThursday $comentavel,
+    ): string {
+        return view(
+            'components.fragmento-seccao-comentarios',
+            [
+                'comentavel' => $comentavel,
+            ],
+        )->render();
     }
 
     /**

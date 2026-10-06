@@ -29,6 +29,85 @@ final class ControladorComentarioTest extends TestCase
     use RefreshDatabase;
 
     /**
+     * Confirma que o carregamento assíncrono devolve apenas os comentários
+     * principais e preserva a contagem de toda a conversa.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function lista_comentarios_principais_de_uma_entidade(): void
+    {
+        $utilizador = Utilizador::factory()
+            ->create();
+
+        $metalThursday = MetalThursday::factory()
+            ->create();
+
+        $comentarioPrincipal =
+            $metalThursday
+                ->comentarios()
+                ->create([
+                    'utilizador_id' => $utilizador->getKey(),
+
+                    'conteudo' => 'Comentário principal carregado.',
+
+                    'comentario_pai_id' => null,
+                ]);
+
+        $metalThursday
+            ->comentarios()
+            ->create([
+                'utilizador_id' => $utilizador->getKey(),
+
+                'conteudo' => 'Resposta carregada apenas sob pedido.',
+
+                'comentario_pai_id' => $comentarioPrincipal->getKey(),
+            ]);
+
+        $resposta = $this
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
+            ->getJson(
+                route(
+                    'comentarios.indice',
+                    [
+                        'tipoComentavel' => TipoEntidadeInteracao::MetalThursday->value,
+
+                        'identificadorComentavel' => $metalThursday->getKey(),
+                    ],
+                ),
+            );
+
+        $resposta
+            ->assertOk()
+            ->assertJsonPath(
+                'numero_comentarios',
+                2,
+            );
+
+        $htmlComentarios =
+            $resposta->json(
+                'comentarios_html',
+            );
+
+        self::assertIsString(
+            $htmlComentarios,
+        );
+
+        self::assertStringContainsString(
+            'Comentário principal carregado.',
+            $htmlComentarios,
+        );
+
+        self::assertStringNotContainsString(
+            'Resposta carregada apenas sob pedido.',
+            $htmlComentarios,
+        );
+    }
+
+    /**
      * Confirma a publicação de um comentário numa secção.
      *
      * @since 2.0.0

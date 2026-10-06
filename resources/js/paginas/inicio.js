@@ -48,8 +48,10 @@ const SELETORES = Object.freeze({
     acionadorAvaliacao:
         '[data-endereco-avaliacao][data-bs-target="#modal-avaliacao"]',
 
-    formularioComentario:
+    interacaoComentarios: [
         '.formulario-comentario',
+        'button[data-acao-comentarios="alternar-seccao"][data-endereco-comentarios]',
+    ].join(', '),
 });
 
 /**
@@ -186,7 +188,7 @@ function configurarSubmissaoAutomatica() {
  * Inicializa os componentes de interação apenas quando são utilizados pela
  * vista apresentada.
  *
- * A vista simplificada não contém controlos de avaliação nem formulários de
+ * A vista simplificada não contém controlos de avaliação nem interações de
  * comentários, pelo que evita transferir estes módulos sem necessidade.
  *
  * @returns {Promise<void>}
@@ -218,7 +220,7 @@ async function iniciarInteracoesDisponiveis() {
 
     if (
         document.querySelector(
-            SELETORES.formularioComentario,
+            SELETORES.interacaoComentarios,
         ) !== null
     ) {
         tarefas.push(

@@ -173,6 +173,21 @@
                                         $seccaoPreparada['identificadorComentarios']
                                     }}"
                                     aria-expanded="false"
+                                    @if ($carregarComentariosAssincronamente)
+                                        data-acao-comentarios="alternar-seccao"
+                                        data-endereco-comentarios="{{
+                                            route(
+                                                'comentarios.indice',
+                                                [
+                                                    'tipoComentavel' =>
+                                                        $seccaoPreparada['tipoInteracao'],
+
+                                                    'identificadorComentavel' =>
+                                                        $seccaoPreparada['identificador'],
+                                                ],
+                                            )
+                                        }}"
+                                    @endif
                                 >
                                     <i
                                         class="bi bi-chat-dots"
@@ -329,10 +344,15 @@
                                 $seccaoPreparada['identificadorComentarios']
                             }}"
                             class="collapse mt-3"
+                            @if ($carregarComentariosAssincronamente)
+                                data-comentarios-carregados="false"
+                            @endif
                         >
-                            <x-seccao-comentarios
-                                :comentavel="$seccaoPreparada['modelo']"
-                            />
+                            @if (! $carregarComentariosAssincronamente)
+                                <x-seccao-comentarios
+                                    :comentavel="$seccaoPreparada['modelo']"
+                                />
+                            @endif
                         </div>
                     @endif
                 @endif
@@ -366,6 +386,21 @@
                         data-bs-target="#{{ $identificadorComentariosMetalThursday }}"
                         aria-controls="{{ $identificadorComentariosMetalThursday }}"
                         aria-expanded="false"
+                        @if ($carregarComentariosAssincronamente)
+                            data-acao-comentarios="alternar-seccao"
+                            data-endereco-comentarios="{{
+                                route(
+                                    'comentarios.indice',
+                                    [
+                                        'tipoComentavel' =>
+                                            $tipoInteracaoMetalThursday,
+
+                                        'identificadorComentavel' =>
+                                            $identificadorMetalThursday,
+                                    ],
+                                )
+                            }}"
+                        @endif
                     >
                         <i
                             class="bi bi-chat-dots"
@@ -505,10 +540,15 @@
         <div
             id="{{ $identificadorComentariosMetalThursday }}"
             class="collapse p-3"
+            @if ($carregarComentariosAssincronamente)
+                data-comentarios-carregados="false"
+            @endif
         >
-            <x-seccao-comentarios
-                :comentavel="$registoMetalThursday"
-            />
+            @if (! $carregarComentariosAssincronamente)
+                <x-seccao-comentarios
+                    :comentavel="$registoMetalThursday"
+                />
+            @endif
         </div>
     @endif
 </article>

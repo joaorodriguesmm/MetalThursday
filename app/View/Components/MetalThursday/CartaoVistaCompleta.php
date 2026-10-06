@@ -119,6 +119,13 @@ final class CartaoVistaCompleta extends Component
     public readonly string $nomeProximoNomeado;
 
     /**
+     * Indica se as secções de comentários são carregadas sob pedido.
+     *
+     * @since 2.0.0
+     */
+    public readonly bool $carregarComentariosAssincronamente;
+
+    /**
      * Indica se as interações sociais podem ser apresentadas.
      *
      * @since 2.0.0
@@ -169,9 +176,13 @@ final class CartaoVistaCompleta extends Component
      */
     public function __construct(
         MetalThursday $registoMetalThursday,
+        bool $carregarComentariosAssincronamente = false,
     ) {
         $this->registoMetalThursday =
             $registoMetalThursday;
+
+        $this->carregarComentariosAssincronamente =
+            $carregarComentariosAssincronamente;
 
         $this->interacoesDisponiveis =
             $registoMetalThursday->estaPublicada();
@@ -246,7 +257,10 @@ final class CartaoVistaCompleta extends Component
                 'seccoes',
             );
 
-        if ($this->interacoesDisponiveis) {
+        if (
+            $this->interacoesDisponiveis
+            && ! $this->carregarComentariosAssincronamente
+        ) {
             $this->obterColecaoCarregada(
                 $registoMetalThursday,
                 'comentarios',
@@ -340,7 +354,10 @@ final class CartaoVistaCompleta extends Component
             }
 
             /** @var Collection<int, LigacaoSeccaoMetalThursday> $ligacoes */
-            if ($this->interacoesDisponiveis) {
+            if (
+                $this->interacoesDisponiveis
+                && ! $this->carregarComentariosAssincronamente
+            ) {
                 $this->obterColecaoCarregada(
                     $seccao,
                     'comentarios',
@@ -808,9 +825,7 @@ final class CartaoVistaCompleta extends Component
             )
         ) {
             return $this->normalizarTexto(
-                $atributos[
-                    'nome_artista_apresentacao'
-                ],
+                $atributos['nome_artista_apresentacao'],
             )
                 ?? 'Artista indisponível';
         }
@@ -968,9 +983,7 @@ final class CartaoVistaCompleta extends Component
             $modelo->getAttributes();
 
         $valor =
-            $atributos[
-                $atributoContagem
-            ]
+            $atributos[$atributoContagem]
             ?? null;
 
         $contagem =
@@ -1007,9 +1020,7 @@ final class CartaoVistaCompleta extends Component
             $modelo->getAttributes();
 
         $mediaCarregada =
-            $atributos[
-                'avaliacoes_avg_pontuacao'
-            ]
+            $atributos['avaliacoes_avg_pontuacao']
             ?? null;
 
         if (is_numeric($mediaCarregada)) {

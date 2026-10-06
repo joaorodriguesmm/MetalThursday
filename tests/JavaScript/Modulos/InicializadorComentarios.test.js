@@ -58,6 +58,206 @@ describe(
         );
 
         it(
+            'carrega secção de comentários apenas uma vez',
+            async () => {
+                document.body.innerHTML = `
+                    <button
+                        id="alternador-comentarios"
+                        type="button"
+                        data-acao-comentarios="alternar-seccao"
+                        data-endereco-comentarios="/metal-thursday/10/comentarios"
+                        aria-controls="comentarios-metal-thursday-10"
+                    >
+                        Comentários
+                        (<span data-quantidade-comentarios>1</span>)
+                    </button>
+
+                    <div
+                        id="comentarios-metal-thursday-10"
+                        data-comentarios-carregados="false"
+                    ></div>
+                `;
+
+                const pedido =
+                    vi.spyOn(
+                        axios,
+                        'get',
+                    )
+                        .mockResolvedValue({
+                            data: {
+                                numero_comentarios: 3,
+                                comentarios_html: `
+                                    <section aria-label="Comentários">
+                                        <div class="lista-comentarios"></div>
+                                    </section>
+                                `,
+                            },
+                        });
+
+                const inicializador =
+                    new InicializadorComentarios();
+
+                const botao =
+                    document.getElementById(
+                        'alternador-comentarios',
+                    );
+
+                const contentor =
+                    document.getElementById(
+                        'comentarios-metal-thursday-10',
+                    );
+
+                await inicializador
+                    .carregarSeccaoComentarios(
+                        botao,
+                    );
+
+                await inicializador
+                    .carregarSeccaoComentarios(
+                        botao,
+                    );
+
+                expect(
+                    pedido,
+                ).toHaveBeenCalledTimes(1);
+
+                expect(
+                    pedido,
+                ).toHaveBeenCalledWith(
+                    '/metal-thursday/10/comentarios',
+                );
+
+                expect(
+                    contentor.dataset
+                        .comentariosCarregados,
+                ).toBe('true');
+
+                expect(
+                    contentor.querySelector(
+                        'section[aria-label="Comentários"]',
+                    ),
+                ).not.toBeNull();
+
+                expect(
+                    botao.querySelector(
+                        '[data-quantidade-comentarios]',
+                    ).textContent,
+                ).toBe('3');
+
+                expect(
+                    botao.disabled,
+                ).toBe(false);
+
+                expect(
+                    botao.hasAttribute(
+                        'aria-busy',
+                    ),
+                ).toBe(false);
+            },
+        );
+
+        it(
+            'permite repetir carregamento da secção depois de falha',
+            async () => {
+                document.body.innerHTML = `
+                    <button
+                        id="alternador-comentarios"
+                        type="button"
+                        data-acao-comentarios="alternar-seccao"
+                        data-endereco-comentarios="/metal-thursday/10/comentarios"
+                        aria-controls="comentarios-metal-thursday-10"
+                    >
+                        Comentários
+                        (<span data-quantidade-comentarios>1</span>)
+                    </button>
+
+                    <div
+                        id="comentarios-metal-thursday-10"
+                        data-comentarios-carregados="false"
+                    ></div>
+                `;
+
+                const pedido =
+                    vi.spyOn(
+                        axios,
+                        'get',
+                    )
+                        .mockRejectedValueOnce(
+                            new Error(
+                                'Falha de rede.',
+                            ),
+                        )
+                        .mockResolvedValueOnce({
+                            data: {
+                                numero_comentarios: 1,
+                                comentarios_html: `
+                                    <section aria-label="Comentários">
+                                        <div class="lista-comentarios"></div>
+                                    </section>
+                                `,
+                            },
+                        });
+
+                const inicializador =
+                    new InicializadorComentarios();
+
+                const botao =
+                    document.getElementById(
+                        'alternador-comentarios',
+                    );
+
+                const contentor =
+                    document.getElementById(
+                        'comentarios-metal-thursday-10',
+                    );
+
+                await expect(
+                    inicializador
+                        .carregarSeccaoComentarios(
+                            botao,
+                        ),
+                ).rejects.toThrow(
+                    'Falha de rede.',
+                );
+
+                expect(
+                    contentor.dataset
+                        .comentariosCarregados,
+                ).toBe('false');
+
+                expect(
+                    contentor.textContent,
+                ).toContain(
+                    'Não foi possível carregar os comentários.',
+                );
+
+                await inicializador
+                    .carregarSeccaoComentarios(
+                        botao,
+                    );
+
+                expect(
+                    pedido,
+                ).toHaveBeenCalledTimes(2);
+
+                expect(
+                    contentor.dataset
+                        .comentariosCarregados,
+                ).toBe('true');
+
+                expect(
+                    botao.disabled,
+                ).toBe(false);
+
+                expect(
+                    botao.hasAttribute(
+                        'aria-busy',
+                    ),
+                ).toBe(false);
+            },
+        );
+
+        it(
             'carrega respostas uma unica vez e expande o ramo',
             async () => {
                 const pedido =

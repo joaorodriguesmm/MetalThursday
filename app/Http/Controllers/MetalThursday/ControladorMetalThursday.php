@@ -200,9 +200,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                     ->paginar(
                         $filtros->aplicar(
                             $this->criarConsultaSimplificada(
-                                $dadosControlosListagem[
-                                    'ordenacaoAtual'
-                                ] === OrdenacaoMetalThursday::Classificacao->value,
+                                $dadosControlosListagem['ordenacaoAtual'] === OrdenacaoMetalThursday::Classificacao->value,
                             ),
                         ),
                         $porPagina,
@@ -215,9 +213,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                         $filtros->aplicar(
                             $this->criarConsultaCompleta(
                                 $identificadorUtilizador,
-                                $dadosControlosListagem[
-                                    'ordenacaoAtual'
-                                ] === OrdenacaoMetalThursday::Classificacao->value,
+                                $dadosControlosListagem['ordenacaoAtual'] === OrdenacaoMetalThursday::Classificacao->value,
                             ),
                         ),
                         $porPagina,
@@ -855,6 +851,7 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
             ->with(
                 $this->obterRelacoesApresentacao(
                     $identificadorUtilizador,
+                    false,
                 ),
             );
 
@@ -1072,35 +1069,28 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
      * evoluam com relações ou agregados diferentes por engano.
      *
      * @param  int  $identificadorUtilizador  Utilizador autenticado.
+     * @param  bool  $incluirComentarios  Indica se os comentários principais
+     *                                    devem ser carregados antecipadamente.
      * @return array<int|string, string|\Closure(Relation<*, *, *>): void> Relações e restrições de eager loading.
      *
      * @since 2.0.0
      */
     private function obterRelacoesApresentacao(
         int $identificadorUtilizador,
+        bool $incluirComentarios = true,
     ): array {
-        return [
+        $relacoes = [
             'edicao:id,nome',
             'autor:id,nome',
             'proximoNomeado:id,nome',
             'avaliacoes.utilizador:id,nome',
             'audicoes.utilizador:id,nome',
 
-            'comentarios' => function (
-                Relation $relacao,
-            ) use (
-                $identificadorUtilizador,
-            ): void {
-                $this->configurarComentariosParaApresentacao(
-                    $relacao,
-                    $identificadorUtilizador,
-                );
-            },
-
             'seccoes' => function (
                 Relation $relacao,
             ) use (
                 $identificadorUtilizador,
+                $incluirComentarios,
             ): void {
                 $construtor =
                     $relacao->getQuery();
@@ -1145,20 +1135,41 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                         'ligacoes',
                         'avaliacoes.utilizador:id,nome',
                         'audicoes.utilizador:id,nome',
-
-                        'comentarios' => function (
-                            Relation $relacaoComentarios,
-                        ) use (
-                            $identificadorUtilizador,
-                        ): void {
-                            $this->configurarComentariosParaApresentacao(
-                                $relacaoComentarios,
-                                $identificadorUtilizador,
-                            );
-                        },
                     ]);
+
+                if (! $incluirComentarios) {
+                    return;
+                }
+
+                $construtor->with([
+                    'comentarios' => function (
+                        Relation $relacaoComentarios,
+                    ) use (
+                        $identificadorUtilizador,
+                    ): void {
+                        $this->configurarComentariosParaApresentacao(
+                            $relacaoComentarios,
+                            $identificadorUtilizador,
+                        );
+                    },
+                ]);
             },
         ];
+
+        if ($incluirComentarios) {
+            $relacoes['comentarios'] = function (
+                Relation $relacao,
+            ) use (
+                $identificadorUtilizador,
+            ): void {
+                $this->configurarComentariosParaApresentacao(
+                    $relacao,
+                    $identificadorUtilizador,
+                );
+            };
+        }
+
+        return $relacoes;
     }
 
     /**

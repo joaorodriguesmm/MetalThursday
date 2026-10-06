@@ -499,6 +499,24 @@ Route::middleware([
         |--------------------------------------------------------------------------
         */
 
+        Route::get(
+            '{tipoComentavel}/{identificadorComentavel}/comentarios',
+            [
+                ControladorComentario::class,
+                'listarPrincipais',
+            ],
+        )
+            ->whereIn(
+                'tipoComentavel',
+                TipoEntidadeInteracao::obterSlugs(),
+            )
+            ->whereNumber(
+                'identificadorComentavel',
+            )
+            ->name(
+                'comentarios.indice',
+            );
+
         Route::post(
             '{tipoComentavel}/{identificadorComentavel}/comentarios',
             [

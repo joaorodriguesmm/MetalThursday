@@ -1593,6 +1593,126 @@ final class ControladorMetalThursdayTest extends TestCase
     }
 
     /**
+     * Confirma que a listagem completa adia a apresentação dos comentários,
+     * mantendo a renderização imediata na página de detalhes.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function listagem_completa_carrega_comentarios_apenas_sob_pedido(): void
+    {
+        $utilizador =
+            $this->criarUtilizador();
+
+        $this->actingAs(
+            $utilizador,
+            'sessao',
+        );
+
+        $edicao =
+            $this->criarEdicao();
+
+        $metalThursday =
+            $this->criarMetalThursday(
+                $edicao,
+                $utilizador,
+                '2026-01-01',
+            );
+
+        $metalThursday
+            ->comentarios()
+            ->create([
+                'utilizador_id' => $utilizador->getKey(),
+
+                'conteudo' => 'Comentário carregado apenas sob pedido.',
+
+                'comentario_pai_id' => null,
+            ]);
+
+        $respostaListagem =
+            $this->get(
+                route(
+                    'inicio',
+                ),
+            );
+
+        $respostaListagem
+            ->assertOk()
+            ->assertDontSee(
+                'Comentário carregado apenas sob pedido.',
+            )
+            ->assertSeeHtml(
+                'data-acao-comentarios="alternar-seccao"',
+            )
+            ->assertSeeHtml(
+                'data-comentarios-carregados="false"',
+            );
+
+        $respostaListagem->assertViewHas(
+            'registosMetalThursday',
+            static function (
+                mixed $paginador,
+            ): bool {
+                if (
+                    ! is_object($paginador)
+                    || ! method_exists(
+                        $paginador,
+                        'getCollection',
+                    )
+                ) {
+                    return false;
+                }
+
+                $metalThursdayApresentada =
+                    $paginador
+                        ->getCollection()
+                        ->first();
+
+                if (
+                    ! $metalThursdayApresentada
+                        instanceof MetalThursday
+                    || $metalThursdayApresentada->relationLoaded(
+                        'comentarios',
+                    )
+                ) {
+                    return false;
+                }
+
+                foreach (
+                    $metalThursdayApresentada->seccoes as $seccao
+                ) {
+                    if (
+                        $seccao->relationLoaded(
+                            'comentarios',
+                        )
+                    ) {
+                        return false;
+                    }
+                }
+
+                return true;
+            },
+        );
+
+        $respostaDetalhes =
+            $this->get(
+                route(
+                    'metal-thursday.detalhes',
+                    $metalThursday,
+                ),
+            );
+
+        $respostaDetalhes
+            ->assertOk()
+            ->assertSee(
+                'Comentário carregado apenas sob pedido.',
+            )
+            ->assertDontSeeHtml(
+                'data-acao-comentarios="alternar-seccao"',
+            );
+    }
+
+    /**
      * Confirma que a página de detalhes carrega explicitamente a posição na
      * edição e reutiliza o valor durante toda a renderização.
      *
@@ -2915,7 +3035,7 @@ final class ControladorMetalThursdayTest extends TestCase
                         && $seccao->relationLoaded('ligacoes')
                         && $seccao->ligacoes->count() === 1
                         && $seccao->ligacoes->first()?->url
-                            === 'https://example.com/lancamento';
+                        === 'https://example.com/lancamento';
                 },
             )
             ->assertSeeHtml(
