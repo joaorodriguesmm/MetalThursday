@@ -24,13 +24,13 @@
                 ->class([
                     'avatar-utilizador',
                     'avatar-utilizador--fotografia',
+                    "avatar-utilizador--tamanho-{$tamanho}",
                 ])
         }}
         src="{{ $urlFotografia }}"
         width="{{ $tamanho }}"
         height="{{ $tamanho }}"
         alt="{{ $avatarDecorativo ? '' : $descricaoAvatar }}"
-        style="--tamanho-avatar: {{ $tamanho }}px; {{ $attributes->get('style', '') }}"
     >
 @else
     <span
@@ -49,9 +49,9 @@
                 ->class([
                     'avatar-utilizador',
                     'avatar-utilizador--iniciais',
+                    "avatar-utilizador--tamanho-{$tamanho}",
                 ])
         }}
-        style="--tamanho-avatar: {{ $tamanho }}px; {{ $attributes->get('style', '') }}"
         @if ($avatarDecorativo)
             aria-hidden="true"
         @else

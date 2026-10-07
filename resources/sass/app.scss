@@ -309,6 +309,12 @@ h6,
     border-radius: 50%;
 }
 
+@for $tamanho from 16 through 256 {
+    .avatar-utilizador--tamanho-#{$tamanho} {
+        --tamanho-avatar: #{$tamanho}px;
+    }
+}
+
 .avatar-utilizador--fotografia {
     object-fit: cover;
 }
