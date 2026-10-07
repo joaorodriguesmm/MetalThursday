@@ -266,6 +266,8 @@ class GestorFiltrosDinamicos {
             this.inicializarTomSelect(
                 nomeFiltro,
                 campo,
+                configuracao,
+                String(valorAtual),
             );
         }
 
@@ -391,26 +393,36 @@ class GestorFiltrosDinamicos {
 
         selecao.append(opcaoInicial);
 
-        this.obterOpcoesFiltro(configuracao)
-            .forEach((opcao) => {
-                if (!this.eOpcaoFiltroValida(opcao)) {
-                    return;
-                }
+        const opcaoAtual =
+            this.obterOpcoesFiltro(
+                configuracao,
+            ).find(
+                (opcao) =>
+                    this.eOpcaoFiltroValida(opcao)
+                    && String(
+                        opcao.identificador,
+                    ) === valorAtual,
+            );
 
-                const elementoOpcao =
-                    document.createElement('option');
+        if (this.eOpcaoFiltroValida(opcaoAtual)) {
+            const elementoOpcao =
+                document.createElement('option');
 
-                elementoOpcao.value =
-                    String(opcao.identificador);
+            elementoOpcao.value =
+                String(
+                    opcaoAtual.identificador,
+                );
 
-                elementoOpcao.textContent =
-                    opcao.nome.trim();
+            elementoOpcao.textContent =
+                opcaoAtual.nome.trim();
 
-                elementoOpcao.selected =
-                    elementoOpcao.value === valorAtual;
+            elementoOpcao.selected =
+                true;
 
-                selecao.append(elementoOpcao);
-            });
+            selecao.append(
+                elementoOpcao,
+            );
+        }
 
         return selecao;
     }
@@ -587,11 +599,17 @@ class GestorFiltrosDinamicos {
     /**
      * Inicializa o Tom Select num campo de seleção.
      *
-     * O módulo é carregado apenas quando existe efetivamente um filtro de
-     * seleção. Se o carregamento falhar, o campo nativo permanece funcional.
+     * As opções são entregues diretamente ao Tom Select para evitar criar
+     * antecipadamente milhares de elementos HTML. Enquanto o módulo é
+     * carregado, o campo nativo conserva a opção atualmente selecionada.
+     *
+     * Se o carregamento falhar, todas as opções são materializadas no campo
+     * nativo para preservar a funcionalidade sem JavaScript adicional.
      *
      * @param {string} nomeFiltro Nome HTML do filtro.
      * @param {HTMLSelectElement} campo Campo de seleção.
+     * @param {object} configuracao Configuração do filtro.
+     * @param {string} valorAtual Valor atualmente selecionado.
      *
      * @returns {Promise<void>}
      *
@@ -600,12 +618,31 @@ class GestorFiltrosDinamicos {
     async inicializarTomSelect(
         nomeFiltro,
         campo,
+        configuracao,
+        valorAtual,
     ) {
         let TomSelect;
 
         try {
             TomSelect = await this.carregarTomSelect();
         } catch {
+            const componente =
+                this.componentesAtivos.get(
+                    nomeFiltro,
+                );
+
+            if (
+                componente
+                && campo.isConnected
+                && componente.contains(campo)
+            ) {
+                this.preencherOpcoesSelecaoNativa(
+                    campo,
+                    configuracao,
+                    valorAtual,
+                );
+            }
+
             return;
         }
 
@@ -620,6 +657,26 @@ class GestorFiltrosDinamicos {
             return;
         }
 
+        const opcoes =
+            this.obterOpcoesFiltro(
+                configuracao,
+            )
+                .filter(
+                    (opcao) =>
+                        this.eOpcaoFiltroValida(
+                            opcao,
+                        ),
+                )
+                .map(
+                    (opcao) => ({
+                        identificador:
+                            opcao.identificador,
+
+                        nome:
+                            opcao.nome.trim(),
+                    }),
+                );
+
         const instancia = new TomSelect(
             campo,
             {
@@ -629,6 +686,26 @@ class GestorFiltrosDinamicos {
 
                 allowEmptyOption: true,
                 create: false,
+
+                valueField:
+                    'identificador',
+
+                labelField:
+                    'nome',
+
+                searchField: [
+                    'nome',
+                ],
+
+                options:
+                    opcoes,
+
+                items:
+                    valorAtual === ''
+                        ? []
+                        : [
+                            valorAtual,
+                        ],
 
                 render: {
                     no_results: (
@@ -648,6 +725,70 @@ class GestorFiltrosDinamicos {
         this.instanciasTomSelect.set(
             nomeFiltro,
             instancia,
+        );
+    }
+
+    /**
+     * Preenche integralmente um campo de seleção nativo.
+     *
+     * Este caminho é utilizado como fallback quando o Tom Select não pode ser
+     * carregado.
+     *
+     * @param {HTMLSelectElement} campo Campo preenchido.
+     * @param {object} configuracao Configuração do filtro.
+     * @param {string} valorAtual Valor atualmente selecionado.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    preencherOpcoesSelecaoNativa(
+        campo,
+        configuracao,
+        valorAtual,
+    ) {
+        campo.replaceChildren();
+
+        const opcaoInicial =
+            document.createElement('option');
+
+        opcaoInicial.value = '';
+        opcaoInicial.textContent =
+            'Seleciona uma opção';
+        opcaoInicial.selected =
+            valorAtual === '';
+
+        campo.append(
+            opcaoInicial,
+        );
+
+        this.obterOpcoesFiltro(
+            configuracao,
+        ).forEach(
+            (opcao) => {
+                if (!this.eOpcaoFiltroValida(opcao)) {
+                    return;
+                }
+
+                const elementoOpcao =
+                    document.createElement('option');
+
+                elementoOpcao.value =
+                    String(
+                        opcao.identificador,
+                    );
+
+                elementoOpcao.textContent =
+                    opcao.nome.trim();
+
+                elementoOpcao.selected =
+                    elementoOpcao.value
+                    === valorAtual;
+
+                campo.append(
+                    elementoOpcao,
+                );
+            },
         );
     }
 
