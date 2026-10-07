@@ -38,6 +38,14 @@ const CHAVES_ENDERECOS = Object.freeze([
 ]);
 
 /**
+ * Identificador do bloco JSON preparado pelo servidor.
+ *
+ * @since 2.0.0
+ */
+const IDENTIFICADOR_CONFIGURACAO_FORMULARIO =
+    'configuracao-formulario-metal-thursday';
+
+/**
  * Determina se um valor é um objeto não nulo.
  *
  * @param {unknown} valor Valor recebido.
@@ -98,19 +106,55 @@ function normalizarEndereco(endereco, chave) {
 }
 
 /**
- * Obtém e valida a configuração global do formulário.
+ * Obtém e valida a configuração do formulário preparada pelo servidor.
  *
  * @returns {{
  *     enderecos: Readonly<Record<string, string>>
  * }} Configuração validada.
  *
+ * @throws {Error} Quando o bloco de configuração não existe, está vazio ou
+ *     contém JSON inválido.
  * @throws {TypeError} Quando a configuração é inválida.
  *
  * @since 2.0.0
  */
-function obterConfiguracaoFormulario() {
-    const configuracao =
-        window.configuracaoFormularioMetalThursday;
+export function obterConfiguracaoFormulario() {
+    const elemento =
+        document.getElementById(
+            IDENTIFICADOR_CONFIGURACAO_FORMULARIO,
+        );
+
+    if (!(elemento instanceof HTMLScriptElement)) {
+        throw new Error(
+            'Não foi encontrada a configuração do formulário de MetalThursday.',
+        );
+    }
+
+    const conteudo =
+        elemento.textContent?.trim()
+        ?? '';
+
+    if (conteudo === '') {
+        throw new Error(
+            'A configuração do formulário de MetalThursday está vazia.',
+        );
+    }
+
+    let configuracao;
+
+    try {
+        configuracao =
+            JSON.parse(
+                conteudo,
+            );
+    } catch (erro) {
+        throw new Error(
+            'A configuração do formulário de MetalThursday contém JSON inválido.',
+            {
+                cause: erro,
+            },
+        );
+    }
 
     if (
         !eObjeto(configuracao)
@@ -132,7 +176,9 @@ function obterConfiguracaoFormulario() {
     );
 
     return {
-        enderecos: Object.freeze(enderecos),
+        enderecos: Object.freeze(
+            enderecos,
+        ),
     };
 }
 

@@ -171,9 +171,11 @@
     )
 
     @push('scripts-pagina')
-        <script>
-            window.configuracaoFormularioMetalThursday =
-                {{ Js::from($configuracaoFormularioMetalThursday) }};
+        <script
+            id="configuracao-formulario-metal-thursday"
+            type="application/json"
+        >
+            {!! Js::encode($configuracaoFormularioMetalThursday) !!}
         </script>
 
         @vite(
