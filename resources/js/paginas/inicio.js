@@ -4,9 +4,6 @@ import AlternadorVistas
 import GestorFiltrosDinamicos
     from '../modulos/GestorFiltrosDinamicos';
 
-import InicializadorTooltips
-    from '../modulos/InicializadorTooltips';
-
 /**
  * Inicializa os comportamentos da página principal de MetalThursdays.
  *
@@ -52,6 +49,9 @@ const SELETORES = Object.freeze({
         '.formulario-comentario',
         'button[data-acao-comentarios="alternar-seccao"][data-endereco-comentarios]',
     ].join(', '),
+
+    tooltip:
+        '[data-bs-toggle="tooltip"]',
 });
 
 /**
@@ -185,6 +185,148 @@ function configurarSubmissaoAutomatica() {
 }
 
 /**
+ * Prepara o carregamento dos tooltips apenas na primeira interação relevante.
+ *
+ * O Bootstrap Tooltip e as respetivas dependências só são transferidos quando
+ * o utilizador tenta consultar um tooltip. A primeira interação é reproduzida
+ * depois da inicialização delegada para não exigir uma segunda ação.
+ *
+ * @returns {void}
+ *
+ * @since 2.0.0
+ */
+function prepararTooltipsSobPedido() {
+    const tiposEvento = [
+        'mouseover',
+        'focusin',
+    ];
+
+    let carregamentoEmCurso =
+        false;
+
+    const registarEventos = () => {
+        tiposEvento.forEach(
+            (tipoEvento) => {
+                document.addEventListener(
+                    tipoEvento,
+                    tratarPrimeiraInteracao,
+                    true,
+                );
+            },
+        );
+    };
+
+    const removerEventos = () => {
+        tiposEvento.forEach(
+            (tipoEvento) => {
+                document.removeEventListener(
+                    tipoEvento,
+                    tratarPrimeiraInteracao,
+                    true,
+                );
+            },
+        );
+    };
+
+    const tratarPrimeiraInteracao = (
+        evento,
+    ) => {
+        if (
+            carregamentoEmCurso
+            || !(evento.target instanceof Element)
+        ) {
+            return;
+        }
+
+        const alvo =
+            evento.target.closest(
+                SELETORES.tooltip,
+            );
+
+        if (!(alvo instanceof HTMLElement)) {
+            return;
+        }
+
+        carregamentoEmCurso =
+            true;
+
+        removerEventos();
+
+        void import(
+            '../modulos/InicializadorTooltips'
+        )
+            .then(
+                ({
+                    default:
+                        InicializadorTooltips,
+                }) => {
+                    new InicializadorTooltips(
+                        document.body,
+                        {
+                            selector:
+                                SELETORES.tooltip,
+                        },
+                    );
+
+                    if (!alvo.isConnected) {
+                        return;
+                    }
+
+                    if (evento.type === 'mouseover') {
+                        if (!alvo.matches(':hover')) {
+                            return;
+                        }
+
+                        alvo.dispatchEvent(
+                            new MouseEvent(
+                                'mouseover',
+                                {
+                                    bubbles:
+                                        true,
+
+                                    relatedTarget:
+                                        null,
+                                },
+                            ),
+                        );
+
+                        return;
+                    }
+
+                    if (
+                        document.activeElement !== alvo
+                        && !alvo.contains(
+                            document.activeElement,
+                        )
+                    ) {
+                        return;
+                    }
+
+                    alvo.dispatchEvent(
+                        new FocusEvent(
+                            'focusin',
+                            {
+                                bubbles:
+                                    true,
+                            },
+                        ),
+                    );
+                },
+            )
+            .catch(
+                () => {
+                    carregamentoEmCurso =
+                        false;
+
+                    registarEventos();
+                },
+            );
+    };
+
+    registarEventos();
+}
+
+/**
  * Inicializa os componentes de interação apenas quando são utilizados pela
  * vista apresentada.
  *
@@ -253,13 +395,7 @@ function iniciarPaginaInicio() {
     const configuracao =
         obterConfiguracaoListagem();
 
-    new InicializadorTooltips(
-        document.body,
-        {
-            selector:
-                '[data-bs-toggle="tooltip"]',
-        },
-    );
+    prepararTooltipsSobPedido();
 
     new GestorFiltrosDinamicos({
         seletorListaFiltros:
