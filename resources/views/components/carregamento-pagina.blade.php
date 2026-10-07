@@ -29,6 +29,74 @@
         }
     }
 
+    #carregamento-pagina {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background-color: #282424;
+        opacity: 1;
+        transition: opacity 150ms ease;
+    }
+
+    #carregamento-pagina.carregamento-pagina--visivel {
+        display: flex;
+    }
+
+    #carregamento-pagina.carregamento-pagina--a-remover {
+        opacity: 0;
+    }
+
+    #carregamento-pagina .carregamento-metal-conteudo {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 180px;
+        height: 180px;
+    }
+
+    #carregamento-pagina .carregamento-metal-anel {
+        position: absolute;
+        inset: 0;
+        border: 3px solid rgb(109 63 64 / 20%);
+        border-top-color: #6d3f40;
+        border-right-color: #a55f61;
+        border-radius: 50%;
+        animation:
+            rotacao-carregamento-metal
+            1.1s
+            linear
+            infinite;
+    }
+
+    #carregamento-pagina .carregamento-metal-logotipo {
+        position: relative;
+        z-index: 1;
+        display: block;
+        width: 125px;
+        height: auto;
+        animation:
+            pulsacao-carregamento-metal
+            1.5s
+            ease-in-out
+            infinite;
+    }
+
+    #carregamento-pagina .carregamento-metal-descricao {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        white-space: nowrap;
+        border: 0;
+        clip-path: inset(50%);
+    }
+
     @media (prefers-reduced-motion: reduce) {
         #carregamento-pagina .carregamento-metal-anel,
         #carregamento-pagina .carregamento-metal-logotipo {
@@ -41,44 +109,11 @@
     id="carregamento-pagina"
     role="status"
     aria-live="polite"
-    style="
-        position: fixed;
-        inset: 0;
-        z-index: 9999;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        background-color: #282424;
-        opacity: 1;
-        transition: opacity 150ms ease;
-    "
 >
-    <div
-        style="
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 180px;
-            height: 180px;
-        "
-    >
+    <div class="carregamento-metal-conteudo">
         <div
             class="carregamento-metal-anel"
             aria-hidden="true"
-            style="
-                position: absolute;
-                inset: 0;
-                border: 3px solid rgb(109 63 64 / 20%);
-                border-top-color: #6d3f40;
-                border-right-color: #a55f61;
-                border-radius: 50%;
-                animation:
-                    rotacao-carregamento-metal
-                    1.1s
-                    linear
-                    infinite;
-            "
         ></div>
 
         <img
@@ -86,34 +121,10 @@
             src="{{ asset('images/logo.png') }}"
             alt=""
             aria-hidden="true"
-            style="
-                position: relative;
-                z-index: 1;
-                display: block;
-                width: 125px;
-                height: auto;
-                animation:
-                    pulsacao-carregamento-metal
-                    1.5s
-                    ease-in-out
-                    infinite;
-            "
         >
     </div>
 
-    <span
-        style="
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            white-space: nowrap;
-            border: 0;
-            clip-path: inset(50%);
-        "
-    >
+    <span class="carregamento-metal-descricao">
         A carregar…
     </span>
 </div>
@@ -128,10 +139,14 @@
             return;
         }
 
-        carregamentoPagina.style.display = 'flex';
+        carregamentoPagina.classList.add(
+            'carregamento-pagina--visivel',
+        );
 
         const removerCarregamento = () => {
-            carregamentoPagina.style.opacity = '0';
+            carregamentoPagina.classList.add(
+                'carregamento-pagina--a-remover',
+            );
 
             window.setTimeout(() => {
                 carregamentoPagina.remove();
