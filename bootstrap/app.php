@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\AdicionarCabecalhosSeguranca;
 use App\Http\Middleware\GarantirAcessoAtivo;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -23,6 +24,15 @@ return Application::configure(
         static function (
             Middleware $middleware,
         ): void {
+            /*
+             * Acrescenta os cabeçalhos HTTP defensivos a todas as respostas
+             * produzidas pela aplicação, incluindo respostas fora do grupo
+             * web.
+             */
+            $middleware->append(
+                AdicionarCabecalhosSeguranca::class,
+            );
+
             /*
              * Restringe os pedidos aos hosts associados ao endereço
              * configurado da aplicação, protegendo também a geração de
