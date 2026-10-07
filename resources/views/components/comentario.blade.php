@@ -32,8 +32,7 @@
     <div class="d-flex align-items-start">
         @if ($comentario->temConteudoEliminado())
             <div
-                class="me-3 flex-shrink-0 d-flex align-items-center justify-content-center text-muted"
-                style="width: 40px; height: 40px;"
+                class="avatar-comentario-eliminado me-3 flex-shrink-0 d-flex align-items-center justify-content-center text-muted"
                 aria-hidden="true"
             >
                 <i class="bi bi-chat-left-dots fs-4"></i>

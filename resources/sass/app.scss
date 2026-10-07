@@ -332,6 +332,23 @@ h6,
 }
 
 /**
+ * Substituto visual do avatar quando um comentário foi eliminado.
+ */
+.avatar-comentario-eliminado {
+    width: 40px;
+    height: 40px;
+}
+
+/**
+ * Fotografia apresentada no perfil detalhado de um artista.
+ */
+.fotografia-artista-detalhes {
+    width: 220px;
+    height: 220px;
+    object-fit: cover;
+}
+
+/**
  * Avatares dos formulários de perfil e registo.
  */
 .contentor-avatar-registo {

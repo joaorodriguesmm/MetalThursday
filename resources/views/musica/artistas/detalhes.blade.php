@@ -66,10 +66,9 @@
                 @if ($artista->url_imagem !== null)
                     <div class="col-12 col-md-auto">
                         <img
-                            class="img-thumbnail"
+                            class="fotografia-artista-detalhes img-thumbnail"
                             src="{{ $artista->url_imagem }}"
                             alt="Imagem de {{ $artista->nome }}"
-                            style="width: 220px; height: 220px; object-fit: cover;"
                         >
                     </div>
                 @endif
