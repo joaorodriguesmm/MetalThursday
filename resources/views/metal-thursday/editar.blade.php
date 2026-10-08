@@ -172,6 +172,7 @@
 
     @push('scripts-pagina')
         <script
+            nonce="{{ Illuminate\Support\Facades\Vite::cspNonce() }}"
             id="configuracao-formulario-metal-thursday"
             type="application/json"
         >

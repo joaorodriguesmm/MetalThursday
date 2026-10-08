@@ -14,6 +14,11 @@
         <meta charset="utf-8">
 
         <meta
+            property="csp-nonce"
+            nonce="{{ Illuminate\Support\Facades\Vite::cspNonce() }}"
+        >
+
+        <meta
             name="viewport"
             content="width=device-width, initial-scale=1"
         >

@@ -96,6 +96,7 @@
 
     @push('scripts-pagina')
         <script
+            nonce="{{ Illuminate\Support\Facades\Vite::cspNonce() }}"
             id="configuracao-listagem-metal-thursday"
             type="application/json"
         >
