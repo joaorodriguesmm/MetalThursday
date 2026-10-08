@@ -46,12 +46,20 @@ function normalizarTexto(valor) {
 function carregarSweetAlert() {
     if (promessaSweetAlert === null) {
         promessaSweetAlert =
-            import(
-                'sweetalert2'
-            )
+            Promise.all([
+                import(
+                    'sweetalert2/dist/sweetalert2.esm.js'
+                ),
+
+                import(
+                    'sweetalert2/dist/sweetalert2.css'
+                ),
+            ])
                 .then(
-                    (modulo) =>
-                        modulo.default.mixin({
+                    ([
+                        moduloSweetAlert,
+                    ]) =>
+                        moduloSweetAlert.default.mixin({
                             theme: 'dark',
                         }),
                 )
