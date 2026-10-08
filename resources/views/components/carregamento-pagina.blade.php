@@ -7,7 +7,7 @@
     @since 2.0.0
 --}}
 
-<style>
+<style nonce="{{ Illuminate\Support\Facades\Vite::cspNonce() }}">
     @keyframes rotacao-carregamento-metal {
         to {
             transform: rotate(360deg);
@@ -129,7 +129,7 @@
     </span>
 </div>
 
-<script>
+<script nonce="{{ Illuminate\Support\Facades\Vite::cspNonce() }}">
     (() => {
         const carregamentoPagina = document.getElementById(
             'carregamento-pagina',

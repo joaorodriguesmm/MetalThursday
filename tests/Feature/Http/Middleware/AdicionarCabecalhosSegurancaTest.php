@@ -7,6 +7,7 @@ namespace Tests\Feature\Http\Middleware;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Vite;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -34,6 +35,22 @@ final class AdicionarCabecalhosSegurancaTest extends TestCase
         '/__testes/cabecalhos-seguranca';
 
     /**
+     * URI da rota que renderiza o carregador de página.
+     *
+     * @since 2.0.0
+     */
+    private const URI_TESTE_CARREGADOR =
+        '__testes/cabecalhos-seguranca/carregador';
+
+    /**
+     * Caminho HTTP da rota que renderiza o carregador de página.
+     *
+     * @since 2.0.0
+     */
+    private const CAMINHO_TESTE_CARREGADOR =
+        '/__testes/cabecalhos-seguranca/carregador';
+
+    /**
      * Regista uma rota sem middleware de rota para confirmar que a proteção
      * pertence à pilha global.
      *
@@ -50,6 +67,15 @@ final class AdicionarCabecalhosSegurancaTest extends TestCase
             self::URI_TESTE,
             static fn (): Response => response(
                 'Resposta protegida.',
+            ),
+        );
+
+        Route::get(
+            self::URI_TESTE_CARREGADOR,
+            static fn (): Response => response(
+                view(
+                    'components.carregamento-pagina',
+                ),
             ),
         );
     }
@@ -86,6 +112,103 @@ final class AdicionarCabecalhosSegurancaTest extends TestCase
             ->assertHeaderMissing(
                 'Strict-Transport-Security',
             );
+    }
+
+    /**
+     * Confirma que cada pedido recebe um nonce CSP próprio.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function gera_um_nonce_csp_novo_por_pedido(): void
+    {
+        $this
+            ->get(
+                self::CAMINHO_TESTE,
+            )
+            ->assertOk();
+
+        $primeiroNonce =
+            Vite::cspNonce();
+
+        self::assertIsString(
+            $primeiroNonce,
+        );
+
+        self::assertNotSame(
+            '',
+            $primeiroNonce,
+        );
+
+        $this
+            ->get(
+                self::CAMINHO_TESTE,
+            )
+            ->assertOk();
+
+        $segundoNonce =
+            Vite::cspNonce();
+
+        self::assertIsString(
+            $segundoNonce,
+        );
+
+        self::assertNotSame(
+            '',
+            $segundoNonce,
+        );
+
+        self::assertNotSame(
+            $primeiroNonce,
+            $segundoNonce,
+        );
+    }
+
+    /**
+     * Confirma que os blocos inline autorizados utilizam o nonce do pedido.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function aplica_o_nonce_csp_ao_carregador_de_pagina(): void
+    {
+        $resposta =
+            $this
+                ->get(
+                    self::CAMINHO_TESTE_CARREGADOR,
+                )
+                ->assertOk();
+
+        $nonce =
+            Vite::cspNonce();
+
+        self::assertIsString(
+            $nonce,
+        );
+
+        self::assertNotSame(
+            '',
+            $nonce,
+        );
+
+        $conteudo =
+            $resposta->getContent();
+
+        self::assertSame(
+            1,
+            substr_count(
+                $conteudo,
+                '<style nonce="'.$nonce.'">',
+            ),
+        );
+
+        self::assertSame(
+            1,
+            substr_count(
+                $conteudo,
+                '<script nonce="'.$nonce.'">',
+            ),
+        );
     }
 
     /**

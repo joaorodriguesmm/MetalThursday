@@ -6,6 +6,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Vite;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -58,6 +59,13 @@ final class AdicionarCabecalhosSeguranca
         Request $request,
         Closure $next,
     ): Response {
+        /*
+         * O nonce é preparado antes da renderização da resposta para que o
+         * Vite e os blocos inline explicitamente autorizados partilhem o
+         * mesmo valor.
+         */
+        Vite::useCspNonce();
+
         $response = $next(
             $request,
         );
