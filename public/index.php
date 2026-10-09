@@ -2,6 +2,12 @@
 
 declare(strict_types=1);
 
+/*
+ * Evita divulgar a versão do PHP mesmo quando expose_php está ativo
+ * no ambiente de execução.
+ */
+header_remove('X-Powered-By');
+
 use Illuminate\Http\Request;
 
 /**
