@@ -211,3 +211,15 @@ Em produção:
 - credenciais e tokens não devem ser guardados no repositório;
 - devem existir cópias de segurança regulares da base de dados e dos ficheiros
   persistentes de `storage/app/`.
+
+Quando HTTPS terminar num proxy inverso ou balanceador antes de o pedido chegar
+ao PHP, os proxies confiáveis devem ser configurados explicitamente no Laravel
+através de `trustProxies()`, limitando a confiança aos endereços IP ou redes
+efetivamente controlados pela infraestrutura.
+
+Não deve ser utilizada confiança global em proxies (`*`) sem uma garantia
+externa de que a aplicação só pode ser alcançada através desses proxies.
+
+Depois do deployment deve ser confirmado que o Laravel reconhece os pedidos
+públicos HTTPS como seguros, nomeadamente através da presença do cabeçalho
+`Strict-Transport-Security` nas respostas HTTPS.
