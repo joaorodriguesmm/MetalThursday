@@ -37,6 +37,9 @@ APP_TIMEZONE=Europe/Lisbon
 SESSION_DRIVER=database
 SESSION_ENCRYPT=true
 SESSION_SECURE_COOKIE=true
+SESSION_HTTP_ONLY=true
+SESSION_SAME_SITE=lax
+SESSION_PARTITIONED_COOKIE=false
 
 CACHE_STORE=database
 QUEUE_CONNECTION=database
@@ -197,6 +200,11 @@ Em produção:
 - `APP_DEBUG` deve permanecer `false`;
 - HTTPS deve ser obrigatório;
 - `SESSION_SECURE_COOKIE` deve permanecer `true`;
+- `SESSION_HTTP_ONLY` deve permanecer `true`;
+- `SESSION_SAME_SITE` deve permanecer `lax`, salvo necessidade funcional
+  explicitamente validada;
+- `SESSION_PARTITIONED_COOKIE` deve permanecer `false` enquanto a aplicação
+  não utilizar cookies em contexto de terceiros;
 - `.env`, `storage/` privado e outros ficheiros internos nunca devem ser
   servidos diretamente pelo servidor web;
 - o document root deve ser exclusivamente `public/`;
