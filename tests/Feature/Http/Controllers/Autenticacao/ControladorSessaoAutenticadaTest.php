@@ -7,9 +7,11 @@ namespace Tests\Feature\Http\Controllers\Autenticacao;
 use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\Utilizador;
 use Database\Factories\Autenticacao\UtilizadorFactory;
+use Illuminate\Auth\Events\Lockout;
 use Illuminate\Auth\SessionGuard;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -40,6 +42,46 @@ final class ControladorSessaoAutenticadaTest extends TestCase
             ->assertOk()
             ->assertViewIs(
                 'autenticacao.iniciar-sessao',
+            );
+    }
+
+    /**
+     * Confirma o limite HTTP aplicado à submissão do início de sessão.
+     *
+     * Os pedidos utilizam dados inválidos para não ativar o limitador interno
+     * de credenciais; este teste isola exclusivamente o middleware da rota.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function limita_submissoes_http_do_inicio_de_sessao(): void
+    {
+        $this->withServerVariables([
+            'REMOTE_ADDR' => '203.0.113.10',
+        ]);
+
+        for ($pedido = 0; $pedido < 6; $pedido++) {
+            $this
+                ->post(
+                    route(
+                        'autenticacao.iniciar',
+                    ),
+                    [],
+                )
+                ->assertStatus(
+                    302,
+                );
+        }
+
+        $this
+            ->post(
+                route(
+                    'autenticacao.iniciar',
+                ),
+                [],
+            )
+            ->assertStatus(
+                429,
             );
     }
 
@@ -292,6 +334,87 @@ final class ControladorSessaoAutenticadaTest extends TestCase
             RateLimiter::attempts(
                 $chaveLimitacao,
             ),
+        );
+    }
+
+    /**
+     * Confirma que o limite interno bloqueia novas tentativas de autenticação.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function bloqueia_autenticacao_apos_cinco_tentativas_falhadas(): void
+    {
+        Event::fake([
+            Lockout::class,
+        ]);
+
+        $utilizador = Utilizador::factory()
+            ->create();
+
+        $chaveLimitacao =
+            $this->criarChaveLimitacao(
+                $utilizador->email,
+            );
+
+        RateLimiter::clear(
+            $chaveLimitacao,
+        );
+
+        for ($tentativa = 0; $tentativa < 5; $tentativa++) {
+            RateLimiter::hit(
+                $chaveLimitacao,
+                60,
+            );
+        }
+
+        self::assertSame(
+            5,
+            RateLimiter::attempts(
+                $chaveLimitacao,
+            ),
+        );
+
+        $resposta = $this
+            ->from(
+                route(
+                    'login',
+                ),
+            )
+            ->post(
+                route(
+                    'autenticacao.iniciar',
+                ),
+                [
+                    'email' => $utilizador->email,
+
+                    'palavra_passe' => UtilizadorFactory::PALAVRA_PASSE_PREDEFINIDA,
+                ],
+            );
+
+        $resposta
+            ->assertRedirect(
+                route(
+                    'login',
+                ),
+            )
+            ->assertSessionHasErrors(
+                'email',
+            );
+
+        $this->assertGuest(
+            'sessao',
+        );
+
+        self::assertSame(
+            5,
+            RateLimiter::attempts(
+                $chaveLimitacao,
+            ),
+        );
+
+        Event::assertDispatched(
+            Lockout::class,
         );
     }
 

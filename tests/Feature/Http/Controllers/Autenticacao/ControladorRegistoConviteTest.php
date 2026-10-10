@@ -71,6 +71,10 @@ final class ControladorRegistoConviteTest extends TestCase
         $conteudo =
             $resposta->getContent();
 
+        self::assertIsString(
+            $conteudo,
+        );
+
         self::assertSame(
             1,
             substr_count(
@@ -86,6 +90,46 @@ final class ControladorRegistoConviteTest extends TestCase
                 'data-permissao-email-individual',
             ),
         );
+    }
+
+    /**
+     * Confirma o limite HTTP aplicado às tentativas de registo por convite.
+     *
+     * Os pedidos utilizam dados inválidos para isolar exclusivamente o
+     * middleware de limitação da rota.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function limita_pedidos_http_de_registo_por_convite(): void
+    {
+        $this->withServerVariables([
+            'REMOTE_ADDR' => '203.0.113.22',
+        ]);
+
+        for ($pedido = 0; $pedido < 6; $pedido++) {
+            $this
+                ->post(
+                    route(
+                        'convites.registar',
+                    ),
+                    [],
+                )
+                ->assertStatus(
+                    302,
+                );
+        }
+
+        $this
+            ->post(
+                route(
+                    'convites.registar',
+                ),
+                [],
+            )
+            ->assertStatus(
+                429,
+            );
     }
 
     #[Test]

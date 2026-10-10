@@ -71,6 +71,46 @@ final class RecuperacaoPalavraPasseTest extends TestCase
     }
 
     /**
+     * Confirma o limite HTTP aplicado aos pedidos de recuperação.
+     *
+     * Os pedidos utilizam dados inválidos para isolar exclusivamente o
+     * middleware de limitação da rota.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function limita_pedidos_http_de_recuperacao_da_palavra_passe(): void
+    {
+        $this->withServerVariables([
+            'REMOTE_ADDR' => '203.0.113.20',
+        ]);
+
+        for ($pedido = 0; $pedido < 6; $pedido++) {
+            $this
+                ->post(
+                    route(
+                        'autenticacao.enviar-ligacao-redefinicao',
+                    ),
+                    [],
+                )
+                ->assertStatus(
+                    302,
+                );
+        }
+
+        $this
+            ->post(
+                route(
+                    'autenticacao.enviar-ligacao-redefinicao',
+                ),
+                [],
+            )
+            ->assertStatus(
+                429,
+            );
+    }
+
+    /**
      * Confirma o contrato português das rotas de redefinição.
      *
      * @since 2.0.0
@@ -112,6 +152,46 @@ final class RecuperacaoPalavraPasseTest extends TestCase
             ],
             $rotaAtualizar->methods(),
         );
+    }
+
+    /**
+     * Confirma o limite HTTP aplicado às tentativas de redefinição.
+     *
+     * Os pedidos utilizam dados inválidos para isolar exclusivamente o
+     * middleware de limitação da rota.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function limita_pedidos_http_de_redefinicao_da_palavra_passe(): void
+    {
+        $this->withServerVariables([
+            'REMOTE_ADDR' => '203.0.113.21',
+        ]);
+
+        for ($pedido = 0; $pedido < 6; $pedido++) {
+            $this
+                ->post(
+                    route(
+                        'autenticacao.atualizar-palavra-passe',
+                    ),
+                    [],
+                )
+                ->assertStatus(
+                    302,
+                );
+        }
+
+        $this
+            ->post(
+                route(
+                    'autenticacao.atualizar-palavra-passe',
+                ),
+                [],
+            )
+            ->assertStatus(
+                429,
+            );
     }
 
     /**
