@@ -33,6 +33,25 @@ return [
 
     'disks' => [
         /*
+         * Disco técnico herdado da configuração base do Laravel.
+         *
+         * Não é utilizado pela aplicação e não deve expor rotas HTTP para
+         * transferência de ficheiros.
+         */
+        'local' => [
+            'driver' => 'local',
+
+            'root' => storage_path(
+                'app/private',
+            ),
+
+            'serve' => false,
+
+            'throw' => true,
+
+            'report' => false,
+        ],
+        /*
          * Disco destinado a ficheiros que não podem ser acedidos
          * diretamente através da Internet.
          */
