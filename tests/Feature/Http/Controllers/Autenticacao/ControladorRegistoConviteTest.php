@@ -8,6 +8,8 @@ use App\Models\Autenticacao\Utilizador;
 use App\Servicos\Autenticacao\ServicoConvites;
 use Database\Seeders\PermissaoEmailSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -174,5 +176,152 @@ final class ControladorRegistoConviteTest extends TestCase
                 'erro',
                 'Não foi possível concluir o registo. Confirma os dados e verifica se o convite continua disponível.',
             );
+    }
+
+    /**
+     * Rejeita um ficheiro PHP apresentado como fotografia JPEG
+     * durante o registo por convite.
+     *
+     * O convite deve permanecer disponível, o utilizador não deve
+     * ser criado e nenhum ficheiro deve ser armazenado.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function rejeita_ficheiro_php_disfarcado_de_fotografia_no_registo(): void
+    {
+        Storage::fake(
+            'publico',
+        );
+
+        $criador =
+            Utilizador::factory()
+                ->create();
+
+        $resultado =
+            app(
+                ServicoConvites::class,
+            )->criar(
+                nomeConvidado: 'Novo Utilizador',
+                emailDestino: 'convidado@exemplo.pt',
+                criador: $criador,
+                expiraEm: null,
+            );
+
+        $codigoConvite =
+            $resultado->obterCodigo();
+
+        $caminhoTemporario = tempnam(
+            sys_get_temp_dir(),
+            'metal-b19-',
+        );
+
+        self::assertIsString(
+            $caminhoTemporario,
+        );
+
+        try {
+            $bytesEscritos = file_put_contents(
+                $caminhoTemporario,
+                '<?php echo "AUDITORIA_B19_15"; ?>',
+            );
+
+            self::assertNotFalse(
+                $bytesEscritos,
+            );
+
+            $ficheiroMalicioso = new UploadedFile(
+                $caminhoTemporario,
+                'fotografia.jpg',
+                'image/jpeg',
+                UPLOAD_ERR_OK,
+                true,
+            );
+
+            self::assertNotSame(
+                'image/jpeg',
+                $ficheiroMalicioso->getMimeType(),
+            );
+
+            $resposta = $this
+                ->from(
+                    route(
+                        'convites.aceitar',
+                        [
+                            'codigoConvite' => $codigoConvite,
+                        ],
+                    ),
+                )
+                ->post(
+                    route(
+                        'convites.registar',
+                    ),
+                    [
+                        'codigo_convite' => $codigoConvite,
+                        'nome' => 'Novo Utilizador',
+                        'email' => 'convidado@exemplo.pt',
+                        'palavra_passe' => 'MetalThursday#2026',
+                        'confirmacao_palavra_passe' => 'MetalThursday#2026',
+                        'permissoes_email' => [],
+                        'fotografia' => $ficheiroMalicioso,
+                    ],
+                );
+
+            $resposta
+                ->assertRedirect(
+                    route(
+                        'convites.aceitar',
+                        [
+                            'codigoConvite' => $codigoConvite,
+                        ],
+                    ),
+                )
+                ->assertSessionHasErrors(
+                    [
+                        'fotografia',
+                    ],
+                )
+                ->assertSessionDoesntHaveErrors(
+                    [
+                        'codigo_convite',
+                        'nome',
+                        'email',
+                        'palavra_passe',
+                        'confirmacao_palavra_passe',
+                        'permissoes_email',
+                    ],
+                );
+
+            $this->assertDatabaseMissing(
+                'utilizadores',
+                [
+                    'email' => 'convidado@exemplo.pt',
+                ],
+            );
+
+            $this->assertDatabaseHas(
+                'convites',
+                [
+                    'id' => $resultado->obterConvite()->getKey(),
+                    'utilizado_por_id' => null,
+                    'utilizado_em' => null,
+                ],
+            );
+
+            self::assertSame(
+                [],
+                Storage::disk(
+                    'publico',
+                )->allFiles(
+                    'fotografias/utilizadores',
+                ),
+            );
+        } finally {
+            if (is_file($caminhoTemporario)) {
+                unlink(
+                    $caminhoTemporario,
+                );
+            }
+        }
     }
 }
