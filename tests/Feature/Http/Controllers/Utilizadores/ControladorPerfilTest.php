@@ -8,6 +8,7 @@ use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\Comunicacao\PermissaoEmail;
 use App\Notifications\NotificacaoVerificacaoEmail;
+use Carbon\CarbonImmutable;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -134,10 +135,18 @@ final class ControladorPerfilTest extends TestCase
             );
 
         $identificadorPermissaoTodas =
-            (int) $permissaoTodas->getKey();
+            $permissaoTodas->getKey();
+
+        self::assertIsInt(
+            $identificadorPermissaoTodas,
+        );
 
         $identificadorPermissaoNovidades =
-            (int) $permissaoNovidades->getKey();
+            $permissaoNovidades->getKey();
+
+        self::assertIsInt(
+            $identificadorPermissaoNovidades,
+        );
 
         $utilizador
             ->permissoesEmail()
@@ -471,6 +480,126 @@ final class ControladorPerfilTest extends TestCase
     }
 
     /**
+     * Rejeita um ficheiro PHP apresentado como fotografia JPEG.
+     *
+     * A fotografia anterior deve permanecer intacta e nenhum
+     * ficheiro novo pode ser armazenado.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function rejeita_ficheiro_php_disfarcado_de_fotografia(): void
+    {
+        $caminhoAnterior =
+            'fotografias/utilizadores/fotografia-anterior.jpg';
+
+        $this->discoPublico->put(
+            $caminhoAnterior,
+            'fotografia-anterior',
+        );
+
+        $utilizador = $this->criarUtilizador(
+            fotografia: $caminhoAnterior,
+        );
+
+        $caminhoTemporario = tempnam(
+            sys_get_temp_dir(),
+            'metal-b19-',
+        );
+
+        self::assertIsString(
+            $caminhoTemporario,
+        );
+
+        try {
+            $bytesEscritos = file_put_contents(
+                $caminhoTemporario,
+                '<?php echo "AUDITORIA_B19_15"; ?>',
+            );
+
+            self::assertNotFalse(
+                $bytesEscritos,
+            );
+
+            $ficheiroMalicioso = new UploadedFile(
+                $caminhoTemporario,
+                'fotografia.jpg',
+                'image/jpeg',
+                UPLOAD_ERR_OK,
+                true,
+            );
+
+            self::assertNotSame(
+                'image/jpeg',
+                $ficheiroMalicioso->getMimeType(),
+            );
+
+            $resposta = $this
+                ->actingAs(
+                    $utilizador,
+                    'sessao',
+                )
+                ->from(
+                    route(
+                        'perfil.editar',
+                    ),
+                )
+                ->patch(
+                    route(
+                        'perfil.atualizar',
+                    ),
+                    [
+                        'nome' => $utilizador->nome,
+
+                        'email' => $utilizador->email,
+
+                        'fotografia' => $ficheiroMalicioso,
+                    ],
+                );
+
+            $resposta
+                ->assertRedirect(
+                    route(
+                        'perfil.editar',
+                    ),
+                )
+                ->assertSessionHasErrors(
+                    [
+                        'fotografia',
+                    ],
+                    null,
+                    'perfil',
+                );
+
+            $utilizador->refresh();
+
+            self::assertSame(
+                $caminhoAnterior,
+                $utilizador->fotografia,
+            );
+
+            $this->discoPublico->assertExists(
+                $caminhoAnterior,
+            );
+
+            self::assertSame(
+                [
+                    $caminhoAnterior,
+                ],
+                $this->discoPublico->allFiles(
+                    'fotografias/utilizadores',
+                ),
+            );
+        } finally {
+            if (is_file($caminhoTemporario)) {
+                unlink(
+                    $caminhoTemporario,
+                );
+            }
+        }
+    }
+
+    /**
      * Devolve os erros no saco exclusivo do formulário do perfil.
      *
      * Os dados persistidos devem permanecer inalterados.
@@ -586,7 +715,7 @@ final class ControladorPerfilTest extends TestCase
 
         $utilizador->email_verified_at =
             $emailVerificado
-            ? now()
+            ? CarbonImmutable::now()
                 ->subDay()
                 ->startOfSecond()
             : null;
