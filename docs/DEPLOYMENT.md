@@ -212,6 +212,52 @@ Em produção:
 - devem existir cópias de segurança regulares da base de dados e dos ficheiros
   persistentes de `storage/app/`.
 
+### Proteção do armazenamento público
+
+Os ficheiros enviados pelos utilizadores são guardados no disco
+`publico`, acessível através de `public/storage`.
+
+O servidor web deve impedir a execução de scripts neste diretório,
+independentemente da validação realizada pela aplicação.
+
+**Apache:**
+
+- O document root deve apontar exclusivamente para `public/`.
+- O módulo `mod_rewrite` deve estar ativo.
+- A configuração deve permitir aplicar o ficheiro `public/.htaccess`.
+- A regra existente nesse ficheiro bloqueia pedidos para caminhos
+  potencialmente executáveis dentro de `/storage/`.
+
+**Nginx:**
+
+O Nginx não interpreta ficheiros `.htaccess`. A configuração do bloco
+`server` deve incluir uma proteção equivalente, antes das restantes
+localizações definidas por expressões regulares, particularmente da
+localização que encaminha pedidos PHP para o PHP-FPM:
+
+```nginx
+location ~* ^/storage/.*\.(?:php[0-9]*|phtml|pht|phar)(?:[./;]|$) {
+    return 403;
+}
+```
+
+A configuração deve impedir que qualquer pedido ao armazenamento
+público seja encaminhado para um interpretador de scripts. A regra
+deve ser adaptada e validada no servidor efetivamente utilizado.
+Não utilizar uma localização `^~ /storage/` que impeça a avaliação
+desta proteção sem implementar uma alternativa equivalente.
+
+**Validação após o deployment:**
+
+- Uma fotografia pública válida deve ser servida normalmente.
+- Pedidos para `/storage/inexistente.php`,
+  `/storage/inexistente.phtml`, `/storage/inexistente.phar`
+  e `/storage/inexistente.php.jpg` devem devolver HTTP 403.
+- Os diretórios privados, incluindo `storage/app/private`,
+  nunca devem estar diretamente acessíveis pela Internet.
+- Em Nginx, executar `nginx -t` antes de aplicar alterações à
+  configuração.
+
 Quando HTTPS terminar num proxy inverso ou balanceador antes de o pedido chegar
 ao PHP, os proxies confiáveis devem ser configurados explicitamente no Laravel
 através de `trustProxies()`, limitando a confiança aos endereços IP ou redes

@@ -5,6 +5,10 @@
 
     RewriteEngine On
 
+    # Impede o acesso a ficheiros potencialmente executaveis
+    # no armazenamento publico.
+    RewriteRule ^storage/.*\.(?:php[0-9]*|phtml|pht|phar)(?:[./;]|$) - [F,NC]
+
     # Preserva o cabeçalho de autorização.
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
