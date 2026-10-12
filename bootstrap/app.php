@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Middleware\AdicionarCabecalhosSeguranca;
 use App\Http\Middleware\GarantirAcessoAtivo;
 use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
 /**
@@ -54,5 +55,21 @@ return Application::configure(
             );
         },
     )
-    ->withExceptions()
+    ->withExceptions(
+        static function (Exceptions $exceptions): void {
+            /*
+             * Impede que palavras-passe sejam guardadas na sessão
+             * para recuperação de formulários após erros de validação.
+             *
+             * As exclusões predefinidas do Laravel são preservadas.
+             */
+            $exceptions->dontFlash([
+                'palavra_passe',
+                'confirmacao_palavra_passe',
+                'palavra_passe_atual',
+                'nova_palavra_passe',
+                'confirmacao_nova_palavra_passe',
+            ]);
+        },
+    )
     ->create();
