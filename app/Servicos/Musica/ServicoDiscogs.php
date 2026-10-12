@@ -790,7 +790,6 @@ final class ServicoDiscogs
                 ),
             );
 
-        $ultimaExcecao = null;
         $ultimaResposta = null;
 
         for (
@@ -842,9 +841,12 @@ final class ServicoDiscogs
                 ) {
                     break;
                 }
-            } catch (ConnectionException $excecao) {
-                $ultimaExcecao =
-                    $excecao;
+            } catch (ConnectionException) {
+                /*
+                 * A mensagem original pode conter informação sensível
+                 * do pedido HTTP, incluindo credenciais. Não a conservar
+                 * na cadeia de exceções reportadas.
+                 */
             }
 
             if (
@@ -861,7 +863,6 @@ final class ServicoDiscogs
         if (! $ultimaResposta instanceof Response) {
             throw new RuntimeException(
                 'Não foi possível estabelecer ligação ao Discogs.',
-                previous: $ultimaExcecao,
             );
         }
 

@@ -5,8 +5,13 @@ declare(strict_types=1);
 namespace Tests\Feature\Servicos\Musica;
 
 use App\Servicos\Musica\ServicoTheAudioDB;
+use DateTimeImmutable;
 use Illuminate\Support\Facades\Http;
+use Monolog\Formatter\LineFormatter;
+use Monolog\Level;
+use Monolog\LogRecord;
 use PHPUnit\Framework\Attributes\Test;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -227,7 +232,7 @@ final class ServicoTheAudioDBTest extends TestCase
         ]);
 
         $this->expectException(
-            \RuntimeException::class,
+            RuntimeException::class,
         );
 
         try {
@@ -241,5 +246,73 @@ final class ServicoTheAudioDBTest extends TestCase
                 1,
             );
         }
+    }
+
+    /**
+     * Impede que a chave da API seja exposta nos registos
+     * quando ocorre uma falha de ligação ao TheAudioDB.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_expoe_chave_api_nos_logs_apos_falha_de_ligacao(): void
+    {
+        $chaveFicticia = 'AUDITORIA_CHAVE_FICTICIA_B19_17';
+
+        config()->set(
+            'theaudiodb.api_key',
+            $chaveFicticia,
+        );
+
+        config()->set(
+            'theaudiodb.tentativas',
+            1,
+        );
+
+        Http::preventStrayRequests();
+
+        Http::fake([
+            '*' => Http::failedConnection(),
+        ]);
+
+        $excecao = null;
+
+        try {
+            app(
+                ServicoTheAudioDB::class,
+            )->obterArtistaPorMusicBrainz(
+                '65f4f0c5-ef9e-490c-aee3-909e7ae6b2ab',
+            );
+        } catch (RuntimeException $erro) {
+            $excecao = $erro;
+        }
+
+        self::assertInstanceOf(
+            RuntimeException::class,
+            $excecao,
+        );
+
+        Http::assertSentCount(1);
+
+        $registo = new LogRecord(
+            new DateTimeImmutable,
+            'auditoria',
+            Level::Error,
+            $excecao->getMessage(),
+            [
+                'exception' => $excecao,
+            ],
+        );
+
+        $textoFormatado = (new LineFormatter)
+            ->format($registo);
+
+        self::assertFalse(
+            str_contains(
+                $textoFormatado,
+                $chaveFicticia,
+            ),
+            'O registo formatado não pode conter a chave da API.',
+        );
     }
 }

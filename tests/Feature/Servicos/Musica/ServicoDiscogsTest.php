@@ -5,9 +5,14 @@ declare(strict_types=1);
 namespace Tests\Feature\Servicos\Musica;
 
 use App\Servicos\Musica\ServicoDiscogs;
+use DateTimeImmutable;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Monolog\Formatter\LineFormatter;
+use Monolog\Level;
+use Monolog\LogRecord;
 use PHPUnit\Framework\Attributes\Test;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -768,7 +773,7 @@ final class ServicoDiscogsTest extends TestCase
         ]);
 
         $this->expectException(
-            \RuntimeException::class,
+            RuntimeException::class,
         );
 
         try {
@@ -782,5 +787,80 @@ final class ServicoDiscogsTest extends TestCase
                 1,
             );
         }
+    }
+
+    /**
+     * Impede que um token presente numa exceção de ligação
+     * seja propagado para os registos do Discogs.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_expoe_token_nos_logs_apos_falha_de_ligacao(): void
+    {
+        $tokenFicticio = 'AUDITORIA_TOKEN_FICTICIO_B19_17';
+
+        config()->set(
+            'discogs.token',
+            $tokenFicticio,
+        );
+
+        config()->set(
+            'discogs.tentativas',
+            1,
+        );
+
+        Http::preventStrayRequests();
+
+        Http::fake([
+            '*' => Http::failedConnection(
+                'Falha simulada com Authorization: Discogs token='.$tokenFicticio,
+            ),
+        ]);
+
+        $excecao = null;
+
+        try {
+            app(
+                ServicoDiscogs::class,
+            )->pesquisarLancamentos(
+                'Metallica',
+            );
+        } catch (RuntimeException $erro) {
+            $excecao = $erro;
+        }
+
+        self::assertInstanceOf(
+            RuntimeException::class,
+            $excecao,
+        );
+
+        self::assertSame(
+            'Não foi possível estabelecer ligação ao Discogs.',
+            $excecao->getMessage(),
+        );
+
+        Http::assertSentCount(1);
+
+        $registo = new LogRecord(
+            new DateTimeImmutable,
+            'auditoria',
+            Level::Error,
+            $excecao->getMessage(),
+            [
+                'exception' => $excecao,
+            ],
+        );
+
+        $textoFormatado = (new LineFormatter)
+            ->format($registo);
+
+        self::assertFalse(
+            str_contains(
+                $textoFormatado,
+                $tokenFicticio,
+            ),
+            'O registo formatado não pode conter o token do Discogs.',
+        );
     }
 }

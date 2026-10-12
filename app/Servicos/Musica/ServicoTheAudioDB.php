@@ -172,7 +172,6 @@ final class ServicoTheAudioDB
             );
 
         $ultimaResposta = null;
-        $ultimaExcecao = null;
 
         for (
             $tentativa = 1;
@@ -216,9 +215,12 @@ final class ServicoTheAudioDB
                 ) {
                     break;
                 }
-            } catch (ConnectionException $excecao) {
-                $ultimaExcecao =
-                    $excecao;
+            } catch (ConnectionException) {
+                /*
+                 * A mensagem original pode conter o URL completo
+                 * com a chave da API. Não a conservar na cadeia
+                 * de exceções reportadas.
+                 */
             }
 
             if (
@@ -235,7 +237,6 @@ final class ServicoTheAudioDB
         if (! $ultimaResposta instanceof Response) {
             throw new RuntimeException(
                 'Não foi possível estabelecer ligação ao TheAudioDB.',
-                previous: $ultimaExcecao,
             );
         }
 
