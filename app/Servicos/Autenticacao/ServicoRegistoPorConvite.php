@@ -393,8 +393,6 @@ final class ServicoRegistoPorConvite
                     'excecao_original' => $excecaoOriginal::class,
 
                     'excecao_limpeza' => $excecaoLimpeza::class,
-
-                    'mensagem_limpeza' => $excecaoLimpeza->getMessage(),
                 ],
             );
         }

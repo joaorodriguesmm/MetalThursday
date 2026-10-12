@@ -12,10 +12,13 @@ use App\Servicos\Utilizadores\ServicoFotografiasUtilizador;
 use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
+use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -700,5 +703,277 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
         $utilizador->saveOrFail();
 
         return $utilizador->refresh();
+    }
+
+    /**
+     * Impede a exposição de dados sensíveis nos logs
+     * quando falha a limpeza da fotografia anterior.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_expoe_mensagem_sensivel_ao_falhar_limpeza_da_fotografia_anterior(): void
+    {
+        $segredoFicticio = 'AUDITORIA_SEGREDO_FICTICIO_B19_17';
+
+        $caminhoAnterior =
+            'fotografias/utilizadores/anterior.jpg';
+
+        $discoOriginal = Storage::disk(
+            self::DISCO_PUBLICO,
+        );
+
+        $discoOriginal->put(
+            $caminhoAnterior,
+            'fotografia-anterior',
+        );
+
+        $utilizador = $this->criarUtilizador(
+            nome: 'Utilizador Teste',
+            email: 'utilizador@exemplo.pt',
+            fotografia: $caminhoAnterior,
+        );
+
+        $discoSimulado = Mockery::mock(
+            $discoOriginal,
+        )->makePartial();
+
+        $discoSimulado
+            ->shouldReceive('exists')
+            ->with($caminhoAnterior)
+            ->once()
+            ->andThrow(
+                new RuntimeException(
+                    'Falha simulada com segredo: '.$segredoFicticio,
+                ),
+            );
+
+        Storage::shouldReceive('disk')
+            ->with(self::DISCO_PUBLICO)
+            ->andReturn($discoSimulado);
+
+        Log::spy();
+
+        $novaFotografia = UploadedFile::fake()->create(
+            name: 'nova-fotografia.jpg',
+            kilobytes: 128,
+            mimeType: 'image/jpeg',
+        );
+
+        $resultado = $this->servicoPerfil->atualizar(
+            utilizador: $utilizador,
+            nome: 'Nome Atualizado',
+            email: 'utilizador@exemplo.pt',
+            fotografia: $novaFotografia,
+        );
+
+        self::assertInstanceOf(
+            PerfilAtualizado::class,
+            $resultado,
+        );
+
+        $utilizador->refresh();
+
+        self::assertSame(
+            'Nome Atualizado',
+            $utilizador->nome,
+        );
+
+        self::assertIsString(
+            $utilizador->fotografia,
+        );
+
+        self::assertNotSame(
+            $caminhoAnterior,
+            $utilizador->fotografia,
+        );
+
+        $mensagemRegistada = null;
+        $contextoRegistado = null;
+
+        Log::shouldHaveReceived('warning')
+            ->once()
+            ->withArgs(
+                static function (
+                    string $mensagem,
+                    array $contexto,
+                ) use (
+                    &$mensagemRegistada,
+                    &$contextoRegistado,
+                ): bool {
+                    $mensagemRegistada = $mensagem;
+                    $contextoRegistado = $contexto;
+
+                    return true;
+                },
+            );
+
+        self::assertSame(
+            'Ocorreu um erro ao eliminar a fotografia anterior do utilizador.',
+            $mensagemRegistada,
+        );
+
+        self::assertIsArray(
+            $contextoRegistado,
+        );
+
+        self::assertSame(
+            $caminhoAnterior,
+            $contextoRegistado['caminho'] ?? null,
+        );
+
+        self::assertSame(
+            RuntimeException::class,
+            $contextoRegistado['excecao'] ?? null,
+        );
+
+        self::assertStringNotContainsString(
+            $segredoFicticio,
+            json_encode(
+                $contextoRegistado,
+                JSON_THROW_ON_ERROR,
+            ),
+        );
+    }
+
+    /**
+     * Impede a exposição de mensagens sensíveis quando falha
+     * a limpeza da fotografia nova após uma atualização inválida.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_expoe_mensagem_sensivel_ao_falhar_limpeza_da_fotografia_nova(): void
+    {
+        $segredoFicticio = 'AUDITORIA_SEGREDO_FICTICIO_B19_17_NOVA';
+
+        $utilizador = $this->criarUtilizador(
+            nome: 'Nome Original',
+            email: 'original@exemplo.pt',
+        );
+
+        $this->criarUtilizador(
+            nome: 'Outro Utilizador',
+            email: 'ocupado@exemplo.pt',
+        );
+
+        $discoOriginal = Storage::disk(
+            self::DISCO_PUBLICO,
+        );
+
+        $discoSimulado = Mockery::mock(
+            $discoOriginal,
+        )->makePartial();
+
+        $discoSimulado
+            ->shouldReceive('delete')
+            ->once()
+            ->andThrow(
+                new RuntimeException(
+                    'Falha simulada com segredo: '.$segredoFicticio,
+                ),
+            );
+
+        Storage::shouldReceive('disk')
+            ->with(self::DISCO_PUBLICO)
+            ->andReturn($discoSimulado);
+
+        Log::spy();
+
+        $novaFotografia = UploadedFile::fake()->create(
+            name: 'fotografia-nova.jpg',
+            kilobytes: 128,
+            mimeType: 'image/jpeg',
+        );
+
+        try {
+            $this->servicoPerfil->atualizar(
+                utilizador: $utilizador,
+                nome: 'Nome Alterado',
+                email: 'ocupado@exemplo.pt',
+                fotografia: $novaFotografia,
+            );
+
+            self::fail(
+                'Era esperada uma exceção devido ao e-mail duplicado.',
+            );
+        } catch (DomainException $excecao) {
+            self::assertSame(
+                'O endereço de e-mail já está associado a outro utilizador.',
+                $excecao->getMessage(),
+            );
+        }
+
+        $utilizador->refresh();
+
+        self::assertSame(
+            'Nome Original',
+            $utilizador->nome,
+        );
+
+        self::assertSame(
+            'original@exemplo.pt',
+            $utilizador->email,
+        );
+
+        self::assertNull(
+            $utilizador->fotografia,
+        );
+
+        $mensagemRegistada = null;
+        $contextoRegistado = null;
+
+        Log::shouldHaveReceived('error')
+            ->once()
+            ->withArgs(
+                static function (
+                    string $mensagem,
+                    array $contexto,
+                ) use (
+                    &$mensagemRegistada,
+                    &$contextoRegistado,
+                ): bool {
+                    $mensagemRegistada = $mensagem;
+                    $contextoRegistado = $contexto;
+
+                    return true;
+                },
+            );
+
+        self::assertSame(
+            'Ocorreu um erro ao eliminar a fotografia nova após uma falha na atualização do perfil.',
+            $mensagemRegistada,
+        );
+
+        self::assertIsArray(
+            $contextoRegistado,
+        );
+
+        self::assertSame(
+            DomainException::class,
+            $contextoRegistado['excecao_original'] ?? null,
+        );
+
+        self::assertSame(
+            RuntimeException::class,
+            $contextoRegistado['excecao_limpeza'] ?? null,
+        );
+
+        self::assertIsString(
+            $contextoRegistado['caminho'] ?? null,
+        );
+
+        self::assertStringStartsWith(
+            'fotografias/utilizadores/',
+            $contextoRegistado['caminho'],
+        );
+
+        self::assertStringNotContainsString(
+            $segredoFicticio,
+            json_encode(
+                $contextoRegistado,
+                JSON_THROW_ON_ERROR,
+            ),
+        );
     }
 }

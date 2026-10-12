@@ -14,9 +14,12 @@ use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
+use Mockery;
 use PHPUnit\Framework\Attributes\Test;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -674,6 +677,150 @@ final class ServicoRegistoPorConviteTest extends TestCase
 
         self::assertTrue(
             $convite->estaDisponivel(),
+        );
+    }
+
+    /**
+     * Impede a exposição de mensagens sensíveis quando falha
+     * a limpeza da fotografia após um registo por convite inválido.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_expoe_mensagem_sensivel_ao_falhar_limpeza_da_fotografia(): void
+    {
+        $segredoFicticio = 'AUDITORIA_SEGREDO_FICTICIO_B19_17_CONVITE';
+
+        $codigo = 'MT-Convite-Auditoria-Logs';
+
+        $convite = $this->criarConvite(
+            $codigo,
+        );
+
+        $discoOriginal = Storage::disk(
+            'publico',
+        );
+
+        $discoSimulado = Mockery::mock(
+            $discoOriginal,
+        )->makePartial();
+
+        $discoSimulado
+            ->shouldReceive('delete')
+            ->once()
+            ->andThrow(
+                new RuntimeException(
+                    'Falha simulada com segredo: '.$segredoFicticio,
+                ),
+            );
+
+        Storage::shouldReceive('disk')
+            ->with('publico')
+            ->andReturn($discoSimulado);
+
+        Log::spy();
+
+        $fotografia = UploadedFile::fake()->create(
+            name: 'fotografia-convite.jpg',
+            kilobytes: 128,
+            mimeType: 'image/jpeg',
+        );
+
+        try {
+            $this->servico->registar(
+                codigoConvite: $codigo,
+                nome: 'Utilizador Auditoria',
+                email: 'auditoria@exemplo.pt',
+                palavraPasse: self::PALAVRA_PASSE,
+                fotografia: $fotografia,
+                identificadoresPermissoesEmail: [
+                    999999,
+                ],
+            );
+
+            self::fail(
+                'Era esperada uma exceção devido à permissão inexistente.',
+            );
+        } catch (InvalidArgumentException $excecao) {
+            self::assertSame(
+                'As seguintes permissões de e-mail não existem: 999999.',
+                $excecao->getMessage(),
+            );
+        }
+
+        $this->assertDatabaseCount(
+            'utilizadores',
+            0,
+        );
+
+        $convite->refresh();
+
+        self::assertNull(
+            $convite->utilizado_por_id,
+        );
+
+        self::assertNull(
+            $convite->utilizado_em,
+        );
+
+        self::assertTrue(
+            $convite->estaDisponivel(),
+        );
+
+        $mensagemRegistada = null;
+        $contextoRegistado = null;
+
+        Log::shouldHaveReceived('error')
+            ->once()
+            ->withArgs(
+                static function (
+                    string $mensagem,
+                    array $contexto,
+                ) use (
+                    &$mensagemRegistada,
+                    &$contextoRegistado,
+                ): bool {
+                    $mensagemRegistada = $mensagem;
+                    $contextoRegistado = $contexto;
+
+                    return true;
+                },
+            );
+
+        self::assertSame(
+            'Ocorreu um erro ao eliminar a fotografia após uma falha no registo por convite.',
+            $mensagemRegistada,
+        );
+
+        self::assertIsArray(
+            $contextoRegistado,
+        );
+
+        self::assertSame(
+            InvalidArgumentException::class,
+            $contextoRegistado['excecao_original'] ?? null,
+        );
+
+        self::assertSame(
+            RuntimeException::class,
+            $contextoRegistado['excecao_limpeza'] ?? null,
+        );
+
+        self::assertIsString(
+            $contextoRegistado['caminho'] ?? null,
+        );
+
+        self::assertStringStartsWith(
+            'fotografias/utilizadores/',
+            $contextoRegistado['caminho'],
+        );
+
+        self::assertStringNotContainsString(
+            $segredoFicticio,
+            json_encode(
+                $contextoRegistado,
+                JSON_THROW_ON_ERROR,
+            ),
         );
     }
 

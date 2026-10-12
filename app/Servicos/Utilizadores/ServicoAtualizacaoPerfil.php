@@ -390,8 +390,6 @@ final class ServicoAtualizacaoPerfil
                     'excecao_original' => $excecaoOriginal::class,
 
                     'excecao_limpeza' => $excecaoLimpeza::class,
-
-                    'mensagem_limpeza' => $excecaoLimpeza->getMessage(),
                 ],
             );
         }
@@ -423,8 +421,6 @@ final class ServicoAtualizacaoPerfil
                     'caminho' => $caminho,
 
                     'excecao' => $excecao::class,
-
-                    'mensagem' => $excecao->getMessage(),
                 ],
             );
         }
