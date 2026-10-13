@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use LogicException;
 use Throwable;
@@ -425,8 +426,11 @@ final class ControladorPerfil extends Controller
 
             return true;
         } catch (Throwable $excecao) {
-            report(
-                $excecao,
+            Log::error(
+                'Ocorreu um erro ao enviar a notificação de verificação do endereço de e-mail.',
+                [
+                    'excecao' => $excecao::class,
+                ],
             );
 
             return false;

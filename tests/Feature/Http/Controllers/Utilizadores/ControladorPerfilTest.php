@@ -12,6 +12,9 @@ use Carbon\CarbonImmutable;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Notifications\Events\NotificationSending;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
@@ -381,6 +384,219 @@ final class ControladorPerfilTest extends TestCase
 
                 'email_verified_at' => null,
             ],
+        );
+    }
+
+    /**
+     * Preserva a alteração do e-mail e termina a sessão mesmo quando
+     * o envio da notificação de verificação falha.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function falha_no_envio_da_verificacao_preserva_email_e_termina_sessao(): void
+    {
+        $utilizador = $this->criarUtilizador(
+            nome: 'Utilizador Teste',
+            email: 'anterior@exemplo.pt',
+            emailVerificado: true,
+        );
+
+        $tentativaEnvio = false;
+
+        /*
+     * A exceção é lançada antes do envio efetivo da notificação.
+     * Não é necessária qualquer ligação ao servidor SMTP.
+     */
+        Event::listen(
+            NotificationSending::class,
+            static function (
+                NotificationSending $evento,
+            ) use (&$tentativaEnvio): void {
+                if (
+                    ! $evento->notification instanceof NotificacaoVerificacaoEmail
+                ) {
+                    return;
+                }
+
+                $tentativaEnvio = true;
+
+                throw new RuntimeException(
+                    'Falha simulada no envio da verificação de e-mail.',
+                );
+            },
+        );
+
+        $resposta = $this
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
+            ->patch(
+                route(
+                    'perfil.atualizar',
+                ),
+                [
+                    'nome' => 'Utilizador Teste',
+
+                    'email' => 'novo@exemplo.pt',
+                ],
+            );
+
+        self::assertTrue(
+            $tentativaEnvio,
+            'A aplicação deveria tentar enviar a notificação de verificação.',
+        );
+
+        $resposta
+            ->assertRedirect(
+                route(
+                    'login',
+                ),
+            )
+            ->assertSessionHas(
+                'erro',
+            )
+            ->assertSessionHasNoErrors();
+
+        $this->assertGuest(
+            'sessao',
+        );
+
+        $utilizador->refresh();
+
+        self::assertSame(
+            'novo@exemplo.pt',
+            $utilizador->email,
+        );
+
+        self::assertNull(
+            $utilizador->email_verified_at,
+        );
+
+        $this->assertDatabaseHas(
+            'utilizadores',
+            [
+                'id' => $utilizador->getKey(),
+
+                'email' => 'novo@exemplo.pt',
+
+                'email_verified_at' => null,
+            ],
+        );
+    }
+
+    /**
+     * Impede a exposição de mensagens sensíveis quando uma falha
+     * no envio da verificação de e-mail é registada nos logs.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_expoe_mensagem_sensivel_ao_reportar_falha_da_verificacao(): void
+    {
+        $segredoFicticio =
+            'AUDITORIA_SEGREDO_FICTICIO_B19_17_EMAIL';
+
+        $utilizador = $this->criarUtilizador(
+            nome: 'Utilizador Teste',
+            email: 'anterior@exemplo.pt',
+            emailVerificado: true,
+        );
+
+        Event::listen(
+            NotificationSending::class,
+            static function (
+                NotificationSending $evento,
+            ) use ($segredoFicticio): void {
+                if (
+                    ! $evento->notification instanceof NotificacaoVerificacaoEmail
+                ) {
+                    return;
+                }
+
+                throw new RuntimeException(
+                    'Falha simulada de SMTP com segredo: '.$segredoFicticio,
+                );
+            },
+        );
+
+        /*
+     * Interceta os registos para não escrever a exceção
+     * simulada nos ficheiros reais de logging.
+     */
+        Log::spy();
+
+        $resposta = $this
+            ->actingAs(
+                $utilizador,
+                'sessao',
+            )
+            ->patch(
+                route(
+                    'perfil.atualizar',
+                ),
+                [
+                    'nome' => 'Utilizador Teste',
+
+                    'email' => 'novo@exemplo.pt',
+                ],
+            );
+
+        $resposta
+            ->assertRedirect(
+                route(
+                    'login',
+                ),
+            )
+            ->assertSessionHas(
+                'erro',
+            );
+
+        $this->assertGuest(
+            'sessao',
+        );
+
+        $mensagemRegistada = null;
+        $contextoRegistado = null;
+
+        Log::shouldHaveReceived('error')
+            ->once()
+            ->withArgs(
+                static function (
+                    string $mensagem,
+                    array $contexto,
+                ) use (
+                    &$mensagemRegistada,
+                    &$contextoRegistado,
+                ): bool {
+                    $mensagemRegistada = $mensagem;
+                    $contextoRegistado = $contexto;
+
+                    return true;
+                },
+            );
+
+        self::assertIsString(
+            $mensagemRegistada,
+        );
+
+        self::assertIsArray(
+            $contextoRegistado,
+        );
+
+        self::assertStringNotContainsString(
+            $segredoFicticio,
+            $mensagemRegistada,
+        );
+
+        /*
+     * Uma exceção completa pode incluir mensagens sensíveis,
+     * incluindo as das exceções anteriores.
+     */
+        self::assertArrayNotHasKey(
+            'exception',
+            $contextoRegistado,
         );
     }
 
