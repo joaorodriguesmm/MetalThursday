@@ -13,6 +13,7 @@ use App\Servicos\MetalThursday\ServicoNotificacaoPublicacaoMetalThursday;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
@@ -203,11 +204,16 @@ final class ExecutarPublicacoesMetalThursdayTest extends TestCase
      * A publicação que falha deve permanecer pendente para uma execução posterior,
      * enquanto a seguinte deve ficar normalmente marcada como processada.
      *
+     * A falha também não pode expor mensagens sensíveis nos logs.
+     *
      * @since 2.0.0
      */
     #[Test]
     public function falha_numa_publicacao_nao_impede_processamento_das_restantes(): void
     {
+        $segredoFicticio =
+            'AUDITORIA_SEGREDO_FICTICIO_B19_17_AGENDAMENTO_PUBLICACOES';
+
         $criador =
             Utilizador::factory()
                 ->create();
@@ -256,16 +262,19 @@ final class ExecutarPublicacoesMetalThursdayTest extends TestCase
             ->andReturnUsing(
                 static function () use (
                     &$numeroDespachos,
+                    $segredoFicticio,
                 ): void {
                     $numeroDespachos++;
 
                     if ($numeroDespachos === 1) {
                         throw new RuntimeException(
-                            'Falha simulada numa publicação.',
+                            'Falha simulada numa publicação: '.$segredoFicticio,
                         );
                     }
                 },
             );
+
+        Log::spy();
 
         app(
             ExecutarPublicacoesMetalThursday::class,
@@ -308,6 +317,46 @@ final class ExecutarPublicacoesMetalThursdayTest extends TestCase
                     $publicacaoSeguinte->getKey(),
                 )
                 ->exists(),
+        );
+
+        $mensagemRegistada = null;
+        $contextoRegistado = null;
+
+        Log::shouldHaveReceived(
+            'error',
+        )
+            ->once()
+            ->withArgs(
+                static function (
+                    string $mensagem,
+                    array $contexto,
+                ) use (
+                    &$mensagemRegistada,
+                    &$contextoRegistado,
+                ): bool {
+                    $mensagemRegistada = $mensagem;
+                    $contextoRegistado = $contexto;
+
+                    return true;
+                },
+            );
+
+        self::assertIsString(
+            $mensagemRegistada,
+        );
+
+        self::assertIsArray(
+            $contextoRegistado,
+        );
+
+        self::assertStringNotContainsString(
+            $segredoFicticio,
+            $mensagemRegistada,
+        );
+
+        self::assertArrayNotHasKey(
+            'exception',
+            $contextoRegistado,
         );
     }
 

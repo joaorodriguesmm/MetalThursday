@@ -7,6 +7,7 @@ namespace App\Servicos\Agendamentos;
 use App\Models\MetalThursday\MetalThursday;
 use App\Servicos\MetalThursday\ServicoNotificacaoPublicacaoMetalThursday;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
@@ -68,8 +69,12 @@ final class ExecutarPublicacoesMetalThursday
                                 $publicacao,
                             );
                         } catch (Throwable $excecao) {
-                            report(
-                                $excecao,
+                            Log::error(
+                                'Ocorreu um erro ao processar uma publicação MetalThursday agendada.',
+                                [
+                                    'excecao' => $excecao::class,
+                                    'metal_thursday_id' => $publicacao->getKey(),
+                                ],
                             );
                         }
                     }

@@ -9,14 +9,19 @@ use App\Models\Autenticacao\Utilizador;
 use App\Models\Comunicacao\PermissaoEmail;
 use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Notifications\NotificacaoLembreteAtrasoMetalThursday;
+use App\Servicos\Agendamentos\ExecutarLembreteAtrasosMetalThursday;
+use App\Servicos\Notificacoes\NotificadorLembretesMetalThursday;
 use Carbon\CarbonImmutable;
 use Database\Seeders\PermissaoEmailSeeder;
 use Illuminate\Console\Scheduling\CallbackEvent;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Console\Kernel as KernelConsola;
+use Illuminate\Contracts\Notifications\Dispatcher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use PHPUnit\Framework\Attributes\Test;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -134,6 +139,137 @@ final class AgendamentoLembretesAtrasosMetalThursdayTest extends TestCase
         }
 
         Notification::assertNothingSent();
+    }
+
+    /**
+     * Confirma que uma falha no despacho de um lembrete de atraso
+     * não expõe mensagens sensíveis nos logs.
+     *
+     * A falha deve permanecer isolada na fronteira da tarefa agendada.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_expoe_mensagem_sensivel_ao_falhar_lembrete_de_atrasos(): void
+    {
+        $segredoFicticio =
+            'AUDITORIA_SEGREDO_FICTICIO_B19_17_LEMBRETES_ATRASOS';
+
+        $responsavel = Utilizador::factory()
+            ->create();
+
+        $this->atribuirPermissaoAtrasos(
+            $responsavel,
+        );
+
+        ReservaMetalThursday::factory()
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-08-20',
+                    'Europe/Lisbon',
+                ),
+            )
+            ->comResponsavel(
+                $responsavel,
+            )
+            ->create();
+
+        /*
+         * Simula a falha no despacho através do contrato utilizado
+         * pelo serviço, sem enviar notificações reais.
+         */
+        $this->mock(
+            Dispatcher::class,
+        )
+            ->shouldReceive(
+                'send',
+            )
+            ->once()
+            ->withArgs(
+                static function (
+                    mixed $destinatario,
+                    mixed $notificacao,
+                ) use (
+                    $responsavel,
+                ): bool {
+                    return $destinatario instanceof Utilizador
+                        && $destinatario->is($responsavel)
+                        && $notificacao instanceof NotificacaoLembreteAtrasoMetalThursday;
+                },
+            )
+            ->andThrow(
+                new RuntimeException(
+                    'Falha simulada no lembrete de atraso: '.$segredoFicticio,
+                ),
+            );
+
+        /*
+         * Intercepta os logs antes de executar a tarefa.
+         */
+        Log::spy();
+
+        CarbonImmutable::setTestNow(
+            CarbonImmutable::parse(
+                '2026-08-27 08:05:00',
+                'Europe/Lisbon',
+            ),
+        );
+
+        try {
+            /*
+             * Executa directamente a fronteira de tratamento de erros.
+             * A excepção deve ser capturada, sem chegar ao teste.
+             */
+            app(
+                ExecutarLembreteAtrasosMetalThursday::class,
+            )(
+                app(
+                    NotificadorLembretesMetalThursday::class,
+                ),
+            );
+        } finally {
+            CarbonImmutable::setTestNow();
+        }
+
+        $mensagemRegistada = null;
+        $contextoRegistado = null;
+
+        Log::shouldHaveReceived(
+            'error',
+        )
+            ->once()
+            ->withArgs(
+                static function (
+                    string $mensagem,
+                    array $contexto,
+                ) use (
+                    &$mensagemRegistada,
+                    &$contextoRegistado,
+                ): bool {
+                    $mensagemRegistada = $mensagem;
+                    $contextoRegistado = $contexto;
+
+                    return true;
+                },
+            );
+
+        self::assertIsString(
+            $mensagemRegistada,
+        );
+
+        self::assertIsArray(
+            $contextoRegistado,
+        );
+
+        self::assertStringNotContainsString(
+            $segredoFicticio,
+            $mensagemRegistada,
+        );
+
+        self::assertArrayNotHasKey(
+            'exception',
+            $contextoRegistado,
+        );
     }
 
     /**

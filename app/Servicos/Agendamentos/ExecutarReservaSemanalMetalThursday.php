@@ -8,6 +8,7 @@ use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Notifications\NotificacaoUtilizadorNomeado;
 use App\Servicos\MetalThursday\ServicoReservasMetalThursday;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
@@ -65,8 +66,12 @@ final class ExecutarReservaSemanalMetalThursday
                 ),
             );
         } catch (Throwable $excecao) {
-            report(
-                $excecao,
+            Log::error(
+                'Ocorreu um erro ao enviar a notificação da reserva semanal MetalThursday.',
+                [
+                    'excecao' => $excecao::class,
+                    'reserva_id' => $reserva->getKey(),
+                ],
             );
         }
     }

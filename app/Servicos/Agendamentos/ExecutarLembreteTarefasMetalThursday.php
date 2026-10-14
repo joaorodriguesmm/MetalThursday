@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Servicos\Agendamentos;
 
 use App\Servicos\Notificacoes\NotificadorLembretesMetalThursday;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
@@ -38,8 +39,11 @@ final class ExecutarLembreteTarefasMetalThursday
             $notificadorLembretes
                 ->notificarTarefasDoDia();
         } catch (Throwable $excecao) {
-            report(
-                $excecao,
+            Log::error(
+                'Ocorreu um erro ao enviar os lembretes das tarefas MetalThursday do próprio dia.',
+                [
+                    'excecao' => $excecao::class,
+                ],
             );
         }
     }
