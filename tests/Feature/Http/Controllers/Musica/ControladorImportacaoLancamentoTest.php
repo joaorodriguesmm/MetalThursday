@@ -13,6 +13,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\Attributes\Test;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -534,6 +535,129 @@ final class ControladorImportacaoLancamentoTest extends TestCase
             [
                 'discogs_release_id' => 249504,
                 'titulo' => 'Master Of Puppets',
+            ],
+        );
+    }
+
+    /**
+     * Confirma que uma falha inesperada do Discogs não
+     * expõe mensagens sensíveis na resposta da pesquisa.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function pesquisa_nao_expoe_mensagem_sensivel_de_falha_inesperada_discogs(): void
+    {
+        $segredoFicticio =
+            'AUDITORIA_SEGREDO_FICTICIO_B19_21_PESQUISA_LANCAMENTOS';
+
+        $administrador =
+            Utilizador::factory()
+                ->comPapel(
+                    PapelUtilizador::Administrador,
+                )
+                ->create([
+                    'email_verified_at' => now(),
+                ]);
+
+        Http::preventStrayRequests();
+
+        Http::fake([
+            'https://api.discogs.com/database/search*' => static function () use ($segredoFicticio): never {
+                throw new RuntimeException(
+                    'Falha inesperada no Discogs: '.$segredoFicticio,
+                );
+            },
+        ]);
+
+        $resposta =
+            $this
+                ->actingAs(
+                    $administrador,
+                    'sessao',
+                )
+                ->getJson(
+                    route(
+                        'lancamentos.importacao.pesquisar',
+                        [
+                            'pesquisa' => 'Master of Puppets',
+                        ],
+                    ),
+                );
+
+        $resposta->assertStatus(503);
+
+        self::assertIsString(
+            $resposta->json('mensagem'),
+        );
+
+        self::assertStringNotContainsString(
+            $segredoFicticio,
+            $resposta->getContent(),
+        );
+    }
+
+    /**
+     * Confirma que uma falha inesperada do Discogs não
+     * expõe mensagens sensíveis na resposta da importação.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function importar_nao_expoe_mensagem_sensivel_de_falha_inesperada_discogs(): void
+    {
+        $segredoFicticio =
+            'AUDITORIA_SEGREDO_FICTICIO_B19_21_IMPORTAR_LANCAMENTO';
+
+        $administrador =
+            Utilizador::factory()
+                ->comPapel(
+                    PapelUtilizador::Administrador,
+                )
+                ->create([
+                    'email_verified_at' => now(),
+                ]);
+
+        Http::preventStrayRequests();
+
+        Http::fake([
+            'https://api.discogs.com/releases/249504' => static function () use ($segredoFicticio): never {
+                throw new RuntimeException(
+                    'Falha inesperada na importação Discogs: '.$segredoFicticio,
+                );
+            },
+        ]);
+
+        $resposta =
+            $this
+                ->actingAs(
+                    $administrador,
+                    'sessao',
+                )
+                ->postJson(
+                    route(
+                        'lancamentos.importacao.importar',
+                        [
+                            'identificadorDiscogs' => 249504,
+                        ],
+                    ),
+                );
+
+        $resposta->assertStatus(503);
+
+        self::assertIsString(
+            $resposta->json('mensagem'),
+        );
+
+        self::assertStringNotContainsString(
+            $segredoFicticio,
+            $resposta->getContent(),
+        );
+
+        $this->assertDatabaseMissing(
+            'lancamentos',
+            [
+                'discogs_release_id' => 249504,
             ],
         );
     }

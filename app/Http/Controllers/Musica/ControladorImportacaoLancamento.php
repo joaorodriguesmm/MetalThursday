@@ -78,10 +78,10 @@ final class ControladorImportacaoLancamento extends Controller
                     ->pesquisarLancamentos(
                         $dados['pesquisa'],
                     );
-        } catch (RuntimeException $excecao) {
+        } catch (RuntimeException) {
             return response()->json(
                 [
-                    'mensagem' => $excecao->getMessage(),
+                    'mensagem' => 'Não foi possível pesquisar lançamentos no Discogs. Tenta novamente mais tarde.',
                 ],
                 Response::HTTP_SERVICE_UNAVAILABLE,
             );
@@ -116,10 +116,10 @@ final class ControladorImportacaoLancamento extends Controller
                     ->importar(
                         (int) $identificadorDiscogs,
                     );
-        } catch (RuntimeException $excecao) {
+        } catch (RuntimeException) {
             return response()->json(
                 [
-                    'mensagem' => $excecao->getMessage(),
+                    'mensagem' => 'Não foi possível importar o lançamento do Discogs. Tenta novamente mais tarde.',
                 ],
                 Response::HTTP_SERVICE_UNAVAILABLE,
             );
