@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Servicos\Musica;
 
 use App\Enumeracoes\EstadoAtividadeArtista;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
@@ -217,8 +218,11 @@ final class ServicoImportacaoArtista
                     $mbid,
                 );
         } catch (RuntimeException $excecao) {
-            report(
-                $excecao,
+            Log::error(
+                'Ocorreu um erro ao obter dados complementares do artista no TheAudioDB.',
+                [
+                    'excecao' => $excecao::class,
+                ],
             );
 
             return null;

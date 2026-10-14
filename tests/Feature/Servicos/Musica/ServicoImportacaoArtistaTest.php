@@ -7,7 +7,9 @@ namespace Tests\Feature\Servicos\Musica;
 use App\Servicos\Musica\ServicoImportacaoArtista;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use PHPUnit\Framework\Attributes\Test;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -425,6 +427,157 @@ final class ServicoImportacaoArtistaTest extends TestCase
                 $pedido->url(),
                 'api.discogs.com',
             ),
+        );
+    }
+
+    /**
+     * Confirma que uma falha inesperada no TheAudioDB não expõe
+     * mensagens sensíveis e preserva a proposta do MusicBrainz.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function falha_inesperada_theaudiodb_nao_expoe_segredo_e_preserva_musicbrainz(): void
+    {
+        $mbid = '65f4f0c5-ef9e-490c-aee3-909e7ae6b2ab';
+
+        $segredoFicticio =
+            'AUDITORIA_SEGREDO_FICTICIO_B19_18_IMPORTACAO_ARTISTA';
+
+        $theAudioDBConsultado = false;
+
+        Http::preventStrayRequests();
+
+        Http::fake([
+            'https://musicbrainz.org/ws/2/artist/'.$mbid.'*' => Http::response(
+                [
+                    'id' => $mbid,
+                    'name' => 'Metallica',
+                    'type' => 'Group',
+                    'country' => 'US',
+                    'area' => [
+                        'name' => 'United States',
+                    ],
+                    'begin-area' => [
+                        'name' => 'Los Angeles',
+                    ],
+                    'life-span' => [
+                        'begin' => '1981-10-28',
+                        'ended' => false,
+                    ],
+                    'relations' => [],
+                ],
+                200,
+            ),
+
+            'https://www.theaudiodb.com/api/v1/json/123/artist-mb.php*' => static function () use (
+                &$theAudioDBConsultado,
+                $segredoFicticio,
+            ): never {
+                $theAudioDBConsultado = true;
+
+                throw new RuntimeException(
+                    'Falha inesperada no TheAudioDB: '.$segredoFicticio,
+                );
+            },
+        ]);
+
+        /*
+         * Intercepta o logger antes de provocar a falha.
+         */
+        Log::spy();
+
+        $resultado = app(
+            ServicoImportacaoArtista::class,
+        )->obterProposta(
+            $mbid,
+        );
+
+        /*
+         * O MusicBrainz continua a ser a fonte principal.
+         */
+        self::assertSame(
+            $mbid,
+            $resultado['musicbrainz_id'],
+        );
+
+        self::assertSame(
+            'Metallica',
+            $resultado['nome'],
+        );
+
+        self::assertSame(
+            'US',
+            $resultado['origem']['codigo_pais'],
+        );
+
+        /*
+         * A falha complementar não pode interromper a importação.
+         */
+        self::assertFalse(
+            $resultado['fontes']['theaudiodb'],
+        );
+
+        self::assertNull(
+            $resultado['biografia'],
+        );
+
+        self::assertNull(
+            $resultado['imagem'],
+        );
+
+        /*
+         * O MusicBrainz foi consultado e registado normalmente.
+         * A chamada ao TheAudioDB lançou uma excepção antes de
+         * poder ser acrescentada ao histórico HTTP.
+         */
+        Http::assertSentCount(1);
+
+        self::assertTrue(
+            $theAudioDBConsultado,
+        );
+
+        /*
+         * Captura o registo produzido pelo tratamento da excepção.
+         */
+        $mensagemRegistada = null;
+        $contextoRegistado = null;
+
+        Log::shouldHaveReceived(
+            'error',
+        )
+            ->once()
+            ->withArgs(
+                static function (
+                    string $mensagem,
+                    array $contexto,
+                ) use (
+                    &$mensagemRegistada,
+                    &$contextoRegistado,
+                ): bool {
+                    $mensagemRegistada = $mensagem;
+                    $contextoRegistado = $contexto;
+
+                    return true;
+                },
+            );
+
+        self::assertIsString(
+            $mensagemRegistada,
+        );
+
+        self::assertIsArray(
+            $contextoRegistado,
+        );
+
+        self::assertStringNotContainsString(
+            $segredoFicticio,
+            $mensagemRegistada,
+        );
+
+        self::assertArrayNotHasKey(
+            'exception',
+            $contextoRegistado,
         );
     }
 }
