@@ -75,10 +75,10 @@ final class ControladorImportacaoArtista extends Controller
                     ->pesquisar(
                         $dados['pesquisa'],
                     );
-        } catch (RuntimeException $excecao) {
+        } catch (RuntimeException) {
             return response()->json(
                 [
-                    'mensagem' => $excecao->getMessage(),
+                    'mensagem' => 'Não foi possível pesquisar artistas no MusicBrainz. Tenta novamente mais tarde.',
                 ],
                 Response::HTTP_SERVICE_UNAVAILABLE,
             );
@@ -112,10 +112,10 @@ final class ControladorImportacaoArtista extends Controller
                     ->obterProposta(
                         $mbid,
                     );
-        } catch (RuntimeException $excecao) {
+        } catch (RuntimeException) {
             return response()->json(
                 [
-                    'mensagem' => $excecao->getMessage(),
+                    'mensagem' => 'Não foi possível obter os dados do artista no MusicBrainz. Tenta novamente mais tarde.',
                 ],
                 Response::HTTP_SERVICE_UNAVAILABLE,
             );

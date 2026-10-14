@@ -9,6 +9,7 @@ use App\Models\Geografia\OrigemGeografica;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\Attributes\Test;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -263,5 +264,117 @@ final class ControladorImportacaoArtistaTest extends TestCase
                 'artista.origem_geografica.codigo',
                 'PT',
             );
+    }
+
+    /**
+     * Confirma que uma falha inesperada do MusicBrainz não
+     * expõe mensagens sensíveis na resposta da pesquisa.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function pesquisa_nao_expoe_mensagem_sensivel_de_falha_inesperada_musicbrainz(): void
+    {
+        $segredoFicticio =
+            'AUDITORIA_SEGREDO_FICTICIO_B19_20_PESQUISA_ARTISTAS';
+
+        $utilizador =
+            Utilizador::factory()
+                ->create([
+                    'email_verified_at' => now(),
+                ]);
+
+        Http::preventStrayRequests();
+
+        Http::fake([
+            'https://musicbrainz.org/ws/2/artist/*' => static function () use ($segredoFicticio): never {
+                throw new RuntimeException(
+                    'Falha inesperada no MusicBrainz: '.$segredoFicticio,
+                );
+            },
+        ]);
+
+        $resposta =
+            $this
+                ->actingAs(
+                    $utilizador,
+                    'sessao',
+                )
+                ->getJson(
+                    route(
+                        'artistas.importacao.pesquisar',
+                        [
+                            'pesquisa' => 'Metallica',
+                        ],
+                    ),
+                );
+
+        $resposta->assertStatus(503);
+
+        self::assertIsString(
+            $resposta->json('mensagem'),
+        );
+
+        self::assertStringNotContainsString(
+            $segredoFicticio,
+            $resposta->getContent(),
+        );
+    }
+
+    /**
+     * Confirma que uma falha inesperada do MusicBrainz não
+     * expõe mensagens sensíveis ao obter a proposta do artista.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function obter_nao_expoe_mensagem_sensivel_de_falha_inesperada_musicbrainz(): void
+    {
+        $mbid = '65f4f0c5-ef9e-490c-aee3-909e7ae6b2ab';
+
+        $segredoFicticio =
+            'AUDITORIA_SEGREDO_FICTICIO_B19_20_OBTER_ARTISTA';
+
+        $utilizador =
+            Utilizador::factory()
+                ->create([
+                    'email_verified_at' => now(),
+                ]);
+
+        Http::preventStrayRequests();
+
+        Http::fake([
+            'https://musicbrainz.org/ws/2/artist/'.$mbid.'*' => static function () use ($segredoFicticio): never {
+                throw new RuntimeException(
+                    'Falha inesperada no MusicBrainz: '.$segredoFicticio,
+                );
+            },
+        ]);
+
+        $resposta =
+            $this
+                ->actingAs(
+                    $utilizador,
+                    'sessao',
+                )
+                ->getJson(
+                    route(
+                        'artistas.importacao.obter',
+                        [
+                            'mbid' => $mbid,
+                        ],
+                    ),
+                );
+
+        $resposta->assertStatus(503);
+
+        self::assertIsString(
+            $resposta->json('mensagem'),
+        );
+
+        self::assertStringNotContainsString(
+            $segredoFicticio,
+            $resposta->getContent(),
+        );
     }
 }
