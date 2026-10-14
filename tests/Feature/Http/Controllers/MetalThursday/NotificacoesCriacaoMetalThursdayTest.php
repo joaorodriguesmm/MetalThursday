@@ -13,12 +13,16 @@ use App\Notifications\NotificacaoAplicacao;
 use App\Notifications\NotificacaoMetalThursdayCriada;
 use App\Notifications\NotificacaoUtilizadorNomeado;
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Notifications\Dispatcher;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionMethod;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -284,6 +288,299 @@ final class NotificacoesCriacaoMetalThursdayTest extends TestCase
         Notification::assertNotSentTo(
             $criador,
             NotificacaoMetalThursdayCriada::class,
+        );
+    }
+
+    /**
+     * Impede a exposição de mensagens sensíveis quando falha
+     * o despacho da notificação do próximo nomeado.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_expoe_mensagem_sensivel_ao_falhar_notificacao_do_proximo_nomeado(): void
+    {
+        $segredoFicticio =
+            'AUDITORIA_SEGREDO_FICTICIO_B19_17_NOMEACAO';
+
+        $criador =
+            $this->criarUtilizadorSelecionavel();
+
+        $nomeado =
+            $this->criarUtilizadorSelecionavel();
+
+        $metalThursday = MetalThursday::factory()
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-08-27',
+                ),
+            )
+            ->comAutor(
+                $criador,
+            )
+            ->comProximoNomeado(
+                $nomeado,
+            )
+            ->create([
+                'criado_por_id' => $criador->getKey(),
+            ]);
+
+        $reservaSeguinte = ReservaMetalThursday::factory()
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-09-03',
+                ),
+            )
+            ->comResponsavel(
+                $nomeado,
+            )
+            ->create();
+
+        /*
+     * Simula uma falha durante o despacho inicial.
+     * Não são enviados e-mails nem executados trabalhos de fila.
+     */
+        $this->mock(
+            Dispatcher::class,
+        )
+            ->shouldReceive(
+                'send',
+            )
+            ->once()
+            ->withArgs(
+                static function (
+                    mixed $destinatario,
+                    mixed $notificacao,
+                ) use (
+                    $nomeado,
+                ): bool {
+                    return $destinatario instanceof Utilizador
+                        && $destinatario->is($nomeado)
+                        && $notificacao instanceof NotificacaoUtilizadorNomeado;
+                },
+            )
+            ->andThrow(
+                new RuntimeException(
+                    'Falha simulada no despacho com segredo: '.$segredoFicticio,
+                ),
+            );
+
+        /*
+     * Intercepta os logs para impedir a escrita do segredo
+     * fictício nos ficheiros reais.
+     */
+        Log::spy();
+
+        $controlador =
+            app(
+                ControladorMetalThursday::class,
+            );
+
+        $metodoNomeacao =
+            new ReflectionMethod(
+                $controlador,
+                'notificarNomeacaoSeguinte',
+            );
+
+        /*
+     * O método deve capturar a exceção e terminar normalmente.
+     */
+        $metodoNomeacao->invoke(
+            $controlador,
+            $metalThursday,
+            $reservaSeguinte,
+        );
+
+        $mensagemRegistada = null;
+        $contextoRegistado = null;
+
+        Log::shouldHaveReceived(
+            'error',
+        )
+            ->once()
+            ->withArgs(
+                static function (
+                    string $mensagem,
+                    array $contexto,
+                ) use (
+                    &$mensagemRegistada,
+                    &$contextoRegistado,
+                ): bool {
+                    $mensagemRegistada = $mensagem;
+                    $contextoRegistado = $contexto;
+
+                    return true;
+                },
+            );
+
+        self::assertIsString(
+            $mensagemRegistada,
+        );
+
+        self::assertIsArray(
+            $contextoRegistado,
+        );
+
+        self::assertStringNotContainsString(
+            $segredoFicticio,
+            $mensagemRegistada,
+        );
+
+        self::assertArrayNotHasKey(
+            'exception',
+            $contextoRegistado,
+        );
+    }
+
+    /**
+     * Impede a exposição de mensagens sensíveis quando falha
+     * o despacho da notificação geral de publicação.
+     *
+     * A publicação deve permanecer pendente de notificação,
+     * permitindo uma tentativa posterior.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_expoe_mensagem_sensivel_ao_falhar_notificacao_geral(): void
+    {
+        $segredoFicticio =
+            'AUDITORIA_SEGREDO_FICTICIO_B19_17_PUBLICACAO';
+
+        $criador =
+            $this->criarUtilizadorSelecionavel();
+
+        $nomeado =
+            $this->criarUtilizadorSelecionavel();
+
+        $destinatario =
+            $this->criarUtilizadorSelecionavel();
+
+        $metalThursday = MetalThursday::factory()
+            ->comData(
+                CarbonImmutable::parse(
+                    '2026-08-27',
+                ),
+            )
+            ->comAutor(
+                $criador,
+            )
+            ->comProximoNomeado(
+                $nomeado,
+            )
+            ->create([
+                'criado_por_id' => $criador->getKey(),
+            ]);
+
+        /*
+     * Garante que existe um destinatário elegível e que o
+     * serviço chega ao despacho da notificação geral.
+     */
+        self::assertTrue(
+            $destinatario->exists,
+        );
+
+        Notification::shouldReceive(
+            'send',
+        )
+            ->once()
+            ->withArgs(
+                static function (
+                    mixed $destinatarios,
+                    mixed $notificacao,
+                ): bool {
+                    return $notificacao instanceof NotificacaoMetalThursdayCriada
+                        && $destinatarios instanceof Collection
+                        && $destinatarios->isNotEmpty();
+                },
+            )
+            ->andThrow(
+                new RuntimeException(
+                    'Falha simulada na publicação com segredo: '.$segredoFicticio,
+                ),
+            );
+
+        /*
+     * Intercepta os logs sem escrever o segredo fictício
+     * nos ficheiros reais.
+     */
+        Log::spy();
+
+        $controlador =
+            app(
+                ControladorMetalThursday::class,
+            );
+
+        $metodoPublicacao =
+            new ReflectionMethod(
+                $controlador,
+                'notificarPublicacao',
+            );
+
+        /*
+     * A falha deve ser capturada pelo controlador.
+     */
+        $metodoPublicacao->invoke(
+            $controlador,
+            $metalThursday,
+        );
+
+        /*
+     * A publicação não pode ficar marcada como notificada.
+     */
+        self::assertNull(
+            $metalThursday
+                ->refresh()
+                ->publicacao_notificada_em,
+        );
+
+        self::assertTrue(
+            MetalThursday::query()
+                ->publicadasPorNotificar()
+                ->whereKey(
+                    $metalThursday->getKey(),
+                )
+                ->exists(),
+        );
+
+        $mensagemRegistada = null;
+        $contextoRegistado = null;
+
+        Log::shouldHaveReceived(
+            'error',
+        )
+            ->once()
+            ->withArgs(
+                static function (
+                    string $mensagem,
+                    array $contexto,
+                ) use (
+                    &$mensagemRegistada,
+                    &$contextoRegistado,
+                ): bool {
+                    $mensagemRegistada = $mensagem;
+                    $contextoRegistado = $contexto;
+
+                    return true;
+                },
+            );
+
+        self::assertIsString(
+            $mensagemRegistada,
+        );
+
+        self::assertIsArray(
+            $contextoRegistado,
+        );
+
+        self::assertStringNotContainsString(
+            $segredoFicticio,
+            $mensagemRegistada,
+        );
+
+        self::assertArrayNotHasKey(
+            'exception',
+            $contextoRegistado,
         );
     }
 

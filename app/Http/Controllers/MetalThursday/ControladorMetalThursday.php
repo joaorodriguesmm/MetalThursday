@@ -45,6 +45,7 @@ use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use LogicException;
 use Symfony\Component\HttpFoundation\Response;
@@ -251,7 +252,6 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                     $identificadoresSeccoes[] =
                         $seccao->id;
                 }
-
             }
 
             $dadosInteracoesListagem =
@@ -1563,8 +1563,11 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                 ),
             );
         } catch (Throwable $excecao) {
-            report(
-                $excecao,
+            Log::error(
+                'Ocorreu um erro ao despachar a notificação do próximo utilizador nomeado.',
+                [
+                    'excecao' => $excecao::class,
+                ],
             );
         }
     }
@@ -1589,8 +1592,11 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                     $metalThursday,
                 );
         } catch (Throwable $excecao) {
-            report(
-                $excecao,
+            Log::error(
+                'Ocorreu um erro ao processar a notificação geral da publicação MetalThursday.',
+                [
+                    'excecao' => $excecao::class,
+                ],
             );
         }
     }
