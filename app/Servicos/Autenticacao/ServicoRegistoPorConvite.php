@@ -203,9 +203,6 @@ final class ServicoRegistoPorConvite
                 $caminhoFotografia,
                 $identificadoresPermissoesEmail,
             ): Utilizador {
-                $momentoUtilizacao =
-                    CarbonImmutable::now();
-
                 $convite = Convite::query()
                     ->where(
                         'codigo_hash',
@@ -213,6 +210,9 @@ final class ServicoRegistoPorConvite
                     )
                     ->lockForUpdate()
                     ->first();
+
+                $momentoUtilizacao =
+                    CarbonImmutable::now();
 
                 if (
                     ! $convite instanceof Convite
