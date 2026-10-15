@@ -19,6 +19,7 @@ use App\Servicos\MetalThursday\ServicoPersistenciaMetalThursday;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Notification;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -939,6 +940,305 @@ final class ControladorMetalThursdayTest extends TestCase
                 'data' => '2026-01-19',
             ],
         );
+    }
+
+    /**
+     * Uma transferência de autoria durante o pedido retira ao antigo autor a
+     * autorização para continuar a atualizar a MetalThursday.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function antigo_autor_nao_atualiza_apos_transferencia_durante_pedido(): void
+    {
+        Notification::fake();
+
+        $criador = Utilizador::factory()
+            ->comPapel(PapelUtilizador::Administrador)
+            ->create();
+        $autorAnterior = $this->criarUtilizador();
+        $novoAutor = $this->criarUtilizador();
+        $proximoNomeado = $this->criarUtilizador();
+        $edicao = $this->criarEdicao();
+        $tipoSeccao = TipoSeccao::factory()
+            ->semDetalhes()
+            ->create();
+
+        $metalThursday = MetalThursday::factory()
+            ->comData(CarbonImmutable::parse('2026-01-18'))
+            ->comEdicao($edicao)
+            ->comAutor($autorAnterior)
+            ->comProximoNomeado($proximoNomeado)
+            ->create();
+
+        $identificador = (int) $metalThursday->getKey();
+        $novoAutorId = (int) $novoAutor->getKey();
+
+        DB::table('metal_thursdays')
+            ->where('id', $identificador)
+            ->update(['criado_por_id' => $criador->getKey()]);
+
+        $this->actingAs($autorAnterior, 'sessao');
+
+        $autoriaAlterada = false;
+
+        Gate::after(
+            static function (
+                Utilizador $utilizador,
+                string $capacidade,
+                ?bool $autorizado,
+                array $argumentos,
+            ) use (
+                &$autoriaAlterada,
+                $identificador,
+                $novoAutorId,
+            ): void {
+                $recurso = $argumentos[0] ?? null;
+
+                if (
+                    $autoriaAlterada
+                    || $capacidade !== 'update'
+                    || $autorizado !== true
+                    || ! $recurso instanceof MetalThursday
+                    || (int) $recurso->getKey() !== $identificador
+                ) {
+                    return;
+                }
+
+                $autoriaAlterada = true;
+
+                DB::table('metal_thursdays')
+                    ->where('id', $identificador)
+                    ->update(['autor_id' => $novoAutorId]);
+            },
+        );
+
+        $this->patchJson(
+            route('metal-thursday.atualizar', $metalThursday),
+            [
+                'edicao_id' => $edicao->getKey(),
+                'data' => '2026-01-18',
+                'nome' => 'Alteração indevida',
+                'autor_id' => $autorAnterior->getKey(),
+                'proximo_nomeado_id' => $proximoNomeado->getKey(),
+                'seccoes' => [
+                    [
+                        'id' => null,
+                        'tipo_seccao_id' => $tipoSeccao->getKey(),
+                        'descricao' => 'Secção de teste.',
+                    ],
+                ],
+            ],
+        )->assertForbidden();
+
+        self::assertTrue($autoriaAlterada);
+        $this->assertDatabaseHas('metal_thursdays', [
+            'id' => $identificador,
+            'autor_id' => $novoAutorId,
+        ]);
+        $this->assertDatabaseMissing('metal_thursdays', [
+            'id' => $identificador,
+            'nome' => 'Alteração indevida',
+        ]);
+    }
+
+    /**
+     * Um criador comum continua autorizado a editar, mas não pode repor uma
+     * autoria que foi alterada depois da validação inicial do pedido.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function criador_comum_nao_restaura_autoria_desatualizada(): void
+    {
+        Notification::fake();
+
+        $criador = $this->criarUtilizador();
+        $autorAnterior = $this->criarUtilizador();
+        $novoAutor = $this->criarUtilizador();
+        $proximoNomeado = $this->criarUtilizador();
+        $edicao = $this->criarEdicao();
+        $tipoSeccao = TipoSeccao::factory()
+            ->semDetalhes()
+            ->create();
+
+        $metalThursday = MetalThursday::factory()
+            ->comData(CarbonImmutable::parse('2026-01-18'))
+            ->comEdicao($edicao)
+            ->comAutor($autorAnterior)
+            ->comProximoNomeado($proximoNomeado)
+            ->create();
+
+        $identificador = (int) $metalThursday->getKey();
+        $novoAutorId = (int) $novoAutor->getKey();
+
+        DB::table('metal_thursdays')
+            ->where('id', $identificador)
+            ->update(['criado_por_id' => $criador->getKey()]);
+
+        $metalThursday->refresh();
+        $this->actingAs($criador, 'sessao');
+
+        $autoriaAlterada = false;
+
+        Gate::after(
+            static function (
+                Utilizador $utilizador,
+                string $capacidade,
+                ?bool $autorizado,
+                array $argumentos,
+            ) use (
+                &$autoriaAlterada,
+                $identificador,
+                $novoAutorId,
+            ): void {
+                $recurso = $argumentos[0] ?? null;
+
+                if (
+                    $autoriaAlterada
+                    || $capacidade !== 'update'
+                    || $autorizado !== true
+                    || ! $recurso instanceof MetalThursday
+                    || (int) $recurso->getKey() !== $identificador
+                ) {
+                    return;
+                }
+
+                $autoriaAlterada = true;
+
+                DB::table('metal_thursdays')
+                    ->where('id', $identificador)
+                    ->update(['autor_id' => $novoAutorId]);
+            },
+        );
+
+        $this->patchJson(
+            route('metal-thursday.atualizar', $metalThursday),
+            [
+                'edicao_id' => $edicao->getKey(),
+                'data' => '2026-01-18',
+                'nome' => 'Autoria antiga',
+                'autor_id' => $autorAnterior->getKey(),
+                'proximo_nomeado_id' => $proximoNomeado->getKey(),
+                'seccoes' => [
+                    [
+                        'id' => null,
+                        'tipo_seccao_id' => $tipoSeccao->getKey(),
+                        'descricao' => 'Secção de teste.',
+                    ],
+                ],
+            ],
+        )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['autor_id']);
+
+        self::assertTrue($autoriaAlterada);
+        $this->assertDatabaseHas('metal_thursdays', [
+            'id' => $identificador,
+            'autor_id' => $novoAutorId,
+        ]);
+        $this->assertDatabaseMissing('metal_thursdays', [
+            'id' => $identificador,
+            'nome' => 'Autoria antiga',
+        ]);
+    }
+
+    /**
+     * Impede que uma submissão comum reponha a data antiga após outra operação
+     * ter mudado a data da MetalThursday antes do bloqueio.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function criador_comum_nao_restaura_data_desatualizada(): void
+    {
+        Notification::fake();
+
+        $criador = $this->criarUtilizador();
+        $autor = $this->criarUtilizador();
+        $proximoNomeado = $this->criarUtilizador();
+        $edicao = $this->criarEdicao();
+        $tipoSeccao = TipoSeccao::factory()
+            ->semDetalhes()
+            ->create();
+
+        $metalThursday = MetalThursday::factory()
+            ->comData(CarbonImmutable::parse('2026-01-18'))
+            ->comEdicao($edicao)
+            ->comAutor($autor)
+            ->comProximoNomeado($proximoNomeado)
+            ->create();
+
+        $identificador = (int) $metalThursday->getKey();
+
+        DB::table('metal_thursdays')
+            ->where('id', $identificador)
+            ->update(['criado_por_id' => $criador->getKey()]);
+
+        $metalThursday->refresh();
+        $this->actingAs($criador, 'sessao');
+
+        $dataAlterada = false;
+
+        Gate::after(
+            static function (
+                Utilizador $utilizador,
+                string $capacidade,
+                ?bool $autorizado,
+                array $argumentos,
+            ) use (
+                &$dataAlterada,
+                $identificador,
+            ): void {
+                $recurso = $argumentos[0] ?? null;
+
+                if (
+                    $dataAlterada
+                    || $capacidade !== 'update'
+                    || $autorizado !== true
+                    || ! $recurso instanceof MetalThursday
+                    || (int) $recurso->getKey() !== $identificador
+                ) {
+                    return;
+                }
+
+                $dataAlterada = true;
+
+                DB::table('metal_thursdays')
+                    ->where('id', $identificador)
+                    ->update(['data' => '2026-01-19']);
+            },
+        );
+
+        $this->patchJson(
+            route('metal-thursday.atualizar', $metalThursday),
+            [
+                'edicao_id' => $edicao->getKey(),
+                'data' => '2026-01-18',
+                'nome' => 'Data antiga',
+                'autor_id' => $autor->getKey(),
+                'proximo_nomeado_id' => $proximoNomeado->getKey(),
+                'seccoes' => [
+                    [
+                        'id' => null,
+                        'tipo_seccao_id' => $tipoSeccao->getKey(),
+                        'descricao' => 'Secção de teste.',
+                    ],
+                ],
+            ],
+        )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['data']);
+
+        self::assertTrue($dataAlterada);
+        $this->assertDatabaseHas('metal_thursdays', [
+            'id' => $identificador,
+            'data' => '2026-01-19',
+        ]);
+        $this->assertDatabaseMissing('metal_thursdays', [
+            'id' => $identificador,
+            'nome' => 'Data antiga',
+        ]);
     }
 
     /**

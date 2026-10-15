@@ -46,6 +46,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use LogicException;
 use Symfony\Component\HttpFoundation\Response;
@@ -732,12 +733,51 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
             $metalThursday,
         );
 
-        $metalThursdayAtualizada =
-            $this->servicoPersistencia
-                ->atualizar(
-                    $metalThursday,
-                    $pedido->validated(),
+        $dados = $pedido->validated();
+        $utilizador = $this->obterUtilizadorAutenticado();
+
+        $metalThursdayAtualizada = DB::transaction(
+            function () use (
+                $metalThursday,
+                $dados,
+                $utilizador,
+            ): MetalThursday {
+                $metalThursdayBloqueada = MetalThursday::query()
+                    ->whereKey(
+                        $metalThursday->getKey(),
+                    )
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                $this->authorize(
+                    'update',
+                    $metalThursdayBloqueada,
                 );
+
+                if (! $utilizador->possuiPrivilegiosAdministrativos()) {
+                    if ($dados['autor_id'] !== $metalThursdayBloqueada->autor_id) {
+                        throw ValidationException::withMessages([
+                            'autor_id' => 'Não tens permissão para definir este autor.',
+                        ]);
+                    }
+
+                    if (
+                        $dados['data']
+                        !== $metalThursdayBloqueada->data->format('Y-m-d')
+                    ) {
+                        throw ValidationException::withMessages([
+                            'data' => 'Não tens permissão para alterar a data da MetalThursday.',
+                        ]);
+                    }
+                }
+
+                return $this->servicoPersistencia->atualizar(
+                    $metalThursdayBloqueada,
+                    $dados,
+                );
+            },
+            self::TENTATIVAS_TRANSACAO,
+        );
 
         if ($pedido->expectsJson()) {
             return response()->json([
