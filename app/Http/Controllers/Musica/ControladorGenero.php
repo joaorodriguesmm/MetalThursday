@@ -405,6 +405,11 @@ final class ControladorGenero extends Controller
                             ->lockForUpdate()
                             ->firstOrFail();
 
+                    $this->authorize(
+                        'update',
+                        $generoBloqueado,
+                    );
+
                     $this->garantirGenerosPaisDisponiveis(
                         $dados['generos_pai'],
                         $identificadoresAtivos,
@@ -500,6 +505,11 @@ final class ControladorGenero extends Controller
                         )
                         ->lockForUpdate()
                         ->firstOrFail();
+
+                $this->authorize(
+                    'delete',
+                    $generoBloqueado,
+                );
 
                 $generoBloqueado->deleteOrFail();
             },
