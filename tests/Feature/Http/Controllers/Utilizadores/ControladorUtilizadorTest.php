@@ -477,6 +477,40 @@ final class ControladorUtilizadorTest extends TestCase
     }
 
     /**
+     * Confirma que um administrador comum não acede diretamente aos detalhes
+     * administrativos de outro utilizador.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function administrador_nao_pode_consultar_os_detalhes(): void
+    {
+        $administrador =
+            Utilizador::factory()
+                ->comPapel(
+                    PapelUtilizador::Administrador,
+                )
+                ->create();
+
+        $utilizadorConsultado =
+            Utilizador::factory()
+                ->create();
+
+        $this
+            ->actingAs(
+                $administrador,
+                'sessao',
+            )
+            ->get(
+                route(
+                    'utilizadores.detalhes',
+                    $utilizadorConsultado,
+                ),
+            )
+            ->assertForbidden();
+    }
+
+    /**
      * Confirma os detalhes de um utilizador sem convite nem históricos.
      *
      * @since 2.0.0
