@@ -830,6 +830,11 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                         ->lockForUpdate()
                         ->firstOrFail();
 
+                $this->authorize(
+                    'delete',
+                    $metalThursdayBloqueada,
+                );
+
                 $metalThursdayBloqueada->deleteOrFail();
             },
             self::TENTATIVAS_TRANSACAO,
