@@ -562,6 +562,11 @@ final class ControladorArtista extends Controller
                     ->lockForUpdate()
                     ->firstOrFail();
 
+                $this->authorize(
+                    'update',
+                    $artistaBloqueado,
+                );
+
                 $this->aplicarDadosPerfil(
                     $artistaBloqueado,
                     $dados,
@@ -674,6 +679,11 @@ final class ControladorArtista extends Controller
                     )
                     ->lockForUpdate()
                     ->firstOrFail();
+
+                $this->authorize(
+                    'delete',
+                    $artistaBloqueado,
+                );
 
                 $artistaBloqueado->deleteOrFail();
             },
