@@ -19,6 +19,7 @@ use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
+use Tests\Suporte\FotografiaPngTeste;
 use Tests\TestCase;
 
 /**
@@ -293,12 +294,7 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
                 fotografia: $caminhoAnterior,
             );
 
-        $novaFotografia =
-            UploadedFile::fake()->create(
-                name: 'nova-fotografia.webp',
-                kilobytes: 256,
-                mimeType: 'image/webp',
-            );
+        $novaFotografia = FotografiaPngTeste::criar('nova-fotografia.png');
 
         $resultado =
             $this
@@ -423,12 +419,7 @@ final class ServicoAtualizacaoPerfilTest extends TestCase
             email: 'ocupado@exemplo.pt',
         );
 
-        $novaFotografia =
-            UploadedFile::fake()->create(
-                name: 'nova.jpg',
-                kilobytes: 128,
-                mimeType: 'image/jpeg',
-            );
+        $novaFotografia = FotografiaPngTeste::criar('nova.png');
 
         try {
             $this

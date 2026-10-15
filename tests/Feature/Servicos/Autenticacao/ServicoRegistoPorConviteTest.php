@@ -20,6 +20,7 @@ use InvalidArgumentException;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
+use Tests\Suporte\FotografiaPngTeste;
 use Tests\TestCase;
 
 /**
@@ -104,11 +105,7 @@ final class ServicoRegistoPorConviteTest extends TestCase
         $identificadorSegundaPermissao =
             (int) $segundaPermissao->getKey();
 
-        $fotografia = UploadedFile::fake()->create(
-            name: 'fotografia.jpg',
-            kilobytes: 128,
-            mimeType: 'image/jpeg',
-        );
+        $fotografia = FotografiaPngTeste::criar('fotografia.png');
 
         $utilizador =
             $this
@@ -405,11 +402,7 @@ final class ServicoRegistoPorConviteTest extends TestCase
                 $codigo,
             );
 
-        $fotografia = UploadedFile::fake()->create(
-            name: 'fotografia-rollback.jpg',
-            kilobytes: 128,
-            mimeType: 'image/jpeg',
-        );
+        $fotografia = FotografiaPngTeste::criar('fotografia-rollback.png');
 
         try {
             $this
@@ -490,11 +483,7 @@ final class ServicoRegistoPorConviteTest extends TestCase
                 $codigo,
             );
 
-        $fotografia = UploadedFile::fake()->create(
-            name: 'fotografia-duplicada.jpg',
-            kilobytes: 128,
-            mimeType: 'image/jpeg',
-        );
+        $fotografia = FotografiaPngTeste::criar('fotografia-duplicada.png');
 
         try {
             $this

@@ -7,6 +7,8 @@ namespace App\Servicos\Utilizadores;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rules\File;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -36,6 +38,14 @@ final class ServicoFotografiasUtilizador
      */
     private const DIRETORIO_FOTOGRAFIAS =
         'fotografias/utilizadores';
+
+    /**
+     * Limite de tamanho em kilobytes, igual ao dos formulários HTTP.
+     *
+     * @since 2.0.0
+     */
+    private const TAMANHO_MAXIMO_FOTOGRAFIA_KILOBYTES =
+        10 * 1024;
 
     /**
      * Comprimento máximo aceite para o caminho relativo.
@@ -196,26 +206,48 @@ final class ServicoFotografiasUtilizador
     /**
      * Valida o carregamento recebido.
      *
-     * A validação do formato, das dimensões e do tamanho máximo pertence ao
-     * pedido HTTP. Este método confirma defensivamente que o carregamento não
-     * terminou com um erro.
+     * Aplica novamente as restrições dos formulários HTTP para impedir que
+     * outros chamadores armazenem conteúdo não autorizado no disco público.
      *
      * @param  UploadedFile  $fotografia  Fotografia recebida.
      *
-     * @throws InvalidArgumentException Quando o carregamento falhou.
+     * @throws InvalidArgumentException Quando o ficheiro não é válido.
      *
      * @since 2.0.0
      */
     private function validarFotografia(
         UploadedFile $fotografia,
     ): void {
-        if ($fotografia->isValid()) {
-            return;
+        if (! $fotografia->isValid()) {
+            throw new InvalidArgumentException(
+                'O carregamento da fotografia não é válido.',
+            );
         }
 
-        throw new InvalidArgumentException(
-            'O carregamento da fotografia não é válido.',
+        $validador = Validator::make(
+            [
+                'fotografia' => $fotografia,
+            ],
+            [
+                'fotografia' => [
+                    'required',
+                    File::image()
+                        ->types([
+                            'jpg',
+                            'jpeg',
+                            'png',
+                            'webp',
+                        ])
+                        ->max(self::TAMANHO_MAXIMO_FOTOGRAFIA_KILOBYTES),
+                ],
+            ],
         );
+
+        if ($validador->fails()) {
+            throw new InvalidArgumentException(
+                'A fotografia deve ser JPEG, PNG ou WebP e não exceder 10 MB.',
+            );
+        }
     }
 
     /**

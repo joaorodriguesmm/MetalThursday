@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\Suporte\FotografiaPngTeste;
 use Tests\TestCase;
 
 /**
@@ -70,10 +71,8 @@ final class ServicoFotografiasUtilizadorTest extends TestCase
     #[Test]
     public function guarda_fotografia_no_diretorio_dos_utilizadores(): void
     {
-        $fotografia = UploadedFile::fake()->create(
-            name: 'fotografia.jpg',
-            kilobytes: 128,
-            mimeType: 'image/jpeg',
+        $fotografia = FotografiaPngTeste::criar(
+            'fotografia.png',
         );
 
         $caminho = $this->servicoFotografias->guardar(
@@ -93,6 +92,80 @@ final class ServicoFotografiasUtilizadorTest extends TestCase
         $this->discoPublico->assertExists(
             $caminho,
         );
+    }
+
+    /**
+     * Rejeita uma imagem falsa mesmo quando a extensão é JPEG.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function rejeita_ficheiro_php_disfarcado_de_fotografia_no_servico(): void
+    {
+        $caminho = tempnam(sys_get_temp_dir(), 'mt-foto-maliciosa-');
+        self::assertIsString($caminho);
+
+        try {
+            self::assertNotFalse(file_put_contents(
+                $caminho,
+                '<?php echo "conteudo-falso"; ?>',
+            ));
+
+            $fotografia = new UploadedFile(
+                $caminho,
+                'fotografia.jpg',
+                'image/jpeg',
+                UPLOAD_ERR_OK,
+                true,
+            );
+
+            $this->expectException(InvalidArgumentException::class);
+            $this->servicoFotografias->guardar($fotografia);
+        } finally {
+            @unlink($caminho);
+            self::assertSame([], $this->discoPublico->allFiles('fotografias/utilizadores'));
+        }
+    }
+
+    /**
+     * Rejeita fotografias superiores aos 10 MB autorizados.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function rejeita_fotografia_acima_do_limite_no_servico(): void
+    {
+        $fotografia = FotografiaPngTeste::criar('fotografia.png')->size(10 * 1024 + 1);
+
+        $this->expectException(InvalidArgumentException::class);
+
+        try {
+            $this->servicoFotografias->guardar($fotografia);
+        } finally {
+            self::assertSame([], $this->discoPublico->allFiles('fotografias/utilizadores'));
+        }
+    }
+
+    /**
+     * Confirma que o serviço apenas aceita os formatos explicitamente definidos.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function rejeita_formato_gif_no_servico(): void
+    {
+        $fotografia = UploadedFile::fake()->createWithContent(
+            'fotografia.gif',
+            (string) base64_decode('R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==', true),
+        );
+
+        $this->expectException(InvalidArgumentException::class);
+
+        try {
+            $this->servicoFotografias->guardar($fotografia);
+        } finally {
+            self::assertSame([], $this->discoPublico->allFiles('fotografias/utilizadores'));
+        }
     }
 
     /**
