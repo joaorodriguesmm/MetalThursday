@@ -188,6 +188,7 @@ final class ServicoTheAudioDB
             try {
                 $ultimaResposta =
                     Http::acceptJson()
+                        ->withoutRedirecting()
                         ->timeout(
                             max(
                                 1,

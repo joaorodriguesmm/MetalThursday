@@ -286,6 +286,7 @@ final class ServicoMusicBrainz
             try {
                 $ultimaResposta =
                     Http::acceptJson()
+                        ->withoutRedirecting()
                         ->withHeaders([
                             'User-Agent' => $userAgent,
                         ])

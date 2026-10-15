@@ -807,6 +807,7 @@ final class ServicoDiscogs
             try {
                 $pedido =
                     Http::acceptJson()
+                        ->withoutRedirecting()
                         ->withHeaders([
                             'User-Agent' => $userAgent,
                         ]);
