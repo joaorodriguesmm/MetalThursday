@@ -196,6 +196,37 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
     }
 
     /**
+     * Revalida o acesso do destinatário no momento efetivo da entrega.
+     *
+     * O destinatário pode ser suspenso depois de a notificação entrar na fila.
+     * A consulta à base de dados evita utilizar o estado potencialmente
+     * desatualizado do modelo serializado no trabalho da fila e impede a
+     * entrega por qualquer canal a uma conta suspensa ou entretanto removida.
+     *
+     * @param  object  $notificavel  Destinatário da notificação.
+     * @param  string  $canal  Canal que está prestes a ser utilizado.
+     * @return bool Verdadeiro apenas para destinatários ainda ativos.
+     *
+     * @since 2.0.0
+     */
+    public function shouldSend(
+        object $notificavel,
+        string $canal,
+    ): bool {
+        if (
+            ! $notificavel instanceof Utilizador
+            || ! $notificavel->exists
+        ) {
+            return false;
+        }
+
+        return Utilizador::query()
+            ->comAcessoAtivo()
+            ->whereKey($notificavel->getKey())
+            ->exists();
+    }
+
+    /**
      * Determina se a notificação deve ser enviada por e-mail.
      *
      * @param  Utilizador  $utilizador  Utilizador destinatário.
