@@ -14,6 +14,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Notification;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -577,6 +578,84 @@ final class ControladorComentarioTest extends TestCase
                 ),
             ),
         );
+    }
+
+    /**
+     * A transferência da autoria após a autorização inicial impede que o
+     * antigo autor elimine um comentário durante o mesmo pedido.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function antigo_autor_nao_elimina_comentario_apos_transferencia_durante_pedido(): void
+    {
+        $autor = Utilizador::factory()
+            ->create();
+        $novoAutor = Utilizador::factory()
+            ->create();
+        $comentario = $this->criarComentario(
+            $autor,
+        );
+
+        $identificadorComentario = (int) $comentario->getKey();
+        $identificadorAutor = (int) $autor->getKey();
+        $identificadorNovoAutor = (int) $novoAutor->getKey();
+        $autoriaTransferida = false;
+
+        $this->actingAs($autor, 'sessao');
+
+        Gate::after(
+            static function (
+                Utilizador $utilizador,
+                string $capacidade,
+                ?bool $autorizado,
+                array $argumentos,
+            ) use (
+                &$autoriaTransferida,
+                $identificadorComentario,
+                $identificadorAutor,
+                $identificadorNovoAutor,
+            ): void {
+                $recurso = $argumentos[0] ?? null;
+
+                if (
+                    $autoriaTransferida
+                    || $capacidade !== 'delete'
+                    || $autorizado !== true
+                    || (int) $utilizador->getKey() !== $identificadorAutor
+                    || ! $recurso instanceof Comentario
+                    || (int) $recurso->getKey() !== $identificadorComentario
+                ) {
+                    return;
+                }
+
+                DB::table('comentarios')
+                    ->where('id', $identificadorComentario)
+                    ->update([
+                        'utilizador_id' => $identificadorNovoAutor,
+                    ]);
+
+                $autoriaTransferida = true;
+            },
+        );
+
+        $resposta = $this->deleteJson(
+            route('comentarios.eliminar', $comentario),
+        );
+
+        self::assertTrue(
+            $autoriaTransferida,
+            'A autoria deve mudar após a autorização inicial.',
+        );
+
+        $resposta->assertForbidden();
+
+        $this->assertDatabaseHas('comentarios', [
+            'id' => $identificadorComentario,
+            'utilizador_id' => $identificadorNovoAutor,
+            'deleted_at' => null,
+            'conteudo_eliminado_em' => null,
+        ]);
     }
 
     /**

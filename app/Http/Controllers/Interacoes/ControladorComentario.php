@@ -651,6 +651,11 @@ final class ControladorComentario extends Controller
                             $comentarioBloqueado,
                         );
 
+                    $this->authorize(
+                        'delete',
+                        $comentarioBloqueado,
+                    );
+
                     if (
                         $comentarioBloqueado
                             ->respostas()
