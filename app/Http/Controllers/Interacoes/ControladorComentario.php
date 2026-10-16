@@ -221,6 +221,12 @@ final class ControladorComentario extends Controller
                             $comentavel,
                         );
 
+                    $this->autorizarComentarioTransacional(
+                        'create',
+                        Comentario::class,
+                        $identificadorUtilizador,
+                    );
+
                     $comentario =
                         $comentavelBloqueado
                             ->comentarios()
@@ -439,6 +445,12 @@ final class ControladorComentario extends Controller
                         $this->bloquearComentavel(
                             $comentavel,
                         );
+
+                    $this->autorizarComentarioTransacional(
+                        'create',
+                        Comentario::class,
+                        $identificadorUtilizador,
+                    );
 
                     $resposta =
                         $comentavelBloqueado
@@ -782,7 +794,7 @@ final class ControladorComentario extends Controller
      */
     private function autorizarComentarioTransacional(
         string $capacidade,
-        Comentario $comentario,
+        Comentario|string $comentario,
         int $identificadorUtilizador,
     ): void {
         $utilizador = Utilizador::query()
@@ -794,6 +806,10 @@ final class ControladorComentario extends Controller
             throw new AuthenticationException(
                 'Não foi possível identificar o utilizador autenticado.',
             );
+        }
+
+        if (! $utilizador->temAcessoAtivo()) {
+            abort(Response::HTTP_FORBIDDEN);
         }
 
         Gate::forUser($utilizador)->authorize(

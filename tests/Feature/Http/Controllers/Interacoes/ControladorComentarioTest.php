@@ -2028,6 +2028,87 @@ final class ControladorComentarioTest extends TestCase
     }
 
     /**
+     * Uma suspensão ocorrida após a autorização inicial impede a publicação.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function utilizador_suspenso_durante_pedido_nao_publica_comentario(): void
+    {
+        Notification::fake();
+
+        $utilizador = Utilizador::factory()->create();
+        $responsavel = Utilizador::factory()
+            ->comPapel(PapelUtilizador::SuperAdministrador)
+            ->create();
+        $metalThursday = MetalThursday::factory()->create();
+
+        $this->actingAs($utilizador, 'sessao');
+
+        $suspenso = false;
+        $this->suspenderAposAutorizacaoDeCriacao(
+            $utilizador,
+            $responsavel,
+            $suspenso,
+        );
+
+        $this->postJson(
+            route('comentarios.guardar', [
+                'tipoComentavel' => TipoEntidadeInteracao::MetalThursday->value,
+                'identificadorComentavel' => $metalThursday->getKey(),
+            ]),
+            ['conteudo' => 'Comentário após suspensão.'],
+        )->assertForbidden();
+
+        self::assertTrue($suspenso);
+        $this->assertDatabaseMissing('comentarios', [
+            'utilizador_id' => $utilizador->id,
+            'conteudo' => 'Comentário após suspensão.',
+        ]);
+        Notification::assertNothingSent();
+    }
+
+    /**
+     * Uma suspensão ocorrida após a autorização inicial impede respostas.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function utilizador_suspenso_durante_pedido_nao_publica_resposta(): void
+    {
+        Notification::fake();
+
+        $autor = Utilizador::factory()->create();
+        $utilizador = Utilizador::factory()->create();
+        $responsavel = Utilizador::factory()
+            ->comPapel(PapelUtilizador::SuperAdministrador)
+            ->create();
+        $comentario = $this->criarComentario($autor);
+
+        $this->actingAs($utilizador, 'sessao');
+
+        $suspenso = false;
+        $this->suspenderAposAutorizacaoDeCriacao(
+            $utilizador,
+            $responsavel,
+            $suspenso,
+        );
+
+        $this->postJson(
+            route('comentarios.respostas.guardar', $comentario),
+            ['conteudo' => 'Resposta após suspensão.'],
+        )->assertForbidden();
+
+        self::assertTrue($suspenso);
+        $this->assertDatabaseMissing('comentarios', [
+            'comentario_pai_id' => $comentario->id,
+            'utilizador_id' => $utilizador->id,
+            'conteudo' => 'Resposta após suspensão.',
+        ]);
+        Notification::assertNothingSent();
+    }
+
+    /**
      * Simula a revogação dos privilégios após uma autorização inicial válida.
      *
      * @since 2.0.0
@@ -2074,6 +2155,53 @@ final class ControladorComentarioTest extends TestCase
                     ]);
 
                 $privilegiosRevogados = true;
+            },
+        );
+    }
+
+    /**
+     * Suspende o utilizador imediatamente após a autorização inicial de criação.
+     *
+     * @since 2.0.0
+     */
+    private function suspenderAposAutorizacaoDeCriacao(
+        Utilizador $utilizador,
+        Utilizador $responsavel,
+        bool &$suspenso,
+    ): void {
+        $identificadorUtilizador = $utilizador->id;
+        $identificadorResponsavel = $responsavel->id;
+
+        Gate::after(
+            static function (
+                Utilizador $utilizadorVerificado,
+                string $capacidade,
+                ?bool $autorizado,
+                array $argumentos,
+            ) use (
+                &$suspenso,
+                $identificadorUtilizador,
+                $identificadorResponsavel,
+            ): void {
+                if (
+                    $suspenso
+                    || $autorizado !== true
+                    || $capacidade !== 'create'
+                    || ($argumentos[0] ?? null) !== Comentario::class
+                    || $utilizadorVerificado->id !== $identificadorUtilizador
+                ) {
+                    return;
+                }
+
+                $afetados = DB::table('utilizadores')
+                    ->where('id', $identificadorUtilizador)
+                    ->update([
+                        'suspenso_em' => now(),
+                        'motivo_suspensao' => 'Suspensão durante o pedido de teste.',
+                        'suspenso_por_id' => $identificadorResponsavel,
+                    ]);
+
+                $suspenso = $afetados === 1;
             },
         );
     }
