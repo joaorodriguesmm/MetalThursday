@@ -531,6 +531,9 @@ Route::middleware([
             ->whereNumber(
                 'identificadorComentavel',
             )
+            ->middleware(
+                'throttle:interacoes-escrita',
+            )
             ->name(
                 'comentarios.guardar',
             );
@@ -559,6 +562,9 @@ Route::middleware([
             ->whereNumber(
                 'comentario',
             )
+            ->middleware(
+                'throttle:interacoes-escrita',
+            )
             ->name(
                 'comentarios.respostas.guardar',
             );
@@ -573,6 +579,9 @@ Route::middleware([
             ->whereNumber(
                 'comentario',
             )
+            ->middleware(
+                'throttle:interacoes-escrita',
+            )
             ->name(
                 'comentarios.atualizar',
             );
@@ -586,6 +595,9 @@ Route::middleware([
         )
             ->whereNumber(
                 'comentario',
+            )
+            ->middleware(
+                'throttle:interacoes-escrita',
             )
             ->name(
                 'comentarios.eliminar',
@@ -606,6 +618,9 @@ Route::middleware([
         )
             ->whereNumber(
                 'comentario',
+            )
+            ->middleware(
+                'throttle:interacoes-escrita',
             )
             ->name(
                 'gostos.alternar',
@@ -645,6 +660,9 @@ Route::middleware([
             ->whereNumber(
                 'identificadorAvaliavel',
             )
+            ->middleware(
+                'throttle:interacoes-escrita',
+            )
             ->name(
                 'avaliacoes.guardar',
             );
@@ -662,6 +680,9 @@ Route::middleware([
             )
             ->whereNumber(
                 'identificadorAvaliavel',
+            )
+            ->middleware(
+                'throttle:interacoes-escrita',
             )
             ->name(
                 'avaliacoes.eliminar',
@@ -686,6 +707,9 @@ Route::middleware([
             )
             ->whereNumber(
                 'identificadorAudivel',
+            )
+            ->middleware(
+                'throttle:interacoes-escrita',
             )
             ->name(
                 'audicoes.alternar',

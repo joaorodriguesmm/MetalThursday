@@ -57,6 +57,7 @@ final class AppServiceProvider extends ServiceProvider
         $this->configurarRelacoesDinamicas();
         $this->configurarRequisitosPalavraPasse();
         $this->configurarLimitadoresIntegracoes();
+        $this->configurarLimitadoresInteracoes();
         $this->configurarPaginacao();
     }
 
@@ -176,6 +177,35 @@ final class AppServiceProvider extends ServiceProvider
             )->by(
                 self::obterChaveLimitadorIntegracao(
                     'artistas',
+                    $pedido,
+                ),
+            ),
+        );
+    }
+
+    /**
+     * Limita em conjunto os pedidos de escrita de interações por utilizador.
+     *
+     * A configuração é consultada no momento do pedido, permitindo ajustar
+     * o limite durante os testes sem reinicializar a aplicação.
+     *
+     * @since 2.0.0
+     */
+    private function configurarLimitadoresInteracoes(): void
+    {
+        RateLimiter::for(
+            'interacoes-escrita',
+            static fn (Request $pedido): Limit => Limit::perMinute(
+                max(
+                    1,
+                    self::obterLimitePedidosHttp(
+                        'interacoes.limites_pedidos_http.escritas_por_minuto',
+                        30,
+                    ),
+                ),
+            )->by(
+                self::obterChaveLimitadorIntegracao(
+                    'interacoes-escrita',
                     $pedido,
                 ),
             ),
