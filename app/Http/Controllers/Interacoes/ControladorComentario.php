@@ -19,6 +19,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -515,7 +516,8 @@ final class ControladorComentario extends Controller
         AtualizarComentarioRequest $pedido,
         Comentario $comentario,
     ): JsonResponse {
-        $this->obterUtilizadorAutenticado();
+        $identificadorUtilizador =
+            $this->obterUtilizadorAutenticado()->id;
 
         $conteudo =
             $pedido->obterConteudo();
@@ -525,6 +527,7 @@ final class ControladorComentario extends Controller
                 function () use (
                     $comentario,
                     $conteudo,
+                    $identificadorUtilizador,
                 ): Comentario {
                     $comentarioBloqueado =
                         Comentario::query()
@@ -548,9 +551,10 @@ final class ControladorComentario extends Controller
                             $comentarioBloqueado,
                         );
 
-                    $this->authorize(
+                    $this->autorizarComentarioTransacional(
                         'update',
                         $comentarioBloqueado,
+                        $identificadorUtilizador,
                     );
 
                     if (
@@ -605,7 +609,8 @@ final class ControladorComentario extends Controller
     public function eliminar(
         Comentario $comentario,
     ): JsonResponse {
-        $this->obterUtilizadorAutenticado();
+        $identificadorUtilizador =
+            $this->obterUtilizadorAutenticado()->id;
 
         $this->authorize(
             'delete',
@@ -628,6 +633,7 @@ final class ControladorComentario extends Controller
             DB::transaction(
                 function () use (
                     $comentario,
+                    $identificadorUtilizador,
                 ): array {
                     $comentarioBloqueado =
                         Comentario::query()
@@ -651,9 +657,10 @@ final class ControladorComentario extends Controller
                             $comentarioBloqueado,
                         );
 
-                    $this->authorize(
+                    $this->autorizarComentarioTransacional(
                         'delete',
                         $comentarioBloqueado,
+                        $identificadorUtilizador,
                     );
 
                     if (
@@ -763,6 +770,36 @@ final class ControladorComentario extends Controller
 
             'pai_atualizado' => $resultado['pai_atualizado'],
         ]);
+    }
+
+    /**
+     * Revalida os privilégios atuais do utilizador dentro da transação.
+     *
+     * O bloqueio protege a decisão contra alterações concorrentes do papel
+     * enquanto a escrita do comentário é concluída.
+     *
+     * @since 2.0.0
+     */
+    private function autorizarComentarioTransacional(
+        string $capacidade,
+        Comentario $comentario,
+        int $identificadorUtilizador,
+    ): void {
+        $utilizador = Utilizador::query()
+            ->whereKey($identificadorUtilizador)
+            ->lockForUpdate()
+            ->first();
+
+        if (! $utilizador instanceof Utilizador) {
+            throw new AuthenticationException(
+                'Não foi possível identificar o utilizador autenticado.',
+            );
+        }
+
+        Gate::forUser($utilizador)->authorize(
+            $capacidade,
+            $comentario,
+        );
     }
 
     /**

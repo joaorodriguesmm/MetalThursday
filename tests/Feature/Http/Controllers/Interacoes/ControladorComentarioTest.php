@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Http\Controllers\Interacoes;
 
 use App\Enumeracoes\Interacoes\TipoEntidadeInteracao;
+use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\Interacoes\Comentario;
 use App\Models\MetalThursday\Edicao;
@@ -654,6 +655,128 @@ final class ControladorComentarioTest extends TestCase
             'id' => $identificadorComentario,
             'utilizador_id' => $identificadorNovoAutor,
             'deleted_at' => null,
+            'conteudo_eliminado_em' => null,
+        ]);
+    }
+
+    /**
+     * O superadministrador mantém a capacidade de editar e eliminar
+     * comentários de outros utilizadores enquanto o papel é válido.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function superadministrador_pode_atualizar_e_eliminar_comentario_alheio(): void
+    {
+        $autor = Utilizador::factory()->create();
+        $superadministrador = Utilizador::factory()
+            ->comPapel(PapelUtilizador::SuperAdministrador)
+            ->create();
+        $comentario = $this->criarComentario($autor);
+
+        $this->actingAs($superadministrador, 'sessao');
+
+        $this->patchJson(
+            route('comentarios.atualizar', $comentario),
+            ['conteudo' => 'Edição autorizada.'],
+        )->assertOk();
+
+        $this->assertDatabaseHas('comentarios', [
+            'id' => $comentario->getKey(),
+            'conteudo' => 'Edição autorizada.',
+        ]);
+
+        $this->deleteJson(
+            route('comentarios.eliminar', $comentario),
+        )->assertOk();
+
+        $this->assertSoftDeleted('comentarios', [
+            'id' => $comentario->getKey(),
+        ]);
+    }
+
+    /**
+     * A revogação do papel de superadministrador durante o pedido impede
+     * a edição de um comentário pertencente a outro utilizador.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function superadministrador_revogado_nao_atualiza_comentario_alheio(): void
+    {
+        $autor = Utilizador::factory()->create();
+        $superadministrador = Utilizador::factory()
+            ->comPapel(PapelUtilizador::SuperAdministrador)
+            ->create();
+        $comentario = $this->criarComentario($autor);
+        $conteudoOriginal = $comentario->conteudo;
+
+        $this->actingAs($superadministrador, 'sessao');
+        $privilegiosRevogados = false;
+        $this->revogarSuperadministradorAposAutorizacao(
+            $superadministrador,
+            $comentario,
+            'update',
+            $privilegiosRevogados,
+        );
+
+        $this->patchJson(
+            route('comentarios.atualizar', $comentario),
+            ['conteudo' => 'Alteração não autorizada.'],
+        )->assertForbidden();
+
+        self::assertTrue($privilegiosRevogados);
+
+        $this->assertDatabaseHas('utilizadores', [
+            'id' => $superadministrador->getKey(),
+            'papel' => PapelUtilizador::Utilizador->value,
+        ]);
+        $this->assertDatabaseHas('comentarios', [
+            'id' => $comentario->getKey(),
+            'conteudo' => $conteudoOriginal,
+            'editado_em' => null,
+        ]);
+    }
+
+    /**
+     * A revogação do papel de superadministrador durante o pedido impede
+     * a eliminação de um comentário pertencente a outro utilizador.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function superadministrador_revogado_nao_elimina_comentario_alheio(): void
+    {
+        $autor = Utilizador::factory()->create();
+        $superadministrador = Utilizador::factory()
+            ->comPapel(PapelUtilizador::SuperAdministrador)
+            ->create();
+        $comentario = $this->criarComentario($autor);
+
+        $this->actingAs($superadministrador, 'sessao');
+        $privilegiosRevogados = false;
+        $this->revogarSuperadministradorAposAutorizacao(
+            $superadministrador,
+            $comentario,
+            'delete',
+            $privilegiosRevogados,
+        );
+
+        $this->deleteJson(
+            route('comentarios.eliminar', $comentario),
+        )->assertForbidden();
+
+        self::assertTrue($privilegiosRevogados);
+
+        $this->assertDatabaseHas('utilizadores', [
+            'id' => $superadministrador->getKey(),
+            'papel' => PapelUtilizador::Utilizador->value,
+        ]);
+        $this->assertNotSoftDeleted('comentarios', [
+            'id' => $comentario->getKey(),
+        ]);
+        $this->assertDatabaseHas('comentarios', [
+            'id' => $comentario->getKey(),
             'conteudo_eliminado_em' => null,
         ]);
     }
@@ -1901,6 +2024,57 @@ final class ControladorComentarioTest extends TestCase
 
                 'conteudo_eliminado_em' => null,
             ],
+        );
+    }
+
+    /**
+     * Simula a revogação dos privilégios após uma autorização inicial válida.
+     *
+     * @since 2.0.0
+     */
+    private function revogarSuperadministradorAposAutorizacao(
+        Utilizador $superadministrador,
+        Comentario $comentario,
+        string $capacidade,
+        bool &$privilegiosRevogados,
+    ): void {
+        $identificadorUtilizador = (int) $superadministrador->getKey();
+        $identificadorComentario = (int) $comentario->getKey();
+
+        Gate::after(
+            static function (
+                Utilizador $utilizador,
+                string $capacidadeVerificada,
+                ?bool $autorizado,
+                array $argumentos,
+            ) use (
+                &$privilegiosRevogados,
+                $identificadorUtilizador,
+                $identificadorComentario,
+                $capacidade,
+            ): void {
+                $recurso = $argumentos[0] ?? null;
+
+                if (
+                    $privilegiosRevogados
+                    || $autorizado !== true
+                    || $capacidadeVerificada !== $capacidade
+                    || (int) $utilizador->getKey() !== $identificadorUtilizador
+                    || ! $recurso instanceof Comentario
+                    || (int) $recurso->getKey() !== $identificadorComentario
+                ) {
+                    return;
+                }
+
+                DB::table('utilizadores')
+                    ->where('id', $identificadorUtilizador)
+                    ->where('papel', PapelUtilizador::SuperAdministrador->value)
+                    ->update([
+                        'papel' => PapelUtilizador::Utilizador->value,
+                    ]);
+
+                $privilegiosRevogados = true;
+            },
         );
     }
 }
