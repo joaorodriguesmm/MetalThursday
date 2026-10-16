@@ -11,6 +11,7 @@ use App\Models\Autenticacao\Utilizador;
 use App\Models\Interacoes\Avaliacao;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
+use App\Servicos\Interacoes\ServicoAcessoInteracoes;
 use App\Servicos\Interacoes\ServicoDisponibilidadeInteracoes;
 use App\Servicos\Notificacoes\NotificadorInteracoes;
 use Illuminate\Auth\AuthenticationException;
@@ -74,6 +75,7 @@ final class ControladorAvaliacao extends Controller
      */
     public function __construct(
         private readonly NotificadorInteracoes $notificadorInteracoes,
+        private readonly ServicoAcessoInteracoes $servicoAcessoInteracoes,
         private readonly ServicoDisponibilidadeInteracoes $servicoDisponibilidadeInteracoes,
     ) {}
 
@@ -142,6 +144,11 @@ final class ControladorAvaliacao extends Controller
                     $avaliavelBloqueado =
                         $this->bloquearAvaliavel(
                             $avaliavel,
+                        );
+
+                    $this->servicoAcessoInteracoes
+                        ->garantirAcessoAtivoComBloqueio(
+                            $identificadorUtilizador,
                         );
 
                     $avaliacao =
@@ -276,6 +283,11 @@ final class ControladorAvaliacao extends Controller
                     $avaliavelBloqueado =
                         $this->bloquearAvaliavel(
                             $avaliavel,
+                        );
+
+                    $this->servicoAcessoInteracoes
+                        ->garantirAcessoAtivoComBloqueio(
+                            $identificadorUtilizador,
                         );
 
                     $avaliacao =

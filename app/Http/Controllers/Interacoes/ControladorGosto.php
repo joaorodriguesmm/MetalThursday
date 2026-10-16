@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\Interacoes\Comentario;
 use App\Models\Interacoes\Gosto;
+use App\Servicos\Interacoes\ServicoAcessoInteracoes;
 use App\Servicos\Interacoes\ServicoDisponibilidadeInteracoes;
 use App\Servicos\Notificacoes\NotificadorInteracoes;
 use Illuminate\Auth\AuthenticationException;
@@ -91,6 +92,7 @@ final class ControladorGosto extends Controller
      */
     public function __construct(
         private readonly NotificadorInteracoes $notificadorInteracoes,
+        private readonly ServicoAcessoInteracoes $servicoAcessoInteracoes,
         private readonly ServicoDisponibilidadeInteracoes $servicoDisponibilidadeInteracoes,
     ) {}
 
@@ -156,6 +158,11 @@ final class ControladorGosto extends Controller
                     $this->servicoDisponibilidadeInteracoes
                         ->obterMetalThursdayPublicadaComBloqueio(
                             $comentarioBloqueado,
+                        );
+
+                    $this->servicoAcessoInteracoes
+                        ->garantirAcessoAtivoComBloqueio(
+                            $identificadorUtilizador,
                         );
 
                     $gosto =
