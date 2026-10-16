@@ -8,6 +8,7 @@ use App\Enumeracoes\IdentificadorPermissaoEmail;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\ReservaMetalThursday;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder;
 use InvalidArgumentException;
 
 /**
@@ -72,6 +73,47 @@ final class NotificacaoLembreteTarefaMetalThursday extends NotificacaoAplicacao
             );
 
         $this->afterCommit();
+    }
+
+    /**
+     * Revalida a reserva e o acesso do responsável antes de cada entrega.
+     *
+     * A reserva pode ter sido transferida ou cumprida durante a espera na fila.
+     * A consulta usa os dados atuais, não o retrato da notificação.
+     *
+     * @param  object  $notificavel  Destinatário da notificação.
+     * @param  string  $canal  Canal prestes a ser processado.
+     * @return bool Verdadeiro se a reserva continua pendente e atribuída ao
+     *              destinatário com acesso ativo.
+     *
+     * @since 2.0.0
+     */
+    public function shouldSend(
+        object $notificavel,
+        string $canal,
+    ): bool {
+        if (
+            ! $notificavel instanceof Utilizador
+            || ! $notificavel->exists
+        ) {
+            return false;
+        }
+
+        if (
+            ! ReservaMetalThursday::query()
+                ->whereKey($this->identificadorReserva)
+                ->where('responsavel_id', $notificavel->getKey())
+                ->whereNull('metal_thursday_id')
+                ->whereHas(
+                    'responsavel',
+                    static fn (Builder $construtor): Builder => $construtor->comAcessoAtivo(),
+                )
+                ->exists()
+        ) {
+            return false;
+        }
+
+        return parent::shouldSend($notificavel, $canal);
     }
 
     /**
