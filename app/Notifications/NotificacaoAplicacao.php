@@ -73,6 +73,44 @@ abstract class NotificacaoAplicacao extends Notification implements ShouldQueue
     }
 
     /**
+     * Revalida as permissões de e-mail no momento da entrega.
+     *
+     * As permissões podem ser revogadas enquanto o trabalho aguarda na fila.
+     * É carregado um destinatário atualizado para evitar relações Eloquent
+     * antigas; os restantes canais mantêm a política original.
+     * Comunicações administrativas usam deveEnviarPorEmail() = true e não
+     * dependem das preferências opcionais.
+     *
+     * @param  object  $notificavel  Destinatário da notificação.
+     * @param  string  $canal  Canal prestes a ser processado.
+     * @return bool Verdadeiro quando a entrega continua autorizada.
+     *
+     * @since 2.0.0
+     */
+    public function shouldSend(
+        object $notificavel,
+        string $canal,
+    ): bool {
+        if ($canal !== 'mail') {
+            return true;
+        }
+
+        if (
+            ! $notificavel instanceof Utilizador
+            || ! $notificavel->exists
+        ) {
+            return false;
+        }
+
+        $utilizadorAtual = Utilizador::query()
+            ->find($notificavel->getKey());
+
+        return $utilizadorAtual instanceof Utilizador
+            && $this->utilizadorPossuiEmail($utilizadorAtual)
+            && $this->deveEnviarPorEmail($utilizadorAtual);
+    }
+
+    /**
      * Constrói a mensagem enviada por e-mail.
      *
      * A ação é opcional. Quando a notificação concreta não fornecer

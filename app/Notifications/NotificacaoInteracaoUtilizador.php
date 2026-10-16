@@ -220,10 +220,16 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
             return false;
         }
 
-        return Utilizador::query()
-            ->comAcessoAtivo()
-            ->whereKey($notificavel->getKey())
-            ->exists();
+        if (
+            ! Utilizador::query()
+                ->comAcessoAtivo()
+                ->whereKey($notificavel->getKey())
+                ->exists()
+        ) {
+            return false;
+        }
+
+        return parent::shouldSend($notificavel, $canal);
     }
 
     /**

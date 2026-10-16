@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Notifications;
 
+use App\Enumeracoes\IdentificadorPermissaoEmail;
 use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\Utilizador;
+use App\Models\Comunicacao\PermissaoEmail;
 use App\Models\MetalThursday\MetalThursday;
 use App\Notifications\NotificacaoInteracaoUtilizador;
+use Database\Seeders\PermissaoEmailSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -31,6 +34,14 @@ final class NotificacaoInteracaoUtilizadorEntregaTest extends TestCase
     {
         $causador = Utilizador::factory()->create();
         $destinatario = Utilizador::factory()->create();
+
+        app(PermissaoEmailSeeder::class)->run();
+
+        $permissao = PermissaoEmail::query()
+            ->where('identificador', IdentificadorPermissaoEmail::TodasInteracoes->value)
+            ->sole();
+
+        $destinatario->permissoesEmail()->attach($permissao->getKey());
 
         $metalThursday = MetalThursday::factory()
             ->comAutor($causador)
