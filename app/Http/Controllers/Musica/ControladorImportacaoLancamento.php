@@ -5,13 +5,17 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Musica;
 
 use App\Http\Controllers\Controller;
+use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\MetalThursday;
+use App\Models\MetalThursday\ReservaMetalThursday;
 use App\Models\Musica\FaixaLancamento;
 use App\Servicos\Musica\ServicoDiscogs;
 use App\Servicos\Musica\ServicoImportacaoLancamento;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -115,6 +119,11 @@ final class ControladorImportacaoLancamento extends Controller
                     ->servicoImportacao
                     ->importar(
                         (int) $identificadorDiscogs,
+                        function () use ($pedido): void {
+                            $this->autorizarUtilizacaoTransacional(
+                                $pedido,
+                            );
+                        },
                     );
         } catch (RuntimeException) {
             return response()->json(
@@ -188,6 +197,94 @@ final class ControladorImportacaoLancamento extends Controller
                 );
 
         $this->authorize(
+            'update',
+            $metalThursday,
+        );
+    }
+
+    /**
+     * Revalida a autorização dentro da transação de importação.
+     *
+     * Bloqueia a reserva pendente ou a MetalThursday relevante antes
+     * de o serviço bloquear e persistir o lançamento.
+     *
+     * @param  Request  $pedido  Pedido HTTP.
+     *
+     * @throws AuthorizationException Quando a autorização foi perdida.
+     *
+     * @since 2.0.0
+     */
+    private function autorizarUtilizacaoTransacional(
+        Request $pedido,
+    ): void {
+        $utilizadorPedido = $pedido->user('sessao');
+
+        if (! $utilizadorPedido instanceof Utilizador) {
+            throw new AuthorizationException;
+        }
+
+        $identificadorUtilizador = $utilizadorPedido->getKey();
+
+        if (! $pedido->has('metal_thursday_id')) {
+            $reserva = ReservaMetalThursday::query()
+                ->where(
+                    'responsavel_id',
+                    $identificadorUtilizador,
+                )
+                ->whereNull(
+                    'metal_thursday_id',
+                )
+                ->orderBy(
+                    'data',
+                )
+                ->lockForUpdate()
+                ->first();
+
+            $utilizador = Utilizador::query()
+                ->whereKey($identificadorUtilizador)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $utilizador instanceof Utilizador) {
+                throw new AuthorizationException;
+            }
+
+            if (
+                ! $utilizador->possuiPrivilegiosAdministrativos()
+                && ! $reserva instanceof ReservaMetalThursday
+            ) {
+                throw new AuthorizationException;
+            }
+
+            Gate::forUser($utilizador)->authorize(
+                'create',
+                MetalThursday::class,
+            );
+
+            return;
+        }
+
+        $metalThursday = MetalThursday::query()
+            ->whereKey(
+                $pedido->integer('metal_thursday_id'),
+            )
+            ->lockForUpdate()
+            ->first();
+
+        if (! $metalThursday instanceof MetalThursday) {
+            throw new AuthorizationException;
+        }
+
+        $utilizador = Utilizador::query()
+            ->whereKey($identificadorUtilizador)
+            ->lockForUpdate()
+            ->first();
+
+        if (! $utilizador instanceof Utilizador) {
+            throw new AuthorizationException;
+        }
+
+        Gate::forUser($utilizador)->authorize(
             'update',
             $metalThursday,
         );

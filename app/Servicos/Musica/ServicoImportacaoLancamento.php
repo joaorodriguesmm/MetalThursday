@@ -8,6 +8,7 @@ use App\Enumeracoes\TipoLancamento;
 use App\Models\Musica\FaixaLancamento;
 use App\Models\Musica\Lancamento;
 use App\Models\Musica\Musica;
+use Closure;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -86,12 +87,14 @@ final class ServicoImportacaoLancamento
      * manual do utilizador e não altera o catálogo automaticamente.
      *
      * @param  int  $identificadorDiscogs  Identificador da Release Discogs.
+     * @param  (Closure(): void)|null  $validarAutorizacao
      * @return Lancamento Lançamento persistido.
      *
      * @since 2.0.0
      */
     public function importar(
         int $identificadorDiscogs,
+        ?Closure $validarAutorizacao = null,
     ): Lancamento {
         $existente =
             Lancamento::withTrashed()
@@ -102,7 +105,8 @@ final class ServicoImportacaoLancamento
                 ->first();
 
         if (
-            $existente instanceof Lancamento
+            $validarAutorizacao === null
+            && $existente instanceof Lancamento
             && ! $existente->trashed()
             && ! $this->necessitaMetadadosExternos(
                 $existente,
@@ -138,12 +142,18 @@ final class ServicoImportacaoLancamento
                     function () use (
                         $identificadorDiscogs,
                         $dados,
+                        $validarAutorizacao,
                     ): Lancamento {
                         return DB::transaction(
                             function () use (
                                 $identificadorDiscogs,
                                 $dados,
+                                $validarAutorizacao,
                             ): Lancamento {
+                                if ($validarAutorizacao !== null) {
+                                    $validarAutorizacao();
+                                }
+
                                 $existenteBloqueado =
                                     Lancamento::withTrashed()
                                         ->where(
