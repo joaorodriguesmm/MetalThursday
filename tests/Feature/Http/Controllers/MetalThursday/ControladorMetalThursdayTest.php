@@ -1043,6 +1043,121 @@ final class ControladorMetalThursdayTest extends TestCase
     }
 
     /**
+     * A revogação de privilégios durante o pedido impede que um antigo
+     * administrador altere a data de uma MetalThursday de que é autor.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function administrador_revogado_nao_altera_data_durante_pedido(): void
+    {
+        Notification::fake();
+
+        $administrador = Utilizador::factory()
+            ->comPapel(PapelUtilizador::Administrador)
+            ->create();
+        $proximoNomeado = $this->criarUtilizador();
+        $edicao = $this->criarEdicao();
+        $tipoSeccao = TipoSeccao::factory()
+            ->semDetalhes()
+            ->create();
+
+        $metalThursday = MetalThursday::factory()
+            ->comData(CarbonImmutable::parse('2026-01-18'))
+            ->comEdicao($edicao)
+            ->comAutor($administrador)
+            ->comProximoNomeado($proximoNomeado)
+            ->create();
+
+        $identificador = (int) $metalThursday->getKey();
+        $identificadorAdministrador = (int) $administrador->getKey();
+        $tabelaUtilizadores = $administrador->getTable();
+        $privilegiosRevogados = false;
+
+        $this->actingAs($administrador, 'sessao');
+
+        Gate::after(
+            static function (
+                Utilizador $utilizador,
+                string $capacidade,
+                ?bool $autorizado,
+                array $argumentos,
+            ) use (
+                &$privilegiosRevogados,
+                $identificador,
+                $identificadorAdministrador,
+                $tabelaUtilizadores,
+            ): void {
+                $recurso = $argumentos[0] ?? null;
+
+                if (
+                    $privilegiosRevogados
+                    || $capacidade !== 'update'
+                    || $autorizado !== true
+                    || (int) $utilizador->getKey() !== $identificadorAdministrador
+                    || ! $recurso instanceof MetalThursday
+                    || (int) $recurso->getKey() !== $identificador
+                ) {
+                    return;
+                }
+
+                DB::table($tabelaUtilizadores)
+                    ->where('id', $identificadorAdministrador)
+                    ->update([
+                        'papel' => PapelUtilizador::Utilizador->value,
+                    ]);
+
+                $privilegiosRevogados = true;
+            },
+        );
+
+        $resposta = $this->patchJson(
+            route('metal-thursday.atualizar', $metalThursday),
+            [
+                'data' => '2026-01-19',
+                'nome' => null,
+                'autor_id' => $administrador->getKey(),
+                'proximo_nomeado_id' => $proximoNomeado->getKey(),
+                'seccoes' => [
+                    [
+                        'id' => null,
+                        'tipo_seccao_id' => $tipoSeccao->getKey(),
+                        'descricao' => 'Secção de teste.',
+                    ],
+                ],
+            ],
+        );
+
+        self::assertTrue(
+            $privilegiosRevogados,
+            'Os privilégios devem ser revogados após a autorização inicial.',
+        );
+
+        $resposta
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['data'])
+            ->assertJsonPath(
+                'errors.data.0',
+                'Não tens permissão para alterar a data da MetalThursday.',
+            );
+
+        $this->assertDatabaseHas($tabelaUtilizadores, [
+            'id' => $identificadorAdministrador,
+            'papel' => PapelUtilizador::Utilizador->value,
+        ]);
+
+        $this->assertDatabaseHas('metal_thursdays', [
+            'id' => $identificador,
+            'data' => '2026-01-18',
+        ]);
+
+        $this->assertDatabaseMissing('metal_thursdays', [
+            'id' => $identificador,
+            'data' => '2026-01-19',
+        ]);
+    }
+
+    /**
      * Um criador comum continua autorizado a editar, mas não pode repor uma
      * autoria que foi alterada depois da validação inicial do pedido.
      *

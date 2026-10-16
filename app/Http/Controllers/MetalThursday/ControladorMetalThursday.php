@@ -734,13 +734,13 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
         );
 
         $dados = $pedido->validated();
-        $utilizador = $this->obterUtilizadorAutenticado();
+        $identificadorUtilizador = $this->obterIdentificadorUtilizadorAutenticado();
 
         $metalThursdayAtualizada = DB::transaction(
             function () use (
                 $metalThursday,
                 $dados,
-                $utilizador,
+                $identificadorUtilizador,
             ): MetalThursday {
                 $metalThursdayBloqueada = MetalThursday::query()
                     ->whereKey(
@@ -749,7 +749,18 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                $this->authorize(
+                $utilizador = Utilizador::query()
+                    ->whereKey($identificadorUtilizador)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $utilizador instanceof Utilizador) {
+                    throw new AuthenticationException(
+                        'Não foi possível identificar o utilizador autenticado.',
+                    );
+                }
+
+                Gate::forUser($utilizador)->authorize(
                     'update',
                     $metalThursdayBloqueada,
                 );
