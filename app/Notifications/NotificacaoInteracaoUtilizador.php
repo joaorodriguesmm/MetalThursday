@@ -229,6 +229,18 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
             return false;
         }
 
+        // A publicação pode ter sido eliminada ou reagendada depois do COMMIT.
+        // O scope exclui registos eliminados logicamente e datas futuras.
+        if (
+            $this->identificadorMetalThursday === null
+            || ! MetalThursday::query()
+                ->publicadas()
+                ->whereKey($this->identificadorMetalThursday)
+                ->exists()
+        ) {
+            return false;
+        }
+
         return parent::shouldSend($notificavel, $canal);
     }
 
