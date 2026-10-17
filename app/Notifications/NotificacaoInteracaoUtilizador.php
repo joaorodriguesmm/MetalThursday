@@ -359,6 +359,56 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
     }
 
     /**
+     * Revalida a secção onde a interação foi realizada.
+     *
+     * A publicação pode continuar disponível depois de uma secção ter sido
+     * eliminada logicamente. Para respostas e gostos, a secção é resolvida
+     * através do comentário original, evitando guardar novos dados na fila.
+     *
+     * @return bool Verdadeiro se não existe uma secção indisponível.
+     *
+     * @since 2.0.0
+     */
+    private function seccaoDaInteracaoAindaDisponivel(): bool
+    {
+        if ($this->tipoSujeito === self::TIPO_METAL_THURSDAY) {
+            return true;
+        }
+
+        if ($this->tipoSujeito === self::TIPO_SECCAO) {
+            return SeccaoMetalThursday::query()
+                ->whereKey($this->identificadorSujeito)
+                ->where('metal_thursday_id', $this->identificadorMetalThursday)
+                ->exists();
+        }
+
+        if ($this->tipoSujeito !== self::TIPO_COMENTARIO) {
+            return false;
+        }
+
+        $comentario = Comentario::query()
+            ->whereKey($this->identificadorSujeito)
+            ->first(['tipo_comentavel', 'comentavel_id']);
+
+        if (! $comentario instanceof Comentario) {
+            return false;
+        }
+
+        if ($comentario->tipo_comentavel === self::TIPO_METAL_THURSDAY) {
+            return $comentario->comentavel_id === $this->identificadorMetalThursday;
+        }
+
+        if ($comentario->tipo_comentavel !== self::TIPO_SECCAO) {
+            return false;
+        }
+
+        return SeccaoMetalThursday::query()
+            ->whereKey($comentario->comentavel_id)
+            ->where('metal_thursday_id', $this->identificadorMetalThursday)
+            ->exists();
+    }
+
+    /**
      * Revalida o acesso do destinatário no momento efetivo da entrega.
      *
      * O destinatário pode ser suspenso depois de a notificação entrar na fila.
@@ -401,6 +451,11 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
                 ->whereKey($this->identificadorMetalThursday)
                 ->exists()
         ) {
+            return false;
+        }
+
+        // Uma secção eliminada invalida também as interações nela registadas.
+        if (! $this->seccaoDaInteracaoAindaDisponivel()) {
             return false;
         }
 
