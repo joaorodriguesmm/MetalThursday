@@ -345,6 +345,13 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
                 ->whereKey($this->identificadorRegistoAcao)
                 ->where('utilizador_id', $this->identificadorCausador)
                 ->where('comentario_id', $this->identificadorSujeito)
+                ->whereIn(
+                    'comentario_id',
+                    Comentario::query()
+                        ->whereKey($this->identificadorSujeito)
+                        ->whereNull('conteudo_eliminado_em')
+                        ->select('id'),
+                )
                 ->exists(),
 
             default => false,
