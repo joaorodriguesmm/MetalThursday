@@ -6,7 +6,10 @@ namespace App\Notifications;
 
 use App\Enumeracoes\IdentificadorPermissaoEmail;
 use App\Models\Autenticacao\Utilizador;
+use App\Models\Interacoes\Audicao;
+use App\Models\Interacoes\Avaliacao;
 use App\Models\Interacoes\Comentario;
+use App\Models\Interacoes\Gosto;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
@@ -86,6 +89,17 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      * @since 2.0.0
      */
     private readonly string $acao;
+
+    /**
+     * Identificador do registo que originou a notificação.
+     *
+     * Permanece nulo em comentários/respostas, ou quando uma ação reversível
+     * não tem um registo persistido. O valor predefinido também evita erros
+     * ao desserializar trabalhos criados antes desta versão.
+     *
+     * @since 2.0.0
+     */
+    private ?int $identificadorRegistoAcao = null;
 
     /**
      * Identificador da MetalThursday relacionada com a interação.
@@ -172,6 +186,9 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
                 $acao,
             );
 
+        $this->identificadorRegistoAcao =
+            $this->obterIdentificadorRegistoAcao($sujeito);
+
         $retrato =
             $this->criarRetratoSujeito(
                 $sujeito,
@@ -193,6 +210,80 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
             $retrato['nome_autor_comentario'];
 
         $this->afterCommit();
+    }
+
+    /**
+     * Captura o registo concreto de uma interação reversível.
+     *
+     * Consultar apenas a existência de outra interação do mesmo utilizador
+     * seria insuficiente: uma ação retirada pode ser recriada antes da entrega.
+     *
+     * @param  MetalThursday|SeccaoMetalThursday|Comentario  $sujeito  Sujeito.
+     * @return int|null Identificador do registo original.
+     *
+     * @since 2.0.0
+     */
+    private function obterIdentificadorRegistoAcao(
+        MetalThursday|SeccaoMetalThursday|Comentario $sujeito,
+    ): ?int {
+        $identificador = match (true) {
+            $this->acao === 'avaliou'
+                && ! $sujeito instanceof Comentario => $sujeito->avaliacoes()
+                    ->where('utilizador_id', $this->identificadorCausador)
+                    ->value('id'),
+
+            $this->acao === 'ouviu'
+                && ! $sujeito instanceof Comentario => $sujeito->audicoes()
+                    ->where('utilizador_id', $this->identificadorCausador)
+                    ->value('id'),
+
+            $this->acao === 'gostou'
+                && $sujeito instanceof Comentario => $sujeito->gostos()
+                    ->where('utilizador_id', $this->identificadorCausador)
+                    ->value('id'),
+
+            default => null,
+        };
+
+        return $this->normalizarIdentificador($identificador);
+    }
+
+    /**
+     * Consulta a interação original, com o mesmo sujeito e causador.
+     *
+     * @return bool Verdadeiro se o registo original ainda existe.
+     *
+     * @since 2.0.0
+     */
+    private function registoAcaoAindaExiste(): bool
+    {
+        if ($this->identificadorRegistoAcao === null) {
+            return false;
+        }
+
+        return match ($this->acao) {
+            'avaliou' => Avaliacao::query()
+                ->whereKey($this->identificadorRegistoAcao)
+                ->where('utilizador_id', $this->identificadorCausador)
+                ->where('tipo_avaliavel', $this->tipoSujeito)
+                ->where('avaliavel_id', $this->identificadorSujeito)
+                ->exists(),
+
+            'ouviu' => Audicao::query()
+                ->whereKey($this->identificadorRegistoAcao)
+                ->where('utilizador_id', $this->identificadorCausador)
+                ->where('tipo_audivel', $this->tipoSujeito)
+                ->where('audivel_id', $this->identificadorSujeito)
+                ->exists(),
+
+            'gostou' => Gosto::query()
+                ->whereKey($this->identificadorRegistoAcao)
+                ->where('utilizador_id', $this->identificadorCausador)
+                ->where('comentario_id', $this->identificadorSujeito)
+                ->exists(),
+
+            default => false,
+        };
     }
 
     /**
@@ -237,6 +328,14 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
                 ->publicadas()
                 ->whereKey($this->identificadorMetalThursday)
                 ->exists()
+        ) {
+            return false;
+        }
+
+        // Validar o registo original, não apenas uma ação entretanto recriada.
+        if (
+            in_array($this->acao, ['avaliou', 'gostou', 'ouviu'], true)
+            && ! $this->registoAcaoAindaExiste()
         ) {
             return false;
         }

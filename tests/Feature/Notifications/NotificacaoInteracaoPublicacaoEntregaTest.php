@@ -110,6 +110,11 @@ final class NotificacaoInteracaoPublicacaoEntregaTest extends TestCase
             ->paraMetalThursday($publicacao)
             ->create();
 
+        $seccao->avaliacoes()->create([
+            'utilizador_id' => $causador->getKey(),
+            'pontuacao' => 8.5,
+        ]);
+
         $notificacao = new NotificacaoInteracaoUtilizador(
             $seccao,
             $causador,
@@ -132,6 +137,10 @@ final class NotificacaoInteracaoPublicacaoEntregaTest extends TestCase
             'utilizador_id' => $causador->getKey(),
             'conteudo' => 'Comentário válido antes do reagendamento.',
             'comentario_pai_id' => null,
+        ]);
+
+        $comentario->gostos()->create([
+            'utilizador_id' => $causador->getKey(),
         ]);
 
         $notificacao = new NotificacaoInteracaoUtilizador(
@@ -162,6 +171,14 @@ final class NotificacaoInteracaoPublicacaoEntregaTest extends TestCase
             'utilizador_id' => $causador->getKey(),
             'conteudo' => 'Comentário numa secção publicada.',
             'comentario_pai_id' => null,
+        ]);
+
+        $seccao->avaliacoes()->create([
+            'utilizador_id' => $causador->getKey(),
+            'pontuacao' => 8.5,
+        ]);
+        $comentario->gostos()->create([
+            'utilizador_id' => $causador->getKey(),
         ]);
 
         $notificacaoSeccao = new NotificacaoInteracaoUtilizador(
@@ -203,6 +220,11 @@ final class NotificacaoInteracaoPublicacaoEntregaTest extends TestCase
             ->comAutor($causador)
             ->comProximoNomeado($causador)
             ->create();
+
+        $publicacao->avaliacoes()->create([
+            'utilizador_id' => $causador->getKey(),
+            'pontuacao' => 8.5,
+        ]);
 
         return [$publicacao, $causador, $destinatario];
     }
