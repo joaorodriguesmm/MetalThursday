@@ -93,8 +93,8 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
     /**
      * Identificador do registo que originou a notificação.
      *
-     * Permanece nulo em comentários/respostas, ou quando uma ação reversível
-     * não tem um registo persistido. O valor predefinido também evita erros
+     * Permanece nulo quando a ação não possui um registo de origem persistido.
+     * O valor predefinido também evita erros
      * ao desserializar trabalhos criados antes desta versão.
      *
      * @since 2.0.0
@@ -144,6 +144,8 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
      *                                                                 interação.
      * @param  Utilizador  $causador  Utilizador que realizou a interação.
      * @param  string  $acao  Ação realizada.
+     * @param  Comentario|null  $comentarioOrigem  Comentário ou resposta criado
+     *                                             pela ação, quando aplicável.
      *
      * @throws InvalidArgumentException Quando um modelo, identificador ou a
      *                                  ação não são válidos.
@@ -154,6 +156,7 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
         MetalThursday|SeccaoMetalThursday|Comentario $sujeito,
         Utilizador $causador,
         string $acao,
+        ?Comentario $comentarioOrigem = null,
     ) {
         $this->tipoSujeito = match (true) {
             $sujeito instanceof MetalThursday => self::TIPO_METAL_THURSDAY,
@@ -187,7 +190,13 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
             );
 
         $this->identificadorRegistoAcao =
-            $this->obterIdentificadorRegistoAcao($sujeito);
+            $comentarioOrigem !== null
+            && in_array($this->acao, ['comentou', 'respondeu'], true)
+                ? $this->obterIdentificadorPersistido(
+                    $comentarioOrigem,
+                    'O comentário que originou a interação',
+                )
+                : $this->obterIdentificadorRegistoAcao($sujeito);
 
         $retrato =
             $this->criarRetratoSujeito(
@@ -246,6 +255,62 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
         };
 
         return $this->normalizarIdentificador($identificador);
+    }
+
+    /**
+     * Confirma a existência do comentário ou resposta que originou o aviso.
+     *
+     * Verifica também o conteúdo removido por marcador e a relação original
+     * entre a resposta e o comentário respondido.
+     *
+     * @return bool Verdadeiro apenas para um comentário ou resposta válido.
+     *
+     * @since 2.0.0
+     */
+    private function comentarioOriginalAindaExiste(): bool
+    {
+        if ($this->identificadorRegistoAcao === null) {
+            return false;
+        }
+
+        $comentarioOriginal = Comentario::query()
+            ->whereKey($this->identificadorRegistoAcao)
+            ->where('utilizador_id', $this->identificadorCausador)
+            ->whereNull('conteudo_eliminado_em');
+
+        if ($this->acao === 'comentou') {
+            if ($this->tipoSujeito === self::TIPO_COMENTARIO) {
+                return false;
+            }
+
+            return $comentarioOriginal
+                ->whereNull('comentario_pai_id')
+                ->where('tipo_comentavel', $this->tipoSujeito)
+                ->where('comentavel_id', $this->identificadorSujeito)
+                ->exists();
+        }
+
+        if (
+            $this->acao !== 'respondeu'
+            || $this->tipoSujeito !== self::TIPO_COMENTARIO
+        ) {
+            return false;
+        }
+
+        $comentarioRespondido = Comentario::query()
+            ->whereKey($this->identificadorSujeito)
+            ->whereNull('conteudo_eliminado_em')
+            ->first(['tipo_comentavel', 'comentavel_id']);
+
+        if (! $comentarioRespondido instanceof Comentario) {
+            return false;
+        }
+
+        return $comentarioOriginal
+            ->where('comentario_pai_id', $this->identificadorSujeito)
+            ->where('tipo_comentavel', $comentarioRespondido->tipo_comentavel)
+            ->where('comentavel_id', $comentarioRespondido->comentavel_id)
+            ->exists();
     }
 
     /**
@@ -336,6 +401,14 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
         if (
             in_array($this->acao, ['avaliou', 'gostou', 'ouviu'], true)
             && ! $this->registoAcaoAindaExiste()
+        ) {
+            return false;
+        }
+
+        // Uma resposta ou comentário entretanto removido não gera avisos.
+        if (
+            in_array($this->acao, ['comentou', 'respondeu'], true)
+            && ! $this->comentarioOriginalAindaExiste()
         ) {
             return false;
         }

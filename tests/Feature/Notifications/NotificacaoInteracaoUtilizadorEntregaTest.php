@@ -48,10 +48,17 @@ final class NotificacaoInteracaoUtilizadorEntregaTest extends TestCase
             ->comProximoNomeado($causador)
             ->create();
 
+        $comentario = $metalThursday->comentarios()->create([
+            'utilizador_id' => $causador->getKey(),
+            'conteudo' => 'Comentário de teste para validar entrega.',
+            'comentario_pai_id' => null,
+        ]);
+
         $notificacao = new NotificacaoInteracaoUtilizador(
             $metalThursday,
             $causador,
             'comentou',
+            $comentario,
         );
 
         self::assertTrue(
@@ -80,10 +87,17 @@ final class NotificacaoInteracaoUtilizadorEntregaTest extends TestCase
             ->comProximoNomeado($causador)
             ->create();
 
+        $comentario = $metalThursday->comentarios()->create([
+            'utilizador_id' => $causador->getKey(),
+            'conteudo' => 'Comentário de teste para validar entrega.',
+            'comentario_pai_id' => null,
+        ]);
+
         $notificacao = new NotificacaoInteracaoUtilizador(
             $metalThursday,
             $causador,
             'comentou',
+            $comentario,
         );
 
         $destinatarioDesatualizado = $destinatario->fresh();
@@ -142,10 +156,17 @@ final class NotificacaoInteracaoUtilizadorEntregaTest extends TestCase
             ->comProximoNomeado($causador)
             ->create();
 
+        $comentario = $metalThursday->comentarios()->create([
+            'utilizador_id' => $causador->getKey(),
+            'conteudo' => 'Comentário de teste para validar entrega.',
+            'comentario_pai_id' => null,
+        ]);
+
         $notificacao = new NotificacaoInteracaoUtilizador(
             $metalThursday,
             $causador,
             'comentou',
+            $comentario,
         );
 
         $destinatario->deleteOrFail();

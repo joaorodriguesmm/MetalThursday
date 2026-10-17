@@ -263,6 +263,7 @@ final class ControladorComentario extends Controller
                 sujeito: $comentavelAtualizado,
                 causador: $utilizador,
                 acao: self::ACAO_COMENTOU,
+                comentarioOrigem: $comentario,
             );
 
         return response()->json(
@@ -488,6 +489,7 @@ final class ControladorComentario extends Controller
                 sujeito: $comentarioRespondido,
                 causador: $utilizador,
                 acao: self::ACAO_RESPONDEU,
+                comentarioOrigem: $resposta,
             );
 
         return response()->json(

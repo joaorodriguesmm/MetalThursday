@@ -136,7 +136,12 @@ final class NotificacaoInteracaoRevogadaEntregaTest extends TestCase
     public function outras_acoes_nao_dependem_dos_registos_reversiveis(): void
     {
         [$publicacao, $causador, $destinatario] = $this->criarCenario();
-        $notificacao = new NotificacaoInteracaoUtilizador($publicacao, $causador, 'comentou');
+        $comentario = $publicacao->comentarios()->create([
+            'utilizador_id' => $causador->getKey(),
+            'conteudo' => 'Comentário que deve continuar a ser entregue.',
+            'comentario_pai_id' => null,
+        ]);
+        $notificacao = new NotificacaoInteracaoUtilizador($publicacao, $causador, 'comentou', $comentario);
         self::assertTrue($notificacao->shouldSend($destinatario, 'database'));
     }
 

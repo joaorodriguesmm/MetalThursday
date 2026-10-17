@@ -74,6 +74,7 @@ final class NotificadorInteracoes
      *                                                                 interação.
      * @param  Utilizador  $causador  Utilizador responsável pela interação.
      * @param  string  $acao  Ação realizada.
+     * @param  Comentario|null  $comentarioOrigem  Comentário ou resposta criado.
      *
      * @throws InvalidArgumentException Quando o sujeito, o utilizador ou a
      *                                  ação não são válidos.
@@ -84,6 +85,7 @@ final class NotificadorInteracoes
         MetalThursday|SeccaoMetalThursday|Comentario $sujeito,
         Utilizador $causador,
         string $acao,
+        ?Comentario $comentarioOrigem = null,
     ): void {
         $identificadorCausador =
             $this->obterIdentificadorCausador(
@@ -100,6 +102,7 @@ final class NotificadorInteracoes
                 $sujeito,
                 $causador,
                 $acaoNormalizada,
+                $comentarioOrigem,
             );
 
         Utilizador::query()
