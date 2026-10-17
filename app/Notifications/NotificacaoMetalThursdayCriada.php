@@ -14,10 +14,9 @@ use InvalidArgumentException;
 /**
  * Notifica os utilizadores sobre a publicação de uma nova MetalThursday.
  *
- * A notificação guarda apenas um retrato de valores escalares obtidos no
- * momento da criação. O processamento posterior da fila não depende da
- * existência atual do modelo nem executa consultas para reconstruir a
- * mensagem.
+ * A notificação conserva um retrato de valores escalares para construir a
+ * mensagem sem consultas posteriores aos dados apresentados. A validade da
+ * publicação e do destinatário é reavaliada antes de cada entrega.
  *
  * @since 1.0.0
  */
@@ -29,6 +28,14 @@ final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
      * @since 2.0.0
      */
     private readonly int $identificadorMetalThursday;
+
+    /**
+     * Data de publicação capturada no despacho, para invalidar trabalhos
+     * antigos quando a MetalThursday muda de data.
+     *
+     * @since 2.0.0
+     */
+    private readonly string $dataPublicacao;
 
     /**
      * Nome utilizado para apresentar a MetalThursday.
@@ -70,6 +77,8 @@ final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
                 $metalThursday,
             );
 
+        $this->dataPublicacao = $metalThursday->data->format('Y-m-d');
+
         $metalThursday->loadMissing([
             'edicao:id,nome',
             'autor:id,nome',
@@ -94,6 +103,54 @@ final class NotificacaoMetalThursdayCriada extends NotificacaoAplicacao
             );
 
         $this->afterCommit();
+    }
+
+    /**
+     * Revalida a publicação e o destinatário antes de cada entrega.
+     *
+     * Uma MetalThursday pode ser eliminada ou reagendada enquanto a
+     * notificação aguarda na fila. A verificação consulta o estado atual da
+     * publicação e impede também entregas a contas entretanto suspensas.
+     * As preferências de e-mail continuam a ser validadas pela classe base.
+     *
+     * @param  object  $notificavel  Destinatário da notificação.
+     * @param  string  $canal  Canal prestes a ser processado.
+     * @return bool Verdadeiro quando a publicação continua válida e o
+     *              destinatário mantém acesso ativo.
+     *
+     * @since 2.0.0
+     */
+    public function shouldSend(
+        object $notificavel,
+        string $canal,
+    ): bool {
+        if (
+            ! $notificavel instanceof Utilizador
+            || ! $notificavel->exists
+        ) {
+            return false;
+        }
+
+        if (
+            ! Utilizador::query()
+                ->comAcessoAtivo()
+                ->whereKey($notificavel->getKey())
+                ->exists()
+        ) {
+            return false;
+        }
+
+        if (
+            ! MetalThursday::query()
+                ->publicadas()
+                ->whereKey($this->identificadorMetalThursday)
+                ->where('data', $this->dataPublicacao)
+                ->exists()
+        ) {
+            return false;
+        }
+
+        return parent::shouldSend($notificavel, $canal);
     }
 
     /**

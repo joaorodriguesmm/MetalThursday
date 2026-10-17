@@ -167,6 +167,42 @@ class MetalThursday extends Model
     }
 
     /**
+     * Reabre a notificação de uma publicação reagendada para o futuro.
+     *
+     * O marcador é atualizado após a alteração da data porque a instância
+     * recebida pode estar desatualizada: o serviço de publicação escreve o
+     * marcador diretamente na base de dados. A operação decorre dentro da
+     * transação do saveOrFail/serviço de persistência.
+     *
+     * @since 2.0.0
+     */
+    protected static function booted(): void
+    {
+        static::updated(
+            static function (self $metalThursday): void {
+                if (
+                    ! $metalThursday->wasChanged('data')
+                    || ! $metalThursday->estaPreparada()
+                ) {
+                    return;
+                }
+
+                DB::table($metalThursday->getTable())
+                    ->where('id', $metalThursday->getKey())
+                    ->whereNotNull(self::COLUNA_PUBLICACAO_NOTIFICADA_EM)
+                    ->update([
+                        self::COLUNA_PUBLICACAO_NOTIFICADA_EM => null,
+                    ]);
+
+                $metalThursday->setAttribute(
+                    self::COLUNA_PUBLICACAO_NOTIFICADA_EM,
+                    null,
+                );
+            },
+        );
+    }
+
+    /**
      * Cria a factory associada ao modelo.
      *
      * @return MetalThursdayFactory Factory das MetalThursdays.
