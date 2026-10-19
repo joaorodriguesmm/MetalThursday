@@ -13,6 +13,7 @@ use App\Models\Interacoes\Comentario;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Servicos\Interacoes\ServicoDisponibilidadeInteracoes;
+use App\Servicos\Interacoes\ServicoIdempotenciaComentarios;
 use App\Servicos\Notificacoes\NotificadorInteracoes;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -83,6 +84,7 @@ final class ControladorComentario extends Controller
     public function __construct(
         private readonly NotificadorInteracoes $notificadorInteracoes,
         private readonly ServicoDisponibilidadeInteracoes $servicoDisponibilidadeInteracoes,
+        private readonly ServicoIdempotenciaComentarios $servicoIdempotenciaComentarios,
     ) {}
 
     /**
@@ -183,9 +185,10 @@ final class ControladorComentario extends Controller
 
         $identificadorUtilizador =
             $utilizador->id;
-
         $conteudo =
             $pedido->obterConteudo();
+
+        $chaveSubmissao = $pedido->obterChaveSubmissao();
 
         $comentavel =
             $this->resolverComentavel(
@@ -201,15 +204,16 @@ final class ControladorComentario extends Controller
         /**
          * @var array{
          *     comentario: Comentario,
-         *     comentavel: MetalThursday|SeccaoMetalThursday
+         *     novo: bool
          * } $resultado
          */
         $resultado =
             DB::transaction(
                 function () use (
-                    $comentavel,
-                    $identificadorUtilizador,
+                    $comentavel, $identificadorUtilizador,
                     $conteudo,
+                    $chaveSubmissao,
+                    $utilizador,
                 ): array {
                     $this->servicoDisponibilidadeInteracoes
                         ->obterMetalThursdayPublicadaComBloqueio(
@@ -226,22 +230,36 @@ final class ControladorComentario extends Controller
                         Comentario::class,
                         $identificadorUtilizador,
                     );
+                    $submissao = $this->servicoIdempotenciaComentarios
+                        ->obterOuCriar(
+                            identificadorUtilizador: $identificadorUtilizador,
+                            chave: $chaveSubmissao,
+                            operacao: 'comentario',
+                            contexto: $comentavelBloqueado->getMorphClass().':'.$comentavelBloqueado->id,
+                            conteudo: $conteudo,
+                            criar: static fn (): Comentario => $comentavelBloqueado
+                                ->comentarios()
+                                ->create([
+                                    'utilizador_id' => $identificadorUtilizador,
+                                    'conteudo' => $conteudo,
+                                    'comentario_pai_id' => null,
+                                ]),
+                        );
 
-                    $comentario =
-                        $comentavelBloqueado
-                            ->comentarios()
-                            ->create([
-                                'utilizador_id' => $identificadorUtilizador,
-
-                                'conteudo' => $conteudo,
-
-                                'comentario_pai_id' => null,
-                            ]);
+                    if ($submissao['novo']) {
+                        $this->notificadorInteracoes
+                            ->notificarOutrosUtilizadores(
+                                sujeito: $comentavelBloqueado,
+                                causador: $utilizador,
+                                acao: self::ACAO_COMENTOU,
+                                comentarioOrigem: $submissao['comentario'],
+                                enfileirarNaTransacao: true,
+                            );
+                    }
 
                     return [
-                        'comentario' => $comentario,
-
-                        'comentavel' => $comentavelBloqueado,
+                        'comentario' => $submissao['comentario'],
+                        'novo' => $submissao['novo'],
                     ];
                 },
                 self::TENTATIVAS_TRANSACAO,
@@ -250,25 +268,15 @@ final class ControladorComentario extends Controller
         $comentario =
             $resultado['comentario'];
 
-        $comentavelAtualizado =
-            $resultado['comentavel'];
-
         $this->carregarComentario(
             $comentario,
         );
 
-        $this
-            ->notificadorInteracoes
-            ->notificarOutrosUtilizadores(
-                sujeito: $comentavelAtualizado,
-                causador: $utilizador,
-                acao: self::ACAO_COMENTOU,
-                comentarioOrigem: $comentario,
-            );
-
         return response()->json(
             [
                 'mensagem' => 'Comentário publicado com sucesso.',
+
+                'submissao_repetida' => ! $resultado['novo'],
 
                 'comentario' => $this->serializarComentario(
                     $comentario,
@@ -393,9 +401,10 @@ final class ControladorComentario extends Controller
 
         $identificadorUtilizador =
             $utilizador->id;
-
         $conteudo =
             $pedido->obterConteudo();
+
+        $chaveSubmissao = $pedido->obterChaveSubmissao();
 
         $this->authorize(
             'create',
@@ -405,15 +414,16 @@ final class ControladorComentario extends Controller
         /**
          * @var array{
          *     resposta: Comentario,
-         *     comentario_respondido: Comentario
+         *     novo: bool
          * } $resultado
          */
         $resultado =
             DB::transaction(
                 function () use (
-                    $comentario,
-                    $identificadorUtilizador,
+                    $comentario, $identificadorUtilizador,
                     $conteudo,
+                    $chaveSubmissao,
+                    $utilizador,
                 ): array {
                     $comentarioRespondido =
                         Comentario::query()
@@ -452,22 +462,36 @@ final class ControladorComentario extends Controller
                         Comentario::class,
                         $identificadorUtilizador,
                     );
+                    $submissao = $this->servicoIdempotenciaComentarios
+                        ->obterOuCriar(
+                            identificadorUtilizador: $identificadorUtilizador,
+                            chave: $chaveSubmissao,
+                            operacao: 'resposta',
+                            contexto: 'comentario:'.$comentarioRespondido->id,
+                            conteudo: $conteudo,
+                            criar: static fn (): Comentario => $comentavelBloqueado
+                                ->comentarios()
+                                ->create([
+                                    'utilizador_id' => $identificadorUtilizador,
+                                    'conteudo' => $conteudo,
+                                    'comentario_pai_id' => $comentarioRespondido->id,
+                                ]),
+                        );
 
-                    $resposta =
-                        $comentavelBloqueado
-                            ->comentarios()
-                            ->create([
-                                'utilizador_id' => $identificadorUtilizador,
-
-                                'conteudo' => $conteudo,
-
-                                'comentario_pai_id' => $comentarioRespondido->id,
-                            ]);
+                    if ($submissao['novo']) {
+                        $this->notificadorInteracoes
+                            ->notificarOutrosUtilizadores(
+                                sujeito: $comentarioRespondido,
+                                causador: $utilizador,
+                                acao: self::ACAO_RESPONDEU,
+                                comentarioOrigem: $submissao['comentario'],
+                                enfileirarNaTransacao: true,
+                            );
+                    }
 
                     return [
-                        'resposta' => $resposta,
-
-                        'comentario_respondido' => $comentarioRespondido,
+                        'resposta' => $submissao['comentario'],
+                        'novo' => $submissao['novo'],
                     ];
                 },
                 self::TENTATIVAS_TRANSACAO,
@@ -476,25 +500,15 @@ final class ControladorComentario extends Controller
         $resposta =
             $resultado['resposta'];
 
-        $comentarioRespondido =
-            $resultado['comentario_respondido'];
-
         $this->carregarComentario(
             $resposta,
         );
 
-        $this
-            ->notificadorInteracoes
-            ->notificarOutrosUtilizadores(
-                sujeito: $comentarioRespondido,
-                causador: $utilizador,
-                acao: self::ACAO_RESPONDEU,
-                comentarioOrigem: $resposta,
-            );
-
         return response()->json(
             [
                 'mensagem' => 'Resposta publicada com sucesso.',
+
+                'submissao_repetida' => ! $resultado['novo'],
 
                 'comentario' => $this->serializarComentario(
                     $resposta,

@@ -31,6 +31,7 @@
         data-endereco="{{ $enderecoGuardarComentario }}"
         data-mensagem-sucesso="Comentário publicado com sucesso."
         data-mensagem-erro="Não foi possível publicar o comentário."
+        data-idempotencia-submissao
         novalidate
     >
         @csrf

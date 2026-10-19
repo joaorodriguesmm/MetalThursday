@@ -331,6 +331,7 @@
                         }}"
                         data-mensagem-sucesso="Resposta publicada com sucesso."
                         data-mensagem-erro="Não foi possível publicar a resposta."
+                        data-idempotencia-submissao
                         data-identificador-comentario-pai="{{
                             $identificadorComentario
                         }}"

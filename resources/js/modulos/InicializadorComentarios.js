@@ -928,6 +928,46 @@ class InicializadorComentarios {
             );
         }
 
+        /*
+         * Uma repetição pode chegar depois de o comentário já ter
+         * sido apresentado. Nesse caso não se volta a inserir nem
+         * a incrementar os contadores.
+         *
+         * Se a primeira resposta HTTP se perdeu, o comentário
+         * ainda não está na interface e deve ser apresentado.
+         */
+        const identificadorPublicado =
+            this.eObjeto(dadosResposta)
+            && this.eObjeto(dadosResposta.comentario)
+                ? this.normalizarQuantidade(
+                    dadosResposta.comentario.id,
+                )
+                : null;
+
+        const comentarioExistente =
+            identificadorPublicado !== null
+            && identificadorPublicado > 0
+                ? document.getElementById(
+                    `comentario-${identificadorPublicado}`,
+                )
+                : null;
+
+        if (
+            comentarioExistente instanceof HTMLElement
+            && comentarioExistente.classList.contains('comentario')
+            && seccaoComentarios.contains(comentarioExistente)
+        ) {
+            if (
+                formulario.classList.contains(
+                    'formulario-resposta-comentario',
+                )
+            ) {
+                this.fecharFormularioResposta(formulario);
+            }
+
+            return;
+        }
+
         if (
             formulario.classList.contains(
                 'formulario-resposta-comentario',

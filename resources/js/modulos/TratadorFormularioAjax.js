@@ -85,6 +85,9 @@ class TratadorFormularioAjax {
         this.emSubmissao =
             false;
 
+        this.chaveSubmissao = null;
+        this.conteudoSubmissao = null;
+
         const botaoSubmissao =
             this.formulario?.querySelector(
                 'button[type="submit"]',
@@ -96,6 +99,63 @@ class TratadorFormularioAjax {
             instanceof HTMLButtonElement
                 ? botaoSubmissao
                 : null;
+    }
+
+    /**
+     * Gera um UUID v4 com aleatoriedade criptograficamente segura.
+     *
+     * @returns {string} Identificador da operação.
+     */
+    gerarChaveSubmissao() {
+        const bytes = new Uint8Array(16);
+        globalThis.crypto.getRandomValues(bytes);
+
+        bytes[6] = (bytes[6] & 0x0f) | 0x40;
+        bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+        const texto = Array.from(
+            bytes,
+            (valor) => valor.toString(16).padStart(2, '0'),
+        ).join('');
+
+        return [
+            texto.slice(0, 8),
+            texto.slice(8, 12),
+            texto.slice(12, 16),
+            texto.slice(16, 20),
+            texto.slice(20),
+        ].join('-');
+    }
+
+    /**
+     * Conserva a chave entre tentativas iguais após falhas HTTP.
+     *
+     * @returns {FormData} Dados a enviar ao servidor.
+     */
+    prepararDadosSubmissao() {
+        const dados = new FormData(this.formulario);
+
+        if (!this.formulario.hasAttribute('data-idempotencia-submissao')) {
+            return dados;
+        }
+
+        const conteudo = dados.get('conteudo');
+
+        if (typeof conteudo !== 'string') {
+            throw new TypeError('O conteúdo da submissão é inválido.');
+        }
+
+        if (
+            this.chaveSubmissao === null
+            || this.conteudoSubmissao !== conteudo
+        ) {
+            this.chaveSubmissao = this.gerarChaveSubmissao();
+            this.conteudoSubmissao = conteudo;
+        }
+
+        dados.set('chave_submissao', this.chaveSubmissao);
+
+        return dados;
     }
 
     /**
@@ -136,9 +196,7 @@ class TratadorFormularioAjax {
                 resposta =
                     await axios.post(
                         this.url,
-                        new FormData(
-                            this.formulario,
-                        ),
+                        this.prepararDadosSubmissao(),
                     );
             } catch (erro) {
                 const erroTratado =
@@ -154,6 +212,10 @@ class TratadorFormularioAjax {
 
                 return;
             }
+
+            // A resposta confirmou a operação; o próximo envio é novo.
+            this.chaveSubmissao = null;
+            this.conteudoSubmissao = null;
 
             this.emitirEventoSucesso(
                 resposta.data,

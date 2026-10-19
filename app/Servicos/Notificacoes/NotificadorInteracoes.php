@@ -11,7 +11,9 @@ use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Notifications\NotificacaoInteracaoUtilizador;
 use Illuminate\Contracts\Notifications\Dispatcher as DespachanteNotificacoes;
 use Illuminate\Database\Eloquent\Collection as ColecaoEloquent;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use LogicException;
 
 /**
  * Envia notificações relacionadas com interações dos utilizadores.
@@ -75,6 +77,7 @@ final class NotificadorInteracoes
      * @param  Utilizador  $causador  Utilizador responsável pela interação.
      * @param  string  $acao  Ação realizada.
      * @param  Comentario|null  $comentarioOrigem  Comentário ou resposta criado.
+     * @param  bool  $enfileirarNaTransacao  Enfileira na transação atual.
      *
      * @throws InvalidArgumentException Quando o sujeito, o utilizador ou a
      *                                  ação não são válidos.
@@ -86,6 +89,7 @@ final class NotificadorInteracoes
         Utilizador $causador,
         string $acao,
         ?Comentario $comentarioOrigem = null,
+        bool $enfileirarNaTransacao = false,
     ): void {
         $identificadorCausador =
             $this->obterIdentificadorCausador(
@@ -104,6 +108,27 @@ final class NotificadorInteracoes
                 $acaoNormalizada,
                 $comentarioOrigem,
             );
+
+        if ($enfileirarNaTransacao) {
+            /*
+             * A fila tem de utilizar a mesma ligação transacional.
+             * Uma configuração incompatível é rejeitada antes do commit.
+             */
+            if (
+                DB::transactionLevel() < 1
+                || config('queue.connections.database.driver') !== 'database'
+                || config('queue.connections.database.connection')
+                    !== DB::getDefaultConnection()
+            ) {
+                throw new LogicException(
+                    'As notificações transacionais exigem a fila database na mesma ligação MariaDB.',
+                );
+            }
+
+            $notificacao
+                ->onConnection('database')
+                ->beforeCommit();
+        }
 
         Utilizador::query()
             ->with([
