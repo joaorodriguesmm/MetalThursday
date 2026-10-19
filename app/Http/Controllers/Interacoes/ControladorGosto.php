@@ -103,12 +103,11 @@ final class ControladorGosto extends Controller
      * mesmo registo. A restrição única da base de dados continua a garantir
      * que cada utilizador possui, no máximo, um gosto por comentário.
      *
-     * A transação limita-se à alteração do gosto. A contagem e a construção
-     * do indicador são realizadas depois da libertação do bloqueio através de
-     * uma única consulta.
+     * A contagem e a construção do indicador são realizadas depois da
+     * libertação do bloqueio através de uma única consulta.
      *
-     * A notificação só é enviada depois de a transação terminar com sucesso e
-     * apenas quando o gosto foi adicionado.
+     * O enfileiramento da notificação integra a transação e só acontece quando
+     * o gosto foi adicionado.
      *
      * @param  Comentario  $comentario  Comentário alterado.
      * @return JsonResponse Estado atualizado do gosto.
@@ -137,6 +136,7 @@ final class ControladorGosto extends Controller
                 function () use (
                     $comentario,
                     $identificadorUtilizador,
+                    $utilizador,
                 ): array {
                     $comentarioBloqueado =
                         Comentario::query()
@@ -190,6 +190,16 @@ final class ControladorGosto extends Controller
                             true;
                     }
 
+                    if ($adicionado) {
+                        $this->notificadorInteracoes
+                            ->notificarOutrosUtilizadores(
+                                sujeito: $comentarioBloqueado,
+                                causador: $utilizador,
+                                acao: self::ACAO_GOSTOU,
+                                enfileirarNaTransacao: true,
+                            );
+                    }
+
                     return [
                         'comentario' => $comentarioBloqueado,
 
@@ -204,16 +214,6 @@ final class ControladorGosto extends Controller
 
         $adicionado =
             $resultado['adicionado'];
-
-        if ($adicionado) {
-            $this
-                ->notificadorInteracoes
-                ->notificarOutrosUtilizadores(
-                    sujeito: $comentarioAtualizado,
-                    causador: $utilizador,
-                    acao: self::ACAO_GOSTOU,
-                );
-        }
 
         $dadosIndicador =
             $this->obterDadosIndicador(

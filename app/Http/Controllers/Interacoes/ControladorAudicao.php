@@ -77,11 +77,10 @@ final class ControladorAudicao extends Controller
      * associadas ao mesmo registo. A restrição única da base de dados
      * continua a garantir, no máximo, uma audição por utilizador e entidade.
      *
-     * A transação limita-se à alteração da audição. A contagem e o indicador
-     * são construídos depois da libertação do bloqueio através de uma única
-     * consulta.
+     * A contagem e o indicador são construídos depois da libertação do
+     * bloqueio através de uma única consulta.
      *
-     * A notificação é enviada depois da conclusão da transação e apenas
+     * O enfileiramento da notificação integra a transação e só acontece
      * quando a entidade foi marcada como ouvida.
      *
      * @param  string  $tipoAudivel  Tipo público da entidade ouvida.
@@ -121,6 +120,7 @@ final class ControladorAudicao extends Controller
                 function () use (
                     $audivel,
                     $identificadorUtilizador,
+                    $utilizador,
                 ): array {
                     $this->servicoDisponibilidadeInteracoes
                         ->obterMetalThursdayPublicadaComBloqueio(
@@ -162,6 +162,16 @@ final class ControladorAudicao extends Controller
                             true;
                     }
 
+                    if ($marcadoComoOuvido) {
+                        $this->notificadorInteracoes
+                            ->notificarOutrosUtilizadores(
+                                sujeito: $audivelBloqueado,
+                                causador: $utilizador,
+                                acao: self::ACAO_OUVIU,
+                                enfileirarNaTransacao: true,
+                            );
+                    }
+
                     return [
                         'audivel' => $audivelBloqueado,
 
@@ -176,16 +186,6 @@ final class ControladorAudicao extends Controller
 
         $marcadoComoOuvido =
             $resultado['marcado_como_ouvido'];
-
-        if ($marcadoComoOuvido) {
-            $this
-                ->notificadorInteracoes
-                ->notificarOutrosUtilizadores(
-                    sujeito: $audivelAtualizado,
-                    causador: $utilizador,
-                    acao: self::ACAO_OUVIU,
-                );
-        }
 
         $dadosIndicador =
             $this->obterDadosIndicador(

@@ -86,8 +86,8 @@ final class ControladorAvaliacao extends Controller
      * existente apenas é persistida quando a pontuação foi efetivamente
      * alterada.
      *
-     * A notificação é enviada depois da conclusão da transação e apenas quando
-     * ocorreu uma criação ou alteração efetiva.
+     * O enfileiramento da notificação integra a transação e só acontece
+     * quando ocorreu uma criação ou alteração efetiva.
      *
      * A média, a contagem e o indicador são construídos depois da transação
      * através de uma única consulta.
@@ -135,6 +135,7 @@ final class ControladorAvaliacao extends Controller
                     $avaliavel,
                     $identificadorUtilizador,
                     $pontuacao,
+                    $utilizador,
                 ): array {
                     $this->servicoDisponibilidadeInteracoes
                         ->obterMetalThursdayPublicadaComBloqueio(
@@ -191,6 +192,16 @@ final class ControladorAvaliacao extends Controller
                             true;
                     }
 
+                    if ($avaliacaoAlterada) {
+                        $this->notificadorInteracoes
+                            ->notificarOutrosUtilizadores(
+                                sujeito: $avaliavelBloqueado,
+                                causador: $utilizador,
+                                acao: self::ACAO_AVALIOU,
+                                enfileirarNaTransacao: true,
+                            );
+                    }
+
                     return [
                         'avaliavel' => $avaliavelBloqueado,
 
@@ -202,16 +213,6 @@ final class ControladorAvaliacao extends Controller
 
         $avaliavelAtualizado =
             $resultado['avaliavel'];
-
-        if ($resultado['avaliacao_alterada']) {
-            $this
-                ->notificadorInteracoes
-                ->notificarOutrosUtilizadores(
-                    sujeito: $avaliavelAtualizado,
-                    causador: $utilizador,
-                    acao: self::ACAO_AVALIOU,
-                );
-        }
 
         $dadosIndicador =
             $this->obterDadosIndicador(
