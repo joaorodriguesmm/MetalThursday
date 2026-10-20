@@ -1320,20 +1320,31 @@ class GestorModalAvaliacao {
             return;
         }
 
-        const confirmado =
-            await GestorAlertas.confirmar({
-                titulo:
-                    'Limpar avaliação?',
+        // A confirmação também faz parte da operação assíncrona exclusiva.
+        this.emSubmissao = true;
 
-                mensagem:
-                    'A tua avaliação será removida. Podes voltar a avaliar mais tarde.',
+        let confirmado = false;
 
-                textoConfirmar:
-                    'Limpar avaliação',
+        try {
+            confirmado =
+                await GestorAlertas.confirmar({
+                    titulo:
+                        'Limpar avaliação?',
 
-                textoCancelar:
-                    'Cancelar',
-            });
+                    mensagem:
+                        'A tua avaliação será removida. Podes voltar a avaliar mais tarde.',
+
+                    textoConfirmar:
+                        'Limpar avaliação',
+
+                    textoCancelar:
+                        'Cancelar',
+                });
+        } finally {
+            if (!confirmado) {
+                this.emSubmissao = false;
+            }
+        }
 
         if (!confirmado) {
             return;
@@ -1345,13 +1356,19 @@ class GestorModalAvaliacao {
         const endereco =
             this.enderecoSubmissao;
 
-        const estadoOperacao =
-            this.iniciarEstadoOperacao(
-                this.botaoLimparAvaliacao,
-                'A limpar...',
-            );
+        let estadoOperacao;
 
-        this.emSubmissao = true;
+        try {
+            estadoOperacao =
+                this.iniciarEstadoOperacao(
+                    this.botaoLimparAvaliacao,
+                    'A limpar...',
+                );
+        } catch (erro) {
+            this.emSubmissao = false;
+
+            throw erro;
+        }
 
         let dadosResposta = null;
 
@@ -1397,11 +1414,13 @@ class GestorModalAvaliacao {
                 'Erro ao limpar avaliação',
             );
         } finally {
-            this.restaurarEstadoOperacao(
-                estadoOperacao,
-            );
-
-            this.emSubmissao = false;
+            try {
+                this.restaurarEstadoOperacao(
+                    estadoOperacao,
+                );
+            } finally {
+                this.emSubmissao = false;
+            }
         }
 
         if (dadosResposta === null) {
