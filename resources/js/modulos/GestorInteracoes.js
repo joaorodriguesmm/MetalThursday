@@ -320,6 +320,14 @@ class GestorInteracoes {
             return;
         }
 
+        const comentarioEmEliminacao = tipo === 'eliminar'
+            ? botao.closest('.comentario')
+            : null;
+
+        if (this.elementosEmProcessamento.has(comentarioEmEliminacao)) {
+            return;
+        }
+
         const endereco = this.normalizarEndereco(
             botao.dataset.endereco,
         );
@@ -339,6 +347,10 @@ class GestorInteracoes {
         };
 
         this.elementosEmProcessamento.add(botao);
+
+        if (comentarioEmEliminacao !== null) {
+            this.elementosEmProcessamento.add(comentarioEmEliminacao);
+        }
 
         let pedidoIniciado = false;
         let elementoEliminado = false;
@@ -397,6 +409,10 @@ class GestorInteracoes {
         } finally {
             this.elementosEmProcessamento.delete(botao);
 
+            if (comentarioEmEliminacao !== null) {
+                this.elementosEmProcessamento.delete(comentarioEmEliminacao);
+            }
+
             if (pedidoIniciado && !elementoEliminado) {
                 this.restaurarEstadoBotao(
                     botao,
@@ -447,6 +463,12 @@ class GestorInteracoes {
      * @since 1.0.0
      */
     async submeterEdicaoComentario(formulario) {
+        const comentarioEmEdicao = formulario.closest('.comentario');
+
+        if (this.elementosEmProcessamento.has(comentarioEmEdicao)) {
+            return;
+        }
+
         if (this.elementosEmProcessamento.has(formulario)) {
             return;
         }
@@ -514,6 +536,10 @@ class GestorInteracoes {
         });
 
         this.elementosEmProcessamento.add(formulario);
+
+        if (comentarioEmEdicao !== null) {
+            this.elementosEmProcessamento.add(comentarioEmEdicao);
+        }
 
         let preparacaoConcluida = false;
 
@@ -678,6 +704,10 @@ class GestorInteracoes {
                 }
             } finally {
                 this.elementosEmProcessamento.delete(formulario);
+
+                if (comentarioEmEdicao !== null) {
+                    this.elementosEmProcessamento.delete(comentarioEmEdicao);
+                }
             }
         }
     }
