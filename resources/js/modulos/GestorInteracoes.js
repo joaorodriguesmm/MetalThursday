@@ -515,25 +515,29 @@ class GestorInteracoes {
 
         this.elementosEmProcessamento.add(formulario);
 
-        formulario.setAttribute(
-            'aria-busy',
-            'true',
-        );
-
-        campoConteudo.readOnly = true;
-
-        botaoSubmeter.innerHTML = [
-            '<span class="spinner-border spinner-border-sm"',
-            'role="status" aria-hidden="true"></span>',
-            '<span>A guardar...</span>',
-        ].join(' ');
-
-        this.limparErroCampo(
-            campoConteudo,
-            elementoErro,
-        );
+        let preparacaoConcluida = false;
 
         try {
+            formulario.setAttribute(
+                'aria-busy',
+                'true',
+            );
+
+            campoConteudo.readOnly = true;
+
+            botaoSubmeter.innerHTML = [
+                '<span class="spinner-border spinner-border-sm"',
+                'role="status" aria-hidden="true"></span>',
+                '<span>A guardar...</span>',
+            ].join(' ');
+
+            this.limparErroCampo(
+                campoConteudo,
+                elementoErro,
+            );
+
+            preparacaoConcluida = true;
+
             const resposta = await axios.patch(
                 endereco,
                 {
@@ -626,6 +630,10 @@ class GestorInteracoes {
                 );
             }
         } catch (erro) {
+            if (!preparacaoConcluida) {
+                throw erro;
+            }
+
             const mensagemValidacaoServidor =
                 axios.isAxiosError(erro)
                 && erro.response?.status === 422
@@ -650,25 +658,27 @@ class GestorInteracoes {
                 void this.mostrarErroPedido(erro);
             }
         } finally {
-            estadosBotoes.forEach(
-                (desativado, botao) => {
-                    botao.disabled = desativado;
-                },
-            );
-
-            botaoSubmeter.innerHTML = conteudoOriginalBotao;
-            campoConteudo.readOnly = campoEraSoDeLeitura;
-
-            if (ariaBusyOriginal === null) {
-                formulario.removeAttribute('aria-busy');
-            } else {
-                formulario.setAttribute(
-                    'aria-busy',
-                    ariaBusyOriginal,
+            try {
+                estadosBotoes.forEach(
+                    (desativado, botao) => {
+                        botao.disabled = desativado;
+                    },
                 );
-            }
 
-            this.elementosEmProcessamento.delete(formulario);
+                botaoSubmeter.innerHTML = conteudoOriginalBotao;
+                campoConteudo.readOnly = campoEraSoDeLeitura;
+
+                if (ariaBusyOriginal === null) {
+                    formulario.removeAttribute('aria-busy');
+                } else {
+                    formulario.setAttribute(
+                        'aria-busy',
+                        ariaBusyOriginal,
+                    );
+                }
+            } finally {
+                this.elementosEmProcessamento.delete(formulario);
+            }
         }
     }
 
