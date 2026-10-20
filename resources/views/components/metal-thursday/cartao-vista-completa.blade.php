@@ -250,6 +250,11 @@
                                     data-tipo-audivel="{{
                                         $seccaoPreparada['tipoInteracao']
                                     }}"
+                                    data-estado-audicao="{{
+                                        $seccaoPreparada['interacoes']['ouvido']
+                                            ? 'true'
+                                            : 'false'
+                                    }}"
                                     data-endereco="{{
                                         route(
                                             'audicoes.alternar',
@@ -455,6 +460,11 @@
                         type="button"
                         data-tipo-interacao="alternar-audicao"
                         data-tipo-audivel="{{ $tipoInteracaoMetalThursday }}"
+                        data-estado-audicao="{{
+                            $interacoesMetalThursday['ouvido']
+                                ? 'true'
+                                : 'false'
+                        }}"
                         data-endereco="{{
                             route(
                                 'audicoes.alternar',

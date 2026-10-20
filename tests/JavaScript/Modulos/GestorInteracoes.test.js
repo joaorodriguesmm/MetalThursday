@@ -104,7 +104,7 @@ describe(
                         '/comentarios/10/gosto',
                         window.location.origin,
                     ).href,
-                    {},
+                    { estado_desejado: true },
                 );
 
                 expect(
@@ -171,6 +171,7 @@ describe(
                             type="button"
                             data-tipo-interacao="alternar-audicao"
                             data-tipo-audivel="seccao-metal-thursday"
+                            data-estado-audicao="false"
                             data-endereco="/seccoes/15/audicao"
                             aria-pressed="false"
                         >
@@ -223,7 +224,7 @@ describe(
                         '/seccoes/15/audicao',
                         window.location.origin,
                     ).href,
-                    {},
+                    { estado_desejado: true },
                 );
 
                 expect(
@@ -245,6 +246,8 @@ describe(
                         'aria-pressed',
                     ),
                 ).toBe(false);
+
+                expect(botao.dataset.estadoAudicao).toBe('true');
 
                 const apresentacao =
                     contentor.querySelector(
@@ -274,6 +277,169 @@ describe(
                         'aria-busy',
                     ),
                 ).toBe(false);
+            },
+        );
+
+        it(
+            'reutiliza a mesma intencao de gosto apos resposta perdida',
+            async () => {
+                const contentor = document.getElementById('interacoes');
+                contentor.innerHTML = `<button
+                    id="gosto-repetido"
+                    type="button"
+                    data-tipo-interacao="alternar-gosto"
+                    data-endereco="/comentarios/50/gosto"
+                    aria-pressed="false"
+                ><span data-icone-gosto></span>
+                <span data-quantidade-gostos>0</span></button>`;
+
+                const botao = document.getElementById('gosto-repetido');
+                const pedido = vi.spyOn(axios, 'post')
+                    .mockRejectedValueOnce(new Error('Resposta perdida'))
+                    .mockResolvedValueOnce({
+                        data: { adicionado: true, numero_gostos: 1 },
+                    });
+                const gestor = new GestorInteracoes('#interacoes');
+                vi.spyOn(gestor, 'mostrarErroPedido')
+                    .mockResolvedValue(undefined);
+
+                await gestor.tratarInteracao(botao, 'alternar-gosto');
+                expect(botao.getAttribute('aria-pressed')).toBe('false');
+
+                await gestor.tratarInteracao(botao, 'alternar-gosto');
+                const endereco = new URL(
+                    '/comentarios/50/gosto', window.location.origin,
+                ).href;
+                expect(pedido).toHaveBeenCalledTimes(2);
+                expect(pedido).toHaveBeenNthCalledWith(
+                    1, endereco, { estado_desejado: true },
+                );
+                expect(pedido).toHaveBeenNthCalledWith(
+                    2, endereco, { estado_desejado: true },
+                );
+                expect(botao.getAttribute('aria-pressed')).toBe('true');
+            },
+        );
+
+        it(
+            'reutiliza a mesma intencao de audicao apos resposta perdida',
+            async () => {
+                const contentor = document.getElementById('interacoes');
+                contentor.innerHTML = `<div data-contentor-interacoes>
+                    <button
+                        id="audicao-repetida"
+                        type="button"
+                        data-tipo-interacao="alternar-audicao"
+                        data-tipo-audivel="metal-thursday"
+                        data-estado-audicao="false"
+                        data-endereco="/metal-thursdays/50/audicao"
+                    ><span data-texto-interacao>Marcar como ouvida</span></button>
+                </div>`;
+
+                const botao = document.getElementById('audicao-repetida');
+                const pedido = vi.spyOn(axios, 'post')
+                    .mockRejectedValueOnce(new Error('Resposta perdida'))
+                    .mockResolvedValueOnce({
+                        data: {
+                            marcado_como_ouvido: true,
+                            numero_audicoes: 1,
+                        },
+                    });
+                const gestor = new GestorInteracoes('#interacoes');
+                vi.spyOn(gestor, 'mostrarErroPedido')
+                    .mockResolvedValue(undefined);
+
+                await gestor.tratarInteracao(botao, 'alternar-audicao');
+                expect(botao.dataset.estadoAudicao).toBe('false');
+
+                await gestor.tratarInteracao(botao, 'alternar-audicao');
+                const endereco = new URL(
+                    '/metal-thursdays/50/audicao', window.location.origin,
+                ).href;
+                expect(pedido).toHaveBeenCalledTimes(2);
+                expect(pedido).toHaveBeenNthCalledWith(
+                    1, endereco, { estado_desejado: true },
+                );
+                expect(pedido).toHaveBeenNthCalledWith(
+                    2, endereco, { estado_desejado: true },
+                );
+                expect(botao.dataset.estadoAudicao).toBe('true');
+            },
+        );
+
+        it(
+            'permite desfazer o gosto apos a primeira resposta bem sucedida',
+            async () => {
+                const contentor = document.getElementById('interacoes');
+                contentor.innerHTML = `<button
+                    id="gosto-intencional"
+                    type="button"
+                    data-tipo-interacao="alternar-gosto"
+                    data-endereco="/comentarios/51/gosto"
+                    aria-pressed="false"
+                ><span data-icone-gosto></span>
+                <span data-quantidade-gostos>0</span></button>`;
+
+                const botao = document.getElementById('gosto-intencional');
+                const pedido = vi.spyOn(axios, 'post')
+                    .mockResolvedValueOnce({
+                        data: { adicionado: true, numero_gostos: 1 },
+                    })
+                    .mockResolvedValueOnce({
+                        data: { adicionado: false, numero_gostos: 0 },
+                    });
+                const gestor = new GestorInteracoes('#interacoes');
+
+                await gestor.tratarInteracao(botao, 'alternar-gosto');
+                await gestor.tratarInteracao(botao, 'alternar-gosto');
+
+                expect(pedido.mock.calls.map(([, dados]) => dados)).toEqual([
+                    { estado_desejado: true },
+                    { estado_desejado: false },
+                ]);
+                expect(botao.getAttribute('aria-pressed')).toBe('false');
+            },
+        );
+
+        it(
+            'permite desfazer a audicao apos a primeira resposta bem sucedida',
+            async () => {
+                const contentor = document.getElementById('interacoes');
+                contentor.innerHTML = `<div data-contentor-interacoes>
+                    <button
+                        id="audicao-intencional"
+                        type="button"
+                        data-tipo-interacao="alternar-audicao"
+                        data-tipo-audivel="seccao-metal-thursday"
+                        data-estado-audicao="false"
+                        data-endereco="/seccoes/51/audicao"
+                    ><span data-texto-interacao>Marcar como ouvido</span></button>
+                </div>`;
+
+                const botao = document.getElementById('audicao-intencional');
+                const pedido = vi.spyOn(axios, 'post')
+                    .mockResolvedValueOnce({
+                        data: {
+                            marcado_como_ouvido: true,
+                            numero_audicoes: 1,
+                        },
+                    })
+                    .mockResolvedValueOnce({
+                        data: {
+                            marcado_como_ouvido: false,
+                            numero_audicoes: 0,
+                        },
+                    });
+                const gestor = new GestorInteracoes('#interacoes');
+
+                await gestor.tratarInteracao(botao, 'alternar-audicao');
+                await gestor.tratarInteracao(botao, 'alternar-audicao');
+
+                expect(pedido.mock.calls.map(([, dados]) => dados)).toEqual([
+                    { estado_desejado: true },
+                    { estado_desejado: false },
+                ]);
+                expect(botao.dataset.estadoAudicao).toBe('false');
             },
         );
 

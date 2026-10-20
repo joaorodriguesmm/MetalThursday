@@ -265,6 +265,32 @@ class GestorInteracoes {
     }
 
     /**
+     * Declara o estado pretendido sem depender do texto visível do botão.
+     *
+     * Na ausência de um estado inicial válido, mantém o contrato antigo
+     * de alternância, para não alterar botões antigos de forma inesperada.
+     *
+     * @param {HTMLButtonElement} botao Botão acionado.
+     * @param {string} tipo Tipo de interação.
+     * @returns {{estado_desejado: boolean}|Record<string, never>}
+     */
+    obterDadosAlternancia(botao, tipo) {
+        const estadoAtual = tipo === 'alternar-gosto'
+            ? botao.getAttribute('aria-pressed')
+            : tipo === 'alternar-audicao'
+                ? botao.dataset.estadoAudicao
+                : null;
+
+        if (estadoAtual !== 'true' && estadoAtual !== 'false') {
+            return {};
+        }
+
+        return {
+            estado_desejado: estadoAtual !== 'true',
+        };
+    }
+
+    /**
      * Trata uma interação local ou remota.
      *
      * @param {HTMLButtonElement} botao Botão acionado.
@@ -330,7 +356,10 @@ class GestorInteracoes {
 
             const resposta = tipo === 'eliminar'
                 ? await axios.delete(endereco)
-                : await axios.post(endereco, {});
+                : await axios.post(
+                    endereco,
+                    this.obterDadosAlternancia(botao, tipo),
+                );
 
             const dados = this.eObjeto(resposta.data)
                 ? resposta.data
@@ -864,6 +893,9 @@ class GestorInteracoes {
 
         const marcadoComoOuvido =
             dados.marcado_como_ouvido;
+
+        botao.dataset.estadoAudicao =
+            String(marcadoComoOuvido);
 
         const numeroAudicoes = Number.parseInt(
             String(dados.numero_audicoes ?? ''),

@@ -15,6 +15,7 @@ use App\Servicos\Interacoes\ServicoDisponibilidadeInteracoes;
 use App\Servicos\Notificacoes\NotificadorInteracoes;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use LogicException;
@@ -71,18 +72,17 @@ final class ControladorAudicao extends Controller
     ) {}
 
     /**
-     * Adiciona ou remove a audição do utilizador autenticado.
+     * Define o estado da audição do utilizador autenticado ou alterna-o
+     * quando o pedido não inclui estado_desejado.
      *
-     * O bloqueio da entidade audível serializa todas as alternâncias
-     * associadas ao mesmo registo. A restrição única da base de dados
-     * continua a garantir, no máximo, uma audição por utilizador e entidade.
+     * O bloqueio da entidade audível serializa as operações e a
+     * restrição única impede audições duplicadas por utilizador.
      *
-     * A contagem e o indicador são construídos depois da libertação do
-     * bloqueio através de uma única consulta.
+     * A alteração e o enfileiramento de notificações pertencem à
+     * mesma transação. Só a criação efetiva de uma audição notifica.
+     * A contagem e o indicador são obtidos após libertar o bloqueio.
      *
-     * O enfileiramento da notificação integra a transação e só acontece
-     * quando a entidade foi marcada como ouvida.
-     *
+     * @param  Request  $pedido  Pedido HTTP com estado_desejado opcional.
      * @param  string  $tipoAudivel  Tipo público da entidade ouvida.
      * @param  int  $identificadorAudivel  Identificador da entidade.
      * @return JsonResponse Estado atualizado da audição.
@@ -94,6 +94,7 @@ final class ControladorAudicao extends Controller
      * @since 1.0.0
      */
     public function alternar(
+        Request $pedido,
         string $tipoAudivel,
         int $identificadorAudivel,
     ): JsonResponse {
@@ -102,6 +103,14 @@ final class ControladorAudicao extends Controller
 
         $identificadorUtilizador =
             $utilizador->id;
+
+        $dadosValidados = $pedido->validate([
+            'estado_desejado' => ['sometimes', 'required', 'boolean'],
+        ]);
+
+        $estadoDesejado = array_key_exists('estado_desejado', $dadosValidados)
+            ? (bool) $dadosValidados['estado_desejado']
+            : null;
 
         $audivel =
             $this->resolverAudivel(
@@ -121,6 +130,7 @@ final class ControladorAudicao extends Controller
                     $audivel,
                     $identificadorUtilizador,
                     $utilizador,
+                    $estadoDesejado,
                 ): array {
                     $this->servicoDisponibilidadeInteracoes
                         ->obterMetalThursdayPublicadaComBloqueio(
@@ -146,23 +156,25 @@ final class ControladorAudicao extends Controller
                             )
                             ->first();
 
-                    if ($audicao instanceof Audicao) {
-                        $audicao->deleteOrFail();
+                    $marcadoComoOuvido =
+                        $estadoDesejado
+                        ?? ! ($audicao instanceof Audicao);
 
-                        $marcadoComoOuvido =
-                            false;
-                    } else {
+                    $audicaoCriada = false;
+
+                    if ($marcadoComoOuvido && ! ($audicao instanceof Audicao)) {
                         $audivelBloqueado
                             ->audicoes()
                             ->create([
                                 'utilizador_id' => $identificadorUtilizador,
                             ]);
 
-                        $marcadoComoOuvido =
-                            true;
+                        $audicaoCriada = true;
+                    } elseif (! $marcadoComoOuvido && $audicao instanceof Audicao) {
+                        $audicao->deleteOrFail();
                     }
 
-                    if ($marcadoComoOuvido) {
+                    if ($audicaoCriada) {
                         $this->notificadorInteracoes
                             ->notificarOutrosUtilizadores(
                                 sujeito: $audivelBloqueado,

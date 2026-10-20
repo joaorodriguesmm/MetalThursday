@@ -13,6 +13,7 @@ use App\Servicos\Interacoes\ServicoDisponibilidadeInteracoes;
 use App\Servicos\Notificacoes\NotificadorInteracoes;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use LogicException;
@@ -97,18 +98,17 @@ final class ControladorGosto extends Controller
     ) {}
 
     /**
-     * Adiciona ou remove o gosto do utilizador autenticado.
+     * Define o estado do gosto do utilizador autenticado ou alterna-o
+     * quando o pedido não inclui estado_desejado.
      *
-     * O bloqueio do comentário serializa todas as alternâncias associadas ao
-     * mesmo registo. A restrição única da base de dados continua a garantir
-     * que cada utilizador possui, no máximo, um gosto por comentário.
+     * O bloqueio do comentário serializa as operações e a restrição
+     * única impede gostos duplicados por utilizador.
      *
-     * A contagem e a construção do indicador são realizadas depois da
-     * libertação do bloqueio através de uma única consulta.
+     * A alteração e o enfileiramento de notificações pertencem à
+     * mesma transação. Só a criação efetiva de um gosto notifica.
+     * A contagem e o indicador são obtidos após libertar o bloqueio.
      *
-     * O enfileiramento da notificação integra a transação e só acontece quando
-     * o gosto foi adicionado.
-     *
+     * @param  Request  $pedido  Pedido HTTP com estado_desejado opcional.
      * @param  Comentario  $comentario  Comentário alterado.
      * @return JsonResponse Estado atualizado do gosto.
      *
@@ -117,6 +117,7 @@ final class ControladorGosto extends Controller
      * @since 1.0.0
      */
     public function alternar(
+        Request $pedido,
         Comentario $comentario,
     ): JsonResponse {
         $utilizador =
@@ -124,6 +125,14 @@ final class ControladorGosto extends Controller
 
         $identificadorUtilizador =
             $utilizador->id;
+
+        $dadosValidados = $pedido->validate([
+            'estado_desejado' => ['sometimes', 'required', 'boolean'],
+        ]);
+
+        $estadoDesejado = array_key_exists('estado_desejado', $dadosValidados)
+            ? (bool) $dadosValidados['estado_desejado']
+            : null;
 
         /**
          * @var array{
@@ -137,6 +146,7 @@ final class ControladorGosto extends Controller
                     $comentario,
                     $identificadorUtilizador,
                     $utilizador,
+                    $estadoDesejado,
                 ): array {
                     $comentarioBloqueado =
                         Comentario::query()
@@ -174,23 +184,25 @@ final class ControladorGosto extends Controller
                             )
                             ->first();
 
-                    if ($gosto instanceof Gosto) {
-                        $gosto->deleteOrFail();
+                    $adicionado =
+                        $estadoDesejado
+                        ?? ! ($gosto instanceof Gosto);
 
-                        $adicionado =
-                            false;
-                    } else {
+                    $gostoCriado = false;
+
+                    if ($adicionado && ! ($gosto instanceof Gosto)) {
                         $comentarioBloqueado
                             ->gostos()
                             ->create([
                                 'utilizador_id' => $identificadorUtilizador,
                             ]);
 
-                        $adicionado =
-                            true;
+                        $gostoCriado = true;
+                    } elseif (! $adicionado && $gosto instanceof Gosto) {
+                        $gosto->deleteOrFail();
                     }
 
-                    if ($adicionado) {
+                    if ($gostoCriado) {
                         $this->notificadorInteracoes
                             ->notificarOutrosUtilizadores(
                                 sujeito: $comentarioBloqueado,
