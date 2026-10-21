@@ -320,11 +320,14 @@ class GestorInteracoes {
             return;
         }
 
-        const comentarioEmEliminacao = tipo === 'eliminar'
+        const comentarioEmProcessamento = (
+            tipo === 'alternar-gosto'
+            || tipo === 'eliminar'
+        )
             ? botao.closest('.comentario')
             : null;
 
-        if (this.elementosEmProcessamento.has(comentarioEmEliminacao)) {
+        if (this.elementosEmProcessamento.has(comentarioEmProcessamento)) {
             return;
         }
 
@@ -348,8 +351,8 @@ class GestorInteracoes {
 
         this.elementosEmProcessamento.add(botao);
 
-        if (comentarioEmEliminacao !== null) {
-            this.elementosEmProcessamento.add(comentarioEmEliminacao);
+        if (comentarioEmProcessamento !== null) {
+            this.elementosEmProcessamento.add(comentarioEmProcessamento);
         }
 
         let pedidoIniciado = false;
@@ -409,8 +412,8 @@ class GestorInteracoes {
         } finally {
             this.elementosEmProcessamento.delete(botao);
 
-            if (comentarioEmEliminacao !== null) {
-                this.elementosEmProcessamento.delete(comentarioEmEliminacao);
+            if (comentarioEmProcessamento !== null) {
+                this.elementosEmProcessamento.delete(comentarioEmProcessamento);
             }
 
             if (pedidoIniciado && !elementoEliminado) {
