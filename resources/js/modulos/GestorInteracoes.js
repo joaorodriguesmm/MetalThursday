@@ -417,6 +417,10 @@ class GestorInteracoes {
                 return;
             }
 
+            if (!botao.isConnected) {
+                return;
+            }
+
             this.definirBotaoOcupado(botao);
             pedidoIniciado = true;
 
@@ -426,6 +430,10 @@ class GestorInteracoes {
                     endereco,
                     this.obterDadosAlternancia(botao, tipo),
                 );
+
+            if (!botao.isConnected) {
+                return;
+            }
 
             const dados = this.eObjeto(resposta.data)
                 ? resposta.data
@@ -456,6 +464,10 @@ class GestorInteracoes {
                 void this.mostrarMensagemSucesso(mensagem);
             }
         } catch (erro) {
+            if (!botao.isConnected) {
+                return;
+            }
+
             void this.mostrarErroPedido(
                 erro,
                 botao.dataset.mensagemErro,
@@ -650,6 +662,10 @@ class GestorInteracoes {
                 },
             );
 
+            if (!formulario.isConnected) {
+                return;
+            }
+
             const conteudoAtualizado = resposta.data
                 ?.comentario
                 ?.conteudo;
@@ -735,6 +751,10 @@ class GestorInteracoes {
                 );
             }
         } catch (erro) {
+            if (!formulario.isConnected) {
+                return;
+            }
+
             if (!preparacaoConcluida) {
                 throw erro;
             }
