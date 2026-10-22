@@ -324,6 +324,16 @@ class GestorImportacaoLancamentoDiscogs {
      * @since 2.0.0
      */
     async importarPorLigacao(seccao) {
+        this.seccoesEmImportacao ??= new WeakSet();
+
+        if (
+            !seccao.isConnected
+            || !this.formulario.contains(seccao)
+            || this.seccoesEmImportacao.has(seccao)
+        ) {
+            return;
+        }
+
         const area = seccao.querySelector(
             '[data-importacao-lancamento]',
         );
@@ -342,12 +352,14 @@ class GestorImportacaoLancamentoDiscogs {
             return;
         }
 
+        const ligacaoSolicitada = campoLigacao.value;
+
         let identificador;
 
         try {
             identificador =
                 this.extrairIdentificadorDiscogs(
-                    campoLigacao.value,
+                    ligacaoSolicitada,
                 );
         } catch (erro) {
             this.atualizarEstado(
@@ -363,18 +375,19 @@ class GestorImportacaoLancamentoDiscogs {
             return;
         }
 
-        this.definirOcupado(
-            area,
-            true,
-        );
-
-        this.atualizarEstado(
-            area,
-            'A importar a edição indicada do Discogs…',
-            'text-muted',
-        );
+        this.seccoesEmImportacao.add(seccao);
 
         try {
+            this.definirOcupado(
+                area,
+                true,
+            );
+
+            this.atualizarEstado(
+                area,
+                'A importar a edição indicada do Discogs…',
+                'text-muted',
+            );
             const endereco = this.urlImportacao.replace(
                 GestorImportacaoLancamentoDiscogs
                     .MARCADOR_IDENTIFICADOR_DISCOGS,
@@ -386,6 +399,14 @@ class GestorImportacaoLancamentoDiscogs {
                 this.criarParametrosContexto(),
             );
 
+            if (
+                !seccao.isConnected
+                || !area.isConnected
+                || !this.formulario.contains(seccao)
+            ) {
+                return;
+            }
+
             const lancamento = resposta?.data?.lancamento;
 
             if (!this.lancamentoImportadoValido(lancamento)) {
@@ -395,6 +416,16 @@ class GestorImportacaoLancamentoDiscogs {
             }
 
             if (!this.seccaoAceitaLancamento(seccao)) {
+                return;
+            }
+
+            if (campoLigacao.value !== ligacaoSolicitada) {
+                this.atualizarEstado(
+                    area,
+                    'A ligação foi alterada. Importa novamente a edição pretendida.',
+                    'text-muted',
+                );
+
                 return;
             }
 
@@ -419,6 +450,14 @@ class GestorImportacaoLancamentoDiscogs {
                 'text-success',
             );
         } catch (erro) {
+            if (
+                !seccao.isConnected
+                || !area.isConnected
+                || !this.formulario.contains(seccao)
+            ) {
+                return;
+            }
+
             this.atualizarEstado(
                 area,
                 this.obterMensagemErro(
@@ -428,10 +467,19 @@ class GestorImportacaoLancamentoDiscogs {
                 'text-danger',
             );
         } finally {
+            this.seccoesEmImportacao.delete(seccao);
+
             this.definirOcupado(
                 area,
                 false,
             );
+
+            if (!this.seccaoAceitaLancamento(seccao)) {
+                this.definirControlosAtivos(
+                    area,
+                    false,
+                );
+            }
         }
     }
 
