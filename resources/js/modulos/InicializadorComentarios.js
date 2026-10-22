@@ -488,6 +488,10 @@ class InicializadorComentarios {
                     endereco,
                 );
 
+            if (!botao.isConnected || !contentor.isConnected) {
+                return;
+            }
+
             const dados =
                 resposta.data;
 
@@ -539,6 +543,10 @@ class InicializadorComentarios {
                 ),
             );
         } catch (erro) {
+            if (!botao.isConnected || !contentor.isConnected) {
+                return;
+            }
+
             contentor.dataset
                 .comentariosCarregados =
                     'false';
@@ -773,6 +781,14 @@ class InicializadorComentarios {
                     endereco,
                 );
 
+            if (
+                !comentario.isConnected
+                || !botao.isConnected
+                || !contentorRespostas.isConnected
+            ) {
+                return;
+            }
+
             const dados =
                 resposta.data;
 
@@ -883,6 +899,14 @@ class InicializadorComentarios {
                 numeroRespostas,
             );
         } catch (erro) {
+            if (
+                !comentario.isConnected
+                || !botao.isConnected
+                || !contentorRespostas.isConnected
+            ) {
+                return;
+            }
+
             this.atualizarQuantidadeRespostas(
                 botao,
                 quantidadeOriginal,
