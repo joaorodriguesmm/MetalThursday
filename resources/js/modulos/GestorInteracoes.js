@@ -331,6 +331,39 @@ class GestorInteracoes {
             return;
         }
 
+        const cartaoMetalThursday =
+            botao.closest('.cartao-metal-thursday');
+
+        const eliminacaoDoCartao =
+            tipo === 'eliminar'
+            && cartaoMetalThursday instanceof HTMLElement
+            && botao.dataset.seletorElementoRemovivel?.trim()
+                === '#' + cartaoMetalThursday.id;
+
+        this.audicoesPendentesPorCartao ??= new WeakMap();
+
+        if (
+            cartaoMetalThursday instanceof HTMLElement
+            && (
+                (
+                    tipo === 'alternar-audicao'
+                    && this.elementosEmProcessamento.has(cartaoMetalThursday)
+                )
+                || (
+                    eliminacaoDoCartao
+                    && (
+                        this.elementosEmProcessamento.has(cartaoMetalThursday)
+                        || (
+                            this.audicoesPendentesPorCartao
+                                .get(cartaoMetalThursday) ?? 0
+                        ) > 0
+                    )
+                )
+            )
+        ) {
+            return;
+        }
+
         const endereco = this.normalizarEndereco(
             botao.dataset.endereco,
         );
@@ -353,6 +386,24 @@ class GestorInteracoes {
 
         if (comentarioEmProcessamento !== null) {
             this.elementosEmProcessamento.add(comentarioEmProcessamento);
+        }
+
+        if (eliminacaoDoCartao) {
+            this.elementosEmProcessamento.add(cartaoMetalThursday);
+        }
+
+        if (
+            tipo === 'alternar-audicao'
+            && cartaoMetalThursday instanceof HTMLElement
+        ) {
+            const pendentes =
+                this.audicoesPendentesPorCartao
+                    .get(cartaoMetalThursday) ?? 0;
+
+            this.audicoesPendentesPorCartao.set(
+                cartaoMetalThursday,
+                pendentes + 1,
+            );
         }
 
         let pedidoIniciado = false;
@@ -414,6 +465,31 @@ class GestorInteracoes {
 
             if (comentarioEmProcessamento !== null) {
                 this.elementosEmProcessamento.delete(comentarioEmProcessamento);
+            }
+
+            if (eliminacaoDoCartao) {
+                this.elementosEmProcessamento.delete(cartaoMetalThursday);
+            }
+
+            if (
+                tipo === 'alternar-audicao'
+                && cartaoMetalThursday instanceof HTMLElement
+            ) {
+                const restantes = (
+                    this.audicoesPendentesPorCartao
+                        .get(cartaoMetalThursday) ?? 0
+                ) - 1;
+
+                if (restantes > 0) {
+                    this.audicoesPendentesPorCartao.set(
+                        cartaoMetalThursday,
+                        restantes,
+                    );
+                } else {
+                    this.audicoesPendentesPorCartao.delete(
+                        cartaoMetalThursday,
+                    );
+                }
             }
 
             if (pedidoIniciado && !elementoEliminado) {
