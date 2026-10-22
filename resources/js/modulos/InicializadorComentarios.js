@@ -914,6 +914,9 @@ class InicializadorComentarios {
         formulario,
         dadosResposta,
     ) {
+        if (!formulario.isConnected) {
+            return;
+        }
         const seccaoComentarios =
             formulario.closest(
                 'section[aria-label="Comentários"]',

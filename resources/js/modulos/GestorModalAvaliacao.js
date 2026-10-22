@@ -1210,6 +1210,7 @@ class GestorModalAvaliacao {
             this.emSubmissao
             || !(this.botaoAcionador
                 instanceof HTMLElement)
+            || !this.botaoAcionador.isConnected
             || this.enderecoSubmissao === null
         ) {
             return;
@@ -1249,6 +1250,14 @@ class GestorModalAvaliacao {
                 ),
             );
 
+            if (!botaoAcionador.isConnected) {
+                this.despacharEventoSucesso(
+                    resposta.data,
+                );
+
+                return;
+            }
+
             if (
                 !this.atualizarResultado(
                     botaoAcionador,
@@ -1266,7 +1275,9 @@ class GestorModalAvaliacao {
 
             sucesso = true;
         } catch (erro) {
-            this.tratarErroSubmissao(erro);
+            if (botaoAcionador.isConnected) {
+                this.tratarErroSubmissao(erro);
+            }
         } finally {
             this.restaurarEstadoOperacao(
                 estadoSubmissao,
@@ -1300,6 +1311,7 @@ class GestorModalAvaliacao {
             this.emSubmissao
             || !(this.botaoAcionador
                 instanceof HTMLElement)
+            || !this.botaoAcionador.isConnected
             || this.enderecoSubmissao === null
         ) {
             return;
@@ -1350,6 +1362,15 @@ class GestorModalAvaliacao {
             return;
         }
 
+        if (
+            !(this.botaoAcionador instanceof HTMLElement)
+            || !this.botaoAcionador.isConnected
+        ) {
+            this.emSubmissao = false;
+
+            return;
+        }
+
         const botaoAcionador =
             this.botaoAcionador;
 
@@ -1378,6 +1399,10 @@ class GestorModalAvaliacao {
                     endereco,
                 );
 
+            if (!botaoAcionador.isConnected) {
+                return;
+            }
+
             if (
                 Number(
                     resposta
@@ -1397,6 +1422,10 @@ class GestorModalAvaliacao {
             dadosResposta =
                 resposta.data;
         } catch (erro) {
+            if (!botaoAcionador.isConnected) {
+                return;
+            }
+
             const mensagemResposta =
                 axios.isAxiosError(erro)
                 && typeof erro.response

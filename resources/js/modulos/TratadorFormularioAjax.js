@@ -199,10 +199,18 @@ class TratadorFormularioAjax {
                         this.prepararDadosSubmissao(),
                     );
             } catch (erro) {
+                if (!this.formulario.isConnected) {
+                    return;
+                }
+
                 const erroTratado =
                     await this.executarAcaoErro(
                         erro,
                     );
+
+                if (!this.formulario.isConnected) {
+                    return;
+                }
 
                 if (!erroTratado) {
                     this.tratarErroSubmissao(
@@ -221,10 +229,18 @@ class TratadorFormularioAjax {
                 resposta.data,
             );
 
+            if (!this.formulario.isConnected) {
+                return;
+            }
+
             const acaoSucessoConcluida =
                 await this.executarAcaoSucesso(
                     resposta.data,
                 );
+
+            if (!this.formulario.isConnected) {
+                return;
+            }
 
             if (acaoSucessoConcluida) {
                 this.mostrarMensagemSucesso();
