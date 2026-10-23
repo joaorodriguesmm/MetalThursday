@@ -7,6 +7,18 @@ import Tooltip from 'bootstrap/js/dist/tooltip';
  */
 class GestorSeccoes {
     /**
+     * Regista gestores por contentor, botão e modelo.
+     *
+     * Evita duplicar os listeners e mantém o contador de índices
+     * da primeira instância.
+     *
+     * @type {WeakMap<HTMLElement, WeakMap<HTMLButtonElement, WeakMap<HTMLTemplateElement, GestorSeccoes>>>}
+     *
+     * @since 2.0.0
+     */
+    static instanciasPorContentor = new WeakMap();
+
+    /**
      * Marcador utilizado pelo modelo HTML para representar o índice.
      *
      * @type {string}
@@ -106,9 +118,28 @@ class GestorSeccoes {
             'modelo da secção',
         );
 
-        this.aoAdicionarSeccao = aoAdicionarSeccao;
-
         this.validarModelo();
+
+        const gestoresDoContentor =
+            GestorSeccoes.instanciasPorContentor.get(
+                this.contentor,
+            );
+
+        const gestoresDoBotao =
+            gestoresDoContentor?.get(
+                this.botaoAdicionar,
+            );
+
+        const gestorExistente =
+            gestoresDoBotao?.get(
+                this.modelo,
+            );
+
+        if (gestorExistente) {
+            return gestorExistente;
+        }
+
+        this.aoAdicionarSeccao = aoAdicionarSeccao;
 
         /**
          * Índice utilizado pela próxima secção criada.
@@ -135,6 +166,39 @@ class GestorSeccoes {
         this.contentor.addEventListener(
             'change',
             (evento) => this.tratarAlteracao(evento),
+        );
+
+        let gestoresContentor =
+            GestorSeccoes.instanciasPorContentor.get(
+                this.contentor,
+            );
+
+        if (!gestoresContentor) {
+            gestoresContentor = new WeakMap();
+
+            GestorSeccoes.instanciasPorContentor.set(
+                this.contentor,
+                gestoresContentor,
+            );
+        }
+
+        let gestoresBotao =
+            gestoresContentor.get(
+                this.botaoAdicionar,
+            );
+
+        if (!gestoresBotao) {
+            gestoresBotao = new WeakMap();
+
+            gestoresContentor.set(
+                this.botaoAdicionar,
+                gestoresBotao,
+            );
+        }
+
+        gestoresBotao.set(
+            this.modelo,
+            this,
         );
     }
 
