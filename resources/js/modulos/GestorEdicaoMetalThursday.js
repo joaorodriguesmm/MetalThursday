@@ -133,16 +133,20 @@ class GestorEdicaoMetalThursday {
             );
         }
 
-        this.edicoes = this.edicoes.filter(
-            (existente) => existente.identificador
-                !== edicao.identificador,
-        );
-
-        this.edicoes.push(
+        const edicoesCandidatas = [
+            ...this.edicoes.filter(
+                (existente) => existente.identificador
+                    !== edicao.identificador,
+            ),
             edicao,
+        ];
+
+        this.validarIntegridadeTemporal(
+            edicoesCandidatas,
         );
 
-        this.validarIntegridadeTemporal();
+        this.edicoes = edicoesCandidatas;
+
         this.atualizarApresentacao();
 
         this.campoData.dispatchEvent(
@@ -348,15 +352,17 @@ class GestorEdicaoMetalThursday {
     /**
      * Garante que os períodos carregados não se sobrepõem.
      *
+     * @param {Array<object>} [edicoes=this.edicoes] Edições a validar.
+     *
      * @returns {void}
      *
      * @throws {Error} Quando existem períodos sobrepostos.
      *
      * @since 2.0.0
      */
-    validarIntegridadeTemporal() {
+    validarIntegridadeTemporal(edicoes = this.edicoes) {
         const ordenadas = [
-            ...this.edicoes,
+            ...edicoes,
         ].sort(
             (primeira, segunda) => primeira.dataInicio.localeCompare(
                 segunda.dataInicio,
