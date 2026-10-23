@@ -108,11 +108,22 @@ class InicializadorTomSelect {
             );
         }
 
-        return Array.from(
+        const elementos = Array.from(
             raiz.querySelectorAll(
                 this.seletor,
             ),
-        )
+        );
+
+        if (
+            raiz instanceof HTMLSelectElement
+            && raiz.matches(
+                this.seletor,
+            )
+        ) {
+            elementos.unshift(raiz);
+        }
+
+        return elementos
             .filter(
                 (elemento) =>
                     elemento
