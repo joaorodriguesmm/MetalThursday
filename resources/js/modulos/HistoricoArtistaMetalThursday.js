@@ -217,6 +217,56 @@ class HistoricoArtistaMetalThursday {
                 );
             },
         );
+
+        this.formulario.addEventListener(
+            'reset',
+            (evento) => {
+                queueMicrotask(() => {
+                    if (
+                        evento.defaultPrevented
+                        || !this.formulario.isConnected
+                    ) {
+                        return;
+                    }
+
+                    this.formulario
+                        .querySelectorAll(
+                            '.tom-select-artistas',
+                        )
+                        .forEach((selecao) => {
+                            if (
+                                !(selecao instanceof HTMLSelectElement)
+                            ) {
+                                return;
+                            }
+
+                            const seccao = selecao.closest(
+                                '.item-seccao',
+                            );
+
+                            if (!(seccao instanceof HTMLElement)) {
+                                return;
+                            }
+
+                            this.cancelarPedidoAnterior(
+                                seccao,
+                            );
+
+                            if (selecao.value === '') {
+                                this.ocultarHistorico(
+                                    seccao,
+                                );
+
+                                return;
+                            }
+
+                            void this.atualizarHistoricoSelecao(
+                                selecao,
+                            );
+                        });
+                });
+            },
+        );
     }
 
     /**
@@ -265,6 +315,8 @@ class HistoricoArtistaMetalThursday {
 
         if (
             !(seccao instanceof HTMLElement)
+            || !this.formulario.isConnected
+            || !seccao.isConnected
             || !this.formulario.contains(
                 seccao,
             )
@@ -310,9 +362,14 @@ class HistoricoArtistaMetalThursday {
 
             if (
                 controlador.signal.aborted
+                || !this.formulario.isConnected
+                || !seccao.isConnected
                 || !this.formulario.contains(
                     seccao,
                 )
+                || !seccao.contains(selecao)
+                || selecao.value
+                    !== String(identificadorArtista)
             ) {
                 return;
             }
@@ -324,6 +381,14 @@ class HistoricoArtistaMetalThursday {
         } catch (erro) {
             if (
                 controlador.signal.aborted
+                || !this.formulario.isConnected
+                || !seccao.isConnected
+                || !this.formulario.contains(
+                    seccao,
+                )
+                || !seccao.contains(selecao)
+                || selecao.value
+                    !== String(identificadorArtista)
                 || (
                     erro instanceof DOMException
                     && erro.name === 'AbortError'
