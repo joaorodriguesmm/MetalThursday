@@ -194,6 +194,30 @@ class SeletorNomeados {
     }
 
     /**
+     * Verifica se o seletor continua associado a uma interface ativa.
+     *
+     * @returns {boolean} Verdadeiro quando a interface está ativa.
+     *
+     * @since 2.0.0
+     */
+    interfaceAindaAtiva() {
+        const campoTomSelect =
+            this.tomSelect.input;
+
+        if (campoTomSelect instanceof Element) {
+            return campoTomSelect.isConnected
+                && campoTomSelect.tomselect === this.tomSelect;
+        }
+
+        const elementoPrincipal =
+            this.botaoMaisAntigo
+            ?? this.botaoAleatorio;
+
+        return elementoPrincipal === null
+            || elementoPrincipal.isConnected;
+    }
+
+    /**
      * Seleciona o utilizador há mais tempo sem ser nomeado.
      *
      * @returns {Promise<void>}
@@ -217,8 +241,10 @@ class SeletorNomeados {
 
         this.bloquearInteracao();
 
+        let valorExcluido;
+
         try {
-            const valorExcluido =
+            valorExcluido =
                 this.obterValorExcluidoNormalizado();
 
             const resposta =
@@ -234,6 +260,14 @@ class SeletorNomeados {
                                 },
                     },
                 );
+
+            if (
+                !this.interfaceAindaAtiva()
+                || this.obterValorExcluidoNormalizado()
+                    !== valorExcluido
+            ) {
+                return;
+            }
 
             const identificador =
                 resposta.data
@@ -286,6 +320,14 @@ class SeletorNomeados {
                 valor,
             );
         } catch (erro) {
+            if (
+                !this.interfaceAindaAtiva()
+                || this.obterValorExcluidoNormalizado()
+                    !== valorExcluido
+            ) {
+                return;
+            }
+
             const mensagemRecebida =
                 axios.isAxiosError(
                     erro,
@@ -305,12 +347,16 @@ class SeletorNomeados {
                     : 'Não foi possível obter o utilizador há mais tempo sem nomeação.',
             );
         } finally {
-            this.reporEstadoInteracao(
-                estadoAnterior,
-            );
-
-            this.emPedidoMaisAntigo =
-                false;
+            try {
+                if (this.interfaceAindaAtiva()) {
+                    this.reporEstadoInteracao(
+                        estadoAnterior,
+                    );
+                }
+            } finally {
+                this.emPedidoMaisAntigo =
+                    false;
+            }
         }
     }
 
