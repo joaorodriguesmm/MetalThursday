@@ -20,6 +20,15 @@ class HistoricoArtistaMetalThursday {
         '__IDENTIFICADOR_ARTISTA__';
 
     /**
+     * Gestores associados aos respetivos formulários HTML.
+     *
+     * @type {WeakMap<HTMLFormElement, HistoricoArtistaMetalThursday>}
+     *
+     * @since 2.0.0
+     */
+    static instanciasPorFormulario = new WeakMap();
+
+    /**
      * Cria o gestor de histórico contextual.
      *
      * @param {HTMLFormElement} formulario Formulário principal.
@@ -33,6 +42,21 @@ class HistoricoArtistaMetalThursday {
             throw new TypeError(
                 'O formulário do histórico de artistas é inválido.',
             );
+        }
+
+        const gestorExistente =
+            HistoricoArtistaMetalThursday
+                .instanciasPorFormulario
+                .get(formulario);
+
+        if (gestorExistente?.estadoInicializacao === 'falhada') {
+            throw new Error(
+                'A inicialização anterior do histórico de artistas falhou e ficou incompleta. É necessário substituir o formulário antes de tentar novamente.',
+            );
+        }
+
+        if (gestorExistente) {
+            return gestorExistente;
         }
 
         this.formulario = formulario;
@@ -54,9 +78,28 @@ class HistoricoArtistaMetalThursday {
         this.controladoresPedidos =
             new WeakMap();
 
-        this.configurarEventos();
+        /**
+         * Estado do ciclo de inicialização desta instância.
+         *
+         * @type {'em_curso'|'concluida'|'falhada'}
+         */
+        this.estadoInicializacao = 'em_curso';
 
-        this.inicializarSecoesExistentes();
+        HistoricoArtistaMetalThursday
+            .instanciasPorFormulario
+            .set(formulario, this);
+
+        try {
+            this.configurarEventos();
+
+            this.inicializarSecoesExistentes();
+
+            this.estadoInicializacao = 'concluida';
+        } catch (erro) {
+            this.estadoInicializacao = 'falhada';
+
+            throw erro;
+        }
     }
 
     /**
