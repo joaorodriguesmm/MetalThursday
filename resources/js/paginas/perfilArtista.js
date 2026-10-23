@@ -21,6 +21,20 @@ const LIMITE_LIGACOES =
     50;
 
 /**
+ * Identifica a pesquisa MusicBrainz mais recente de cada contentor.
+ *
+ * @type {WeakMap<HTMLElement, symbol>}
+ */
+const pesquisasPendentesImportacao = new WeakMap();
+
+/**
+ * Identifica a selecao MusicBrainz mais recente de cada contentor.
+ *
+ * @type {WeakMap<HTMLElement, symbol>}
+ */
+const selecoesPendentesImportacao = new WeakMap();
+
+/**
  * Verifica se um valor é um objeto simples.
  *
  * @param {unknown} valor Valor recebido.
@@ -1769,6 +1783,25 @@ async function selecionarImportacao(
         return;
     }
 
+    const identificadorSelecao = Symbol();
+
+    selecoesPendentesImportacao.set(
+        contentor,
+        identificadorSelecao,
+    );
+
+    pesquisasPendentesImportacao.delete(
+        contentor,
+    );
+
+    const selecaoAindaAtual = () =>
+        formulario.isConnected
+        && contentor.isConnected
+        && formulario.contains(contentor)
+        && botao.isConnected
+        && selecoesPendentesImportacao.get(contentor)
+            === identificadorSelecao;
+
     definirEstadoImportacao(
         contentor,
         'A obter e combinar os dados disponíveis…',
@@ -1785,6 +1818,10 @@ async function selecionarImportacao(
                     mbid.trim(),
                 ),
             );
+
+        if (!selecaoAindaAtual()) {
+            return;
+        }
 
         if (
             !eObjeto(
@@ -1806,6 +1843,10 @@ async function selecionarImportacao(
             contentor,
         );
     } catch (erro) {
+        if (!selecaoAindaAtual()) {
+            return;
+        }
+
         definirEstadoImportacao(
             contentor,
             obterMensagemErro(
@@ -1815,8 +1856,19 @@ async function selecionarImportacao(
             true,
         );
     } finally {
-        botao.disabled =
-            false;
+        if (
+            selecoesPendentesImportacao.get(contentor)
+                === identificadorSelecao
+        ) {
+            selecoesPendentesImportacao.delete(
+                contentor,
+            );
+        }
+
+        if (botao.isConnected) {
+            botao.disabled =
+                false;
+        }
     }
 }
 
@@ -1861,6 +1913,26 @@ async function pesquisarImportacao(
     const pesquisa =
         campoNome.value.trim();
 
+    const identificadorPedido = Symbol();
+
+    pesquisasPendentesImportacao.set(
+        contentor,
+        identificadorPedido,
+    );
+
+    selecoesPendentesImportacao.delete(
+        contentor,
+    );
+
+    const pesquisaAindaAtual = () =>
+        formulario.isConnected
+        && contentor.isConnected
+        && formulario.contains(contentor)
+        && formulario.contains(campoNome)
+        && campoNome.value.trim() === pesquisa
+        && pesquisasPendentesImportacao.get(contentor)
+            === identificadorPedido;
+
     if (pesquisa === '') {
         definirEstadoImportacao(
             contentor,
@@ -1893,6 +1965,10 @@ async function pesquisarImportacao(
                 },
             );
 
+        if (!pesquisaAindaAtual()) {
+            return;
+        }
+
         const quantidade =
             apresentarResultadosImportacao(
                 contentor,
@@ -1906,6 +1982,10 @@ async function pesquisarImportacao(
                 : 'Não foram encontrados artistas para esta pesquisa.',
         );
     } catch (erro) {
+        if (!pesquisaAindaAtual()) {
+            return;
+        }
+
         definirEstadoImportacao(
             contentor,
             obterMensagemErro(
@@ -1940,6 +2020,14 @@ function removerAssociacaoImportacao(
     if (formulario === null) {
         return;
     }
+
+    selecoesPendentesImportacao.delete(
+        contentor,
+    );
+
+    pesquisasPendentesImportacao.delete(
+        contentor,
+    );
 
     const musicBrainz =
         formulario.querySelector(
@@ -2161,9 +2249,50 @@ function inicializarImportacao(
         },
     );
 
+    const invalidarSelecaoPorEdicao = (evento) => {
+        const campo = evento.target;
+
+        if (
+            !(
+                campo instanceof HTMLInputElement
+                || campo instanceof HTMLSelectElement
+                || campo instanceof HTMLTextAreaElement
+            )
+            || contentor.contains(campo)
+            || (
+                campo instanceof HTMLInputElement
+                && campo.type === 'hidden'
+            )
+        ) {
+            return;
+        }
+
+        selecoesPendentesImportacao.delete(
+            contentor,
+        );
+    };
+
+    formulario.addEventListener(
+        'input',
+        invalidarSelecaoPorEdicao,
+    );
+
+    formulario.addEventListener(
+        'change',
+        invalidarSelecaoPorEdicao,
+    );
+
     formulario.addEventListener(
         'reset',
         () => {
+            selecoesPendentesImportacao.delete(
+                contentor,
+            );
+
+            pesquisasPendentesImportacao.delete(
+                contentor,
+            );
+
             window.setTimeout(
                 () => {
                     limparResultadosImportacao(
