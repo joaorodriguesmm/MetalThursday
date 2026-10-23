@@ -1,0 +1,510 @@
+import {
+    afterEach,
+    beforeEach,
+    describe,
+    expect,
+    it,
+    vi,
+} from 'vitest';
+
+const efeitos = vi.hoisted(() => ({
+    gestorEdicao: vi.fn(),
+    gestorImportacao: vi.fn(),
+    gestorSeccoes: vi.fn(),
+    validador: vi.fn(),
+    gestorModais: vi.fn(),
+}));
+
+vi.mock(
+    '../../../resources/js/modulos/GestorEdicaoMetalThursday',
+    () => ({
+        default: class GestorEdicaoSimulado {
+            constructor() {
+                efeitos.gestorEdicao();
+            }
+        },
+    }),
+);
+
+vi.mock(
+    '../../../resources/js/modulos/GestorImportacaoLancamentoDiscogs',
+    () => ({
+        default: class GestorImportacaoSimulado {
+            constructor() {
+                efeitos.gestorImportacao();
+            }
+        },
+    }),
+);
+
+vi.mock(
+    '../../../resources/js/modulos/GestorSeccoes',
+    () => ({
+        default: class GestorSeccoesSimulado {
+            constructor() {
+                efeitos.gestorSeccoes();
+            }
+        },
+    }),
+);
+
+vi.mock(
+    '../../../resources/js/modulos/ValidadorFormulario',
+    () => ({
+        default: class ValidadorSimulado {
+            constructor() {
+                efeitos.validador();
+            }
+        },
+    }),
+);
+
+vi.mock(
+    '../../../resources/js/modulos/GestorFormulariosModais',
+    () => ({
+        default: class GestorModaisSimulado {
+            constructor() {
+                efeitos.gestorModais();
+            }
+        },
+    }),
+);
+
+import inicializarFormularioMetalThursday
+    from '../../../resources/js/modulos/InicializadorFormularioMetalThursday';
+
+const IDENTIFICADOR_FORMULARIO =
+    'formulario-criar-metal-thursday';
+
+function criarConfiguracao() {
+    const elemento = document.createElement('script');
+
+    elemento.id =
+        'configuracao-formulario-metal-thursday';
+
+    elemento.type = 'application/json';
+
+    elemento.textContent = JSON.stringify({
+        enderecos: {
+            guardarEdicao: '/edicoes',
+            guardarArtista: '/artistas',
+            guardarGenero: '/generos',
+            pesquisarLancamentos: '/discogs/pesquisar',
+            importarLancamento:
+                '/discogs/__IDENTIFICADOR_DISCOGS__',
+            obterUtilizadorHaMaisTempoSemNomeacao:
+                '/utilizadores/mais-antigo',
+        },
+    });
+
+    document.body.append(elemento);
+}
+
+function criarPagina() {
+    document.body.innerHTML = `
+        <form id="${IDENTIFICADOR_FORMULARIO}">
+            <input
+                id="data-metal-thursday"
+                type="date"
+                name="data"
+            >
+
+            <input
+                id="edicao-metal-thursday"
+                type="text"
+            >
+
+            <input
+                id="nome-metal-thursday"
+                type="text"
+                name="nome"
+            >
+
+            <input
+                type="hidden"
+                name="autor_id"
+                value="1"
+            >
+
+            <div id="contentor-seccoes"></div>
+            <div id="erro-seccoes"></div>
+        </form>
+
+        <div id="estado-edicao-metal-thursday"></div>
+
+        <div
+            id="dados-edicoes-metal-thursday"
+            data-data-referencia="2026-10-23"
+        ></div>
+
+        <div id="modal-criar-artista">
+            <form id="formulario-criar-artista">
+                <input type="text" name="nome">
+            </form>
+        </div>
+
+        <div id="modal-criar-genero"></div>
+    `;
+
+    criarConfiguracao();
+
+    return document.getElementById(
+        IDENTIFICADOR_FORMULARIO,
+    );
+}
+
+function inicializar() {
+    inicializarFormularioMetalThursday(
+        IDENTIFICADOR_FORMULARIO,
+    );
+}
+
+function contarListeners(espia, tipoEvento) {
+    return espia.mock.calls.filter(
+        ([tipo]) => tipo === tipoEvento,
+    ).length;
+}
+
+describe(
+    'B25.26 — idempotencia do inicializador do formulario',
+    () => {
+        beforeEach(() => {
+            vi.clearAllMocks();
+            criarPagina();
+        });
+
+        afterEach(() => {
+            vi.restoreAllMocks();
+            document.body.replaceChildren();
+        });
+
+        it(
+            'cria os gestores apenas uma vez para o mesmo formulario',
+            () => {
+                inicializar();
+                inicializar();
+
+                expect(
+                    efeitos.gestorEdicao,
+                ).toHaveBeenCalledTimes(1);
+
+                expect(
+                    efeitos.gestorImportacao,
+                ).toHaveBeenCalledTimes(1);
+
+                expect(
+                    efeitos.gestorSeccoes,
+                ).toHaveBeenCalledTimes(1);
+
+                expect(
+                    efeitos.validador,
+                ).toHaveBeenCalledTimes(1);
+
+                expect(
+                    efeitos.gestorModais,
+                ).toHaveBeenCalledTimes(1);
+            },
+        );
+
+        it(
+            'nao duplica listeners de validacao e dos modais',
+            () => {
+                const formulario =
+                    document.getElementById(
+                        IDENTIFICADOR_FORMULARIO,
+                    );
+
+                const modalArtista =
+                    document.getElementById(
+                        'modal-criar-artista',
+                    );
+
+                const modalGenero =
+                    document.getElementById(
+                        'modal-criar-genero',
+                    );
+
+                const campoNomeArtista =
+                    document.querySelector(
+                        '#formulario-criar-artista [name="nome"]',
+                    );
+
+                const listenersFormulario =
+                    vi.spyOn(
+                        formulario,
+                        'addEventListener',
+                    );
+
+                const listenersModalArtista =
+                    vi.spyOn(
+                        modalArtista,
+                        'addEventListener',
+                    );
+
+                const listenersModalGenero =
+                    vi.spyOn(
+                        modalGenero,
+                        'addEventListener',
+                    );
+
+                const listenersNomeArtista =
+                    vi.spyOn(
+                        campoNomeArtista,
+                        'addEventListener',
+                    );
+
+                inicializar();
+                inicializar();
+
+                for (
+                    const evento
+                    of ['submit', 'reset', 'input', 'change']
+                ) {
+                    expect(
+                        contarListeners(
+                            listenersFormulario,
+                            evento,
+                        ),
+                    ).toBe(1);
+                }
+
+                expect(
+                    contarListeners(
+                        listenersModalArtista,
+                        'show.bs.modal',
+                    ),
+                ).toBe(1);
+
+                expect(
+                    contarListeners(
+                        listenersModalArtista,
+                        'hidden.bs.modal',
+                    ),
+                ).toBe(1);
+
+                expect(
+                    contarListeners(
+                        listenersModalGenero,
+                        'show.bs.modal',
+                    ),
+                ).toBe(1);
+
+                expect(
+                    contarListeners(
+                        listenersModalGenero,
+                        'hidden.bs.modal',
+                    ),
+                ).toBe(1);
+
+                expect(
+                    contarListeners(
+                        listenersNomeArtista,
+                        'input',
+                    ),
+                ).toBe(1);
+            },
+        );
+
+        it(
+            'inicializa um novo formulario depois de substituir a DOM',
+            () => {
+                const primeiro = document.getElementById(
+                    IDENTIFICADOR_FORMULARIO,
+                );
+
+                inicializar();
+
+                criarPagina();
+
+                const segundo = document.getElementById(
+                    IDENTIFICADOR_FORMULARIO,
+                );
+
+                expect(segundo).not.toBe(primeiro);
+
+                inicializar();
+
+                expect(
+                    efeitos.gestorEdicao,
+                ).toHaveBeenCalledTimes(2);
+
+                expect(
+                    efeitos.validador,
+                ).toHaveBeenCalledTimes(2);
+
+                expect(
+                    efeitos.gestorImportacao,
+                ).toHaveBeenCalledTimes(2);
+            },
+        );
+
+        it(
+            'permite repetir a inicializacao apos configuracao invalida',
+            () => {
+                document.getElementById(
+                    'configuracao-formulario-metal-thursday',
+                ).remove();
+
+                expect(
+                    () => inicializar(),
+                ).toThrow(
+                    'Não foi encontrada a configuração do formulário de MetalThursday.',
+                );
+
+                expect(
+                    efeitos.gestorEdicao,
+                ).not.toHaveBeenCalled();
+
+                criarConfiguracao();
+
+                expect(
+                    () => inicializar(),
+                ).not.toThrow();
+
+                expect(
+                    efeitos.gestorEdicao,
+                ).toHaveBeenCalledTimes(1);
+
+                expect(
+                    efeitos.validador,
+                ).toHaveBeenCalledTimes(1);
+            },
+        );
+
+        it(
+            'impede duplicacao apos uma falha na etapa final',
+            () => {
+                efeitos.gestorModais.mockImplementationOnce(
+                    () => {
+                        throw new Error(
+                            'Falha simulada nos modais.',
+                        );
+                    },
+                );
+
+                expect(
+                    () => inicializar(),
+                ).toThrow(
+                    'Falha simulada nos modais.',
+                );
+
+                expect(
+                    efeitos.gestorEdicao,
+                ).toHaveBeenCalledTimes(1);
+
+                expect(
+                    efeitos.gestorImportacao,
+                ).toHaveBeenCalledTimes(1);
+
+                expect(
+                    efeitos.validador,
+                ).toHaveBeenCalledTimes(1);
+
+                /*
+                 * Depois de uma falha parcial, uma segunda
+                 * tentativa no mesmo formulario nao e segura
+                 * sem libertar os componentes ja inicializados.
+                 */
+                expect(
+                    () => inicializar(),
+                ).toThrow(
+                    /inicializa|falh|incompleta/iu,
+                );
+
+                expect(
+                    efeitos.gestorEdicao,
+                ).toHaveBeenCalledTimes(1);
+
+                expect(
+                    efeitos.gestorImportacao,
+                ).toHaveBeenCalledTimes(1);
+
+                expect(
+                    efeitos.validador,
+                ).toHaveBeenCalledTimes(1);
+
+                expect(
+                    efeitos.gestorModais,
+                ).toHaveBeenCalledTimes(1);
+            },
+        );
+
+        it(
+            'permite novo formulario apos uma falha parcial',
+            () => {
+                efeitos.gestorModais.mockImplementationOnce(
+                    () => {
+                        throw new Error(
+                            'Falha simulada nos modais.',
+                        );
+                    },
+                );
+
+                const formularioAnterior =
+                    document.getElementById(
+                        IDENTIFICADOR_FORMULARIO,
+                    );
+
+                expect(
+                    () => inicializar(),
+                ).toThrow(
+                    'Falha simulada nos modais.',
+                );
+
+                criarPagina();
+
+                const formularioNovo =
+                    document.getElementById(
+                        IDENTIFICADOR_FORMULARIO,
+                    );
+
+                expect(
+                    formularioNovo,
+                ).not.toBe(
+                    formularioAnterior,
+                );
+
+                expect(
+                    () => inicializar(),
+                ).not.toThrow();
+
+                expect(
+                    efeitos.gestorEdicao,
+                ).toHaveBeenCalledTimes(2);
+
+                expect(
+                    efeitos.gestorModais,
+                ).toHaveBeenCalledTimes(2);
+            },
+        );
+
+        it(
+            'impede uma inicializacao reentrante',
+            () => {
+                efeitos.gestorEdicao.mockImplementationOnce(
+                    () => {
+                        inicializar();
+                    },
+                );
+
+                inicializar();
+
+                expect(
+                    efeitos.gestorEdicao,
+                ).toHaveBeenCalledTimes(1);
+
+                expect(
+                    efeitos.gestorImportacao,
+                ).toHaveBeenCalledTimes(1);
+
+                expect(
+                    efeitos.validador,
+                ).toHaveBeenCalledTimes(1);
+
+                expect(
+                    efeitos.gestorModais,
+                ).toHaveBeenCalledTimes(1);
+            },
+        );
+    },
+);

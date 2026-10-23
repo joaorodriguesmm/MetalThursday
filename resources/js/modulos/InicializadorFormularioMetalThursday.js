@@ -46,6 +46,16 @@ const IDENTIFICADOR_CONFIGURACAO_FORMULARIO =
     'configuracao-formulario-metal-thursday';
 
 /**
+ * Regista o estado de inicializacao de cada formulario HTML.
+ * Formularios substituidos possuem estados independentes.
+ *
+ * @type {WeakMap<HTMLFormElement, 'em_curso'|'concluida'|'falhada'>}
+ *
+ * @since 2.0.0
+ */
+const estadosInicializacao = new WeakMap();
+
+/**
  * Determina se um valor é um objeto não nulo.
  *
  * @param {unknown} valor Valor recebido.
@@ -1903,24 +1913,20 @@ function configurarRetornoCriacaoGeneroParaArtista(
 }
 
 /**
- * Inicializa um formulário de criação ou edição de MetalThursday.
+ * Executa a inicializacao dos componentes de um formulario validado.
  *
- * @param {string} identificadorFormulario Identificador HTML do formulário
- *     principal.
+ * @param {HTMLFormElement} formulario Formulario principal.
+ * @param {{enderecos: Readonly<Record<string, string>>}} configuracao
+ *     Configuracao validada.
  *
  * @returns {void}
  *
  * @since 2.0.0
  */
-function inicializarFormularioMetalThursday(
-    identificadorFormulario,
+function executarInicializacaoFormularioMetalThursday(
+    formulario,
+    configuracao,
 ) {
-    const formulario = obterFormulario(
-        identificadorFormulario,
-    );
-
-    const configuracao = obterConfiguracaoFormulario();
-
     const gestorEdicao = new GestorEdicaoMetalThursday({
         campoData: obterElementoObrigatorio(
             'data-metal-thursday',
@@ -2181,6 +2187,67 @@ function inicializarFormularioMetalThursday(
             contextoCriacaoRapida,
         ),
     );
+}
+
+/**
+ * Inicializa um formulario de criacao ou edicao de MetalThursday.
+ *
+ * @param {string} identificadorFormulario Identificador HTML do formulario
+ *     principal.
+ *
+ * @returns {void}
+ *
+ * @since 2.0.0
+ */
+function inicializarFormularioMetalThursday(
+    identificadorFormulario,
+) {
+    const formulario = obterFormulario(
+        identificadorFormulario,
+    );
+
+    const estado = estadosInicializacao.get(
+        formulario,
+    );
+
+    if (
+        estado === 'em_curso'
+        || estado === 'concluida'
+    ) {
+        return;
+    }
+
+    if (estado === 'falhada') {
+        throw new Error(
+            'A inicialização anterior do formulário falhou e ficou incompleta. É necessário substituir o formulário antes de tentar novamente.',
+        );
+    }
+
+    const configuracao = obterConfiguracaoFormulario();
+
+    estadosInicializacao.set(
+        formulario,
+        'em_curso',
+    );
+
+    try {
+        executarInicializacaoFormularioMetalThursday(
+            formulario,
+            configuracao,
+        );
+
+        estadosInicializacao.set(
+            formulario,
+            'concluida',
+        );
+    } catch (erro) {
+        estadosInicializacao.set(
+            formulario,
+            'falhada',
+        );
+
+        throw erro;
+    }
 }
 
 export default inicializarFormularioMetalThursday;
