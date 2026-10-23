@@ -8,6 +8,15 @@
  */
 class LimpadorFormulariosModais {
     /**
+     * Impede o processamento repetido do mesmo evento de fecho.
+     *
+     * @type {WeakSet<Event>}
+     *
+     * @since 2.0.0
+     */
+    static eventosProcessados = new WeakSet();
+
+    /**
      * Cria e inicializa um limpador de formulários de janelas modais.
      *
      * O evento de fecho do Bootstrap propaga-se pela DOM, permitindo utilizar
@@ -85,6 +94,18 @@ class LimpadorFormulariosModais {
         }
 
         if (
+            LimpadorFormulariosModais
+                .eventosProcessados
+                .has(evento)
+        ) {
+            return;
+        }
+
+        LimpadorFormulariosModais
+            .eventosProcessados
+            .add(evento);
+
+        if (
             modal.hasAttribute(
                 'data-preservar-formularios-ao-fechar',
             )
@@ -120,7 +141,29 @@ class LimpadorFormulariosModais {
      * @since 2.0.0
      */
     limparFormulario(formulario) {
-        formulario.reset();
+        let eventoReposicao = null;
+
+        const observarReposicao = (evento) => {
+            eventoReposicao = evento;
+        };
+
+        formulario.addEventListener(
+            'reset',
+            observarReposicao,
+        );
+
+        try {
+            formulario.reset();
+        } finally {
+            formulario.removeEventListener(
+                'reset',
+                observarReposicao,
+            );
+        }
+
+        if (eventoReposicao?.defaultPrevented) {
+            return;
+        }
 
         this.sincronizarTomSelect(
             formulario,
