@@ -159,6 +159,75 @@ class TratadorFormularioAjax {
     }
 
     /**
+     * Obtém os valores dos campos e as referências dos ficheiros.
+     *
+     * @returns {object} Estado atual dos campos do formulário.
+     *
+     * @since 2.0.0
+     */
+    obterEstadoCamposFormulario() {
+        return {
+            conteudo: JSON.stringify(
+                Array.from(
+                    new FormData(this.formulario),
+                    ([nome, valor]) => [
+                        nome,
+                        typeof valor === 'string'
+                            ? valor
+                            : null,
+                    ],
+                ),
+            ),
+
+            ficheiros: Array.from(
+                this.formulario.querySelectorAll(
+                    'input[type="file"]',
+                ),
+                (campo) => ({
+                    campo,
+                    selecionados: Array.from(
+                        campo.files ?? [],
+                    ),
+                }),
+            ),
+        };
+    }
+
+    /**
+     * Confirma que os campos não mudaram após a submissão.
+     *
+     * @param {object} estadoAnterior Estado anterior ao pedido.
+     *
+     * @returns {boolean} Verdadeiro quando os campos não mudaram.
+     *
+     * @since 2.0.0
+     */
+    camposFormularioMantidos(estadoAnterior) {
+        const estadoAtual =
+            this.obterEstadoCamposFormulario();
+
+        return estadoAnterior.conteudo
+            === estadoAtual.conteudo
+            && estadoAnterior.ficheiros.length
+                === estadoAtual.ficheiros.length
+            && estadoAnterior.ficheiros.every(
+                (entrada, indice) => {
+                    const atual =
+                        estadoAtual.ficheiros[indice];
+
+                    return entrada.campo === atual.campo
+                        && entrada.selecionados.length
+                            === atual.selecionados.length
+                        && entrada.selecionados.every(
+                            (ficheiro, posicao) =>
+                                ficheiro
+                                === atual.selecionados[posicao],
+                        );
+                },
+            );
+    }
+
+    /**
      * Submete o formulário de forma assíncrona.
      *
      * @param {Event|null} evento Evento de submissão.
@@ -175,6 +244,7 @@ class TratadorFormularioAjax {
         if (
             !(this.formulario
                 instanceof HTMLFormElement)
+            || !this.formulario.isConnected
             || this.emSubmissao
         ) {
             return;
@@ -191,12 +261,19 @@ class TratadorFormularioAjax {
 
         try {
             let resposta;
+            let estadoCamposSubmetidos;
 
             try {
+                const dadosSubmissao =
+                    this.prepararDadosSubmissao();
+
+                estadoCamposSubmetidos =
+                    this.obterEstadoCamposFormulario();
+
                 resposta =
                     await axios.post(
                         this.url,
-                        this.prepararDadosSubmissao(),
+                        dadosSubmissao,
                     );
             } catch (erro) {
                 if (!this.formulario.isConnected) {
@@ -248,7 +325,15 @@ class TratadorFormularioAjax {
                 this.mostrarAvisoAtualizacaoInterface();
             }
 
-            this.finalizarSubmissao();
+            if (
+                this.camposFormularioMantidos(
+                    estadoCamposSubmetidos,
+                )
+            ) {
+                this.finalizarSubmissao();
+            } else {
+                this.limparErros();
+            }
         } finally {
             this.reporEstadoBotaoSubmissao(
                 estadoBotao,
