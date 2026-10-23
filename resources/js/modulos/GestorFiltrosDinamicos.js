@@ -5,6 +5,15 @@
  */
 class GestorFiltrosDinamicos {
     /**
+     * Gestores associados aos pares lista/contentor.
+     *
+     * @type {WeakMap<HTMLSelectElement, WeakMap<HTMLElement, GestorFiltrosDinamicos>>}
+     *
+     * @since 2.0.0
+     */
+    static instanciasPorLista = new WeakMap();
+
+    /**
      * Cria e inicia um gestor de filtros dinâmicos.
      *
      * Cada filtro disponível deve possuir:
@@ -58,6 +67,20 @@ class GestorFiltrosDinamicos {
                 filtrosDisponiveis,
             );
 
+        const gestoresExistentes =
+            GestorFiltrosDinamicos.instanciasPorLista.get(
+                this.listaAdicionarFiltro,
+            );
+
+        const gestorExistente =
+            gestoresExistentes?.get(
+                this.areaFiltrosAtivos,
+            );
+
+        if (gestorExistente) {
+            return gestorExistente;
+        }
+
         /**
          * Componentes atualmente apresentados, indexados pelo nome do campo.
          *
@@ -85,6 +108,15 @@ class GestorFiltrosDinamicos {
          */
         this.promessaTomSelect = null;
 
+        /**
+         * Inicializacoes pendentes por elemento select.
+         *
+         * @type {WeakMap<HTMLSelectElement, Promise<void>>}
+         *
+         * @since 2.0.0
+         */
+        this.inicializacoesTomSelect = new WeakMap();
+
         this.inicializarAPartirDoUrl();
 
         this.listaAdicionarFiltro.addEventListener(
@@ -95,6 +127,25 @@ class GestorFiltrosDinamicos {
         this.areaFiltrosAtivos.addEventListener(
             'click',
             (evento) => this.tratarRemocaoFiltro(evento),
+        );
+
+        let gestoresDaLista =
+            GestorFiltrosDinamicos.instanciasPorLista.get(
+                this.listaAdicionarFiltro,
+            );
+
+        if (!gestoresDaLista) {
+            gestoresDaLista = new WeakMap();
+
+            GestorFiltrosDinamicos.instanciasPorLista.set(
+                this.listaAdicionarFiltro,
+                gestoresDaLista,
+            );
+        }
+
+        gestoresDaLista.set(
+            this.areaFiltrosAtivos,
+            this,
         );
     }
 
@@ -621,6 +672,68 @@ class GestorFiltrosDinamicos {
         configuracao,
         valorAtual,
     ) {
+        const instanciaExistente =
+            this.instanciasTomSelect.get(nomeFiltro);
+
+        if (
+            campo.tomselect
+            || instanciaExistente?.input === campo
+        ) {
+            return;
+        }
+
+        const carregamentoExistente =
+            this.inicializacoesTomSelect.get(campo);
+
+        if (carregamentoExistente) {
+            await carregamentoExistente;
+
+            return;
+        }
+
+        const carregamento =
+            this.executarInicializacaoTomSelect(
+                nomeFiltro,
+                campo,
+                configuracao,
+                valorAtual,
+            );
+
+        this.inicializacoesTomSelect.set(
+            campo,
+            carregamento,
+        );
+
+        try {
+            await carregamento;
+        } finally {
+            if (
+                this.inicializacoesTomSelect.get(campo)
+                === carregamento
+            ) {
+                this.inicializacoesTomSelect.delete(campo);
+            }
+        }
+    }
+
+    /**
+     * Executa a inicializacao efetiva do Tom Select.
+     *
+     * @param {string} nomeFiltro Nome HTML do filtro.
+     * @param {HTMLSelectElement} campo Campo de selecao.
+     * @param {object} configuracao Configuracao do filtro.
+     * @param {string} valorAtual Valor inicial de referencia.
+     *
+     * @returns {Promise<void>}
+     *
+     * @since 2.0.0
+     */
+    async executarInicializacaoTomSelect(
+        nomeFiltro,
+        campo,
+        configuracao,
+        valorAtual,
+    ) {
         let TomSelect;
 
         try {
@@ -639,7 +752,7 @@ class GestorFiltrosDinamicos {
                 this.preencherOpcoesSelecaoNativa(
                     campo,
                     configuracao,
-                    valorAtual,
+                    campo.value ?? valorAtual,
                 );
             }
 
@@ -656,6 +769,9 @@ class GestorFiltrosDinamicos {
         ) {
             return;
         }
+
+        const valorSelecionado =
+            campo.value ?? valorAtual;
 
         const opcoes =
             this.obterOpcoesFiltro(
@@ -701,10 +817,10 @@ class GestorFiltrosDinamicos {
                     opcoes,
 
                 items:
-                    valorAtual === ''
+                    valorSelecionado === ''
                         ? []
                         : [
-                            valorAtual,
+                            valorSelecionado,
                         ],
 
                 render: {
