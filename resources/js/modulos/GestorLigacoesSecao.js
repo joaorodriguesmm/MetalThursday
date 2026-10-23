@@ -10,6 +10,15 @@ import GestorSeccoes from './GestorSeccoes';
  */
 class GestorLigacoesSecao {
     /**
+     * Instancias associadas a cada seccao HTML.
+     *
+     * @type {WeakMap<HTMLElement, GestorLigacoesSecao>}
+     *
+     * @since 2.0.0
+     */
+    static instanciasPorSeccao = new WeakMap();
+
+    /**
      * Marcador utilizado pelo modelo HTML para o índice de uma ligação.
      *
      * @type {string}
@@ -105,6 +114,22 @@ class GestorLigacoesSecao {
             );
         }
 
+        const gestorExistente =
+            GestorLigacoesSecao.instanciasPorSeccao.get(
+                seccao,
+            );
+
+        if (
+            gestorExistente
+            && gestorExistente.editor === this.editor
+            && gestorExistente.lista === this.lista
+            && gestorExistente.modelo === this.modelo
+            && gestorExistente.botaoAdicionar === this.botaoAdicionar
+            && gestorExistente.estado === this.estado
+        ) {
+            return gestorExistente;
+        }
+
         this.nomeBaseCampo =
             this.normalizarNomeBaseCampo(
                 this.editor.dataset.nomeBaseCampo,
@@ -115,12 +140,26 @@ class GestorLigacoesSecao {
                 this.editor.dataset.maximoLigacoes,
             );
 
+        /**
+         * Permite libertar os listeners de uma instancia substituida.
+         *
+         * @type {AbortController}
+         *
+         * @since 2.0.0
+         */
+        this.controladorEventos = new AbortController();
+
+        gestorExistente?.controladorEventos.abort();
+
         this.editor.addEventListener(
             'click',
             (evento) => {
                 this.tratarClique(
                     evento,
                 );
+            },
+            {
+                signal: this.controladorEventos.signal,
             },
         );
 
@@ -131,6 +170,9 @@ class GestorLigacoesSecao {
                     evento,
                 );
             },
+            {
+                signal: this.controladorEventos.signal,
+            },
         );
 
         this.seccao.addEventListener(
@@ -138,9 +180,17 @@ class GestorLigacoesSecao {
             () => {
                 this.normalizar();
             },
+            {
+                signal: this.controladorEventos.signal,
+            },
         );
 
         this.normalizar();
+
+        GestorLigacoesSecao.instanciasPorSeccao.set(
+            seccao,
+            this,
+        );
     }
 
     /**
