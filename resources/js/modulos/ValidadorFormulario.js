@@ -25,6 +25,7 @@ class ValidadorFormulario {
         this.mensagens = this.configuracao.mensagens;
         this.erros = new Map();
         this.tentouSubmeter = false;
+        this.versaoValidacao = 0;
         this.dependencias = this.criarMapaDependencias(this.regras);
 
         this.formulario.setAttribute('novalidate', '');
@@ -33,8 +34,8 @@ class ValidadorFormulario {
             this.manipularSubmissao(evento);
         });
 
-        this.formulario.addEventListener('reset', () => {
-            this.manipularReposicao();
+        this.formulario.addEventListener('reset', (evento) => {
+            this.manipularReposicao(evento);
         });
 
         this.configuracao.eventosTempoReal.forEach((tipoEvento) => {
@@ -534,6 +535,7 @@ class ValidadorFormulario {
             return;
         }
 
+        this.versaoValidacao += 1;
         this.tentouSubmeter = true;
 
         const validacaoEstatica = this.validarTudo({
@@ -599,6 +601,8 @@ class ValidadorFormulario {
             return;
         }
 
+        this.versaoValidacao += 1;
+
         if (Object.hasOwn(this.regras, nomeCampo)) {
             this.validarCampo(nomeCampo);
         }
@@ -627,10 +631,23 @@ class ValidadorFormulario {
     /**
      * Processa a reposição do formulário.
      *
+     * @param {Event} evento Evento de reposição.
+     *
      * @since 2.0.0
      */
-    manipularReposicao() {
+    manipularReposicao(evento) {
+        const versaoAnterior =
+            this.versaoValidacao;
+
         window.setTimeout(() => {
+            if (
+                evento.defaultPrevented
+                || this.versaoValidacao
+                    !== versaoAnterior
+            ) {
+                return;
+            }
+
             this.tentouSubmeter = false;
             this.limparTodosErros();
         }, 0);
@@ -946,6 +963,23 @@ class ValidadorFormulario {
      */
     criarMensagemPadrao(nomeCampo, campos, regra, parametro) {
         const nomeAmigavel = this.obterNomeAmigavel(campos, nomeCampo);
+
+        if (regra === 'posterior_ou_igual') {
+            const camposReferencia =
+                this.obterCamposObrigatorios(
+                    parametro,
+                    regra,
+                );
+
+            const nomeReferencia =
+                this.obterNomeAmigavel(
+                    camposReferencia,
+                    parametro ?? '',
+                );
+
+            return `O campo '${nomeAmigavel}' deve conter uma data igual ou posterior a '${nomeReferencia}'.`;
+        }
+
         const mensagens = {
             obrigatorio: `O campo '${nomeAmigavel}' é obrigatório.`,
             email: 'Por favor, insere um endereço de e-mail válido.',
@@ -956,11 +990,6 @@ class ValidadorFormulario {
             confirmado: 'A confirmação não coincide.',
             diferente: `O campo '${nomeAmigavel}' deve ser diferente.`,
             data: `O campo '${nomeAmigavel}' deve conter uma data válida.`,
-            posterior_ou_igual:
-                `O campo '${nomeAmigavel}' deve conter uma data igual ou posterior a '${this.obterNomeAmigavel(
-                    this.obterCamposObrigatorios(parametro, regra),
-                    parametro ?? '',
-                )}'.`,
             maiuscula:
                 `O campo '${nomeAmigavel}' deve conter uma letra maiúscula.`,
             minuscula:

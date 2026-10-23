@@ -11,6 +11,15 @@ import ValidadorFormulario from './ValidadorFormulario';
  */
 class GestorFormulariosModais {
     /**
+     * Elementos de formulario ja inicializados.
+     *
+     * @type {WeakSet<HTMLFormElement>}
+     *
+     * @since 2.0.0
+     */
+    static formulariosInicializados = new WeakSet();
+
+    /**
      * Cria e inicializa os formulários de janelas modais.
      *
      * Cada configuração deve possuir:
@@ -82,6 +91,14 @@ class GestorFormulariosModais {
             return;
         }
 
+        if (
+            GestorFormulariosModais
+                .formulariosInicializados
+                .has(formulario)
+        ) {
+            return;
+        }
+
         const tratadorAjax = new TratadorFormularioAjax(
             configuracao.idFormulario,
             configuracao.url,
@@ -101,6 +118,10 @@ class GestorFormulariosModais {
                 },
             },
         );
+
+        GestorFormulariosModais
+            .formulariosInicializados
+            .add(formulario);
     }
 
     /**
