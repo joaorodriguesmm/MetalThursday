@@ -176,12 +176,16 @@ describe(
                     },
                 );
 
-                expect(
-                    document.querySelector(
-                        '.tooltip-inner',
-                    )?.innerHTML,
-                ).toBe(
-                    'Utilizador A<br>Utilizador B',
+                await vi.waitFor(
+                    () => {
+                        expect(
+                            document.querySelector(
+                                '.tooltip-inner',
+                            )?.innerHTML,
+                        ).toBe(
+                            'Utilizador A<br>Utilizador B',
+                        );
+                    },
                 );
             },
         );
@@ -239,12 +243,16 @@ describe(
                     },
                 );
 
-                expect(
-                    document.querySelector(
-                        '.tooltip-inner',
-                    )?.innerHTML,
-                ).toBe(
-                    'Utilizador C<br>Utilizador D',
+                await vi.waitFor(
+                    () => {
+                        expect(
+                            document.querySelector(
+                                '.tooltip-inner',
+                            )?.innerHTML,
+                        ).toBe(
+                            'Utilizador C<br>Utilizador D',
+                        );
+                    },
                 );
             },
         );
