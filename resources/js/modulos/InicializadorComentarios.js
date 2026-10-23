@@ -22,6 +22,33 @@ import ValidadorFormulario
  */
 class InicializadorComentarios {
     /**
+     * Instancias ativas por contentor.
+     *
+     * @type {WeakMap<Document|Element, InicializadorComentarios>}
+     *
+     * @since 2.0.0
+     */
+    static instanciasPorContentor = new WeakMap();
+
+    /**
+     * Formularios inicializados, independentemente da instancia.
+     *
+     * @type {WeakSet<HTMLFormElement>}
+     *
+     * @since 2.0.0
+     */
+    static formulariosInicializadosGlobais = new WeakSet();
+
+    /**
+     * Cliques ja processados por outro inicializador.
+     *
+     * @type {WeakSet<Event>}
+     *
+     * @since 2.0.0
+     */
+    static cliquesProcessados = new WeakSet();
+
+    /**
      * Seletor dos formulários suportados.
      *
      * @type {string}
@@ -92,6 +119,18 @@ class InicializadorComentarios {
             );
         }
 
+        const inicializadorExistente =
+            InicializadorComentarios
+                .instanciasPorContentor.get(contentor);
+
+        if (inicializadorExistente) {
+            inicializadorExistente.inicializarFormularios(
+                contentor,
+            );
+
+            return inicializadorExistente;
+        }
+
         /**
          * Contentor utilizado na delegação dos eventos.
          *
@@ -105,7 +144,8 @@ class InicializadorComentarios {
          * @type {WeakSet<HTMLFormElement>}
          */
         this.formulariosInicializados =
-            new WeakSet();
+            InicializadorComentarios
+                .formulariosInicializadosGlobais;
 
         /**
          * Carregamentos atualmente associados a cada secção de comentários.
@@ -138,6 +178,12 @@ class InicializadorComentarios {
                 );
             },
         );
+
+        InicializadorComentarios
+            .instanciasPorContentor.set(
+                contentor,
+                this,
+            );
     }
 
     /**
@@ -290,6 +336,13 @@ class InicializadorComentarios {
     tratarClique(
         evento,
     ) {
+        if (
+            InicializadorComentarios
+                .cliquesProcessados.has(evento)
+        ) {
+            return;
+        }
+
         if (!(evento.target instanceof Element)) {
             return;
         }
@@ -307,6 +360,9 @@ class InicializadorComentarios {
                 botaoSeccao,
             )
         ) {
+            InicializadorComentarios
+                .cliquesProcessados.add(evento);
+
             void this
                 .carregarSeccaoComentarios(
                     botaoSeccao,
@@ -337,6 +393,9 @@ class InicializadorComentarios {
         ) {
             return;
         }
+
+        InicializadorComentarios
+            .cliquesProcessados.add(evento);
 
         evento.preventDefault();
 
