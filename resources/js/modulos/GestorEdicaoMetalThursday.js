@@ -227,9 +227,17 @@ class GestorEdicaoMetalThursday {
             return null;
         }
 
-        const identificador = Number(
-            dados.id,
-        );
+        const identificadorRecebido = dados.id;
+
+        const identificador = (
+            typeof identificadorRecebido === 'number'
+            || (
+                typeof identificadorRecebido === 'string'
+                && /^[1-9]\d*$/u.test(identificadorRecebido)
+            )
+        )
+            ? Number(identificadorRecebido)
+            : null;
 
         const nome = typeof dados.nome === 'string'
             ? dados.nome.trim()
@@ -253,7 +261,7 @@ class GestorEdicaoMetalThursday {
             );
 
         if (
-            !Number.isInteger(identificador)
+            !Number.isSafeInteger(identificador)
             || identificador < 1
             || nome === ''
             || dataInicio === null
