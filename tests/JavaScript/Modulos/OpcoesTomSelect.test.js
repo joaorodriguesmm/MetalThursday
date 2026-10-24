@@ -125,5 +125,99 @@ describe(
                 );
             },
         );
+
+        it(
+            'aceita o maior identificador inteiro seguro numa resposta',
+            () => {
+                expect(
+                    obterOpcaoResposta(
+                        {
+                            artista: {
+                                id: Number.MAX_SAFE_INTEGER,
+                                nome: 'Artista válido',
+                            },
+                        },
+                        'artista',
+                        'nome',
+                    ),
+                ).toEqual({
+                    identificador: Number.MAX_SAFE_INTEGER,
+                    nome: 'Artista válido',
+                });
+            },
+        );
+
+        it(
+            'rejeita identificadores inteiros inseguros numa resposta',
+            () => {
+                expect(
+                    obterOpcaoResposta(
+                        {
+                            artista: {
+                                id: Number.MAX_SAFE_INTEGER + 1,
+                                nome: 'Artista inválido',
+                            },
+                        },
+                        'artista',
+                        'nome',
+                    ),
+                ).toBeNull();
+            },
+        );
+
+        it(
+            'adiciona uma opcao com identificador inteiro seguro',
+            () => {
+                const adicionar = vi.fn();
+
+                const instancia = {
+                    addOption: adicionar,
+                    options: {},
+                };
+
+                expect(
+                    adicionarOpcaoTomSelect(
+                        instancia,
+                        Number.MAX_SAFE_INTEGER,
+                        'Opção válida',
+                    ),
+                ).toBe(true);
+
+                expect(adicionar).toHaveBeenCalledWith({
+                    value: String(Number.MAX_SAFE_INTEGER),
+                    text: 'Opção válida',
+                });
+            },
+        );
+
+        it(
+            'rejeita identificadores inteiros inseguros antes de adicionar',
+            () => {
+                const adicionar = vi.fn();
+                const atualizar = vi.fn();
+                const selecionar = vi.fn();
+
+                const instancia = {
+                    addOption: adicionar,
+                    addItem: selecionar,
+                    options: {},
+                    refreshOptions: atualizar,
+                };
+
+                expect(
+                    adicionarOpcaoTomSelect(
+                        instancia,
+                        Number.MAX_SAFE_INTEGER + 1,
+                        'Opção inválida',
+                        true,
+                    ),
+                ).toBe(false);
+
+                expect(adicionar).not.toHaveBeenCalled();
+                expect(atualizar).not.toHaveBeenCalled();
+                expect(selecionar).not.toHaveBeenCalled();
+            },
+        );
+
     },
 );

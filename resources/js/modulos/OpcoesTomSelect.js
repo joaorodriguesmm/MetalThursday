@@ -44,7 +44,7 @@ function adicionarOpcaoTomSelect(
     if (
         !instancia
         || typeof instancia.addOption !== 'function'
-        || !Number.isInteger(
+        || !Number.isSafeInteger(
             identificador,
         )
         || identificador < 1
@@ -172,7 +172,7 @@ function obterOpcaoResposta(
         entidade[chaveNome];
 
     if (
-        !Number.isInteger(
+        !Number.isSafeInteger(
             identificador,
         )
         || identificador < 1
