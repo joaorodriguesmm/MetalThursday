@@ -1915,6 +1915,10 @@ function configurarRetornoCriacaoGeneroParaArtista(
                 regressarAoModalArtista;
 
             if (!regressarAoModalArtista) {
+                modalArtista.removeAttribute(
+                    'data-preservar-formularios-ao-fechar',
+                );
+
                 return;
             }
 

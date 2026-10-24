@@ -883,5 +883,68 @@ describe(
             },
         );
 
+
+        it(
+            'nao preserva o artista apos abertura cancelada seguida de abertura independente',
+            async () => {
+                inicializar();
+
+                const modalArtista = document.getElementById(
+                    'modal-criar-artista',
+                );
+
+                const modalGenero = document.getElementById(
+                    'modal-criar-genero',
+                );
+
+                const acionadorArtista =
+                    document.createElement('button');
+
+                const acionadorExterno =
+                    document.createElement('button');
+
+                modalArtista.append(acionadorArtista);
+                document.body.append(acionadorExterno);
+
+                modalGenero.addEventListener(
+                    'show.bs.modal',
+                    (evento) => {
+                        if (
+                            evento.relatedTarget
+                            === acionadorArtista
+                        ) {
+                            evento.preventDefault();
+                        }
+                    },
+                );
+
+                const primeiraAbertura =
+                    emitirAberturaGenero(
+                        acionadorArtista,
+                    );
+
+                expect(
+                    primeiraAbertura.defaultPrevented,
+                ).toBe(true);
+
+                const segundaAbertura =
+                    emitirAberturaGenero(
+                        acionadorExterno,
+                    );
+
+                expect(
+                    segundaAbertura.defaultPrevented,
+                ).toBe(false);
+
+                await Promise.resolve();
+
+                expect(
+                    modalArtista.hasAttribute(
+                        'data-preservar-formularios-ao-fechar',
+                    ),
+                ).toBe(false);
+            },
+        );
+
     },
 );
