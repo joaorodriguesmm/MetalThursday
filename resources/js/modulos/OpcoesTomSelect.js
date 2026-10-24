@@ -44,6 +44,11 @@ function adicionarOpcaoTomSelect(
     if (
         !instancia
         || typeof instancia.addOption !== 'function'
+        || (
+            selecionar
+            && typeof instancia.addItem !== 'function'
+            && typeof instancia.setValue !== 'function'
+        )
         || !Number.isSafeInteger(
             identificador,
         )

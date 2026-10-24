@@ -219,5 +219,77 @@ describe(
             },
         );
 
+
+        it(
+            'seleciona a nova opcao atraves de addItem',
+            () => {
+                const adicionar = vi.fn();
+                const selecionar = vi.fn();
+                const definirValor = vi.fn();
+
+                const instancia = {
+                    addOption: adicionar,
+                    addItem: selecionar,
+                    setValue: definirValor,
+                    options: {},
+                };
+
+                expect(
+                    adicionarOpcaoTomSelect(
+                        instancia,
+                        44,
+                        'Artista novo',
+                        true,
+                    ),
+                ).toBe(true);
+
+                expect(
+                    adicionar,
+                ).toHaveBeenCalledExactlyOnceWith({
+                    value: '44',
+                    text: 'Artista novo',
+                });
+
+                expect(
+                    selecionar,
+                ).toHaveBeenCalledExactlyOnceWith('44');
+
+                expect(
+                    definirValor,
+                ).not.toHaveBeenCalled();
+            },
+        );
+
+        it(
+            'rejeita selecao impossivel sem alterar a instancia',
+            () => {
+                const adicionar = vi.fn();
+                const atualizar = vi.fn();
+
+                const instancia = {
+                    addOption: adicionar,
+                    options: {},
+                    refreshOptions: atualizar,
+                };
+
+                expect(
+                    adicionarOpcaoTomSelect(
+                        instancia,
+                        45,
+                        'Artista sem selecao',
+                        true,
+                    ),
+                ).toBe(false);
+
+                expect(
+                    adicionar,
+                ).not.toHaveBeenCalled();
+
+                expect(
+                    atualizar,
+                ).not.toHaveBeenCalled();
+            },
+        );
+
     },
 );
