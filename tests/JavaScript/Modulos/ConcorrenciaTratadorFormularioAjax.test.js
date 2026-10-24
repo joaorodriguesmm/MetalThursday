@@ -526,4 +526,76 @@ describe('B25.16 — concorrencia dos formularios AJAX', () => {
         expect(botao.disabled).toBe(false);
         expect(tratador.emSubmissao).toBe(false);
     });
+
+    it(
+        'distingue falha no callback de erro HTTP sem repetir pedido',
+        async () => {
+            const aoSucesso = vi.fn(() => {
+                throw new Error(
+                    'Resposta incompleta simulada.',
+                );
+            });
+
+            const outroTratador = new TratadorFormularioAjax(
+                'teste-concorrencia-ajax',
+                '/comentarios',
+                aoSucesso,
+            );
+
+            const sucessoVisual = vi.spyOn(
+                outroTratador,
+                'mostrarMensagemSucesso',
+            ).mockImplementation(() => {});
+
+            const avisoVisual = vi.spyOn(
+                outroTratador,
+                'mostrarAvisoAtualizacaoInterface',
+            ).mockImplementation(() => {});
+
+            const erroVisual = vi.spyOn(
+                outroTratador,
+                'tratarErroSubmissao',
+            ).mockImplementation(() => {});
+
+            const pedido = vi.spyOn(
+                axios,
+                'post',
+            ).mockResolvedValue({
+                data: {
+                    mensagem: 'Operação guardada.',
+                },
+            });
+
+            const eventoSucesso = vi.fn();
+
+            document.addEventListener(
+                'formulario-ajax:sucesso',
+                eventoSucesso,
+            );
+
+            try {
+                campo.value = 'Mensagem submetida';
+
+                await outroTratador.submeter();
+
+                expect(pedido).toHaveBeenCalledTimes(1);
+                expect(aoSucesso).toHaveBeenCalledTimes(1);
+
+                expect(eventoSucesso).toHaveBeenCalledTimes(1);
+
+                expect(sucessoVisual).not.toHaveBeenCalled();
+                expect(avisoVisual).toHaveBeenCalledTimes(1);
+                expect(erroVisual).not.toHaveBeenCalled();
+
+                expect(outroTratador.emSubmissao).toBe(false);
+                expect(botao.disabled).toBe(false);
+            } finally {
+                document.removeEventListener(
+                    'formulario-ajax:sucesso',
+                    eventoSucesso,
+                );
+            }
+        },
+    );
+
 });

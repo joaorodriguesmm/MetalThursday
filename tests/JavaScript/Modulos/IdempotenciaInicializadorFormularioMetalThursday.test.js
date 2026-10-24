@@ -9,6 +9,7 @@ import {
 
 const efeitos = vi.hoisted(() => ({
     gestorEdicao: vi.fn(),
+    adicionarEdicao: vi.fn(),
     gestorImportacao: vi.fn(),
     gestorSeccoes: vi.fn(),
     validador: vi.fn(),
@@ -21,6 +22,10 @@ vi.mock(
         default: class GestorEdicaoSimulado {
             constructor() {
                 efeitos.gestorEdicao();
+            }
+
+            adicionarEdicao(dados) {
+                efeitos.adicionarEdicao(dados);
             }
         },
     }),
@@ -63,8 +68,8 @@ vi.mock(
     '../../../resources/js/modulos/GestorFormulariosModais',
     () => ({
         default: class GestorModaisSimulado {
-            constructor() {
-                efeitos.gestorModais();
+            constructor(configuracoes) {
+                efeitos.gestorModais(configuracoes);
             }
         },
     }),
@@ -506,5 +511,81 @@ describe(
                 ).toHaveBeenCalledTimes(1);
             },
         );
+
+        it.each([
+            [
+                'edicao',
+                'formulario-criar-edicao',
+            ],
+            [
+                'artista',
+                'formulario-criar-artista',
+            ],
+            [
+                'genero',
+                'formulario-criar-genero',
+            ],
+        ])(
+            'assinala uma resposta incompleta na criacao de %s',
+            (
+                _tipo,
+                identificadorFormulario,
+            ) => {
+                inicializar();
+
+                const configuracoes =
+                    efeitos.gestorModais.mock.calls[0][0];
+
+                const configuracao = configuracoes.find(
+                    (entrada) => entrada.idFormulario
+                        === identificadorFormulario,
+                );
+
+                expect(configuracao).toBeDefined();
+
+                expect(
+                    () => configuracao.aoSucesso({
+                        mensagem: 'Operacao guardada.',
+                    }),
+                ).toThrow();
+            },
+        );
+
+        it(
+            'continua a integrar uma edicao devolvida corretamente',
+            () => {
+                inicializar();
+
+                const configuracoes =
+                    efeitos.gestorModais.mock.calls[0][0];
+
+                const configuracao = configuracoes.find(
+                    (entrada) => entrada.idFormulario
+                        === 'formulario-criar-edicao',
+                );
+
+                expect(configuracao).toBeDefined();
+
+                const edicao = {
+                    id: 3,
+                    nome: 'Edição criada',
+                    data_inicio: '2027-01-01',
+                    data_fim: null,
+                };
+
+                expect(
+                    () => configuracao.aoSucesso({
+                        edicao,
+                    }),
+                ).not.toThrow();
+
+                expect(
+                    efeitos.adicionarEdicao,
+                ).toHaveBeenCalledExactlyOnceWith(
+                    edicao,
+                );
+            },
+        );
+
     },
 );

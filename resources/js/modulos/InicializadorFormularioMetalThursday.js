@@ -1608,7 +1608,9 @@ function criarConfiguracoesModais(
                         dadosResposta.edicao,
                     )
                 ) {
-                    return;
+                    throw new TypeError(
+                        'A resposta de criação da edição não contém dados válidos.',
+                    );
                 }
 
                 gestorEdicao.adicionarEdicao(
@@ -1666,7 +1668,9 @@ function criarConfiguracoesModais(
                 );
 
                 if (opcao === null) {
-                    return;
+                    throw new TypeError(
+                        'A resposta de criação do artista não contém dados válidos.',
+                    );
                 }
 
                 artistasCriados.set(
@@ -1736,7 +1740,9 @@ function criarConfiguracoesModais(
                 );
 
                 if (opcao === null) {
-                    return;
+                    throw new TypeError(
+                        'A resposta de criação do género não contém dados válidos.',
+                    );
                 }
 
                 [
