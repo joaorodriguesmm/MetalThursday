@@ -587,5 +587,152 @@ describe(
             },
         );
 
+
+        function obterCallbackCriacao(identificadorFormulario) {
+            inicializar();
+
+            const configuracoes =
+                efeitos.gestorModais.mock.calls[0][0];
+
+            const configuracao = configuracoes.find(
+                (entrada) => entrada.idFormulario
+                    === identificadorFormulario,
+            );
+
+            expect(configuracao).toBeDefined();
+
+            return configuracao.aoSucesso;
+        }
+
+        it(
+            'inicializa um seletor de artistas existente antes de adicionar',
+            () => {
+                const callback = obterCallbackCriacao(
+                    'formulario-criar-artista',
+                );
+
+                const selecao = document.createElement(
+                    'select',
+                );
+
+                selecao.className =
+                    'tom-select-unico tom-select-artistas';
+
+                document.body.append(selecao);
+
+                const resposta = {
+                    artista: {
+                        id: 31,
+                        rotulo_selecao: 'Artista criado',
+                    },
+                };
+
+                expect(
+                    () => callback(resposta),
+                ).not.toThrow();
+
+                expect(selecao.tomselect).toBeDefined();
+
+                expect(
+                    selecao.tomselect?.options?.['31']?.text,
+                ).toBe('Artista criado');
+            },
+        );
+
+        it.each([
+            [
+                'artista',
+                'formulario-criar-artista',
+                'tom-select-artistas',
+                '',
+                {
+                    artista: {
+                        id: 41,
+                        rotulo_selecao: 'Artista criado',
+                    },
+                },
+            ],
+            [
+                'genero',
+                'formulario-criar-genero',
+                'tom-select-multiplo',
+                'generos-novo-artista',
+                {
+                    genero: {
+                        id: 42,
+                        nome: 'Género criado',
+                    },
+                },
+            ],
+        ])(
+            'assinala falha ao atualizar um seletor existente de %s',
+            (
+                _tipo,
+                identificadorFormulario,
+                classe,
+                identificadorSeletor,
+                resposta,
+            ) => {
+                const callback = obterCallbackCriacao(
+                    identificadorFormulario,
+                );
+
+                const selecao = document.createElement(
+                    'select',
+                );
+
+                selecao.className = classe;
+
+                if (identificadorSeletor !== '') {
+                    selecao.id = identificadorSeletor;
+                }
+
+                selecao.tomselect = {
+                    on: vi.fn(),
+                    options: {},
+                };
+
+                document.body.append(selecao);
+
+                expect(
+                    () => callback(resposta),
+                ).toThrow();
+
+                expect(
+                    selecao.tomselect.options,
+                ).toEqual({});
+            },
+        );
+
+        it(
+            'permite a criacao de genero sem seletores opcionais',
+            () => {
+                const callback = obterCallbackCriacao(
+                    'formulario-criar-genero',
+                );
+
+                expect(
+                    document.getElementById(
+                        'generos-novo-artista',
+                    ),
+                ).toBeNull();
+
+                expect(
+                    document.getElementById(
+                        'generos-pai-novo-genero',
+                    ),
+                ).toBeNull();
+
+                expect(
+                    () => callback({
+                        genero: {
+                            id: 43,
+                            nome: 'Género criado',
+                        },
+                    }),
+                ).not.toThrow();
+            },
+        );
+
     },
 );

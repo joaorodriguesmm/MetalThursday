@@ -1688,15 +1688,25 @@ function criarConfiguracoesModais(
                                 selecao
                                 instanceof HTMLSelectElement
                             ) {
-                                adicionarOpcaoTomSelect(
-                                    selecao.tomselect
-                                    ?? null,
-                                    opcao.identificador,
-                                    opcao.nome,
-                                    selecao
-                                    === contextoCriacaoRapida
-                                        .selecaoArtistaDestino,
-                                );
+                                const instancia =
+                                    inicializadorTomSelect.iniciar(
+                                        selecao,
+                                    );
+
+                                if (
+                                    !adicionarOpcaoTomSelect(
+                                        instancia,
+                                        opcao.identificador,
+                                        opcao.nome,
+                                        selecao
+                                        === contextoCriacaoRapida
+                                            .selecaoArtistaDestino,
+                                    )
+                                ) {
+                                    throw new Error(
+                                        'Não foi possível atualizar o seletor de artistas.',
+                                    );
+                                }
                             }
                         },
                     );
@@ -1752,18 +1762,34 @@ function criarConfiguracoesModais(
                     (
                         identificadorCampo,
                     ) => {
-                        adicionarOpcaoTomSelect(
-                            inicializadorTomSelect
-                                .obterInstancia(
-                                    identificadorCampo,
-                                ),
-                            opcao.identificador,
-                            opcao.nome,
-                            identificadorCampo
-                                === 'generos-novo-artista'
-                            && contextoCriacaoRapida
-                                .generoParaArtista,
-                        );
+                        const campo =
+                            document.getElementById(
+                                identificadorCampo,
+                            );
+
+                        if (campo === null) {
+                            return;
+                        }
+
+                        if (
+                            !(campo instanceof HTMLSelectElement)
+                            || !adicionarOpcaoTomSelect(
+                                inicializadorTomSelect
+                                    .obterInstancia(
+                                        identificadorCampo,
+                                    ),
+                                opcao.identificador,
+                                opcao.nome,
+                                identificadorCampo
+                                    === 'generos-novo-artista'
+                                && contextoCriacaoRapida
+                                    .generoParaArtista,
+                            )
+                        ) {
+                            throw new Error(
+                                'Não foi possível atualizar o seletor de géneros.',
+                            );
+                        }
                     },
                 );
             },
