@@ -734,5 +734,154 @@ describe(
             },
         );
 
+
+        function emitirAberturaGenero(acionador) {
+            const modalGenero = document.getElementById(
+                'modal-criar-genero',
+            );
+
+            const evento = new Event(
+                'show.bs.modal',
+                {
+                    bubbles: true,
+                    cancelable: true,
+                },
+            );
+
+            Object.defineProperty(
+                evento,
+                'relatedTarget',
+                {
+                    value: acionador,
+                },
+            );
+
+            modalGenero.dispatchEvent(evento);
+
+            return evento;
+        }
+
+        it(
+            'preserva o artista durante a abertura normal do genero',
+            () => {
+                inicializar();
+
+                const modalArtista = document.getElementById(
+                    'modal-criar-artista',
+                );
+
+                const acionador = document.createElement(
+                    'button',
+                );
+
+                modalArtista.append(acionador);
+
+                const evento = emitirAberturaGenero(
+                    acionador,
+                );
+
+                expect(evento.defaultPrevented).toBe(false);
+
+                expect(
+                    modalArtista.hasAttribute(
+                        'data-preservar-formularios-ao-fechar',
+                    ),
+                ).toBe(true);
+            },
+        );
+
+        it(
+            'anula a preservacao e a selecao quando a abertura e cancelada',
+            async () => {
+                inicializar();
+
+                const modalArtista = document.getElementById(
+                    'modal-criar-artista',
+                );
+
+                const modalGenero = document.getElementById(
+                    'modal-criar-genero',
+                );
+
+                const acionador = document.createElement(
+                    'button',
+                );
+
+                modalArtista.append(acionador);
+
+                modalGenero.addEventListener(
+                    'show.bs.modal',
+                    (evento) => {
+                        evento.preventDefault();
+                    },
+                    {
+                        once: true,
+                    },
+                );
+
+                const evento = emitirAberturaGenero(
+                    acionador,
+                );
+
+                expect(evento.defaultPrevented).toBe(true);
+
+                await Promise.resolve();
+
+                expect(
+                    modalArtista.hasAttribute(
+                        'data-preservar-formularios-ao-fechar',
+                    ),
+                ).toBe(false);
+
+                const selecao = document.createElement(
+                    'select',
+                );
+
+                selecao.id = 'generos-novo-artista';
+
+                const selecionar = vi.fn();
+                const adicionar = vi.fn();
+
+                selecao.tomselect = {
+                    on: vi.fn(),
+                    addOption: adicionar,
+                    addItem: selecionar,
+                    options: {},
+                };
+
+                document.body.append(selecao);
+
+                const configuracoes =
+                    efeitos.gestorModais.mock.calls[0][0];
+
+                const configuracao = configuracoes.find(
+                    (entrada) => entrada.idFormulario
+                        === 'formulario-criar-genero',
+                );
+
+                expect(configuracao).toBeDefined();
+
+                expect(
+                    () => configuracao.aoSucesso({
+                        genero: {
+                            id: 55,
+                            nome: 'Género independente',
+                        },
+                    }),
+                ).not.toThrow();
+
+                expect(
+                    adicionar,
+                ).toHaveBeenCalledExactlyOnceWith({
+                    value: '55',
+                    text: 'Género independente',
+                });
+
+                expect(
+                    selecionar,
+                ).not.toHaveBeenCalled();
+            },
+        );
+
     },
 );

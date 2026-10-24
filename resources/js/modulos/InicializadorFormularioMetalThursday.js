@@ -1894,9 +1894,13 @@ function configurarRetornoCriacaoGeneroParaArtista(
     let regressarAoModalArtista =
         false;
 
+    let ultimoEventoAbertura = null;
+
     modalGenero.addEventListener(
         'show.bs.modal',
         (evento) => {
+            ultimoEventoAbertura = evento;
+
             const acionador =
                 evento.relatedTarget;
 
@@ -1918,6 +1922,25 @@ function configurarRetornoCriacaoGeneroParaArtista(
                 'data-preservar-formularios-ao-fechar',
                 '',
             );
+
+            queueMicrotask(() => {
+                if (
+                    ultimoEventoAbertura !== evento
+                    || !evento.defaultPrevented
+                ) {
+                    return;
+                }
+
+                regressarAoModalArtista = false;
+
+                contextoCriacaoRapida
+                    .generoParaArtista =
+                    false;
+
+                modalArtista.removeAttribute(
+                    'data-preservar-formularios-ao-fechar',
+                );
+            });
         },
     );
 
