@@ -598,4 +598,144 @@ describe('B25.16 — concorrencia dos formularios AJAX', () => {
         },
     );
 
+
+    it(
+        'nao finaliza pedido antigo apos reset com valores iguais',
+        async () => {
+            const pendente = criarPedidoPendente();
+
+            vi.spyOn(
+                axios,
+                'post',
+            ).mockReturnValue(
+                pendente.promessa,
+            );
+
+            const finalizar = vi.spyOn(
+                tratador,
+                'finalizarSubmissao',
+            );
+
+            campo.value = 'Nome reutilizado';
+
+            const submissao = tratador.submeter();
+
+            expect(tratador.emSubmissao).toBe(true);
+
+            // Simula a limpeza ao fechar o modal.
+            formulario.reset();
+
+            // O utilizador reabre e introduz o mesmo valor.
+            campo.value = 'Nome reutilizado';
+
+            pendente.resolver({
+                data: {
+                    mensagem: 'Operação concluída.',
+                },
+            });
+
+            await submissao;
+
+            expect(
+                finalizar,
+            ).not.toHaveBeenCalled();
+
+            expect(campo.value).toBe(
+                'Nome reutilizado',
+            );
+
+            expect(tratador.emSubmissao).toBe(false);
+        },
+    );
+
+
+    it(
+        'permite finalizar apos reset cancelado',
+        async () => {
+            const pendente = criarPedidoPendente();
+
+            vi.spyOn(
+                axios,
+                'post',
+            ).mockReturnValue(pendente.promessa);
+
+            const finalizar = vi.spyOn(
+                tratador,
+                'finalizarSubmissao',
+            );
+
+            formulario.addEventListener(
+                'reset',
+                (evento) => {
+                    evento.preventDefault();
+                },
+                {once: true},
+            );
+
+            campo.value = 'Nome submetido';
+
+            const submissao = tratador.submeter();
+
+            formulario.reset();
+
+            pendente.resolver({
+                data: {mensagem: 'OK'},
+            });
+
+            await submissao;
+
+            expect(finalizar).toHaveBeenCalledTimes(1);
+            expect(tratador.emSubmissao).toBe(false);
+        },
+    );
+
+    it(
+        'nao ignora reset efetivo seguido de reset cancelado',
+        async () => {
+            const pendente = criarPedidoPendente();
+
+            vi.spyOn(
+                axios,
+                'post',
+            ).mockReturnValue(pendente.promessa);
+
+            const finalizar = vi.spyOn(
+                tratador,
+                'finalizarSubmissao',
+            );
+
+            campo.value = 'Nome reutilizado';
+
+            const submissao = tratador.submeter();
+
+            formulario.reset();
+
+            campo.value = 'Nome reutilizado';
+
+            formulario.addEventListener(
+                'reset',
+                (evento) => {
+                    evento.preventDefault();
+                },
+                {once: true},
+            );
+
+            formulario.reset();
+
+            pendente.resolver({
+                data: {mensagem: 'OK'},
+            });
+
+            await submissao;
+
+            expect(finalizar).not.toHaveBeenCalled();
+
+            expect(campo.value).toBe(
+                'Nome reutilizado',
+            );
+
+            expect(tratador.emSubmissao).toBe(false);
+        },
+    );
+
 });

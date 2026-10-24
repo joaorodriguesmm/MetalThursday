@@ -259,6 +259,17 @@ class TratadorFormularioAjax {
         this.limparErros();
         this.apresentarEstadoCarregamento();
 
+        const eventosReposicao = [];
+
+        const observarReposicao = (evento) => {
+            eventosReposicao.push(evento);
+        };
+
+        this.formulario.addEventListener(
+            'reset',
+            observarReposicao,
+        );
+
         try {
             let resposta;
             let estadoCamposSubmetidos;
@@ -326,7 +337,10 @@ class TratadorFormularioAjax {
             }
 
             if (
-                this.camposFormularioMantidos(
+                eventosReposicao.every(
+                    (evento) => evento.defaultPrevented,
+                )
+                && this.camposFormularioMantidos(
                     estadoCamposSubmetidos,
                 )
             ) {
@@ -335,6 +349,11 @@ class TratadorFormularioAjax {
                 this.limparErros();
             }
         } finally {
+            this.formulario.removeEventListener(
+                'reset',
+                observarReposicao,
+            );
+
             this.reporEstadoBotaoSubmissao(
                 estadoBotao,
             );
