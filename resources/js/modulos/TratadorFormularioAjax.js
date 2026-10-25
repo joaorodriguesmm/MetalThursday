@@ -1138,6 +1138,9 @@ class TratadorFormularioAjax {
     /**
      * Repõe o formulário e fecha a janela modal, quando aplicável.
      *
+     * Num modal, só repõe os campos se o Bootstrap aceitar o fecho.
+     * Um fecho cancelado ou ignorado mantém os dados apresentados.
+     *
      * @returns {void}
      *
      * @since 2.0.0
@@ -1150,23 +1153,108 @@ class TratadorFormularioAjax {
             return;
         }
 
-        this.formulario.reset();
-        this.limparErros();
-
         const elementoModal =
             this.formulario.closest(
                 '.modal',
             );
 
-        if (
-            elementoModal
-            instanceof HTMLElement
-        ) {
+        if (!(elementoModal instanceof HTMLElement)) {
+            this.formulario.reset();
+            this.limparErros();
+
+            return;
+        }
+
+        let eventoFecho = null;
+        let eventoReposicao = null;
+
+        const observarFecho = (evento) => {
+            eventoFecho = evento;
+        };
+
+        const observarReposicao = (evento) => {
+            eventoReposicao = evento;
+        };
+
+        const finalizarOcultacao = (evento) => {
+            if (evento.target !== elementoModal) {
+                return;
+            }
+
+            elementoModal.removeEventListener(
+                'hidden.bs.modal',
+                finalizarOcultacao,
+            );
+
+            queueMicrotask(() => {
+                try {
+                    if (!this.formulario.isConnected) {
+                        return;
+                    }
+
+                    if (eventoReposicao === null) {
+                        this.formulario.reset();
+                    }
+
+                    if (
+                        eventoReposicao !== null
+                        && !eventoReposicao.defaultPrevented
+                    ) {
+                        this.limparErros();
+                    }
+                } finally {
+                    this.formulario.removeEventListener(
+                        'reset',
+                        observarReposicao,
+                    );
+                }
+            });
+        };
+
+        this.formulario.addEventListener(
+            'reset',
+            observarReposicao,
+        );
+
+        elementoModal.addEventListener(
+            'hidden.bs.modal',
+            finalizarOcultacao,
+        );
+
+        elementoModal.addEventListener(
+            'hide.bs.modal',
+            observarFecho,
+        );
+
+        let fechoAceite = false;
+
+        try {
             Modal
                 .getOrCreateInstance(
                     elementoModal,
                 )
                 .hide();
+
+            fechoAceite =
+                eventoFecho !== null
+                && !eventoFecho.defaultPrevented;
+        } finally {
+            elementoModal.removeEventListener(
+                'hide.bs.modal',
+                observarFecho,
+            );
+
+            if (!fechoAceite) {
+                elementoModal.removeEventListener(
+                    'hidden.bs.modal',
+                    finalizarOcultacao,
+                );
+
+                this.formulario.removeEventListener(
+                    'reset',
+                    observarReposicao,
+                );
+            }
         }
     }
 
