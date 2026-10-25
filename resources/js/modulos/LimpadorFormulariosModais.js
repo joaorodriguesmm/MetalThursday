@@ -93,6 +93,12 @@ class LimpadorFormulariosModais {
             return;
         }
 
+        // Um listener anterior pode ter reaberto o modal
+        // antes de o evento hidden chegar ao documento.
+        if (modal.classList.contains('show')) {
+            return;
+        }
+
         if (
             LimpadorFormulariosModais
                 .eventosProcessados

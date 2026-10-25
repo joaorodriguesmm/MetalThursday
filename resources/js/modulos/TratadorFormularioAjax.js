@@ -1188,7 +1188,12 @@ class TratadorFormularioAjax {
 
             queueMicrotask(() => {
                 try {
-                    if (!this.formulario.isConnected) {
+                    if (
+                        !this.formulario.isConnected
+                        || elementoModal.classList.contains(
+                            'show',
+                        )
+                    ) {
                         return;
                     }
 

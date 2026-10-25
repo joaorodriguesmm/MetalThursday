@@ -508,4 +508,143 @@ describe('B25.42 — cancelamento do fecho AJAX', () => {
         },
     );
 
+
+    it(
+        'preserva novo rascunho apos reabertura imediata',
+        async () => {
+            instancia.show();
+
+            campo.value = 'Dados da submissao anterior';
+
+            const reposicoes = vi.spyOn(
+                formulario,
+                'reset',
+            );
+
+            modal.addEventListener(
+                'hidden.bs.modal',
+                () => {
+                    instancia.show();
+
+                    campo.value =
+                        'Novo rascunho independente';
+                },
+                { once: true },
+            );
+
+            const ocultado = esperarEvento(
+                modal,
+                'hidden.bs.modal',
+            );
+
+            tratador.finalizarSubmissao();
+
+            await ocultado;
+            await Promise.resolve();
+
+            expect(
+                modal.classList.contains('show'),
+            ).toBe(true);
+
+            expect(campo.value).toBe(
+                'Novo rascunho independente',
+            );
+
+            expect(reposicoes).not.toHaveBeenCalled();
+        },
+    );
+
+
+    it.each([true, false])(
+        'preserva novo rascunho com limpador e ordem: %s',
+        async (limpadorPrimeiro) => {
+            instancia.show();
+
+            campo.value = 'Submissao anterior';
+
+            const reposicoes = vi.spyOn(
+                formulario,
+                'reset',
+            );
+
+            const listeners = [];
+
+            const adicionarOriginal =
+                document.addEventListener.bind(document);
+
+            const observarListeners = vi.spyOn(
+                document,
+                'addEventListener',
+            ).mockImplementation((tipo, listener, opcoes) => {
+                if (tipo === 'hidden.bs.modal') {
+                    listeners.push(listener);
+                }
+
+                adicionarOriginal(
+                    tipo,
+                    listener,
+                    opcoes,
+                );
+            });
+
+            const reabrir = (evento) => {
+                if (evento.target !== modal) {
+                    return;
+                }
+
+                instancia.show();
+
+                campo.value = 'Novo rascunho protegido';
+            };
+
+            try {
+                if (limpadorPrimeiro) {
+                    new LimpadorFormulariosModais();
+                }
+
+                document.addEventListener(
+                    'hidden.bs.modal',
+                    reabrir,
+                );
+
+                if (!limpadorPrimeiro) {
+                    new LimpadorFormulariosModais();
+                }
+
+                observarListeners.mockRestore();
+
+                const ocultado = esperarEvento(
+                    modal,
+                    'hidden.bs.modal',
+                );
+
+                tratador.finalizarSubmissao();
+
+                await ocultado;
+                await Promise.resolve();
+
+                expect(
+                    modal.classList.contains('show'),
+                ).toBe(true);
+
+                expect(campo.value).toBe(
+                    'Novo rascunho protegido',
+                );
+
+                expect(reposicoes).toHaveBeenCalledTimes(
+                    limpadorPrimeiro ? 1 : 0,
+                );
+            } finally {
+                observarListeners.mockRestore();
+
+                listeners.forEach((listener) => {
+                    document.removeEventListener(
+                        'hidden.bs.modal',
+                        listener,
+                    );
+                });
+            }
+        },
+    );
+
 });
