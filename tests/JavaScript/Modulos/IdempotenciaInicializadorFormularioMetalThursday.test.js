@@ -1296,5 +1296,140 @@ describe(
             },
         );
 
+
+        it.each([
+            [
+                'artista',
+                'modal-criar-artista',
+                'formulario-criar-artista',
+                'versaoArtista',
+            ],
+            [
+                'genero',
+                'modal-criar-genero',
+                'formulario-criar-genero',
+                'versaoGenero',
+            ],
+        ])(
+            'incrementa a versao de %s quando a abertura e aceite',
+            (
+                _tipo,
+                identificadorModal,
+                identificadorFormulario,
+                propriedadeVersao,
+            ) => {
+                inicializar();
+
+                const configuracoes =
+                    efeitos.gestorModais.mock.calls[0][0];
+
+                const configuracao = configuracoes.find(
+                    (entrada) =>
+                        entrada.idFormulario
+                        === identificadorFormulario,
+                );
+
+                const antes =
+                    configuracao.obterContextoSubmissao()[
+                        propriedadeVersao
+                    ];
+
+                const modal = document.getElementById(
+                    identificadorModal,
+                );
+
+                const evento = new Event(
+                    'show.bs.modal',
+                    {
+                        bubbles: true,
+                        cancelable: true,
+                    },
+                );
+
+                modal.dispatchEvent(evento);
+
+                expect(evento.defaultPrevented).toBe(false);
+
+                expect(
+                    configuracao.obterContextoSubmissao()[
+                        propriedadeVersao
+                    ],
+                ).toBe(antes + 1);
+            },
+        );
+
+        it.each([
+            [
+                'artista',
+                'modal-criar-artista',
+                'formulario-criar-artista',
+                'versaoArtista',
+            ],
+            [
+                'genero',
+                'modal-criar-genero',
+                'formulario-criar-genero',
+                'versaoGenero',
+            ],
+        ])(
+            'nao incrementa a versao de %s quando a abertura e cancelada',
+            async (
+                _tipo,
+                identificadorModal,
+                identificadorFormulario,
+                propriedadeVersao,
+            ) => {
+                inicializar();
+
+                const configuracoes =
+                    efeitos.gestorModais.mock.calls[0][0];
+
+                const configuracao = configuracoes.find(
+                    (entrada) =>
+                        entrada.idFormulario
+                        === identificadorFormulario,
+                );
+
+                const antes =
+                    configuracao.obterContextoSubmissao()[
+                        propriedadeVersao
+                    ];
+
+                const modal = document.getElementById(
+                    identificadorModal,
+                );
+
+                modal.addEventListener(
+                    'show.bs.modal',
+                    (evento) => {
+                        evento.preventDefault();
+                    },
+                    {
+                        once: true,
+                    },
+                );
+
+                const evento = new Event(
+                    'show.bs.modal',
+                    {
+                        bubbles: true,
+                        cancelable: true,
+                    },
+                );
+
+                modal.dispatchEvent(evento);
+
+                expect(evento.defaultPrevented).toBe(true);
+
+                await Promise.resolve();
+
+                expect(
+                    configuracao.obterContextoSubmissao()[
+                        propriedadeVersao
+                    ],
+                ).toBe(antes);
+            },
+        );
+
     },
 );

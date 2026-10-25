@@ -1848,7 +1848,32 @@ function configurarDestinoCriacaoArtista(
     modalArtista.addEventListener(
         'show.bs.modal',
         (evento) => {
+            const versaoAnterior =
+                contextoCriacaoRapida.versaoArtista;
+
+            const destinoAnterior =
+                contextoCriacaoRapida.selecaoArtistaDestino;
+
             contextoCriacaoRapida.versaoArtista += 1;
+
+            const versaoAbertura =
+                contextoCriacaoRapida.versaoArtista;
+
+            queueMicrotask(() => {
+                if (
+                    !evento.defaultPrevented
+                    || contextoCriacaoRapida.versaoArtista
+                        !== versaoAbertura
+                ) {
+                    return;
+                }
+
+                contextoCriacaoRapida.versaoArtista =
+                    versaoAnterior;
+
+                contextoCriacaoRapida.selecaoArtistaDestino =
+                    destinoAnterior;
+            });
 
             const acionador =
                 evento.relatedTarget;
@@ -1926,9 +1951,29 @@ function configurarRetornoCriacaoGeneroParaArtista(
     modalGenero.addEventListener(
         'show.bs.modal',
         (evento) => {
+            const versaoAnterior =
+                contextoCriacaoRapida.versaoGenero;
+
             contextoCriacaoRapida.versaoGenero += 1;
 
+            const versaoAbertura =
+                contextoCriacaoRapida.versaoGenero;
+
             ultimoEventoAbertura = evento;
+
+            queueMicrotask(() => {
+                if (
+                    !evento.defaultPrevented
+                    || ultimoEventoAbertura !== evento
+                    || contextoCriacaoRapida.versaoGenero
+                        !== versaoAbertura
+                ) {
+                    return;
+                }
+
+                contextoCriacaoRapida.versaoGenero =
+                    versaoAnterior;
+            });
 
             const acionador =
                 evento.relatedTarget;
