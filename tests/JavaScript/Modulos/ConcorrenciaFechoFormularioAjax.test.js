@@ -271,7 +271,7 @@ describe('B25.42 — cancelamento do fecho AJAX', () => {
                 'addEventListener',
             ).mockImplementation((tipo, listener, opcoes) => {
                 if (tipo === 'hidden.bs.modal') {
-                    listeners.push(listener);
+                    listeners.push({ listener, opcoes });
                 }
 
                 adicionarOriginal(
@@ -314,10 +314,11 @@ describe('B25.42 — cancelamento do fecho AJAX', () => {
 
                 expect(repor).toHaveBeenCalledTimes(1);
             } finally {
-                listeners.forEach((listener) => {
+                listeners.forEach(({ listener, opcoes }) => {
                     document.removeEventListener(
                         'hidden.bs.modal',
                         listener,
+                        opcoes,
                     );
                 });
             }
@@ -356,7 +357,7 @@ describe('B25.42 — cancelamento do fecho AJAX', () => {
                 'addEventListener',
             ).mockImplementation((tipo, listener, opcoes) => {
                 if (tipo === 'hidden.bs.modal') {
-                    listeners.push(listener);
+                    listeners.push({ listener, opcoes });
                 }
 
                 adicionarOriginal(
@@ -398,10 +399,11 @@ describe('B25.42 — cancelamento do fecho AJAX', () => {
             } finally {
                 observarListeners.mockRestore();
 
-                listeners.forEach((listener) => {
+                listeners.forEach(({ listener, opcoes }) => {
                     document.removeEventListener(
                         'hidden.bs.modal',
                         listener,
+                        opcoes,
                     );
                 });
             }
@@ -426,7 +428,7 @@ describe('B25.42 — cancelamento do fecho AJAX', () => {
                 ).mockImplementation(
                     (tipo, listener, opcoes) => {
                         if (tipo === 'hidden.bs.modal') {
-                            listeners.push(listener);
+                            listeners.push({ listener, opcoes });
                         }
 
                         adicionarOriginal(
@@ -498,10 +500,11 @@ describe('B25.42 — cancelamento do fecho AJAX', () => {
             } finally {
                 observarListeners?.mockRestore();
 
-                listeners.forEach((listener) => {
+                listeners.forEach(({ listener, opcoes }) => {
                     document.removeEventListener(
                         'hidden.bs.modal',
                         listener,
+                        opcoes,
                     );
                 });
             }
@@ -577,7 +580,7 @@ describe('B25.42 — cancelamento do fecho AJAX', () => {
                 'addEventListener',
             ).mockImplementation((tipo, listener, opcoes) => {
                 if (tipo === 'hidden.bs.modal') {
-                    listeners.push(listener);
+                    listeners.push({ listener, opcoes });
                 }
 
                 adicionarOriginal(
@@ -637,10 +640,11 @@ describe('B25.42 — cancelamento do fecho AJAX', () => {
             } finally {
                 observarListeners.mockRestore();
 
-                listeners.forEach((listener) => {
+                listeners.forEach(({ listener, opcoes }) => {
                     document.removeEventListener(
                         'hidden.bs.modal',
                         listener,
+                        opcoes,
                     );
                 });
             }

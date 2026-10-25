@@ -17,6 +17,13 @@ class LimpadorFormulariosModais {
     static eventosProcessados = new WeakSet();
 
     /**
+     * Preservação existente no início de cada evento de fecho.
+     *
+     * @type {WeakMap<Event, boolean>}
+     */
+    static preservacoesPorEvento = new WeakMap();
+
+    /**
      * Cria e inicializa um limpador de formulários de janelas modais.
      *
      * O evento de fecho do Bootstrap propaga-se pela DOM, permitindo utilizar
@@ -64,6 +71,39 @@ class LimpadorFormulariosModais {
         document.addEventListener(
             'hidden.bs.modal',
             (evento) => {
+                const modal = evento.target;
+
+                if (
+                    !(modal instanceof HTMLElement)
+                    || !modal.matches(this.seletorModais)
+                    || LimpadorFormulariosModais
+                        .preservacoesPorEvento.has(evento)
+                ) {
+                    return;
+                }
+
+                const preservar = modal.hasAttribute(
+                    'data-preservar-formularios-ao-fechar',
+                );
+
+                LimpadorFormulariosModais
+                    .preservacoesPorEvento.set(
+                        evento,
+                        preservar,
+                    );
+
+                if (preservar) {
+                    modal.removeAttribute(
+                        'data-preservar-formularios-ao-fechar',
+                    );
+                }
+            },
+            true,
+        );
+
+        document.addEventListener(
+            'hidden.bs.modal',
+            (evento) => {
                 this.limparFormulariosModal(
                     evento,
                 );
@@ -93,12 +133,6 @@ class LimpadorFormulariosModais {
             return;
         }
 
-        // Um listener anterior pode ter reaberto o modal
-        // antes de o evento hidden chegar ao documento.
-        if (modal.classList.contains('show')) {
-            return;
-        }
-
         if (
             LimpadorFormulariosModais
                 .eventosProcessados
@@ -111,15 +145,31 @@ class LimpadorFormulariosModais {
             .eventosProcessados
             .add(evento);
 
-        if (
-            modal.hasAttribute(
-                'data-preservar-formularios-ao-fechar',
-            )
-        ) {
-            modal.removeAttribute(
+        const preservacoes =
+            LimpadorFormulariosModais.preservacoesPorEvento;
+
+        const estadoCapturado = preservacoes.has(evento);
+
+        const preservarFormularios = estadoCapturado
+            ? preservacoes.get(evento)
+            : modal.hasAttribute(
                 'data-preservar-formularios-ao-fechar',
             );
 
+        // Compatibilidade com chamadas diretas ao método,
+        // sem passagem pela captura delegada.
+        if (!estadoCapturado && preservarFormularios) {
+            modal.removeAttribute(
+                'data-preservar-formularios-ao-fechar',
+            );
+        }
+
+        // O pedido antigo já foi consumido na captura.
+        // Um pedido novo pertence ao ciclo seguinte.
+        if (
+            preservarFormularios
+            || modal.classList.contains('show')
+        ) {
             return;
         }
 

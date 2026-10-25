@@ -62,7 +62,7 @@ describe('B25.18 — ciclo de vida dos formularios modais', () => {
             'addEventListener',
         ).mockImplementation((tipo, listener, opcoes) => {
             if (tipo === 'hidden.bs.modal') {
-                listeners.push(listener);
+                listeners.push({ listener, opcoes });
             }
 
             adicionarOriginal(
@@ -74,10 +74,11 @@ describe('B25.18 — ciclo de vida dos formularios modais', () => {
     });
 
     afterEach(() => {
-        listeners.forEach((listener) => {
+        listeners.forEach(({ listener, opcoes }) => {
             document.removeEventListener(
                 'hidden.bs.modal',
                 listener,
+                opcoes,
             );
         });
 
@@ -286,4 +287,185 @@ describe('B25.18 — ciclo de vida dos formularios modais', () => {
             feedback.textContent.trim(),
         ).toBe('Erro de validacao');
     });
+
+    it(
+        'consome preservacao antiga quando o modal ja reabriu',
+        () => {
+            new LimpadorFormulariosModais();
+
+            // Preservacao associada ao fecho anterior.
+            modal.setAttribute(
+                'data-preservar-formularios-ao-fechar',
+                '',
+            );
+
+            // Outro listener reabriu o modal antes
+            // de o limpador receber o hidden anterior.
+            modal.classList.add('show');
+
+            campo.value = 'Novo rascunho';
+
+            fecharModal();
+
+            expect(campo.value).toBe(
+                'Novo rascunho',
+            );
+
+            // A preservacao do fecho antigo deve
+            // ficar consumida, apesar da reabertura.
+            expect(
+                modal.hasAttribute(
+                    'data-preservar-formularios-ao-fechar',
+                ),
+            ).toBe(false);
+
+            // Num fecho posterior, sem novo pedido
+            // de preservacao, a limpeza deve ocorrer.
+            modal.classList.remove('show');
+
+            campo.value = 'Dados do fecho seguinte';
+
+            fecharModal();
+
+            expect(campo.value).toBe(
+                'Mensagem original',
+            );
+
+            expect(
+                campo.classList.contains('is-invalid'),
+            ).toBe(false);
+        },
+    );
+
+
+    it(
+        'respeita uma nova preservacao depois da reabertura',
+        () => {
+            new LimpadorFormulariosModais();
+
+            modal.setAttribute(
+                'data-preservar-formularios-ao-fechar',
+                '',
+            );
+
+            modal.classList.add('show');
+
+            campo.value = 'Rascunho da reabertura';
+
+            fecharModal();
+
+            expect(campo.value).toBe(
+                'Rascunho da reabertura',
+            );
+
+            expect(
+                modal.hasAttribute(
+                    'data-preservar-formularios-ao-fechar',
+                ),
+            ).toBe(false);
+
+            // Depois do fecho antigo ter sido
+            // processado, surge um novo pedido.
+            modal.setAttribute(
+                'data-preservar-formularios-ao-fechar',
+                '',
+            );
+
+            modal.classList.remove('show');
+
+            campo.value = 'Novo pedido de preservacao';
+
+            fecharModal();
+
+            expect(campo.value).toBe(
+                'Novo pedido de preservacao',
+            );
+
+            expect(
+                modal.hasAttribute(
+                    'data-preservar-formularios-ao-fechar',
+                ),
+            ).toBe(false);
+
+            // O pedido novo tambem foi consumido:
+            // outro fecho deve voltar a limpar.
+            campo.value = 'Dados a limpar';
+
+            fecharModal();
+
+            expect(campo.value).toBe(
+                'Mensagem original',
+            );
+
+            expect(
+                campo.classList.contains('is-invalid'),
+            ).toBe(false);
+        },
+    );
+
+
+    it.each([false, true])(
+        'preserva pedido criado durante hidden com atributo anterior: %s',
+        (preservacaoAnterior) => {
+            new LimpadorFormulariosModais();
+
+            const atributo =
+                'data-preservar-formularios-ao-fechar';
+
+            if (preservacaoAnterior) {
+                modal.setAttribute(atributo, '');
+            }
+
+            campo.value = 'Dados do primeiro fecho';
+
+            modal.addEventListener(
+                'hidden.bs.modal',
+                () => {
+                    // Outro listener iniciou um novo ciclo.
+                    modal.classList.add('show');
+
+                    campo.value = 'Novo rascunho';
+
+                    // Este pedido pertence ao NOVO fecho.
+                    modal.setAttribute(atributo, '');
+                },
+                { once: true },
+            );
+
+            fecharModal();
+
+            expect(
+                modal.classList.contains('show'),
+            ).toBe(true);
+
+            expect(campo.value).toBe('Novo rascunho');
+
+            // O limpador nao pode consumir um pedido
+            // que foi criado para o ciclo seguinte.
+            expect(modal.hasAttribute(atributo))
+                .toBe(true);
+
+            // O fecho seguinte deve preservar
+            // o rascunho e consumir o pedido novo.
+            modal.classList.remove('show');
+
+            fecharModal();
+
+            expect(campo.value).toBe('Novo rascunho');
+
+            expect(modal.hasAttribute(atributo))
+                .toBe(false);
+
+            // Um terceiro fecho, sem preservacao,
+            // deve executar novamente a limpeza.
+            campo.value = 'Dados a limpar';
+
+            fecharModal();
+
+            expect(campo.value).toBe(
+                'Mensagem original',
+            );
+        },
+    );
+
 });
