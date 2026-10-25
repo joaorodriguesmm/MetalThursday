@@ -946,5 +946,355 @@ describe(
             },
         );
 
+
+        it(
+            'nao seleciona artista antigo numa seccao reaberta',
+            () => {
+                const callback = obterCallbackCriacao(
+                    'formulario-criar-artista',
+                );
+
+                const contentor = document.getElementById(
+                    'contentor-seccoes',
+                );
+
+                contentor.innerHTML = `
+                    <div class="item-seccao">
+                        <select class="tom-select-artistas"></select>
+                        <button id="abrir-artista-a"></button>
+                    </div>
+                    <div class="item-seccao">
+                        <select class="tom-select-artistas"></select>
+                        <button id="abrir-artista-b"></button>
+                    </div>
+                `;
+
+                const selecoes = Array.from(
+                    contentor.querySelectorAll(
+                        '.tom-select-artistas',
+                    ),
+                );
+
+                const selecionarA = vi.fn();
+                const selecionarB = vi.fn();
+                const adicionarB = vi.fn();
+
+                selecoes[0].tomselect = {
+                    on: vi.fn(),
+                    addOption: vi.fn(),
+                    addItem: selecionarA,
+                    options: {},
+                };
+
+                selecoes[1].tomselect = {
+                    on: vi.fn(),
+                    addOption: adicionarB,
+                    addItem: selecionarB,
+                    options: {},
+                };
+
+                const modal = document.getElementById(
+                    'modal-criar-artista',
+                );
+
+                function abrir(identificador) {
+                    const evento = new Event(
+                        'show.bs.modal',
+                    );
+
+                    Object.defineProperty(
+                        evento,
+                        'relatedTarget',
+                        {
+                            value: document.getElementById(
+                                identificador,
+                            ),
+                        },
+                    );
+
+                    modal.dispatchEvent(evento);
+                }
+
+                abrir('abrir-artista-a');
+
+                const contextoSubmissao =
+                    efeitos.gestorModais.mock.calls[0][0]
+                        .find((entrada) => entrada.idFormulario
+                            === 'formulario-criar-artista')
+                        .obterContextoSubmissao();
+
+                document.getElementById(
+                    'formulario-criar-artista',
+                ).dispatchEvent(
+                    new Event('submit', {
+                        cancelable: true,
+                    }),
+                );
+
+                modal.dispatchEvent(
+                    new Event('hidden.bs.modal'),
+                );
+
+                abrir('abrir-artista-b');
+
+                callback({
+                    artista: {
+                        id: 61,
+                        rotulo_selecao: 'Artista da primeira submissao',
+                    },
+                }, contextoSubmissao);
+
+                expect(
+                    adicionarB,
+                ).toHaveBeenCalledExactlyOnceWith({
+                    value: '61',
+                    text: 'Artista da primeira submissao',
+                });
+
+                expect(
+                    selecionarB,
+                ).not.toHaveBeenCalled();
+            },
+        );
+
+        it(
+            'nao seleciona genero antigo numa nova criacao de artista',
+            () => {
+                const callback = obterCallbackCriacao(
+                    'formulario-criar-genero',
+                );
+
+                const modalArtista = document.getElementById(
+                    'modal-criar-artista',
+                );
+
+                const modalGenero = document.getElementById(
+                    'modal-criar-genero',
+                );
+
+                const formularioGenero = document.createElement(
+                    'form',
+                );
+
+                formularioGenero.id = 'formulario-criar-genero';
+                modalGenero.append(formularioGenero);
+
+                const selecao = document.createElement(
+                    'select',
+                );
+
+                selecao.id = 'generos-novo-artista';
+
+                const adicionar = vi.fn();
+                const selecionar = vi.fn();
+
+                selecao.tomselect = {
+                    on: vi.fn(),
+                    addOption: adicionar,
+                    addItem: selecionar,
+                    options: {},
+                };
+
+                modalArtista.append(selecao);
+
+                const acionadorExterno = document.createElement(
+                    'button',
+                );
+
+                const acionadorArtista = document.createElement(
+                    'button',
+                );
+
+                document.body.append(acionadorExterno);
+                modalArtista.append(acionadorArtista);
+
+                emitirAberturaGenero(acionadorExterno);
+
+                const contextoSubmissao =
+                    efeitos.gestorModais.mock.calls[0][0]
+                        .find((entrada) => entrada.idFormulario
+                            === 'formulario-criar-genero')
+                        .obterContextoSubmissao();
+
+                formularioGenero.dispatchEvent(
+                    new Event('submit', {
+                        cancelable: true,
+                    }),
+                );
+
+                modalGenero.dispatchEvent(
+                    new Event('hidden.bs.modal'),
+                );
+
+                emitirAberturaGenero(acionadorArtista);
+
+                callback({
+                    genero: {
+                        id: 62,
+                        nome: 'Género da primeira submissão',
+                    },
+                }, contextoSubmissao);
+
+                expect(
+                    adicionar,
+                ).toHaveBeenCalledExactlyOnceWith({
+                    value: '62',
+                    text: 'Género da primeira submissão',
+                });
+
+                expect(
+                    selecionar,
+                ).not.toHaveBeenCalled();
+            },
+        );
+
+
+        it(
+            'seleciona artista criado quando o destino original continua valido',
+            () => {
+                const callback = obterCallbackCriacao(
+                    'formulario-criar-artista',
+                );
+
+                const contentor = document.getElementById(
+                    'contentor-seccoes',
+                );
+
+                contentor.innerHTML =
+                    '<div class="item-seccao">'
+                    + '<select class="tom-select-artistas"></select>'
+                    + '<button id="abrir-artista-valido"></button>'
+                    + '</div>';
+
+                const selecao = contentor.querySelector(
+                    '.tom-select-artistas',
+                );
+
+                const adicionar = vi.fn();
+                const selecionar = vi.fn();
+
+                selecao.tomselect = {
+                    on: vi.fn(),
+                    addOption: adicionar,
+                    addItem: selecionar,
+                    options: {},
+                };
+
+                const evento = new Event('show.bs.modal');
+
+                Object.defineProperty(
+                    evento,
+                    'relatedTarget',
+                    {
+                        value: document.getElementById(
+                            'abrir-artista-valido',
+                        ),
+                    },
+                );
+
+                document.getElementById(
+                    'modal-criar-artista',
+                ).dispatchEvent(evento);
+
+                const configuracoes =
+                    efeitos.gestorModais.mock.calls[0][0];
+
+                const configuracao = configuracoes.find(
+                    (entrada) => entrada.idFormulario
+                        === 'formulario-criar-artista',
+                );
+
+                const contexto =
+                    configuracao.obterContextoSubmissao();
+
+                callback({
+                    artista: {
+                        id: 63,
+                        rotulo_selecao: 'Artista válido',
+                    },
+                }, contexto);
+
+                expect(
+                    adicionar,
+                ).toHaveBeenCalledExactlyOnceWith({
+                    value: '63',
+                    text: 'Artista válido',
+                });
+
+                expect(
+                    selecionar,
+                ).toHaveBeenCalledExactlyOnceWith('63');
+            },
+        );
+
+        it(
+            'seleciona genero criado quando continua no mesmo contexto',
+            () => {
+                const callback = obterCallbackCriacao(
+                    'formulario-criar-genero',
+                );
+
+                const modalArtista = document.getElementById(
+                    'modal-criar-artista',
+                );
+
+                const acionador = document.createElement(
+                    'button',
+                );
+
+                const selecao = document.createElement(
+                    'select',
+                );
+
+                selecao.id = 'generos-novo-artista';
+
+                const adicionar = vi.fn();
+                const selecionar = vi.fn();
+
+                selecao.tomselect = {
+                    on: vi.fn(),
+                    addOption: adicionar,
+                    addItem: selecionar,
+                    options: {},
+                };
+
+                modalArtista.append(
+                    acionador,
+                    selecao,
+                );
+
+                emitirAberturaGenero(acionador);
+
+                const configuracoes =
+                    efeitos.gestorModais.mock.calls[0][0];
+
+                const configuracao = configuracoes.find(
+                    (entrada) => entrada.idFormulario
+                        === 'formulario-criar-genero',
+                );
+
+                const contexto =
+                    configuracao.obterContextoSubmissao();
+
+                callback({
+                    genero: {
+                        id: 64,
+                        nome: 'Género válido',
+                    },
+                }, contexto);
+
+                expect(
+                    adicionar,
+                ).toHaveBeenCalledExactlyOnceWith({
+                    value: '64',
+                    text: 'Género válido',
+                });
+
+                expect(
+                    selecionar,
+                ).toHaveBeenCalledExactlyOnceWith('64');
+            },
+        );
+
     },
 );

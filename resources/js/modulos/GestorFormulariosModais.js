@@ -104,6 +104,7 @@ class GestorFormulariosModais {
             configuracao.url,
             configuracao.aoSucesso,
             configuracao.aoErro,
+            configuracao.obterContextoSubmissao,
         );
 
         new ValidadorFormulario(
@@ -206,6 +207,18 @@ class GestorFormulariosModais {
             );
         }
 
+        const obterContextoSubmissao =
+            configuracao.obterContextoSubmissao ?? null;
+
+        if (
+            obterContextoSubmissao !== null
+            && typeof obterContextoSubmissao !== 'function'
+        ) {
+            throw new TypeError(
+                'A função de contexto da submissão é inválida.',
+            );
+        }
+
         return {
             idFormulario:
                 configuracao.idFormulario.trim(),
@@ -216,6 +229,7 @@ class GestorFormulariosModais {
             mensagensValidacao,
             aoSucesso,
             aoErro,
+            obterContextoSubmissao,
         };
     }
 

@@ -28,6 +28,7 @@ class TratadorFormularioAjax {
         url,
         aoSucesso = null,
         aoErro = null,
+        obterContextoSubmissao = null,
     ) {
         if (
             typeof idFormulario !== 'string'
@@ -65,6 +66,15 @@ class TratadorFormularioAjax {
             );
         }
 
+        if (
+            obterContextoSubmissao !== null
+            && typeof obterContextoSubmissao !== 'function'
+        ) {
+            throw new TypeError(
+                'A função de contexto da submissão é inválida.',
+            );
+        }
+
         const identificadorFormulario =
             idFormulario.trim();
 
@@ -81,6 +91,9 @@ class TratadorFormularioAjax {
 
         this.aoErro =
             aoErro;
+
+        this.obterContextoSubmissao =
+            obterContextoSubmissao;
 
         this.emSubmissao =
             false;
@@ -273,10 +286,16 @@ class TratadorFormularioAjax {
         try {
             let resposta;
             let estadoCamposSubmetidos;
+            let contextoSubmissao = null;
 
             try {
                 const dadosSubmissao =
                     this.prepararDadosSubmissao();
+
+                contextoSubmissao =
+                    this.obterContextoSubmissao === null
+                        ? null
+                        : this.obterContextoSubmissao();
 
                 estadoCamposSubmetidos =
                     this.obterEstadoCamposFormulario();
@@ -324,6 +343,7 @@ class TratadorFormularioAjax {
             const acaoSucessoConcluida =
                 await this.executarAcaoSucesso(
                     resposta.data,
+                    contextoSubmissao,
                 );
 
             if (!this.formulario.isConnected) {
@@ -416,15 +436,23 @@ class TratadorFormularioAjax {
      */
     async executarAcaoSucesso(
         dadosResposta,
+        contextoSubmissao = null,
     ) {
         if (this.aoSucesso === null) {
             return true;
         }
 
         try {
-            await this.aoSucesso(
-                dadosResposta,
-            );
+            if (this.obterContextoSubmissao === null) {
+                await this.aoSucesso(
+                    dadosResposta,
+                );
+            } else {
+                await this.aoSucesso(
+                    dadosResposta,
+                    contextoSubmissao,
+                );
+            }
 
             return true;
         } catch {

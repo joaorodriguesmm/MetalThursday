@@ -1456,7 +1456,7 @@ function tratarErroCriacaoArtista(
  *
  * @since 2.0.0
  */
-function configurarConfirmacaoNomeRepetidoArtista() {
+function configurarConfirmacaoNomeRepetidoArtista(contextoCriacaoRapida) {
     const formulario =
         document.getElementById(
             'formulario-criar-artista',
@@ -1504,6 +1504,8 @@ function configurarConfirmacaoNomeRepetidoArtista() {
     modal.addEventListener(
         'hidden.bs.modal',
         () => {
+            contextoCriacaoRapida.versaoArtista += 1;
+
             reporConfirmacaoNomeRepetidoArtista(
                 formulario,
             );
@@ -1625,6 +1627,13 @@ function criarConfiguracoesModais(
             url:
                 enderecos.guardarArtista,
 
+            obterContextoSubmissao: () => ({
+                selecaoArtistaDestino:
+                    contextoCriacaoRapida.selecaoArtistaDestino,
+                versaoArtista:
+                    contextoCriacaoRapida.versaoArtista,
+            }),
+
             regrasValidacao: {
                 nome: [
                     'obrigatorio',
@@ -1660,6 +1669,7 @@ function criarConfiguracoesModais(
 
             aoSucesso: (
                 dadosResposta,
+                contextoSubmissao = null,
             ) => {
                 const opcao = obterOpcaoResposta(
                     dadosResposta,
@@ -1699,8 +1709,12 @@ function criarConfiguracoesModais(
                                         opcao.identificador,
                                         opcao.nome,
                                         selecao
-                                        === contextoCriacaoRapida
-                                            .selecaoArtistaDestino,
+                                        === contextoSubmissao
+                                            ?.selecaoArtistaDestino
+                                        && contextoSubmissao
+                                            ?.versaoArtista
+                                            === contextoCriacaoRapida
+                                                .versaoArtista,
                                     )
                                 ) {
                                     throw new Error(
@@ -1723,6 +1737,13 @@ function criarConfiguracoesModais(
             url:
                 enderecos.guardarGenero,
 
+            obterContextoSubmissao: () => ({
+                generoParaArtista:
+                    contextoCriacaoRapida.generoParaArtista,
+                versaoGenero:
+                    contextoCriacaoRapida.versaoGenero,
+            }),
+
             regrasValidacao: {
                 nome: [
                     'obrigatorio',
@@ -1742,6 +1763,7 @@ function criarConfiguracoesModais(
 
             aoSucesso: (
                 dadosResposta,
+                contextoSubmissao = null,
             ) => {
                 const opcao = obterOpcaoResposta(
                     dadosResposta,
@@ -1782,8 +1804,10 @@ function criarConfiguracoesModais(
                                 opcao.nome,
                                 identificadorCampo
                                     === 'generos-novo-artista'
-                                && contextoCriacaoRapida
-                                    .generoParaArtista,
+                                && contextoSubmissao?.generoParaArtista
+                                    === true
+                                && contextoSubmissao?.versaoGenero
+                                    === contextoCriacaoRapida.versaoGenero,
                             )
                         ) {
                             throw new Error(
@@ -1824,6 +1848,8 @@ function configurarDestinoCriacaoArtista(
     modalArtista.addEventListener(
         'show.bs.modal',
         (evento) => {
+            contextoCriacaoRapida.versaoArtista += 1;
+
             const acionador =
                 evento.relatedTarget;
 
@@ -1859,6 +1885,7 @@ function configurarDestinoCriacaoArtista(
             }
         },
     );
+
 }
 
 /**
@@ -1899,6 +1926,8 @@ function configurarRetornoCriacaoGeneroParaArtista(
     modalGenero.addEventListener(
         'show.bs.modal',
         (evento) => {
+            contextoCriacaoRapida.versaoGenero += 1;
+
             ultimoEventoAbertura = evento;
 
             const acionador =
@@ -1951,6 +1980,8 @@ function configurarRetornoCriacaoGeneroParaArtista(
     modalGenero.addEventListener(
         'hidden.bs.modal',
         () => {
+            contextoCriacaoRapida.versaoGenero += 1;
+
             if (!regressarAoModalArtista) {
                 return;
             }
@@ -2029,6 +2060,8 @@ function executarInicializacaoFormularioMetalThursday(
     const contextoCriacaoRapida = {
         selecaoArtistaDestino: null,
         generoParaArtista: false,
+        versaoArtista: 0,
+        versaoGenero: 0,
     };
 
     /*
@@ -2235,7 +2268,9 @@ function executarInicializacaoFormularioMetalThursday(
         contextoCriacaoRapida,
     );
 
-    configurarConfirmacaoNomeRepetidoArtista();
+    configurarConfirmacaoNomeRepetidoArtista(
+        contextoCriacaoRapida,
+    );
 
     new GestorFormulariosModais(
         criarConfiguracoesModais(

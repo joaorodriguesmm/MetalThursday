@@ -240,4 +240,64 @@ describe('B25.17 — inicializacao dos formularios modais', () => {
             ).toBe(false);
         });
     });
+
+    it(
+        'entrega ao callback o contexto capturado antes do pedido HTTP',
+        async () => {
+            let concluirPedido;
+
+            const respostaPendente = new Promise((resolve) => {
+                concluirPedido = resolve;
+            });
+
+            pedido.mockReturnValue(respostaPendente);
+
+            let destino = 'seccao-a';
+
+            const aoSucesso = vi.fn();
+
+            new GestorFormulariosModais([
+                {
+                    ...criarConfiguracao(
+                        'formulario-b25-17',
+                    ),
+
+                    obterContextoSubmissao: () => ({
+                        destino,
+                    }),
+
+                    aoSucesso,
+                },
+            ]);
+
+            const evento = submeterFormulario(
+                formulario,
+            );
+
+            expect(evento.defaultPrevented).toBe(true);
+            expect(pedido).toHaveBeenCalledTimes(1);
+
+            destino = 'seccao-b';
+
+            concluirPedido({
+                data: {
+                    mensagem: 'Operação criada.',
+                },
+            });
+
+            await vi.waitFor(() => {
+                expect(
+                    aoSucesso,
+                ).toHaveBeenCalledExactlyOnceWith(
+                    {
+                        mensagem: 'Operação criada.',
+                    },
+                    {
+                        destino: 'seccao-a',
+                    },
+                );
+            });
+        },
+    );
+
 });
