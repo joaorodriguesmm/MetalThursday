@@ -1431,5 +1431,263 @@ describe(
             },
         );
 
+
+        it.each([
+            [
+                'artista',
+                'modal-criar-artista',
+                'formulario-criar-artista',
+                'versaoArtista',
+            ],
+            [
+                'genero',
+                'modal-criar-genero',
+                'formulario-criar-genero',
+                'versaoGenero',
+            ],
+        ])(
+            'mantem a versao de %s apos duas aberturas canceladas',
+            async (
+                _tipo,
+                identificadorModal,
+                identificadorFormulario,
+                propriedadeVersao,
+            ) => {
+                inicializar();
+
+                const configuracoes =
+                    efeitos.gestorModais.mock.calls[0][0];
+
+                const configuracao = configuracoes.find(
+                    (entrada) => entrada.idFormulario
+                        === identificadorFormulario,
+                );
+
+                const antes =
+                    configuracao.obterContextoSubmissao()[
+                        propriedadeVersao
+                    ];
+
+                const modal = document.getElementById(
+                    identificadorModal,
+                );
+
+                modal.addEventListener(
+                    'show.bs.modal',
+                    (evento) => evento.preventDefault(),
+                );
+
+                for (let indice = 0; indice < 2; indice += 1) {
+                    const evento = new Event(
+                        'show.bs.modal',
+                        {
+                            bubbles: true,
+                            cancelable: true,
+                        },
+                    );
+
+                    modal.dispatchEvent(evento);
+
+                    expect(evento.defaultPrevented).toBe(true);
+                }
+
+                await Promise.resolve();
+
+                expect(
+                    configuracao.obterContextoSubmissao()[
+                        propriedadeVersao
+                    ],
+                ).toBe(antes);
+            },
+        );
+
+        it.each([
+            [
+                'artista',
+                'modal-criar-artista',
+                'formulario-criar-artista',
+                'versaoArtista',
+            ],
+            [
+                'genero',
+                'modal-criar-genero',
+                'formulario-criar-genero',
+                'versaoGenero',
+            ],
+        ])(
+            'incrementa uma vez a versao de %s apos cancelamento e abertura aceite',
+            async (
+                _tipo,
+                identificadorModal,
+                identificadorFormulario,
+                propriedadeVersao,
+            ) => {
+                inicializar();
+
+                const configuracoes =
+                    efeitos.gestorModais.mock.calls[0][0];
+
+                const configuracao = configuracoes.find(
+                    (entrada) => entrada.idFormulario
+                        === identificadorFormulario,
+                );
+
+                const antes =
+                    configuracao.obterContextoSubmissao()[
+                        propriedadeVersao
+                    ];
+
+                const modal = document.getElementById(
+                    identificadorModal,
+                );
+
+                modal.addEventListener(
+                    'show.bs.modal',
+                    (evento) => {
+                        if (evento.cancelarNoTeste) {
+                            evento.preventDefault();
+                        }
+                    },
+                );
+
+                for (const cancelar of [true, false]) {
+                    const evento = new Event(
+                        'show.bs.modal',
+                        {
+                            bubbles: true,
+                            cancelable: true,
+                        },
+                    );
+
+                    evento.cancelarNoTeste = cancelar;
+
+                    modal.dispatchEvent(evento);
+
+                    expect(evento.defaultPrevented).toBe(
+                        cancelar,
+                    );
+                }
+
+                await Promise.resolve();
+
+                expect(
+                    configuracao.obterContextoSubmissao()[
+                        propriedadeVersao
+                    ],
+                ).toBe(antes + 1);
+            },
+        );
+
+
+        it.each([
+            ['duas canceladas', true],
+            ['cancelamento seguido de abertura programatica', false],
+        ])(
+            'preserva destino do artista apos %s',
+            async (_descricao, duasCanceladas) => {
+                inicializar();
+
+                const contentor = document.getElementById(
+                    'contentor-seccoes',
+                );
+
+                contentor.innerHTML = ['a', 'b', 'c']
+                    .map((nome) =>
+                        '<div class="item-seccao">'
+                        + '<select id="selecao-' + nome
+                        + '" class="tom-select-artistas"></select>'
+                        + '<button id="botao-' + nome
+                        + '"></button>'
+                        + '</div>',
+                    )
+                    .join('');
+
+                const modal = document.getElementById(
+                    'modal-criar-artista',
+                );
+
+                const configuracao =
+                    efeitos.gestorModais.mock.calls[0][0]
+                        .find((entrada) =>
+                            entrada.idFormulario
+                            === 'formulario-criar-artista',
+                        );
+
+                function abrir(nome = null) {
+                    const evento = new Event(
+                        'show.bs.modal',
+                        {
+                            bubbles: true,
+                            cancelable: true,
+                        },
+                    );
+
+                    if (nome !== null) {
+                        Object.defineProperty(
+                            evento,
+                            'relatedTarget',
+                            {
+                                value: document.getElementById(
+                                    'botao-' + nome,
+                                ),
+                            },
+                        );
+                    }
+
+                    modal.dispatchEvent(evento);
+
+                    return evento;
+                }
+
+                abrir('a');
+
+                const anterior =
+                    configuracao.obterContextoSubmissao();
+
+                modal.addEventListener(
+                    'show.bs.modal',
+                    (evento) => {
+                        const nome =
+                            evento.relatedTarget?.id;
+
+                        if (
+                            nome === 'botao-b'
+                            || nome === 'botao-c'
+                        ) {
+                            evento.preventDefault();
+                        }
+                    },
+                );
+
+                expect(
+                    abrir('b').defaultPrevented,
+                ).toBe(true);
+
+                if (duasCanceladas) {
+                    expect(
+                        abrir('c').defaultPrevented,
+                    ).toBe(true);
+                } else {
+                    expect(
+                        abrir().defaultPrevented,
+                    ).toBe(false);
+                }
+
+                await Promise.resolve();
+
+                const atual =
+                    configuracao.obterContextoSubmissao();
+
+                expect(atual.selecaoArtistaDestino).toBe(
+                    document.getElementById('selecao-a'),
+                );
+
+                expect(atual.versaoArtista).toBe(
+                    anterior.versaoArtista
+                    + (duasCanceladas ? 0 : 1),
+                );
+            },
+        );
+
     },
 );

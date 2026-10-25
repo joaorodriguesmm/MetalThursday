@@ -1845,69 +1845,82 @@ function configurarDestinoCriacaoArtista(
         return;
     }
 
+
+    const aberturasPendentes = [];
+    let destinoAntesAberturas = null;
+
     modalArtista.addEventListener(
         'show.bs.modal',
         (evento) => {
-            const versaoAnterior =
-                contextoCriacaoRapida.versaoArtista;
-
-            const destinoAnterior =
-                contextoCriacaoRapida.selecaoArtistaDestino;
+            if (aberturasPendentes.length === 0) {
+                destinoAntesAberturas =
+                    contextoCriacaoRapida.selecaoArtistaDestino;
+            }
 
             contextoCriacaoRapida.versaoArtista += 1;
 
-            const versaoAbertura =
-                contextoCriacaoRapida.versaoArtista;
+            const acionador = evento.relatedTarget;
+            let destinoPretendido = null;
 
-            queueMicrotask(() => {
-                if (
-                    !evento.defaultPrevented
-                    || contextoCriacaoRapida.versaoArtista
-                        !== versaoAbertura
-                ) {
-                    return;
-                }
-
-                contextoCriacaoRapida.versaoArtista =
-                    versaoAnterior;
-
-                contextoCriacaoRapida.selecaoArtistaDestino =
-                    destinoAnterior;
-            });
-
-            const acionador =
-                evento.relatedTarget;
-
-            if (!(acionador instanceof Element)) {
-                return;
-            }
-
-            contextoCriacaoRapida
-                .selecaoArtistaDestino =
-                null;
-
-            const seccao =
-                acionador.closest(
+            if (acionador instanceof Element) {
+                const seccao = acionador.closest(
                     '.item-seccao',
                 );
 
-            if (!(seccao instanceof HTMLElement)) {
-                return;
+                if (seccao instanceof HTMLElement) {
+                    const selecao = seccao.querySelector(
+                        '.tom-select-artistas',
+                    );
+
+                    if (selecao instanceof HTMLSelectElement) {
+                        destinoPretendido = selecao;
+                    }
+                }
+
+                contextoCriacaoRapida.selecaoArtistaDestino =
+                    destinoPretendido;
             }
 
-            const selecaoArtista =
-                seccao.querySelector(
-                    '.tom-select-artistas',
-                );
+            aberturasPendentes.push({
+                evento,
+                alterarDestino: acionador instanceof Element,
+                destino: destinoPretendido,
+            });
 
-            if (
-                selecaoArtista
-                instanceof HTMLSelectElement
-            ) {
-                contextoCriacaoRapida
-                    .selecaoArtistaDestino =
-                    selecaoArtista;
-            }
+            queueMicrotask(() => {
+                const ultima =
+                    aberturasPendentes[
+                        aberturasPendentes.length - 1
+                    ];
+
+                if (ultima?.evento !== evento) {
+                    return;
+                }
+
+                let canceladas = 0;
+                let destinoConfirmado = destinoAntesAberturas;
+
+                aberturasPendentes.forEach((abertura) => {
+                    if (abertura.evento.defaultPrevented) {
+                        canceladas += 1;
+                        return;
+                    }
+
+                    if (abertura.alterarDestino) {
+                        destinoConfirmado = abertura.destino;
+                    }
+                });
+
+                aberturasPendentes.length = 0;
+
+                contextoCriacaoRapida.versaoArtista -=
+                    canceladas;
+
+                if (canceladas > 0) {
+                    contextoCriacaoRapida.selecaoArtistaDestino =
+                        destinoConfirmado;
+                }
+            });
         },
     );
 
@@ -1951,28 +1964,14 @@ function configurarRetornoCriacaoGeneroParaArtista(
     modalGenero.addEventListener(
         'show.bs.modal',
         (evento) => {
-            const versaoAnterior =
-                contextoCriacaoRapida.versaoGenero;
-
             contextoCriacaoRapida.versaoGenero += 1;
-
-            const versaoAbertura =
-                contextoCriacaoRapida.versaoGenero;
 
             ultimoEventoAbertura = evento;
 
             queueMicrotask(() => {
-                if (
-                    !evento.defaultPrevented
-                    || ultimoEventoAbertura !== evento
-                    || contextoCriacaoRapida.versaoGenero
-                        !== versaoAbertura
-                ) {
-                    return;
+                if (evento.defaultPrevented) {
+                    contextoCriacaoRapida.versaoGenero -= 1;
                 }
-
-                contextoCriacaoRapida.versaoGenero =
-                    versaoAnterior;
             });
 
             const acionador =
