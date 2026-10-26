@@ -475,4 +475,145 @@ describe('B25.12 — concorrencia na importacao Discogs', () => {
             gestor.seccoesEmImportacao.has(seccao),
         ).toBe(false);
     });
+
+    it(
+        'B25.57 — falha de comunicacao comunica resultado incerto',
+        async () => {
+            const erroComunicacao = new axios.AxiosError(
+                'Network Error',
+                'ERR_NETWORK',
+                {},
+                {readyState: 4},
+            );
+
+            const pedido = vi.spyOn(
+                axios,
+                'post',
+            ).mockRejectedValueOnce(
+                erroComunicacao,
+            );
+
+            await gestor.importarPorLigacao(seccao);
+
+            expect(pedido).toHaveBeenCalledTimes(1);
+
+            expect(estado.textContent).toBe(
+                'Não foi possível confirmar se a operação foi concluída. '
+                + 'Verifica o resultado antes de tentares novamente.',
+            );
+
+            expect(estado.classList.contains('text-danger'))
+                .toBe(true);
+
+            // Sem resposta valida, o formulario nao deve
+            // assumir que a associacao foi concluida.
+            expect(
+                seccao.querySelector(
+                    '[name$="[lancamento_id]"]',
+                ).value,
+            ).toBe('');
+
+            expect(
+                gestor.editorLancamentos.carregarLancamento,
+            ).not.toHaveBeenCalled();
+
+            expect(gestor.seccoesEmImportacao.has(seccao))
+                .toBe(false);
+
+            expect(area.getAttribute('aria-busy'))
+                .toBe('false');
+
+            expect(campoLigacao.disabled).toBe(false);
+            expect(botaoImportar.disabled).toBe(false);
+        },
+    );
+
+    it(
+        'B25.57 — preserva mensagem devolvida pelo servidor',
+        async () => {
+            const erroHttp = new axios.AxiosError(
+                'Erro HTTP 503.',
+                'ERR_BAD_RESPONSE',
+                {},
+                {},
+                {
+                    data: {
+                        mensagem:
+                            'O serviço Discogs está temporariamente indisponível.',
+                    },
+                    status: 503,
+                    statusText: 'Service Unavailable',
+                    headers: {},
+                    config: {},
+                },
+            );
+
+            vi.spyOn(
+                axios,
+                'post',
+            ).mockRejectedValueOnce(erroHttp);
+
+            await gestor.importarPorLigacao(seccao);
+
+            expect(estado.textContent).toBe(
+                'O serviço Discogs está temporariamente indisponível.',
+            );
+
+            expect(gestor.seccoesEmImportacao.has(seccao))
+                .toBe(false);
+        },
+    );
+
+    it(
+        'B25.57 — preserva erro de validacao HTTP 422',
+        async () => {
+            const erroHttp = new axios.AxiosError(
+                'Erro HTTP 422.',
+                'ERR_BAD_RESPONSE',
+                {},
+                {},
+                {
+                    data: {
+                        errors: {
+                            identificador: [
+                                'A edição indicada não é válida.',
+                            ],
+                        },
+                    },
+                    status: 422,
+                    statusText: 'Unprocessable Content',
+                    headers: {},
+                    config: {},
+                },
+            );
+
+            vi.spyOn(
+                axios,
+                'post',
+            ).mockRejectedValueOnce(erroHttp);
+
+            await gestor.importarPorLigacao(seccao);
+
+            expect(estado.textContent).toBe(
+                'A edição indicada não é válida.',
+            );
+        },
+    );
+
+    it(
+        'B25.57 — nao confunde erro local com falha de rede',
+        () => {
+            const mensagem = gestor.obterMensagemErro(
+                new TypeError(
+                    'A resposta de importação do lançamento é inválida.',
+                ),
+                'Não foi possível importar o lançamento do Discogs.',
+            );
+
+            expect(mensagem).toBe(
+                'A resposta de importação do lançamento é inválida.',
+            );
+        },
+    );
+
 });

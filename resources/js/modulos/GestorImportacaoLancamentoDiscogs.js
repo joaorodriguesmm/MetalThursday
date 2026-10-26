@@ -919,6 +919,19 @@ class GestorImportacaoLancamentoDiscogs {
         erro,
         alternativa,
     ) {
+        // Uma falha de comunicacao nao confirma
+        // o resultado da importacao no servidor.
+        const falhaComunicacao =
+            axios.isAxiosError(erro)
+            && erro.request !== undefined
+            && erro.request !== null
+            && !erro.response;
+
+        if (falhaComunicacao) {
+            return 'Não foi possível confirmar se a operação foi concluída. '
+                + 'Verifica o resultado antes de tentares novamente.';
+        }
+
         if (
             typeof erro === 'object'
             && erro !== null
