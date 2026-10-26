@@ -149,6 +149,8 @@ class TratadorFormularioAjax {
             return;
         }
 
+        const destinoAlterado = this.url !== url;
+
         this.url = url;
         this.aoSucesso = aoSucesso;
         this.aoErro = aoErro;
@@ -157,10 +159,13 @@ class TratadorFormularioAjax {
 
         this.versaoConfiguracao += 1;
 
-        // Uma nova configuracao nao pode herdar a
-        // chave de idempotencia da operacao anterior.
-        this.chaveSubmissao = null;
-        this.conteudoSubmissao = null;
+        // A atualizacao dos callbacks ou das regras
+        // nao representa, por si so, uma nova operacao.
+        // Um destino diferente exige uma chave nova.
+        if (destinoAlterado) {
+            this.chaveSubmissao = null;
+            this.conteudoSubmissao = null;
+        }
     }
 
     /**
@@ -388,16 +393,19 @@ class TratadorFormularioAjax {
                 return;
             }
 
-            // A resposta confirmou a operação; o próximo envio é novo.
+            // Uma resposta de configuracao obsoleta nao
+            // pode eliminar a chave da operacao anterior.
+            if (this.versaoConfiguracao !== versaoConfiguracao) {
+                return;
+            }
+
+            // A resposta confirmou a operacao na configuracao
+            // atual. O proximo envio representa outra operacao.
             this.chaveSubmissao = null;
             this.conteudoSubmissao = null;
 
             // O evento representa o sucesso no servidor,
             // mesmo que o formulario tenha sido removido.
-            // Nao publicar eventos de configuracoes obsoletas.
-            if (this.versaoConfiguracao !== versaoConfiguracao) {
-                return;
-            }
 
             this.emitirEventoSucesso(
                 resposta.data,
