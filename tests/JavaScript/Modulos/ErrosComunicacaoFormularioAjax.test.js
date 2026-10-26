@@ -131,7 +131,7 @@ describe('B25.51 — falhas de comunicacao AJAX', () => {
         expect(tratador.emSubmissao).toBe(false);
     });
 
-    it('respeita a mensagem personalizada do formulario', async () => {
+    it('respeita mensagem personalizada em erro HTTP', async () => {
         formulario.dataset.mensagemErro =
             'Mensagem personalizada do formulario.';
 
@@ -139,7 +139,7 @@ describe('B25.51 — falhas de comunicacao AJAX', () => {
             axios,
             'post',
         ).mockRejectedValueOnce(
-            criarErroComunicacao(),
+            criarErroHttp(),
         );
 
         const tratador = new TratadorFormularioAjax(
@@ -155,6 +155,59 @@ describe('B25.51 — falhas de comunicacao AJAX', () => {
 
         expect(tratador.emSubmissao).toBe(false);
     });
+
+
+    it.each([
+        [
+            'comentario',
+            'Não foi possível publicar o comentário.',
+        ],
+        [
+            'resposta',
+            'Não foi possível publicar a resposta.',
+        ],
+    ])(
+        'B25.54 — falha de rede em %s comunica resultado incerto',
+        async (_tipo, mensagemConfigurada) => {
+            formulario.dataset.mensagemErro =
+                mensagemConfigurada;
+
+            const pedido = vi.spyOn(
+                axios,
+                'post',
+            ).mockRejectedValueOnce(
+                criarErroComunicacao(),
+            );
+
+            const tratador = new TratadorFormularioAjax(
+                'formulario-b25-51',
+                '/teste/submissao',
+            );
+
+            campo.value = 'Publicacao com resultado incerto';
+
+            await tratador.submeter();
+
+            expect(pedido).toHaveBeenCalledTimes(1);
+
+            // A mensagem personalizada nao deve
+            // ocultar o resultado incerto da operacao.
+            expect(alerta).toHaveBeenCalledWith(
+                'Não foi possível confirmar se a operação foi concluída. '
+                + 'Verifica o resultado antes de tentares novamente.',
+            );
+
+            expect(campo.value).toBe(
+                'Publicacao com resultado incerto',
+            );
+
+            expect(botao.disabled).toBe(false);
+            expect(botao.hasAttribute('aria-busy'))
+                .toBe(false);
+
+            expect(tratador.emSubmissao).toBe(false);
+        },
+    );
 
     it('nao apresenta alerta se o callback tratar o erro', async () => {
         const aoErro = vi.fn(() => true);

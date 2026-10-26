@@ -614,19 +614,24 @@ class TratadorFormularioAjax {
 
         // Sem resposta HTTP, uma operacao enviada pode
         // ter sido concluida no servidor.
-        const mensagemPadrao =
+        const falhaComunicacao =
             axios.isAxiosError(erro)
             && erro.request !== undefined
             && erro.request !== null
-            && !erro.response
+            && !erro.response;
+
+        const mensagemPadrao =
+            falhaComunicacao
                 ? 'Não foi possível confirmar se a operação foi concluída. '
                     + 'Verifica o resultado antes de tentares novamente.'
                 : 'Ocorreu um erro inesperado. Tenta novamente.';
 
+        // Uma mensagem personalizada nao deve ocultar
+        // o resultado incerto de uma operacao enviada.
         void GestorAlertas.mostrarErro(
-            mensagemConfigurada !== ''
-                ? mensagemConfigurada
-                : mensagemPadrao,
+            falhaComunicacao || mensagemConfigurada === ''
+                ? mensagemPadrao
+                : mensagemConfigurada,
         );
     }
 
