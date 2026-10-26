@@ -1456,7 +1456,10 @@ function tratarErroCriacaoArtista(
  *
  * @since 2.0.0
  */
-function configurarConfirmacaoNomeRepetidoArtista(contextoCriacaoRapida) {
+function configurarConfirmacaoNomeRepetidoArtista(
+    contextoCriacaoRapida,
+    sinalEventos,
+) {
     const formulario =
         document.getElementById(
             'formulario-criar-artista',
@@ -1499,6 +1502,7 @@ function configurarConfirmacaoNomeRepetidoArtista(contextoCriacaoRapida) {
                 formulario,
             );
         },
+        { signal: sinalEventos },
     );
 
     modal.addEventListener(
@@ -1517,6 +1521,7 @@ function configurarConfirmacaoNomeRepetidoArtista(contextoCriacaoRapida) {
                 Modal.getOrCreateInstance(modal).show();
             }
         },
+        { signal: sinalEventos },
     );
 }
 
@@ -1842,6 +1847,7 @@ function criarConfiguracoesModais(
  */
 function configurarDestinoCriacaoArtista(
     contextoCriacaoRapida,
+    sinalEventos,
 ) {
     const modalArtista =
         document.getElementById(
@@ -1895,6 +1901,9 @@ function configurarDestinoCriacaoArtista(
             });
 
             queueMicrotask(() => {
+                if (sinalEventos.aborted) {
+                    return;
+                }
                 const ultima =
                     aberturasPendentes[
                         aberturasPendentes.length - 1
@@ -1929,11 +1938,16 @@ function configurarDestinoCriacaoArtista(
                 }
             });
         },
+        { signal: sinalEventos },
     );
 
 }
 
 const preparadoresAberturaGenero = new WeakMap();
+
+const controladoresEventosModais = new WeakMap();
+
+const estadosRetornoGeneroArtista = new WeakMap();
 
 let capturaAberturaGeneroInstalada = false;
 
@@ -1975,6 +1989,7 @@ function capturarAberturaDeclarativaGenero(evento) {
  */
 function configurarRetornoCriacaoGeneroParaArtista(
     contextoCriacaoRapida,
+    sinalEventos,
 ) {
     const modalArtista =
         document.getElementById(
@@ -1993,11 +2008,67 @@ function configurarRetornoCriacaoGeneroParaArtista(
         return;
     }
 
+    const estadoAnterior =
+        estadosRetornoGeneroArtista.get(modalGenero);
+
     let regressarAoModalArtista =
-        false;
+        estadoAnterior?.modalArtista === modalArtista
+        && estadoAnterior.obterRetorno() === true;
+
+    contextoCriacaoRapida.generoParaArtista =
+        regressarAoModalArtista;
 
     let ultimoEventoAbertura = null;
     let acionadorDeclarativo = null;
+
+    estadosRetornoGeneroArtista.set(
+        modalGenero,
+        {
+            modalArtista,
+            obterRetorno: () => (
+                regressarAoModalArtista
+                && (
+                    ultimoEventoAbertura === null
+                    || !ultimoEventoAbertura.defaultPrevented
+                )
+            ),
+        },
+    );
+
+    // Ao substituir a inicializacao, limpar apenas
+    // preservacoes provisórias de operacoes interrompidas.
+    // Nao interferir com uma abertura aceite ou com
+    // um fecho do artista que ainda esteja em curso.
+    sinalEventos.addEventListener(
+        'abort',
+        () => {
+            const aberturaCancelada =
+                regressarAoModalArtista
+                && ultimoEventoAbertura?.defaultPrevented === true;
+
+            const cliqueInterrompido =
+                acionadorDeclarativo !== null
+                && modalArtista.classList.contains('show');
+
+            if (
+                !aberturaCancelada
+                && !cliqueInterrompido
+            ) {
+                return;
+            }
+
+            acionadorDeclarativo = null;
+            regressarAoModalArtista = false;
+
+            contextoCriacaoRapida.generoParaArtista =
+                false;
+
+            modalArtista.removeAttribute(
+                'data-preservar-formularios-ao-fechar',
+            );
+        },
+        { once: true },
+    );
 
     preparadoresAberturaGenero.set(
         modalArtista,
@@ -2010,6 +2081,9 @@ function configurarRetornoCriacaoGeneroParaArtista(
             );
 
             queueMicrotask(() => {
+                if (sinalEventos.aborted) {
+                    return;
+                }
                 if (acionadorDeclarativo !== acionador) {
                     return;
                 }
@@ -2043,6 +2117,9 @@ function configurarRetornoCriacaoGeneroParaArtista(
             ultimoEventoAbertura = evento;
 
             queueMicrotask(() => {
+                if (sinalEventos.aborted) {
+                    return;
+                }
                 if (evento.defaultPrevented) {
                     contextoCriacaoRapida.versaoGenero -= 1;
                 }
@@ -2084,6 +2161,9 @@ function configurarRetornoCriacaoGeneroParaArtista(
             }
 
             queueMicrotask(() => {
+                if (sinalEventos.aborted) {
+                    return;
+                }
                 if (
                     ultimoEventoAbertura !== evento
                     || !evento.defaultPrevented
@@ -2126,6 +2206,7 @@ function configurarRetornoCriacaoGeneroParaArtista(
                 }
             });
         },
+        { signal: sinalEventos },
     );
 
     modalGenero.addEventListener(
@@ -2150,6 +2231,7 @@ function configurarRetornoCriacaoGeneroParaArtista(
                 )
                 .show();
         },
+        { signal: sinalEventos },
     );
 }
 
@@ -2412,16 +2494,42 @@ function executarInicializacaoFormularioMetalThursday(
         validadorFormulario,
     );
 
+    const controladorEventos =
+        new AbortController();
+
+    [
+        'modal-criar-artista',
+        'modal-criar-genero',
+    ].forEach((identificador) => {
+        const modal =
+            document.getElementById(identificador);
+
+        if (!(modal instanceof HTMLElement)) {
+            return;
+        }
+
+        controladoresEventosModais
+            .get(modal)?.abort();
+
+        controladoresEventosModais.set(
+            modal,
+            controladorEventos,
+        );
+    });
+
     configurarDestinoCriacaoArtista(
         contextoCriacaoRapida,
+        controladorEventos.signal,
     );
 
     configurarRetornoCriacaoGeneroParaArtista(
         contextoCriacaoRapida,
+        controladorEventos.signal,
     );
 
     configurarConfirmacaoNomeRepetidoArtista(
         contextoCriacaoRapida,
+        controladorEventos.signal,
     );
 
     new GestorFormulariosModais(

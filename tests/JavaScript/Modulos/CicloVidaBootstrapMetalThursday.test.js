@@ -1451,4 +1451,716 @@ describe('B25.41 — ciclo de vida com Bootstrap verdadeiro', () => {
         },
     );
 
+
+    it(
+        'B25.46 — nao altera contexto antigo apos substituir formulario principal',
+        async () => {
+            const primeiraInicializacao =
+                prepararPagina();
+
+            const modalArtista =
+                document.getElementById(
+                    'modal-criar-artista',
+                );
+
+            const modalGenero =
+                document.getElementById(
+                    'modal-criar-genero',
+                );
+
+            const formularioAntigo =
+                document.getElementById(
+                    'formulario-criar-metal-thursday',
+                );
+
+            const formularioNovo =
+                formularioAntigo.cloneNode(true);
+
+            const versaoAnterior =
+                primeiraInicializacao
+                    .obterContextoArtista()
+                    .versaoArtista;
+
+            // Apenas o formulario principal e substituido.
+            // Os modais continuam a ser os mesmos elementos.
+            formularioAntigo.replaceWith(
+                formularioNovo,
+            );
+
+            inicializarFormularioMetalThursday(
+                'formulario-criar-metal-thursday',
+            );
+
+            expect(efeitos.gestorModais)
+                .toHaveBeenCalledTimes(2);
+
+            expect(
+                document.getElementById(
+                    'modal-criar-artista',
+                ),
+            ).toBe(modalArtista);
+
+            expect(
+                document.getElementById(
+                    'modal-criar-genero',
+                ),
+            ).toBe(modalGenero);
+
+            const configuracoesNovas =
+                efeitos.gestorModais.mock.calls[1][0];
+
+            const configuracaoArtistaNova =
+                configuracoesNovas.find(
+                    (configuracao) =>
+                        configuracao.idFormulario
+                            === 'formulario-criar-artista',
+                );
+
+            expect(configuracaoArtistaNova)
+                .toBeDefined();
+
+            const versaoNovaInicial =
+                configuracaoArtistaNova
+                    .obterContextoSubmissao()
+                    .versaoArtista;
+
+            const artista = criarModal(
+                'modal-criar-artista',
+            );
+
+            artista.instancia.show();
+
+            await Promise.resolve();
+
+            // A abertura pertence a nova inicializacao.
+            expect(
+                configuracaoArtistaNova
+                    .obterContextoSubmissao()
+                    .versaoArtista,
+            ).toBe(versaoNovaInicial + 1);
+
+            // O contexto da inicializacao substituida
+            // nao deve continuar a receber eventos.
+            expect(
+                primeiraInicializacao
+                    .obterContextoArtista()
+                    .versaoArtista,
+            ).toBe(versaoAnterior);
+        },
+    );
+
+
+    it(
+        'B25.46 — genero usa apenas contexto da ultima inicializacao',
+        async () => {
+            const primeira = prepararPagina();
+
+            const obterVersoesAntigas = [
+                primeira.obterContextoGenero,
+            ];
+
+            for (let ciclo = 0; ciclo < 2; ciclo += 1) {
+                const anterior = document.getElementById(
+                    'formulario-criar-metal-thursday',
+                );
+
+                anterior.replaceWith(
+                    anterior.cloneNode(true),
+                );
+
+                inicializarFormularioMetalThursday(
+                    'formulario-criar-metal-thursday',
+                );
+
+                const chamadas = efeitos.gestorModais.mock.calls;
+                const configuracoes =
+                    chamadas[chamadas.length - 1][0];
+
+                const configuracaoGenero =
+                    configuracoes.find(
+                        (entrada) =>
+                            entrada.idFormulario
+                                === 'formulario-criar-genero',
+                    );
+
+                expect(configuracaoGenero).toBeDefined();
+
+                obterVersoesAntigas.push(
+                    () => configuracaoGenero
+                        .obterContextoSubmissao(),
+                );
+            }
+
+            expect(efeitos.gestorModais)
+                .toHaveBeenCalledTimes(3);
+
+            const versoesAnteriores =
+                obterVersoesAntigas.map(
+                    (obter) => obter().versaoGenero,
+                );
+
+            const genero = criarModal(
+                'modal-criar-genero',
+            );
+
+            const abertura = esperarEvento(
+                genero.elemento,
+                'shown.bs.modal',
+            );
+
+            genero.instancia.show();
+
+            await abertura;
+
+            expect(
+                obterVersoesAntigas[2]().versaoGenero,
+            ).toBe(versoesAnteriores[2] + 1);
+
+            expect(
+                obterVersoesAntigas[0]().versaoGenero,
+            ).toBe(versoesAnteriores[0]);
+
+            expect(
+                obterVersoesAntigas[1]().versaoGenero,
+            ).toBe(versoesAnteriores[1]);
+        },
+    );
+
+    it(
+        'B25.46 — cancelamento pendente nao deixa preservacao obsoleta',
+        async () => {
+            prepararPagina();
+
+            const modalArtista =
+                document.getElementById(
+                    'modal-criar-artista',
+                );
+
+            const genero = criarModal(
+                'modal-criar-genero',
+            );
+
+            const acionador =
+                document.createElement('button');
+
+            acionador.type = 'button';
+
+            modalArtista.querySelector(
+                '.modal-dialog',
+            ).append(acionador);
+
+            genero.elemento.addEventListener(
+                'show.bs.modal',
+                (evento) => {
+                    evento.preventDefault();
+                },
+                { once: true },
+            );
+
+            // O evento e cancelado, mas as microtarefas
+            // de reconciliacao ainda nao foram executadas.
+            genero.instancia.show(acionador);
+
+            expect(
+                genero.elemento.classList.contains('show'),
+            ).toBe(false);
+
+            expect(
+                modalArtista.hasAttribute(
+                    'data-preservar-formularios-ao-fechar',
+                ),
+            ).toBe(true);
+
+            const formularioAnterior =
+                document.getElementById(
+                    'formulario-criar-metal-thursday',
+                );
+
+            formularioAnterior.replaceWith(
+                formularioAnterior.cloneNode(true),
+            );
+
+            inicializarFormularioMetalThursday(
+                'formulario-criar-metal-thursday',
+            );
+
+            await Promise.resolve();
+
+            // A abertura foi cancelada. A reinicializacao
+            // nao pode herdar uma preservacao abandonada.
+            expect(
+                modalArtista.hasAttribute(
+                    'data-preservar-formularios-ao-fechar',
+                ),
+            ).toBe(false);
+
+            expect(efeitos.gestorModais)
+                .toHaveBeenCalledTimes(2);
+        },
+    );
+
+
+    it(
+        'B25.46 — preserva transicao fade durante reinicializacao',
+        async () => {
+            const inicializacaoAntiga = prepararPagina();
+
+            const artista = criarModal(
+                'modal-criar-artista',
+            );
+
+            const genero = criarModal(
+                'modal-criar-genero',
+            );
+
+            artista.elemento.classList.add('fade');
+            genero.elemento.classList.add('fade');
+
+            const limparListeners = ativarLimpadorModal();
+
+            try {
+                const nome = artista.elemento.querySelector(
+                    '[name="nome"]',
+                );
+
+                const acionador = document.createElement(
+                    'button',
+                );
+
+                acionador.type = 'button';
+
+                acionador.setAttribute(
+                    'data-bs-toggle',
+                    'modal',
+                );
+
+                acionador.setAttribute(
+                    'data-bs-target',
+                    '#modal-criar-genero',
+                );
+
+                artista.elemento
+                    .querySelector('.modal-dialog')
+                    .append(acionador);
+
+                const artistaAberto = esperarEvento(
+                    artista.elemento,
+                    'shown.bs.modal',
+                );
+
+                artista.instancia.show();
+
+                await artistaAberto;
+
+                nome.value = 'Rascunho durante reinicializacao';
+
+                const artistaOculto = esperarEvento(
+                    artista.elemento,
+                    'hidden.bs.modal',
+                );
+
+                const generoAberto = esperarEvento(
+                    genero.elemento,
+                    'shown.bs.modal',
+                );
+
+                acionador.click();
+
+                // O evento show do genero pode ocorrer
+                // durante o clique, antes da reinicializacao.
+                const versaoGeneroAntiga =
+                    inicializacaoAntiga
+                        .obterContextoGenero()
+                        .versaoGenero;
+
+                // O Bootstrap iniciou um fecho real.
+                expect(
+                    artista.elemento.classList.contains(
+                        'show',
+                    ),
+                ).toBe(false);
+
+                expect(
+                    artista.elemento.hasAttribute(
+                        'data-preservar-formularios-ao-fechar',
+                    ),
+                ).toBe(true);
+
+                // Substituir apenas o formulario principal,
+                // mantendo os dois modais em transicao.
+                const anterior = document.getElementById(
+                    'formulario-criar-metal-thursday',
+                );
+
+                anterior.replaceWith(
+                    anterior.cloneNode(true),
+                );
+
+                inicializarFormularioMetalThursday(
+                    'formulario-criar-metal-thursday',
+                );
+
+                expect(efeitos.gestorModais)
+                    .toHaveBeenCalledTimes(2);
+
+                // O aborto dos listeners antigos nao
+                // pode consumir a preservacao legitima.
+                expect(
+                    artista.elemento.hasAttribute(
+                        'data-preservar-formularios-ao-fechar',
+                    ),
+                ).toBe(true);
+
+                await Promise.all([
+                    artistaOculto,
+                    generoAberto,
+                ]);
+
+                expect(nome.value).toBe(
+                    'Rascunho durante reinicializacao',
+                );
+
+                expect(
+                    inicializacaoAntiga
+                        .obterContextoGenero()
+                        .versaoGenero,
+                ).toBe(versaoGeneroAntiga);
+
+                const configuracoes =
+                    efeitos.gestorModais.mock.calls[1][0];
+
+                const configuracaoGenero =
+                    configuracoes.find(
+                        (entrada) =>
+                            entrada.idFormulario
+                                === 'formulario-criar-genero',
+                    );
+
+                expect(configuracaoGenero).toBeDefined();
+
+                expect(
+                    configuracaoGenero
+                        .obterContextoSubmissao()
+                        .generoParaArtista,
+                ).toBe(true);
+
+                const generoOculto = esperarEvento(
+                    genero.elemento,
+                    'hidden.bs.modal',
+                );
+
+                const artistaReaberto = esperarEvento(
+                    artista.elemento,
+                    'shown.bs.modal',
+                );
+
+                genero.instancia.hide();
+
+                await Promise.all([
+                    generoOculto,
+                    artistaReaberto,
+                ]);
+
+                expect(
+                    artista.elemento.classList.contains(
+                        'show',
+                    ),
+                ).toBe(true);
+
+                expect(nome.value).toBe(
+                    'Rascunho durante reinicializacao',
+                );
+
+                expect(
+                    configuracaoGenero
+                        .obterContextoSubmissao()
+                        .generoParaArtista,
+                ).toBe(false);
+            } finally {
+                limparListeners();
+            }
+        },
+    );
+
+
+    it(
+        'B25.46 — regresso unico apos duas reinicializacoes fade',
+        async () => {
+            prepararPagina();
+
+            const artista = criarModal(
+                'modal-criar-artista',
+            );
+
+            const genero = criarModal(
+                'modal-criar-genero',
+            );
+
+            artista.elemento.classList.add('fade');
+            genero.elemento.classList.add('fade');
+
+            const limparListeners = ativarLimpadorModal();
+
+            try {
+                const nome = artista.elemento.querySelector(
+                    '[name="nome"]',
+                );
+
+                const acionador = document.createElement(
+                    'button',
+                );
+
+                acionador.type = 'button';
+
+                acionador.setAttribute(
+                    'data-bs-toggle',
+                    'modal',
+                );
+
+                acionador.setAttribute(
+                    'data-bs-target',
+                    '#modal-criar-genero',
+                );
+
+                artista.elemento
+                    .querySelector('.modal-dialog')
+                    .append(acionador);
+
+                const aberturasArtista = vi.fn();
+
+                artista.elemento.addEventListener(
+                    'show.bs.modal',
+                    aberturasArtista,
+                );
+
+                const artistaAberto = esperarEvento(
+                    artista.elemento,
+                    'shown.bs.modal',
+                );
+
+                artista.instancia.show();
+
+                await artistaAberto;
+
+                nome.value = 'Artista com duas reinicializacoes';
+
+                const artistaOculto = esperarEvento(
+                    artista.elemento,
+                    'hidden.bs.modal',
+                );
+
+                const generoAberto = esperarEvento(
+                    genero.elemento,
+                    'shown.bs.modal',
+                );
+
+                acionador.click();
+
+                expect(
+                    artista.elemento.hasAttribute(
+                        'data-preservar-formularios-ao-fechar',
+                    ),
+                ).toBe(true);
+
+                const contextosNovos = [];
+
+                for (let ciclo = 0; ciclo < 2; ciclo += 1) {
+                    const formulario = document.getElementById(
+                        'formulario-criar-metal-thursday',
+                    );
+
+                    formulario.replaceWith(
+                        formulario.cloneNode(true),
+                    );
+
+                    inicializarFormularioMetalThursday(
+                        'formulario-criar-metal-thursday',
+                    );
+
+                    const chamadas =
+                        efeitos.gestorModais.mock.calls;
+
+                    const configuracoes =
+                        chamadas[chamadas.length - 1][0];
+
+                    const configuracaoGenero =
+                        configuracoes.find(
+                            (entrada) =>
+                                entrada.idFormulario
+                                    === 'formulario-criar-genero',
+                        );
+
+                    expect(configuracaoGenero).toBeDefined();
+
+                    const obterContexto = () =>
+                        configuracaoGenero.obterContextoSubmissao();
+
+                    contextosNovos.push(obterContexto);
+
+                    expect(
+                        obterContexto().generoParaArtista,
+                    ).toBe(true);
+
+                    expect(
+                        artista.elemento.hasAttribute(
+                            'data-preservar-formularios-ao-fechar',
+                        ),
+                    ).toBe(true);
+                }
+
+                expect(efeitos.gestorModais)
+                    .toHaveBeenCalledTimes(3);
+
+                await Promise.all([
+                    artistaOculto,
+                    generoAberto,
+                ]);
+
+                expect(nome.value).toBe(
+                    'Artista com duas reinicializacoes',
+                );
+
+                const generoOculto = esperarEvento(
+                    genero.elemento,
+                    'hidden.bs.modal',
+                );
+
+                const artistaReaberto = esperarEvento(
+                    artista.elemento,
+                    'shown.bs.modal',
+                );
+
+                genero.instancia.hide();
+
+                await Promise.all([
+                    generoOculto,
+                    artistaReaberto,
+                ]);
+
+                expect(aberturasArtista)
+                    .toHaveBeenCalledTimes(2);
+
+                expect(
+                    artista.elemento.classList.contains('show'),
+                ).toBe(true);
+
+                expect(nome.value).toBe(
+                    'Artista com duas reinicializacoes',
+                );
+
+                expect(
+                    contextosNovos[1]().generoParaArtista,
+                ).toBe(false);
+            } finally {
+                limparListeners();
+            }
+        },
+    );
+
+    it(
+        'B25.46 — genero independente apos duas reinicializacoes',
+        async () => {
+            prepararPagina();
+
+            const artista = criarModal(
+                'modal-criar-artista',
+            );
+
+            const genero = criarModal(
+                'modal-criar-genero',
+            );
+
+            for (let ciclo = 0; ciclo < 2; ciclo += 1) {
+                const formulario = document.getElementById(
+                    'formulario-criar-metal-thursday',
+                );
+
+                formulario.replaceWith(
+                    formulario.cloneNode(true),
+                );
+
+                inicializarFormularioMetalThursday(
+                    'formulario-criar-metal-thursday',
+                );
+            }
+
+            expect(efeitos.gestorModais)
+                .toHaveBeenCalledTimes(3);
+
+            const configuracoes =
+                efeitos.gestorModais.mock.calls[2][0];
+
+            const configuracaoGenero =
+                configuracoes.find(
+                    (entrada) =>
+                        entrada.idFormulario
+                            === 'formulario-criar-genero',
+                );
+
+            expect(configuracaoGenero).toBeDefined();
+
+            const aberturasArtista = vi.fn();
+
+            artista.elemento.addEventListener(
+                'show.bs.modal',
+                aberturasArtista,
+            );
+
+            const acionador = document.createElement(
+                'button',
+            );
+
+            acionador.type = 'button';
+
+            acionador.setAttribute(
+                'data-bs-toggle',
+                'modal',
+            );
+
+            acionador.setAttribute(
+                'data-bs-target',
+                '#modal-criar-genero',
+            );
+
+            document.body.append(acionador);
+
+            const generoAberto = esperarEvento(
+                genero.elemento,
+                'shown.bs.modal',
+            );
+
+            acionador.click();
+
+            await generoAberto;
+
+            expect(
+                configuracaoGenero
+                    .obterContextoSubmissao()
+                    .generoParaArtista,
+            ).toBe(false);
+
+            const generoOculto = esperarEvento(
+                genero.elemento,
+                'hidden.bs.modal',
+            );
+
+            genero.instancia.hide();
+
+            await generoOculto;
+
+            expect(aberturasArtista)
+                .not.toHaveBeenCalled();
+
+            expect(
+                artista.elemento.classList.contains('show'),
+            ).toBe(false);
+
+            expect(
+                artista.elemento.hasAttribute(
+                    'data-preservar-formularios-ao-fechar',
+                ),
+            ).toBe(false);
+        },
+    );
+
 });
