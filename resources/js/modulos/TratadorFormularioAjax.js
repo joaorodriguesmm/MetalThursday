@@ -95,6 +95,8 @@ class TratadorFormularioAjax {
         this.obterContextoSubmissao =
             obterContextoSubmissao;
 
+        this.versaoConfiguracao = 0;
+
         this.emSubmissao =
             false;
 
@@ -112,6 +114,49 @@ class TratadorFormularioAjax {
             instanceof HTMLButtonElement
                 ? botaoSubmissao
                 : null;
+    }
+
+    /**
+     * Atualiza a configuracao de um formulario reutilizado.
+     *
+     * Pedidos pendentes de versoes anteriores deixam
+     * de produzir efeitos na interface.
+     *
+     * @param {string} url Endereco de submissao.
+     * @param {Function|null} aoSucesso Callback de sucesso.
+     * @param {Function|null} aoErro Callback de erro.
+     * @param {Function|null} obterContextoSubmissao Contexto.
+     *
+     * @returns {void}
+     */
+    atualizarConfiguracao(
+        url,
+        aoSucesso,
+        aoErro,
+        obterContextoSubmissao,
+    ) {
+        if (
+            this.url === url
+            && this.aoSucesso === aoSucesso
+            && this.aoErro === aoErro
+            && this.obterContextoSubmissao
+                === obterContextoSubmissao
+        ) {
+            return;
+        }
+
+        this.url = url;
+        this.aoSucesso = aoSucesso;
+        this.aoErro = aoErro;
+        this.obterContextoSubmissao =
+            obterContextoSubmissao;
+
+        this.versaoConfiguracao += 1;
+
+        // Uma nova configuracao nao pode herdar a
+        // chave de idempotencia da operacao anterior.
+        this.chaveSubmissao = null;
+        this.conteudoSubmissao = null;
     }
 
     /**
@@ -263,6 +308,9 @@ class TratadorFormularioAjax {
             return;
         }
 
+        const versaoConfiguracao =
+            this.versaoConfiguracao;
+
         this.emSubmissao =
             true;
 
@@ -306,7 +354,11 @@ class TratadorFormularioAjax {
                         dadosSubmissao,
                     );
             } catch (erro) {
-                if (!this.formulario.isConnected) {
+                if (
+                    !this.formulario.isConnected
+                    || this.versaoConfiguracao
+                        !== versaoConfiguracao
+                ) {
                     return;
                 }
 
@@ -315,7 +367,11 @@ class TratadorFormularioAjax {
                         erro,
                     );
 
-                if (!this.formulario.isConnected) {
+                if (
+                    !this.formulario.isConnected
+                    || this.versaoConfiguracao
+                        !== versaoConfiguracao
+                ) {
                     return;
                 }
 
@@ -332,11 +388,24 @@ class TratadorFormularioAjax {
             this.chaveSubmissao = null;
             this.conteudoSubmissao = null;
 
+            // O evento representa o sucesso no servidor,
+            // mesmo que o formulario tenha sido removido.
+            // Nao publicar eventos de configuracoes obsoletas.
+            if (this.versaoConfiguracao !== versaoConfiguracao) {
+                return;
+            }
+
             this.emitirEventoSucesso(
                 resposta.data,
             );
 
-            if (!this.formulario.isConnected) {
+            // Um listener do evento global pode remover
+            // o formulario durante o processamento.
+            if (
+                    !this.formulario.isConnected
+                    || this.versaoConfiguracao
+                        !== versaoConfiguracao
+                ) {
                 return;
             }
 
@@ -346,7 +415,11 @@ class TratadorFormularioAjax {
                     contextoSubmissao,
                 );
 
-            if (!this.formulario.isConnected) {
+            if (
+                    !this.formulario.isConnected
+                    || this.versaoConfiguracao
+                        !== versaoConfiguracao
+                ) {
                 return;
             }
 

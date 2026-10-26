@@ -738,4 +738,77 @@ describe('B25.16 — concorrencia dos formularios AJAX', () => {
         },
     );
 
+
+    it(
+        'B25.48 — preserva evento global de formulario substituido',
+        async () => {
+            const pendente = criarPedidoPendente();
+
+            const pedido = vi.spyOn(
+                axios,
+                'post',
+            ).mockReturnValue(pendente.promessa);
+
+            const eventoSucesso = vi.fn();
+
+            document.addEventListener(
+                'formulario-ajax:sucesso',
+                eventoSucesso,
+            );
+
+            try {
+                campo.value = 'Pedido da pagina antiga';
+
+                const submissao = tratador.submeter();
+
+                expect(pedido).toHaveBeenCalledTimes(1);
+
+                // Substituir o formulario enquanto
+                // a resposta HTTP permanece pendente.
+                const formularioNovo =
+                    formulario.cloneNode(true);
+
+                formulario.replaceWith(formularioNovo);
+
+                expect(formulario.isConnected).toBe(false);
+                expect(formularioNovo.isConnected).toBe(true);
+
+                expect(formularioNovo.id).toBe(
+                    formulario.id,
+                );
+
+                // O servidor concluiu o pedido antigo.
+                pendente.resolver({
+                    data: {
+                        mensagem: 'Operacao antiga concluida.',
+                    },
+                });
+
+                await submissao;
+
+                // O evento representa a operacao
+                // confirmada no servidor, mesmo apos
+                // a substituicao do formulario.
+                expect(eventoSucesso)
+                    .toHaveBeenCalledTimes(1);
+
+                expect(
+                    eventoSucesso.mock.calls[0][0].detail,
+                ).toEqual({
+                    idFormulario: formulario.id,
+                    dadosResposta: {
+                        mensagem: 'Operacao antiga concluida.',
+                    },
+                });
+
+                expect(tratador.emSubmissao).toBe(false);
+            } finally {
+                document.removeEventListener(
+                    'formulario-ajax:sucesso',
+                    eventoSucesso,
+                );
+            }
+        },
+    );
+
 });

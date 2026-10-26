@@ -13,11 +13,11 @@ class GestorFormulariosModais {
     /**
      * Elementos de formulario ja inicializados.
      *
-     * @type {WeakSet<HTMLFormElement>}
+     * @type {WeakMap<HTMLFormElement, TratadorFormularioAjax>}
      *
      * @since 2.0.0
      */
-    static formulariosInicializados = new WeakSet();
+    static formulariosInicializados = new WeakMap();
 
     /**
      * Cria e inicializa os formulários de janelas modais.
@@ -45,13 +45,18 @@ class GestorFormulariosModais {
             );
         }
 
+        const configuracoesNormalizadas =
+            configuracoesModais.map(
+                (configuracao) =>
+                    this.normalizarConfiguracao(
+                        configuracao,
+                    ),
+            );
+
         const formulariosConfigurados = new Set();
 
-        configuracoesModais.forEach((configuracao) => {
-            const configuracaoNormalizada =
-                this.normalizarConfiguracao(
-                    configuracao,
-                );
+        configuracoesNormalizadas.forEach(
+            (configuracaoNormalizada) => {
 
             if (
                 formulariosConfigurados.has(
@@ -66,11 +71,38 @@ class GestorFormulariosModais {
             formulariosConfigurados.add(
                 configuracaoNormalizada.idFormulario,
             );
+        });
 
-            this.inicializarFormulario(
-                configuracaoNormalizada,
+        // Validar tambem as regras dos validadores
+        // antes de modificar qualquer formulario real.
+        // Os formularios temporarios nao entram na DOM.
+        configuracoesNormalizadas.forEach((configuracao) => {
+            const formulario = document.getElementById(
+                configuracao.idFormulario,
+            );
+
+            if (!(formulario instanceof HTMLFormElement)) {
+                return;
+            }
+
+            new ValidadorFormulario(
+                document.createElement('form'),
+                {
+                    regras: configuracao.regrasValidacao,
+                    mensagens: configuracao.mensagensValidacao,
+                    aoSucesso: () => {},
+                },
             );
         });
+
+        // So aplicar depois de todas as verificacoes.
+        configuracoesNormalizadas.forEach(
+            (configuracaoNormalizada) => {
+                this.inicializarFormulario(
+                    configuracaoNormalizada,
+                );
+            },
+        );
     }
 
     /**
@@ -91,11 +123,21 @@ class GestorFormulariosModais {
             return;
         }
 
-        if (
+        const tratadorExistente =
             GestorFormulariosModais
                 .formulariosInicializados
-                .has(formulario)
-        ) {
+                .get(formulario);
+
+        if (tratadorExistente) {
+            // Reutilizar o listener de validacao,
+            // mas atualizar o contexto dos pedidos futuros.
+            tratadorExistente.atualizarConfiguracao(
+                configuracao.url,
+                configuracao.aoSucesso,
+                configuracao.aoErro,
+                configuracao.obterContextoSubmissao,
+            );
+
             return;
         }
 
@@ -122,7 +164,7 @@ class GestorFormulariosModais {
 
         GestorFormulariosModais
             .formulariosInicializados
-            .add(formulario);
+            .set(formulario, tratadorAjax);
     }
 
     /**

@@ -300,4 +300,385 @@ describe('B25.17 — inicializacao dos formularios modais', () => {
         },
     );
 
+
+    it(
+        'B25.48 — nova inicializacao usa callback e contexto atuais',
+        async () => {
+            const callbackAntigo = vi.fn();
+            const callbackNovo = vi.fn();
+
+            // Primeira inicializacao do formulario modal.
+            new GestorFormulariosModais([
+                {
+                    ...criarConfiguracao(
+                        'formulario-b25-17',
+                    ),
+                    obterContextoSubmissao: () => ({
+                        inicializacao: 'antiga',
+                    }),
+                    aoSucesso: callbackAntigo,
+                },
+            ]);
+
+            // Uma nova inicializacao principal reutiliza
+            // o mesmo formulario modal, mas tem callbacks
+            // e contexto de submissao diferentes.
+            new GestorFormulariosModais([
+                {
+                    ...criarConfiguracao(
+                        'formulario-b25-17',
+                    ),
+                    obterContextoSubmissao: () => ({
+                        inicializacao: 'nova',
+                    }),
+                    aoSucesso: callbackNovo,
+                },
+            ]);
+
+            const evento = submeterFormulario(
+                formulario,
+            );
+
+            expect(evento.defaultPrevented).toBe(true);
+
+            // A reutilizacao nao pode duplicar pedidos.
+            expect(pedido).toHaveBeenCalledTimes(1);
+
+            // A submissao comecou depois da segunda
+            // inicializacao, logo pertence ao novo contexto.
+            await vi.waitFor(() => {
+                expect(callbackNovo)
+                    .toHaveBeenCalledExactlyOnceWith(
+                        {
+                            mensagem: 'OK',
+                        },
+                        {
+                            inicializacao: 'nova',
+                        },
+                    );
+            });
+
+            expect(callbackAntigo)
+                .not.toHaveBeenCalled();
+
+            expect(pedido).toHaveBeenCalledTimes(1);
+        },
+    );
+
+
+    it(
+        'B25.48 — resposta anterior nao usa callbacks apos reinicializacao',
+        async () => {
+            let concluirPedido;
+
+            const respostaPendente = new Promise(
+                (resolve) => {
+                    concluirPedido = resolve;
+                },
+            );
+
+            pedido.mockReturnValue(respostaPendente);
+
+            const callbackAntigo = vi.fn();
+            const callbackNovo = vi.fn();
+            const eventoSucesso = vi.fn();
+
+            document.addEventListener(
+                'formulario-ajax:sucesso',
+                eventoSucesso,
+            );
+
+            try {
+                new GestorFormulariosModais([
+                    {
+                        ...criarConfiguracao(
+                            'formulario-b25-17',
+                        ),
+                        obterContextoSubmissao: () => ({
+                            inicializacao: 'antiga',
+                        }),
+                        aoSucesso: callbackAntigo,
+                    },
+                ]);
+
+                const evento = submeterFormulario(
+                    formulario,
+                );
+
+                expect(evento.defaultPrevented).toBe(true);
+                expect(pedido).toHaveBeenCalledTimes(1);
+
+                expect(
+                    formulario.querySelector('button')
+                        .disabled,
+                ).toBe(true);
+
+                // A primeira operacao continua pendente,
+                // mas uma nova inicializacao assume
+                // o mesmo formulario modal.
+                new GestorFormulariosModais([
+                    {
+                        ...criarConfiguracao(
+                            'formulario-b25-17',
+                        ),
+                        obterContextoSubmissao: () => ({
+                            inicializacao: 'nova',
+                        }),
+                        aoSucesso: callbackNovo,
+                    },
+                ]);
+
+                concluirPedido({
+                    data: {
+                        mensagem: 'Operacao antiga concluida.',
+                    },
+                });
+
+                await vi.waitFor(() => {
+                    expect(
+                        formulario.querySelector('button')
+                            .disabled,
+                    ).toBe(false);
+                });
+
+                // Uma resposta iniciada antes da
+                // reinicializacao nao pode executar
+                // callbacks de nenhuma das versoes.
+                expect(callbackAntigo)
+                    .not.toHaveBeenCalled();
+
+                expect(callbackNovo)
+                    .not.toHaveBeenCalled();
+
+                // Tambem nao deve publicar um evento
+                // global pertencente ao contexto antigo.
+                expect(eventoSucesso)
+                    .not.toHaveBeenCalled();
+
+                expect(pedido).toHaveBeenCalledTimes(1);
+            } finally {
+                document.removeEventListener(
+                    'formulario-ajax:sucesso',
+                    eventoSucesso,
+                );
+            }
+        },
+    );
+
+
+    it(
+        'B25.48 — erro HTTP antigo nao afeta nova inicializacao',
+        async () => {
+            let rejeitarPedido;
+
+            const respostaPendente = new Promise(
+                (_resolve, reject) => {
+                    rejeitarPedido = reject;
+                },
+            );
+
+            pedido.mockReturnValue(respostaPendente);
+
+            const erroAntigo = vi.fn(() => true);
+            const erroNovo = vi.fn(() => true);
+
+            new GestorFormulariosModais([
+                {
+                    ...criarConfiguracao(
+                        'formulario-b25-17',
+                    ),
+                    aoErro: erroAntigo,
+                },
+            ]);
+
+            const evento = submeterFormulario(
+                formulario,
+            );
+
+            expect(evento.defaultPrevented).toBe(true);
+            expect(pedido).toHaveBeenCalledTimes(1);
+
+            // O pedido antigo continua pendente.
+            // O mesmo formulario recebe nova configuracao.
+            new GestorFormulariosModais([
+                {
+                    ...criarConfiguracao(
+                        'formulario-b25-17',
+                    ),
+                    aoErro: erroNovo,
+                },
+            ]);
+
+            rejeitarPedido(
+                new Error(
+                    'Erro HTTP da inicializacao antiga',
+                ),
+            );
+
+            await vi.waitFor(() => {
+                expect(
+                    formulario.querySelector('button')
+                        .disabled,
+                ).toBe(false);
+            });
+
+            // A resposta antiga nao pode executar
+            // callbacks de nenhuma das configuracoes.
+            expect(erroAntigo).not.toHaveBeenCalled();
+            expect(erroNovo).not.toHaveBeenCalled();
+
+            // Uma submissao posterior ja deve utilizar
+            // o callback da nova configuracao.
+            pedido.mockRejectedValueOnce(
+                new Error(
+                    'Erro HTTP da nova inicializacao',
+                ),
+            );
+
+            const novoEvento = submeterFormulario(
+                formulario,
+            );
+
+            expect(novoEvento.defaultPrevented)
+                .toBe(true);
+
+            await vi.waitFor(() => {
+                expect(erroNovo)
+                    .toHaveBeenCalledTimes(1);
+            });
+
+            expect(erroAntigo).not.toHaveBeenCalled();
+            expect(pedido).toHaveBeenCalledTimes(2);
+        },
+    );
+
+    it(
+        'B25.48 — configuracao invalida conserva callbacks anteriores',
+        async () => {
+            const callbackAntigo = vi.fn();
+            const callbackNovo = vi.fn();
+
+            new GestorFormulariosModais([
+                {
+                    ...criarConfiguracao(
+                        'formulario-b25-17',
+                    ),
+                    aoSucesso: callbackAntigo,
+                },
+            ]);
+
+            // A primeira configuracao e valida,
+            // mas a segunda contem um URL invalido.
+            expect(
+                () => new GestorFormulariosModais([
+                    {
+                        ...criarConfiguracao(
+                            'formulario-b25-17',
+                        ),
+                        aoSucesso: callbackNovo,
+                    },
+                    {
+                        ...criarConfiguracao(
+                            'outro-formulario-b25-17',
+                        ),
+                        url: '',
+                    },
+                ]),
+            ).toThrow(
+                'Cada formulário modal deve possuir um endereço de submissão válido.',
+            );
+
+            // Uma tentativa falhada nao pode alterar
+            // os callbacks anteriormente funcionais.
+            const evento = submeterFormulario(
+                formulario,
+            );
+
+            expect(evento.defaultPrevented).toBe(true);
+            expect(pedido).toHaveBeenCalledTimes(1);
+
+            await vi.waitFor(() => {
+                expect(callbackAntigo)
+                    .toHaveBeenCalledTimes(1);
+            });
+
+            expect(callbackNovo).not.toHaveBeenCalled();
+            expect(pedido).toHaveBeenCalledTimes(1);
+        },
+    );
+
+
+    it(
+        'B25.48 — falha do validador conserva callbacks existentes',
+        async () => {
+            const callbackAntigo = vi.fn();
+            const callbackNovo = vi.fn();
+
+            new GestorFormulariosModais([
+                {
+                    ...criarConfiguracao(
+                        'formulario-b25-17',
+                    ),
+                    aoSucesso: callbackAntigo,
+                },
+            ]);
+
+            document.body.insertAdjacentHTML(
+                'beforeend',
+                `
+                    <form id="formulario-b25-48-segundo">
+                        <textarea name="conteudo">
+                            Segunda mensagem
+                        </textarea>
+                        <button type="submit">Enviar</button>
+                    </form>
+                `,
+            );
+
+            // Todas as configuracoes passam na
+            // normalizacao do gestor AJAX.
+            //
+            // Contudo, as regras do segundo
+            // formulario nao sao uma lista valida
+            // para o ValidadorFormulario.
+
+            expect(
+                () => new GestorFormulariosModais([
+                    {
+                        ...criarConfiguracao(
+                            'formulario-b25-17',
+                        ),
+                        aoSucesso: callbackNovo,
+                    },
+                    {
+                        ...criarConfiguracao(
+                            'formulario-b25-48-segundo',
+                        ),
+                        regrasValidacao: {
+                            conteudo: 'obrigatorio',
+                        },
+                    },
+                ]),
+            ).toThrow(TypeError);
+
+            // O primeiro formulario ja funcionava
+            // antes da tentativa mal sucedida.
+            // O respetivo callback deve permanecer.
+            const evento = submeterFormulario(
+                formulario,
+            );
+
+            expect(evento.defaultPrevented).toBe(true);
+            expect(pedido).toHaveBeenCalledTimes(1);
+
+            await vi.waitFor(() => {
+                expect(callbackAntigo)
+                    .toHaveBeenCalledTimes(1);
+            });
+
+            expect(callbackNovo).not.toHaveBeenCalled();
+            expect(pedido).toHaveBeenCalledTimes(1);
+        },
+    );
+
 });
