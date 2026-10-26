@@ -1437,9 +1437,20 @@ class GestorModalAvaliacao {
                         .trim()
                     : '';
 
+            // A ausencia de resposta nao confirma
+            // que a eliminacao falhou no servidor.
+            const falhaComunicacao =
+                axios.isAxiosError(erro)
+                && erro.request !== undefined
+                && erro.request !== null
+                && !erro.response;
+
             await GestorAlertas.mostrarErro(
-                mensagemResposta
-                || 'Não foi possível limpar a avaliação.',
+                falhaComunicacao
+                    ? 'Não foi possível confirmar se a operação foi concluída. '
+                        + 'Verifica o resultado antes de tentares novamente.'
+                    : mensagemResposta
+                        || 'Não foi possível limpar a avaliação.',
                 'Erro ao limpar avaliação',
             );
         } finally {
@@ -1615,11 +1626,22 @@ class GestorModalAvaliacao {
                 ?.trim()
             ?? '';
 
+        // Uma resposta perdida nao confirma
+        // que a avaliacao deixou de ser guardada.
+        const falhaComunicacao =
+            axios.isAxiosError(erro)
+            && erro.request !== undefined
+            && erro.request !== null
+            && !erro.response;
+
         this.apresentarErroAvaliacao(
-            mensagemValidacao
-            || mensagemResposta
-            || mensagemConfigurada
-            || 'Não foi possível guardar a avaliação.',
+            falhaComunicacao
+                ? 'Não foi possível confirmar se a operação foi concluída. '
+                    + 'Verifica o resultado antes de tentares novamente.'
+                : mensagemValidacao
+                    || mensagemResposta
+                    || mensagemConfigurada
+                    || 'Não foi possível guardar a avaliação.',
         );
 
         this.focarEstrelaCorrespondente(

@@ -433,4 +433,122 @@ describe('B25.6 — conclusao das operacoes de avaliacao', () => {
         expect(erro).not.toHaveBeenCalled();
         expect(gestor.emSubmissao).toBe(false);
     });
+
+    it(
+        'B25.56 — falha de rede ao limpar avaliacao comunica resultado incerto',
+        async () => {
+            const gestor = prepararGestor();
+
+            const confirmar = vi.spyOn(
+                GestorAlertas,
+                'confirmar',
+            ).mockResolvedValue(true);
+
+            const alerta = vi.spyOn(
+                GestorAlertas,
+                'mostrarErro',
+            ).mockResolvedValue(undefined);
+
+            const erroComunicacao = new axios.AxiosError(
+                'A ligação foi interrompida.',
+                'ERR_NETWORK',
+                {},
+                {readyState: 4},
+            );
+
+            const pedido = vi.spyOn(
+                axios,
+                'delete',
+            ).mockRejectedValueOnce(
+                erroComunicacao,
+            );
+
+            const botao = document.getElementById(
+                'botao-avaliar',
+            );
+
+            await gestor.limparAvaliacao();
+
+            expect(confirmar).toHaveBeenCalledTimes(1);
+            expect(pedido).toHaveBeenCalledTimes(1);
+
+            // O gestor normaliza o endereco para URL absoluto.
+            // A identidade da rota nao depende dessa forma.
+            expect(
+                new URL(
+                    pedido.mock.calls[0][0],
+                    document.baseURI,
+                ).pathname,
+            ).toBe('/avaliacoes/metal-thursday/42');
+
+            expect(alerta).toHaveBeenCalledTimes(1);
+
+            expect(alerta).toHaveBeenCalledWith(
+                'Não foi possível confirmar se a operação foi concluída. '
+                + 'Verifica o resultado antes de tentares novamente.',
+                'Erro ao limpar avaliação',
+            );
+
+            // Uma resposta desconhecida nao pode
+            // alterar indevidamente o estado visual.
+            expect(botao.dataset.pontuacaoUtilizador)
+                .toBe('3.5');
+
+            expect(gestor.emSubmissao).toBe(false);
+        },
+    );
+
+    it(
+        'B25.56 — erro HTTP ao limpar preserva mensagem do servidor',
+        async () => {
+            const gestor = prepararGestor();
+
+            vi.spyOn(
+                GestorAlertas,
+                'confirmar',
+            ).mockResolvedValue(true);
+
+            const alerta = vi.spyOn(
+                GestorAlertas,
+                'mostrarErro',
+            ).mockResolvedValue(undefined);
+
+            const erroHttp = new axios.AxiosError(
+                'Erro HTTP 409.',
+                'ERR_BAD_RESPONSE',
+                {},
+                {},
+                {
+                    data: {
+                        mensagem:
+                            'A avaliação não pode ser eliminada.',
+                    },
+                    status: 409,
+                    statusText: 'Conflict',
+                    headers: {},
+                    config: {},
+                },
+            );
+
+            const pedido = vi.spyOn(
+                axios,
+                'delete',
+            ).mockRejectedValueOnce(
+                erroHttp,
+            );
+
+            await gestor.limparAvaliacao();
+
+            expect(pedido).toHaveBeenCalledTimes(1);
+            expect(alerta).toHaveBeenCalledTimes(1);
+
+            expect(alerta).toHaveBeenCalledWith(
+                'A avaliação não pode ser eliminada.',
+                'Erro ao limpar avaliação',
+            );
+
+            expect(gestor.emSubmissao).toBe(false);
+        },
+    );
+
 });
