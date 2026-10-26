@@ -2343,10 +2343,20 @@ class GestorInteracoes {
                 ? mensagemPredefinida.trim()
                 : '';
 
-        const mensagem =
-            mensagemResposta
-            || mensagemConfigurada
-            || 'Ocorreu um erro ao processar a ação.';
+        // Sem resposta HTTP, a operacao pode ter
+        // sido concluida apesar da falha de comunicacao.
+        const falhaComunicacao =
+            axios.isAxiosError(erro)
+            && erro.request !== undefined
+            && erro.request !== null
+            && !erro.response;
+
+        const mensagem = falhaComunicacao
+            ? 'Não foi possível confirmar se a operação foi concluída. '
+                + 'Verifica o resultado antes de tentares novamente.'
+            : mensagemResposta
+                || mensagemConfigurada
+                || 'Ocorreu um erro ao processar a ação.';
 
         await GestorAlertas.mostrarErro(
             mensagem,
