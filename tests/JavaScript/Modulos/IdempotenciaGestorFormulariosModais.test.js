@@ -847,4 +847,116 @@ describe('B25.17 — inicializacao dos formularios modais', () => {
         },
     );
 
+
+    it(
+        'B25.50 — reinicializacao nao sobrepoe pedidos pendentes',
+        async () => {
+            const callbackAntigo = vi.fn();
+            const callbackNovo = vi.fn();
+
+            let concluirPedido;
+
+            const pendente = new Promise((resolve) => {
+                concluirPedido = resolve;
+            });
+
+            pedido.mockReturnValueOnce(pendente);
+
+            new GestorFormulariosModais([
+                {
+                    ...criarConfiguracao(
+                        'formulario-b25-17',
+                    ),
+                    aoSucesso: callbackAntigo,
+                },
+            ]);
+
+            const primeiroEvento = submeterFormulario(
+                formulario,
+            );
+
+            expect(primeiroEvento.defaultPrevented)
+                .toBe(true);
+
+            expect(pedido).toHaveBeenCalledTimes(1);
+
+            const botao = formulario.querySelector(
+                'button[type="submit"]',
+            );
+
+            expect(botao.disabled).toBe(true);
+
+            // A nova inicializacao altera o URL e
+            // o callback enquanto o pedido antigo
+            // continua por concluir.
+            new GestorFormulariosModais([
+                {
+                    ...criarConfiguracao(
+                        'formulario-b25-17',
+                    ),
+                    url: '/teste/nova-submissao',
+                    aoSucesso: callbackNovo,
+                },
+            ]);
+
+            // Simular uma tentativa de submissao
+            // mesmo com o botao desativado.
+            const segundoEvento = submeterFormulario(
+                formulario,
+            );
+
+            expect(segundoEvento.defaultPrevented)
+                .toBe(true);
+
+            // Nenhum pedido pode sobrepor-se ao antigo.
+            expect(pedido).toHaveBeenCalledTimes(1);
+
+            expect(callbackAntigo)
+                .not.toHaveBeenCalled();
+
+            expect(callbackNovo)
+                .not.toHaveBeenCalled();
+
+            concluirPedido({
+                data: {
+                    mensagem: 'Pedido antigo concluido.',
+                },
+            });
+
+            await vi.waitFor(() => {
+                expect(botao.disabled).toBe(false);
+            });
+
+            expect(callbackAntigo)
+                .not.toHaveBeenCalled();
+
+            expect(callbackNovo)
+                .not.toHaveBeenCalled();
+
+            // Depois de terminar o primeiro pedido,
+            // a nova configuracao deve funcionar.
+            const terceiroEvento = submeterFormulario(
+                formulario,
+            );
+
+            expect(terceiroEvento.defaultPrevented)
+                .toBe(true);
+
+            expect(pedido).toHaveBeenCalledTimes(2);
+
+            expect(pedido.mock.calls[1][0])
+                .toBe('/teste/nova-submissao');
+
+            await vi.waitFor(() => {
+                expect(callbackNovo)
+                    .toHaveBeenCalledTimes(1);
+            });
+
+            expect(callbackAntigo)
+                .not.toHaveBeenCalled();
+
+            expect(botao.disabled).toBe(false);
+        },
+    );
+
 });
