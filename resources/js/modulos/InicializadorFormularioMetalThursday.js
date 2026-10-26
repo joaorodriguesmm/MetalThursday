@@ -1509,6 +1509,13 @@ function configurarConfirmacaoNomeRepetidoArtista(contextoCriacaoRapida) {
             reporConfirmacaoNomeRepetidoArtista(
                 formulario,
             );
+
+            if (contextoCriacaoRapida.reabrirArtistaAposFecho) {
+                contextoCriacaoRapida.reabrirArtistaAposFecho =
+                    false;
+
+                Modal.getOrCreateInstance(modal).show();
+            }
         },
     );
 }
@@ -1926,6 +1933,36 @@ function configurarDestinoCriacaoArtista(
 
 }
 
+const preparadoresAberturaGenero = new WeakMap();
+
+let capturaAberturaGeneroInstalada = false;
+
+function capturarAberturaDeclarativaGenero(evento) {
+    const acionador = evento.target instanceof Element
+        ? evento.target.closest(
+            '[data-bs-toggle="modal"][data-bs-target="#modal-criar-genero"]',
+        )
+        : null;
+
+    if (!(acionador instanceof HTMLElement)) {
+        return;
+    }
+
+    const modalArtista = acionador.closest(
+        '#modal-criar-artista',
+    );
+
+    if (
+        !(modalArtista instanceof HTMLElement)
+        || !modalArtista.classList.contains('show')
+    ) {
+        return;
+    }
+
+    preparadoresAberturaGenero
+        .get(modalArtista)?.(acionador);
+}
+
 /**
  * Mantém o formulário do artista ao criar um género a partir do respetivo
  * modal e reabre o modal do artista quando o modal do género é fechado.
@@ -1960,6 +1997,43 @@ function configurarRetornoCriacaoGeneroParaArtista(
         false;
 
     let ultimoEventoAbertura = null;
+    let acionadorDeclarativo = null;
+
+    preparadoresAberturaGenero.set(
+        modalArtista,
+        (acionador) => {
+            acionadorDeclarativo = acionador;
+
+            modalArtista.setAttribute(
+                'data-preservar-formularios-ao-fechar',
+                '',
+            );
+
+            queueMicrotask(() => {
+                if (acionadorDeclarativo !== acionador) {
+                    return;
+                }
+
+                acionadorDeclarativo = null;
+
+                if (modalArtista.classList.contains('show')) {
+                    modalArtista.removeAttribute(
+                        'data-preservar-formularios-ao-fechar',
+                    );
+                }
+            });
+        },
+    );
+
+    if (!capturaAberturaGeneroInstalada) {
+        window.addEventListener(
+            'click',
+            capturarAberturaDeclarativaGenero,
+            true,
+        );
+
+        capturaAberturaGeneroInstalada = true;
+    }
 
     modalGenero.addEventListener(
         'show.bs.modal',
@@ -1976,6 +2050,13 @@ function configurarRetornoCriacaoGeneroParaArtista(
 
             const acionador =
                 evento.relatedTarget;
+
+            const aberturaDeclarativa =
+                acionadorDeclarativo === acionador;
+
+            if (aberturaDeclarativa) {
+                acionadorDeclarativo = null;
+            }
 
             regressarAoModalArtista =
                 acionador instanceof Element
@@ -1995,10 +2076,12 @@ function configurarRetornoCriacaoGeneroParaArtista(
                 return;
             }
 
-            modalArtista.setAttribute(
-                'data-preservar-formularios-ao-fechar',
-                '',
-            );
+            if (!aberturaDeclarativa) {
+                modalArtista.setAttribute(
+                    'data-preservar-formularios-ao-fechar',
+                    '',
+                );
+            }
 
             queueMicrotask(() => {
                 if (
@@ -2008,15 +2091,39 @@ function configurarRetornoCriacaoGeneroParaArtista(
                     return;
                 }
 
+                const recuperarArtista =
+                    aberturaDeclarativa
+                    && regressarAoModalArtista;
+
                 regressarAoModalArtista = false;
 
                 contextoCriacaoRapida
                     .generoParaArtista =
                     false;
 
+                if (
+                    recuperarArtista
+                    && !modalArtista.classList.contains('show')
+                    && modalArtista.style.display !== 'none'
+                ) {
+                    contextoCriacaoRapida.reabrirArtistaAposFecho =
+                        true;
+
+                    return;
+                }
+
                 modalArtista.removeAttribute(
                     'data-preservar-formularios-ao-fechar',
                 );
+
+                if (
+                    recuperarArtista
+                    && !modalArtista.classList.contains('show')
+                ) {
+                    Modal.getOrCreateInstance(
+                        modalArtista,
+                    ).show();
+                }
             });
         },
     );
@@ -2104,6 +2211,7 @@ function executarInicializacaoFormularioMetalThursday(
     const contextoCriacaoRapida = {
         selecaoArtistaDestino: null,
         generoParaArtista: false,
+        reabrirArtistaAposFecho: false,
         versaoArtista: 0,
         versaoGenero: 0,
     };
