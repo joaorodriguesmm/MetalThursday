@@ -681,4 +681,170 @@ describe('B25.17 — inicializacao dos formularios modais', () => {
         },
     );
 
+
+    it(
+        'B25.49 — nova inicializacao atualiza regras de validacao',
+        async () => {
+            // A configuracao inicial exige conteudo.
+            new GestorFormulariosModais([
+                criarConfiguracao(
+                    'formulario-b25-17',
+                ),
+            ]);
+
+            // O formulario modal permanece na DOM,
+            // mas a nova configuracao torna o campo opcional.
+            new GestorFormulariosModais([
+                {
+                    ...criarConfiguracao(
+                        'formulario-b25-17',
+                    ),
+                    regrasValidacao: {
+                        conteudo: [],
+                    },
+                },
+            ]);
+
+            formulario.querySelector(
+                '[name="conteudo"]',
+            ).value = '';
+
+            const evento = submeterFormulario(
+                formulario,
+            );
+
+            expect(evento.defaultPrevented).toBe(true);
+
+            // A configuracao mais recente deve permitir
+            // a submissao com o conteudo vazio.
+            expect(pedido).toHaveBeenCalledTimes(1);
+
+            await vi.waitFor(() => {
+                expect(
+                    formulario.querySelector('button').disabled,
+                ).toBe(false);
+            });
+        },
+    );
+
+
+    it(
+        'B25.49 — novas regras invalidam resposta AJAX pendente',
+        async () => {
+            const callbackSucesso = vi.fn();
+            const eventosSucesso = vi.fn();
+
+            const configuracao = {
+                ...criarConfiguracao(
+                    'formulario-b25-17',
+                ),
+                aoSucesso: callbackSucesso,
+            };
+
+            new GestorFormulariosModais([
+                configuracao,
+            ]);
+
+            let concluirPedido;
+
+            const pendente = new Promise((resolve) => {
+                concluirPedido = resolve;
+            });
+
+            pedido.mockReturnValueOnce(pendente);
+
+            document.addEventListener(
+                'formulario-ajax:sucesso',
+                eventosSucesso,
+            );
+
+            try {
+                formulario.querySelector(
+                    '[name="conteudo"]',
+                ).value = 'Mensagem antes da alteracao';
+
+                const primeiroEvento = submeterFormulario(
+                    formulario,
+                );
+
+                expect(primeiroEvento.defaultPrevented)
+                    .toBe(true);
+
+                expect(pedido).toHaveBeenCalledTimes(1);
+
+                // Mantemos URL e callbacks identicos.
+                // Apenas as regras de validacao mudam.
+                new GestorFormulariosModais([
+                    {
+                        ...configuracao,
+                        regrasValidacao: {
+                            conteudo: [],
+                        },
+                    },
+                ]);
+
+                concluirPedido({
+                    data: {
+                        mensagem:
+                            'Resposta da configuracao anterior.',
+                    },
+                });
+
+                await vi.waitFor(() => {
+                    expect(
+                        formulario.querySelector('button').disabled,
+                    ).toBe(false);
+                });
+
+                // O pedido HTTP terminou, mas a resposta
+                // pertence a regras que ja nao estao ativas.
+                expect(callbackSucesso)
+                    .not.toHaveBeenCalled();
+
+                expect(eventosSucesso)
+                    .not.toHaveBeenCalled();
+
+                expect(pedido).toHaveBeenCalledTimes(1);
+
+                // Uma submissao nova deve funcionar.
+                pedido.mockResolvedValueOnce({
+                    data: {
+                        mensagem: 'Novo pedido concluido.',
+                    },
+                });
+
+                formulario.querySelector(
+                    '[name="conteudo"]',
+                ).value = 'Mensagem da nova configuracao';
+
+                const segundoEvento = submeterFormulario(
+                    formulario,
+                );
+
+                expect(segundoEvento.defaultPrevented)
+                    .toBe(true);
+
+                expect(pedido).toHaveBeenCalledTimes(2);
+
+                await vi.waitFor(() => {
+                    expect(callbackSucesso)
+                        .toHaveBeenCalledTimes(1);
+
+                    expect(eventosSucesso)
+                        .toHaveBeenCalledTimes(1);
+                });
+
+                expect(
+                    eventosSucesso.mock.calls[0][0]
+                        .detail.idFormulario,
+                ).toBe('formulario-b25-17');
+            } finally {
+                document.removeEventListener(
+                    'formulario-ajax:sucesso',
+                    eventosSucesso,
+                );
+            }
+        },
+    );
+
 });

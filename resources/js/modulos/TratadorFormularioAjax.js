@@ -126,6 +126,8 @@ class TratadorFormularioAjax {
      * @param {Function|null} aoSucesso Callback de sucesso.
      * @param {Function|null} aoErro Callback de erro.
      * @param {Function|null} obterContextoSubmissao Contexto.
+     * @param {boolean} invalidarSubmissoesPendentes
+     *     Indica se as regras de validacao foram alteradas.
      *
      * @returns {void}
      */
@@ -134,9 +136,11 @@ class TratadorFormularioAjax {
         aoSucesso,
         aoErro,
         obterContextoSubmissao,
+        invalidarSubmissoesPendentes = false,
     ) {
         if (
-            this.url === url
+            !invalidarSubmissoesPendentes
+            && this.url === url
             && this.aoSucesso === aoSucesso
             && this.aoErro === aoErro
             && this.obterContextoSubmissao

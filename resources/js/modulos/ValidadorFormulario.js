@@ -46,6 +46,79 @@ class ValidadorFormulario {
     }
 
     /**
+     * Atualiza as regras e mensagens sem reinstalar listeners.
+     *
+     * Conserva os valores do formulario e o callback de
+     * submissao. Devolve verdadeiro apenas quando existe
+     * uma alteracao efetiva da validacao.
+     *
+     * @param {object} configuracao Nova configuracao.
+     * @returns {boolean} Indica se houve alteracoes.
+     */
+    atualizarConfiguracao({ regras, mensagens }) {
+        const novaConfiguracao = this.normalizarConfiguracao({
+            ...this.configuracao,
+            regras,
+            mensagens,
+        });
+
+        const novasDependencias = this.criarMapaDependencias(
+            novaConfiguracao.regras,
+        );
+
+        const mesmasRegras =
+            Object.keys(this.regras).length
+                === Object.keys(novaConfiguracao.regras).length
+            && Object.entries(novaConfiguracao.regras).every(
+                ([nomeCampo, regrasCampo]) =>
+                    Object.hasOwn(this.regras, nomeCampo)
+                    && this.regras[nomeCampo].length
+                        === regrasCampo.length
+                    && regrasCampo.every(
+                        (regra, indice) =>
+                            this.regras[nomeCampo][indice] === regra,
+                    ),
+            );
+
+        const mesmasMensagens =
+            Object.keys(this.mensagens).length
+                === Object.keys(novaConfiguracao.mensagens).length
+            && Object.entries(novaConfiguracao.mensagens).every(
+                ([nomeCampo, mensagensCampo]) => {
+                    if (!Object.hasOwn(this.mensagens, nomeCampo)) {
+                        return false;
+                    }
+
+                    const anteriores = this.mensagens[nomeCampo];
+
+                    return Object.keys(anteriores).length
+                        === Object.keys(mensagensCampo).length
+                        && Object.entries(mensagensCampo).every(
+                            ([nomeRegra, mensagem]) =>
+                                Object.hasOwn(anteriores, nomeRegra)
+                                && anteriores[nomeRegra] === mensagem,
+                        );
+                },
+            );
+
+        if (mesmasRegras && mesmasMensagens) {
+            return false;
+        }
+
+        this.configuracao = novaConfiguracao;
+        this.regras = novaConfiguracao.regras;
+        this.mensagens = novaConfiguracao.mensagens;
+        this.dependencias = novasDependencias;
+
+        // Invalidar reposicoes diferidas da configuracao antiga.
+        this.versaoValidacao += 1;
+        this.tentouSubmeter = false;
+        this.limparTodosErros();
+
+        return true;
+    }
+
+    /**
      * Valida todos os campos configurados.
      *
      * @param {object} opcoes Opções da validação.

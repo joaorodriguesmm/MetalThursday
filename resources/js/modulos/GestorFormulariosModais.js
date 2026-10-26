@@ -13,7 +13,7 @@ class GestorFormulariosModais {
     /**
      * Elementos de formulario ja inicializados.
      *
-     * @type {WeakMap<HTMLFormElement, TratadorFormularioAjax>}
+     * @type {WeakMap<HTMLFormElement, {tratadorAjax: TratadorFormularioAjax, validadorFormulario: ValidadorFormulario}>}
      *
      * @since 2.0.0
      */
@@ -123,19 +123,27 @@ class GestorFormulariosModais {
             return;
         }
 
-        const tratadorExistente =
+        const instanciaExistente =
             GestorFormulariosModais
                 .formulariosInicializados
                 .get(formulario);
 
-        if (tratadorExistente) {
-            // Reutilizar o listener de validacao,
-            // mas atualizar o contexto dos pedidos futuros.
-            tratadorExistente.atualizarConfiguracao(
+        if (instanciaExistente) {
+            const regrasAlteradas =
+                instanciaExistente.validadorFormulario
+                    .atualizarConfiguracao({
+                        regras: configuracao.regrasValidacao,
+                        mensagens: configuracao.mensagensValidacao,
+                    });
+
+            // Preservar os listeners existentes e atualizar
+            // apenas a configuracao dos pedidos futuros.
+            instanciaExistente.tratadorAjax.atualizarConfiguracao(
                 configuracao.url,
                 configuracao.aoSucesso,
                 configuracao.aoErro,
                 configuracao.obterContextoSubmissao,
+                regrasAlteradas,
             );
 
             return;
@@ -149,7 +157,7 @@ class GestorFormulariosModais {
             configuracao.obterContextoSubmissao,
         );
 
-        new ValidadorFormulario(
+        const validadorFormulario = new ValidadorFormulario(
             formulario,
             {
                 regras: configuracao.regrasValidacao,
@@ -164,7 +172,10 @@ class GestorFormulariosModais {
 
         GestorFormulariosModais
             .formulariosInicializados
-            .set(formulario, tratadorAjax);
+            .set(formulario, {
+                tratadorAjax,
+                validadorFormulario,
+            });
     }
 
     /**
