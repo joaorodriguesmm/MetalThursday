@@ -2497,50 +2497,88 @@ function executarInicializacaoFormularioMetalThursday(
     const controladorEventos =
         new AbortController();
 
-    [
-        'modal-criar-artista',
-        'modal-criar-genero',
-    ].forEach((identificador) => {
-        const modal =
-            document.getElementById(identificador);
+    try {
+        [
+            'modal-criar-artista',
+            'modal-criar-genero',
+        ].forEach((identificador) => {
+            const modal =
+                document.getElementById(identificador);
 
-        if (!(modal instanceof HTMLElement)) {
-            return;
+            if (!(modal instanceof HTMLElement)) {
+                return;
+            }
+
+            controladoresEventosModais
+                .get(modal)?.abort();
+
+            controladoresEventosModais.set(
+                modal,
+                controladorEventos,
+            );
+        });
+
+        configurarDestinoCriacaoArtista(
+            contextoCriacaoRapida,
+            controladorEventos.signal,
+        );
+
+        configurarRetornoCriacaoGeneroParaArtista(
+            contextoCriacaoRapida,
+            controladorEventos.signal,
+        );
+
+        configurarConfirmacaoNomeRepetidoArtista(
+            contextoCriacaoRapida,
+            controladorEventos.signal,
+        );
+
+        new GestorFormulariosModais(
+            criarConfiguracoesModais(
+                inicializadorTomSelect,
+                configuracao.enderecos,
+                artistasCriados,
+                gestorEdicao,
+                contextoCriacaoRapida,
+            ),
+        );
+    } catch (erro) {
+        // Desativar todos os listeners da tentativa
+        // que nao conseguiu concluir a inicializacao.
+        controladorEventos.abort();
+
+        // Retirar apenas as referencias pertencentes
+        // ao controlador que acabou de falhar.
+        for (const identificador of [
+            'modal-criar-artista',
+            'modal-criar-genero',
+        ]) {
+            const modal =
+                document.getElementById(
+                    identificador,
+                );
+
+            if (
+                !(modal instanceof HTMLElement)
+                || controladoresEventosModais.get(modal)
+                    !== controladorEventos
+            ) {
+                continue;
+            }
+
+            controladoresEventosModais.delete(modal);
+
+            if (identificador === 'modal-criar-artista') {
+                preparadoresAberturaGenero.delete(modal);
+            } else {
+                estadosRetornoGeneroArtista.delete(modal);
+            }
         }
 
-        controladoresEventosModais
-            .get(modal)?.abort();
-
-        controladoresEventosModais.set(
-            modal,
-            controladorEventos,
-        );
-    });
-
-    configurarDestinoCriacaoArtista(
-        contextoCriacaoRapida,
-        controladorEventos.signal,
-    );
-
-    configurarRetornoCriacaoGeneroParaArtista(
-        contextoCriacaoRapida,
-        controladorEventos.signal,
-    );
-
-    configurarConfirmacaoNomeRepetidoArtista(
-        contextoCriacaoRapida,
-        controladorEventos.signal,
-    );
-
-    new GestorFormulariosModais(
-        criarConfiguracoesModais(
-            inicializadorTomSelect,
-            configuracao.enderecos,
-            artistasCriados,
-            gestorEdicao,
-            contextoCriacaoRapida,
-        ),
-    );
+        // Manter a excecao original e a politica
+        // existente de inicializacao incompleta.
+        throw erro;
+    }
 }
 
 /**

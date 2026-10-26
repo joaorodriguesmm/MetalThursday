@@ -2163,4 +2163,214 @@ describe('B25.41 — ciclo de vida com Bootstrap verdadeiro', () => {
         },
     );
 
+
+    it(
+        'B25.47 — falha final nao deixa listeners de modais ativos',
+        async () => {
+            const primeira = prepararPagina();
+
+            const versaoAntiga =
+                primeira.obterContextoArtista()
+                    .versaoArtista;
+
+            // O formulario principal muda, mas os
+            // modais permanecem na mesma DOM.
+            const formulario =
+                document.getElementById(
+                    'formulario-criar-metal-thursday',
+                );
+
+            formulario.replaceWith(
+                formulario.cloneNode(true),
+            );
+
+            // A falha ocorre depois da configuracao
+            // dos listeners dos modais.
+            efeitos.gestorModais.mockImplementationOnce(
+                () => {
+                    throw new Error(
+                        'Falha simulada B25.47 nos modais.',
+                    );
+                },
+            );
+
+            expect(
+                () => inicializarFormularioMetalThursday(
+                    'formulario-criar-metal-thursday',
+                ),
+            ).toThrow(
+                'Falha simulada B25.47 nos modais.',
+            );
+
+            expect(efeitos.gestorModais)
+                .toHaveBeenCalledTimes(2);
+
+            const configuracoesFalhadas =
+                efeitos.gestorModais.mock.calls[1][0];
+
+            const configuracaoArtista =
+                configuracoesFalhadas.find(
+                    (entrada) =>
+                        entrada.idFormulario
+                            === 'formulario-criar-artista',
+                );
+
+            expect(configuracaoArtista).toBeDefined();
+
+            const obterContextoFalhado = () =>
+                configuracaoArtista
+                    .obterContextoSubmissao();
+
+            const versaoFalhada =
+                obterContextoFalhado().versaoArtista;
+
+            const artista = criarModal(
+                'modal-criar-artista',
+            );
+
+            const abertura = esperarEvento(
+                artista.elemento,
+                'shown.bs.modal',
+            );
+
+            artista.instancia.show();
+
+            await abertura;
+
+            // Uma inicializacao que terminou com erro
+            // nao pode continuar a reagir aos eventos.
+            expect(
+                obterContextoFalhado().versaoArtista,
+            ).toBe(versaoFalhada);
+
+            // A inicializacao substituida tambem nao
+            // pode voltar a receber estes eventos.
+            expect(
+                primeira.obterContextoArtista()
+                    .versaoArtista,
+            ).toBe(versaoAntiga);
+        },
+    );
+
+
+    it(
+        'B25.47 — falha final nao conserva captura global obsoleta',
+        async () => {
+            prepararPagina();
+
+            const formulario =
+                document.getElementById(
+                    'formulario-criar-metal-thursday',
+                );
+
+            formulario.replaceWith(
+                formulario.cloneNode(true),
+            );
+
+            efeitos.gestorModais.mockImplementationOnce(
+                () => {
+                    throw new Error(
+                        'Falha B25.47 na inicializacao dos modais.',
+                    );
+                },
+            );
+
+            expect(
+                () => inicializarFormularioMetalThursday(
+                    'formulario-criar-metal-thursday',
+                ),
+            ).toThrow(
+                'Falha B25.47 na inicializacao dos modais.',
+            );
+
+            const artista = criarModal(
+                'modal-criar-artista',
+            );
+
+            const abertura = esperarEvento(
+                artista.elemento,
+                'shown.bs.modal',
+            );
+
+            artista.instancia.show();
+
+            await abertura;
+
+            const nome =
+                artista.elemento.querySelector(
+                    '[name="nome"]',
+                );
+
+            nome.value = 'Rascunho apos falha';
+
+            const acionador =
+                document.createElement('button');
+
+            acionador.type = 'button';
+
+            acionador.setAttribute(
+                'data-bs-toggle',
+                'modal',
+            );
+
+            acionador.setAttribute(
+                'data-bs-target',
+                '#modal-criar-genero',
+            );
+
+            artista.elemento
+                .querySelector('.modal-dialog')
+                .append(acionador);
+
+            let preservacaoDuranteCaptura = null;
+
+            // Este listener e instalado depois do
+            // listener global da aplicacao.
+            // Observa o atributo na propria window,
+            // antes do Bootstrap processar o clique.
+            window.addEventListener(
+                'click',
+                (evento) => {
+                    preservacaoDuranteCaptura =
+                        artista.elemento.hasAttribute(
+                            'data-preservar-formularios-ao-fechar',
+                        );
+
+                    // Isolar o teste da transicao
+                    // declarativa normal do Bootstrap.
+                    evento.stopPropagation();
+                },
+                {
+                    capture: true,
+                    once: true,
+                },
+            );
+
+            acionador.click();
+
+            await Promise.resolve();
+
+            // Uma tentativa falhada nao pode deixar
+            // o preparador global a atuar.
+            expect(preservacaoDuranteCaptura)
+                .toBe(false);
+
+            expect(
+                artista.elemento.hasAttribute(
+                    'data-preservar-formularios-ao-fechar',
+                ),
+            ).toBe(false);
+
+            expect(nome.value).toBe(
+                'Rascunho apos falha',
+            );
+
+            expect(
+                artista.elemento.classList.contains(
+                    'show',
+                ),
+            ).toBe(true);
+        },
+    );
+
 });
