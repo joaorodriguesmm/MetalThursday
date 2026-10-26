@@ -604,10 +604,21 @@ class TratadorFormularioAjax {
                 ?.trim()
             ?? '';
 
+        // Sem resposta HTTP, uma operacao enviada pode
+        // ter sido concluida no servidor.
+        const mensagemPadrao =
+            axios.isAxiosError(erro)
+            && erro.request !== undefined
+            && erro.request !== null
+            && !erro.response
+                ? 'Não foi possível confirmar se a operação foi concluída. '
+                    + 'Verifica o resultado antes de tentares novamente.'
+                : 'Ocorreu um erro inesperado. Tenta novamente.';
+
         void GestorAlertas.mostrarErro(
             mensagemConfigurada !== ''
                 ? mensagemConfigurada
-                : 'Ocorreu um erro inesperado. Tenta novamente.',
+                : mensagemPadrao,
         );
     }
 
