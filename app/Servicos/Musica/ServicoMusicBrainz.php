@@ -194,6 +194,12 @@ final class ServicoMusicBrainz
             );
         }
 
+        if ($artista['mbid'] !== $mbidNormalizado) {
+            throw new RuntimeException(
+                'O MusicBrainz devolveu uma identidade diferente da solicitada.',
+            );
+        }
+
         return $artista;
     }
 

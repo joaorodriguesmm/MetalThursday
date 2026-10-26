@@ -106,16 +106,29 @@ final class ServicoTheAudioDB
             return null;
         }
 
-        $artista =
-            $artistas[0] ?? null;
+        foreach ($artistas as $artista) {
+            if (! is_array($artista)) {
+                continue;
+            }
 
-        if (! is_array($artista)) {
-            return null;
+            $identificador =
+                $this->obterTexto(
+                    $artista['strMusicBrainzID'] ?? null,
+                );
+
+            if (
+                $identificador === null
+                || strcasecmp($identificador, $mbid) !== 0
+            ) {
+                continue;
+            }
+
+            return $this->normalizarArtista(
+                $artista,
+            );
         }
 
-        return $this->normalizarArtista(
-            $artista,
-        );
+        return null;
     }
 
     /**
