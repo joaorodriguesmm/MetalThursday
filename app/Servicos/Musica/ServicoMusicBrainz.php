@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Servicos\Musica;
 
+use App\Models\Musica\Artista;
 use App\Servicos\Integracoes\LimitadorPedidosExternos;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
@@ -461,6 +462,12 @@ final class ServicoMusicBrainz
             || ! $this->eMbidValido(
                 $mbid,
             )
+        ) {
+            return null;
+        }
+
+        if (
+            mb_strlen($nome) > Artista::COMPRIMENTO_MAXIMO_NOME
         ) {
             return null;
         }

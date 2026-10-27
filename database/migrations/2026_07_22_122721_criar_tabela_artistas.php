@@ -74,7 +74,7 @@ return new class extends Migration
                     ->nullable();
 
                 $tabela
-                    ->text(
+                    ->longText(
                         'biografia',
                     )
                     ->nullable();

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Servicos\Musica;
 
+use App\Models\Comum\Ligacao;
+use App\Models\Musica\Artista;
 use App\Servicos\Integracoes\LimitadorPedidosExternos;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
@@ -337,6 +339,20 @@ final class ServicoTheAudioDB
                 $artista['strBiographyEN'] ?? null,
             );
 
+        if (
+            $biografiaPortugues !== null
+            && ! $this->eBiografiaImportavel($biografiaPortugues)
+        ) {
+            $biografiaPortugues = null;
+        }
+
+        if (
+            $biografiaIngles !== null
+            && ! $this->eBiografiaImportavel($biografiaIngles)
+        ) {
+            $biografiaIngles = null;
+        }
+
         $biografia =
             $biografiaPortugues
             ?? $biografiaIngles;
@@ -565,6 +581,22 @@ final class ServicoTheAudioDB
     }
 
     /**
+     * Verifica se uma biografia externa respeita o contrato do artista.
+     *
+     * @since 2.0.0
+     */
+    private function eBiografiaImportavel(string $biografia): bool
+    {
+        return preg_match('//u', $biografia) === 1
+            && preg_match(
+                '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/',
+                $biografia,
+            ) !== 1
+            && mb_strlen($biografia)
+                <= Artista::COMPRIMENTO_MAXIMO_BIOGRAFIA;
+    }
+
+    /**
      * Normaliza um endereço HTTP/HTTPS.
      *
      * Aceita igualmente domínios sem esquema, acrescentando HTTPS.
@@ -646,6 +678,12 @@ final class ServicoTheAudioDB
                 ],
                 true,
             )
+        ) {
+            return null;
+        }
+
+        if (
+            mb_strlen($valor) > Ligacao::COMPRIMENTO_MAXIMO_URL
         ) {
             return null;
         }
