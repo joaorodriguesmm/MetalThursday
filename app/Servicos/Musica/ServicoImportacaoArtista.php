@@ -669,6 +669,13 @@ final class ServicoImportacaoArtista
             return false;
         }
 
+        if (
+            parse_url($endereco, PHP_URL_USER) !== null
+            || parse_url($endereco, PHP_URL_PASS) !== null
+        ) {
+            return false;
+        }
+
         $esquema =
             mb_strtolower(
                 (string) parse_url(

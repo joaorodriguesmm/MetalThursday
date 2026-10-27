@@ -551,6 +551,10 @@ final class ServicoTheAudioDB
             || mb_strlen(
                 $identificador,
             ) < 2
+            || preg_match(
+                '/\A[\p{L}\p{N}][\p{L}\p{N}._-]*\z/u',
+                $identificador,
+            ) !== 1
         ) {
             return null;
         }
@@ -614,6 +618,13 @@ final class ServicoTheAudioDB
                 $valor,
                 FILTER_VALIDATE_URL,
             ) === false
+        ) {
+            return null;
+        }
+
+        if (
+            parse_url($valor, PHP_URL_USER) !== null
+            || parse_url($valor, PHP_URL_PASS) !== null
         ) {
             return null;
         }
