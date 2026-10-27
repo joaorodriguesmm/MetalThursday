@@ -125,6 +125,22 @@ final class ServicoImportacaoArtista
             $musicBrainz['discogs_id']
             ?? null;
 
+        $anoInicioAtividade = $musicBrainz['ano_inicio']
+            ?? $theAudioDB['ano_inicio']
+            ?? null;
+
+        $anoFimAtividade = $musicBrainz['ano_fim']
+            ?? $theAudioDB['ano_fim']
+            ?? null;
+
+        if (
+            is_int($anoInicioAtividade)
+            && is_int($anoFimAtividade)
+            && $anoFimAtividade < $anoInicioAtividade
+        ) {
+            $anoFimAtividade = null;
+        }
+
         return [
             'musicbrainz_id' => $musicBrainz['mbid'],
 
@@ -152,13 +168,9 @@ final class ServicoImportacaoArtista
                     ?? null,
             ],
 
-            'ano_inicio_atividade' => $musicBrainz['ano_inicio']
-                ?? $theAudioDB['ano_inicio']
-                ?? null,
+            'ano_inicio_atividade' => $anoInicioAtividade,
 
-            'ano_fim_atividade' => $musicBrainz['ano_fim']
-                ?? $theAudioDB['ano_fim']
-                ?? null,
+            'ano_fim_atividade' => $anoFimAtividade,
 
             'estado_atividade' => $this->obterEstadoAtividade(
                 $musicBrainz,

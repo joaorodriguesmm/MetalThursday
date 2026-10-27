@@ -332,11 +332,13 @@ final class ServicoTheAudioDB
         $biografiaPortugues =
             $this->obterTexto(
                 $artista['strBiographyPT'] ?? null,
+                true,
             );
 
         $biografiaIngles =
             $this->obterTexto(
                 $artista['strBiographyEN'] ?? null,
+                true,
             );
 
         if (
@@ -701,6 +703,7 @@ final class ServicoTheAudioDB
      */
     private function obterTexto(
         mixed $valor,
+        bool $textoLongo = false,
     ): ?string {
         if (! is_string($valor)) {
             return null;
@@ -710,6 +713,17 @@ final class ServicoTheAudioDB
             trim(
                 $valor,
             );
+
+        $padraoCaracteresInvalidos = $textoLongo
+            ? '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/'
+            : '/[\x00-\x1F\x7F]/';
+
+        if (
+            preg_match('//u', $valor) !== 1
+            || preg_match($padraoCaracteresInvalidos, $valor) === 1
+        ) {
+            return null;
+        }
 
         return $valor === ''
             ? null
@@ -748,7 +762,12 @@ final class ServicoTheAudioDB
             return null;
         }
 
-        return (int) $valor;
+        $ano = (int) $valor;
+
+        return $ano >= Artista::ANO_MINIMO_ATIVIDADE
+            && $ano <= now()->year
+            ? $ano
+            : null;
     }
 
     /**

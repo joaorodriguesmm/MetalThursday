@@ -779,7 +779,12 @@ final class ServicoMusicBrainz
             return null;
         }
 
-        return (int) $correspondencias[1];
+        $ano = (int) $correspondencias[1];
+
+        return $ano >= Artista::ANO_MINIMO_ATIVIDADE
+            && $ano <= now()->year
+            ? $ano
+            : null;
     }
 
     /**
@@ -801,6 +806,13 @@ final class ServicoMusicBrainz
             trim(
                 $valor,
             );
+
+        if (
+            preg_match('//u', $valor) !== 1
+            || preg_match('/[\x00-\x1F\x7F]/', $valor) === 1
+        ) {
+            return null;
+        }
 
         return $valor === ''
             ? null
