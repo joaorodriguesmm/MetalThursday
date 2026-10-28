@@ -566,12 +566,22 @@ final class ServicoTheAudioDB
                 $texto,
             );
 
+        $dominiosPermitidos = [$dominioPlataforma];
+
+        if ($dominioPlataforma === 'youtube.com') {
+            $dominiosPermitidos[] = 'youtu.be';
+        }
+
+        if ($dominioPlataforma === 'x.com') {
+            $dominiosPermitidos[] = 'twitter.com';
+        }
+
         if (
             str_starts_with($valorMinusculas, 'http://')
             || str_starts_with($valorMinusculas, 'https://')
             || str_starts_with($valorMinusculas, 'www.')
             || str_contains($texto, '/')
-            || $valorMinusculas === $dominioPlataforma
+            || in_array($valorMinusculas, $dominiosPermitidos, true)
             || str_ends_with(
                 $valorMinusculas,
                 '.'.$dominioPlataforma,
@@ -586,16 +596,6 @@ final class ServicoTheAudioDB
             $host = mb_strtolower(
                 (string) parse_url($url, PHP_URL_HOST),
             );
-
-            $dominiosPermitidos = [$dominioPlataforma];
-
-            if ($dominioPlataforma === 'youtube.com') {
-                $dominiosPermitidos[] = 'youtu.be';
-            }
-
-            if ($dominioPlataforma === 'x.com') {
-                $dominiosPermitidos[] = 'twitter.com';
-            }
 
             foreach ($dominiosPermitidos as $dominioPermitido) {
                 if (
