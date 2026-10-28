@@ -577,7 +577,36 @@ final class ServicoTheAudioDB
                 '.'.$dominioPlataforma,
             )
         ) {
-            return $this->normalizarUrl($texto);
+            $url = $this->normalizarUrl($texto);
+
+            if ($url === null) {
+                return null;
+            }
+
+            $host = mb_strtolower(
+                (string) parse_url($url, PHP_URL_HOST),
+            );
+
+            $dominiosPermitidos = [$dominioPlataforma];
+
+            if ($dominioPlataforma === 'youtube.com') {
+                $dominiosPermitidos[] = 'youtu.be';
+            }
+
+            if ($dominioPlataforma === 'x.com') {
+                $dominiosPermitidos[] = 'twitter.com';
+            }
+
+            foreach ($dominiosPermitidos as $dominioPermitido) {
+                if (
+                    $host === $dominioPermitido
+                    || str_ends_with($host, '.'.$dominioPermitido)
+                ) {
+                    return $url;
+                }
+            }
+
+            return null;
         }
 
         $identificador =
