@@ -240,7 +240,7 @@ final class ProtecaoCredenciaisUrlsIntegracoesTest extends TestCase
                 ],
                 [
                     'titulo' => 'YouTube',
-                    'url' => 'https://www.youtube.com/artista-teste',
+                    'url' => 'https://www.youtube.com/@artista-teste',
                 ],
             ],
             $resultado['ligacoes'],

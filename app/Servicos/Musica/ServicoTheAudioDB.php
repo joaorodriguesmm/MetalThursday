@@ -628,6 +628,13 @@ final class ServicoTheAudioDB
             return null;
         }
 
+        if (
+            $dominioPlataforma === 'youtube.com'
+            && str_starts_with($texto, '@')
+        ) {
+            $identificador = '@'.$identificador;
+        }
+
         return $this->normalizarUrl(
             $prefixo.$identificador,
         );

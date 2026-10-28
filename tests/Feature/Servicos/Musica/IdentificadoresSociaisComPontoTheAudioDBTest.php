@@ -99,7 +99,7 @@ final class IdentificadoresSociaisComPontoTheAudioDBTest extends TestCase
                 'strYoutube',
                 '@artista.metal',
                 'YouTube',
-                'https://www.youtube.com/artista.metal',
+                'https://www.youtube.com/@artista.metal',
             ],
             'youtube_dominio_sem_esquema' => [
                 'strYoutube',
