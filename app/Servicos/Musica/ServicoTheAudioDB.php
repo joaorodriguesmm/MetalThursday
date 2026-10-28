@@ -360,11 +360,9 @@ final class ServicoTheAudioDB
             ?? $biografiaIngles;
 
         return [
-            'id' => is_numeric(
+            'id' => $this->normalizarIdentificadorPositivo(
                 $artista['idArtist'] ?? null,
-            )
-                ? (int) $artista['idArtist']
-                : null,
+            ),
 
             'nome' => $this->obterTexto(
                 $artista['strArtist'] ?? null,
@@ -691,6 +689,49 @@ final class ServicoTheAudioDB
         }
 
         return $valor;
+    }
+
+    /**
+     * Normaliza um identificador externo como inteiro positivo.
+     *
+     * Rejeita valores não decimais ou superiores ao limite inteiro PHP.
+     *
+     * @since 2.0.0
+     */
+    private function normalizarIdentificadorPositivo(
+        mixed $valor,
+    ): ?int {
+        if (
+            ! is_string($valor)
+            && ! is_int($valor)
+        ) {
+            return null;
+        }
+
+        $texto = (string) $valor;
+
+        if (
+            preg_match(
+                '/\A[0-9]+\z/',
+                $texto,
+            ) !== 1
+        ) {
+            return null;
+        }
+
+        $identificador = filter_var(
+            ltrim($texto, '0'),
+            FILTER_VALIDATE_INT,
+            [
+                'options' => [
+                    'min_range' => 1,
+                ],
+            ],
+        );
+
+        return is_int($identificador)
+            ? $identificador
+            : null;
     }
 
     /**

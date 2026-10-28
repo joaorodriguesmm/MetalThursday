@@ -649,10 +649,17 @@ final class ServicoMusicBrainz
                 continue;
             }
 
-            $identificador =
-                (int) $correspondencias[1];
+            $identificador = filter_var(
+                ltrim($correspondencias[1], '0'),
+                FILTER_VALIDATE_INT,
+                [
+                    'options' => [
+                        'min_range' => 1,
+                    ],
+                ],
+            );
 
-            if ($identificador > 0) {
+            if (is_int($identificador)) {
                 return $identificador;
             }
         }
