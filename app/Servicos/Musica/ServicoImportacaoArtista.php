@@ -516,9 +516,9 @@ final class ServicoImportacaoArtista
     /**
      * Determina a categoria funcional de uma ligação externa.
      *
-     * O site oficial é identificado preferencialmente pelo tipo estruturado
-     * devolvido pelo MusicBrainz. As restantes categorias são reconhecidas
-     * pelo domínio.
+     * Os domínios conhecidos prevalecem sobre o tipo MusicBrainz.
+     * MusicBrainz e Discogs são excluídos. Os restantes domínios só são
+     * classificados como site oficial quando o tipo o indicar.
      *
      * @param  string  $endereco  Endereço externo.
      * @param  string|null  $tipoMusicBrainz  Tipo da relação MusicBrainz.
@@ -530,15 +530,6 @@ final class ServicoImportacaoArtista
         string $endereco,
         ?string $tipoMusicBrainz,
     ): ?string {
-        if (
-            $tipoMusicBrainz !== null
-            && mb_strtolower(
-                $tipoMusicBrainz,
-            ) === 'official homepage'
-        ) {
-            return 'site_oficial';
-        }
-
         $host =
             $this->obterHostNormalizado(
                 $endereco,
@@ -549,6 +540,15 @@ final class ServicoImportacaoArtista
         }
 
         return match (true) {
+            $this->hostCorresponde(
+                $host,
+                'discogs.com',
+            ),
+            $this->hostCorresponde(
+                $host,
+                'musicbrainz.org',
+            ) => null,
+
             $this->hostCorresponde(
                 $host,
                 'bandcamp.com',
@@ -581,6 +581,11 @@ final class ServicoImportacaoArtista
                 $host,
                 'metal-archives.com',
             ) => 'metal_archives',
+
+            $tipoMusicBrainz !== null
+                && mb_strtolower(
+                    $tipoMusicBrainz,
+                ) === 'official homepage' => 'site_oficial',
 
             default => null,
         };
