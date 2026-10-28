@@ -63,7 +63,9 @@
                         <div
                             class="estrelas-avaliacao-interativas"
                             data-estrelas-avaliacao
+                            role="group"
                             aria-label="Selecionar pontuação"
+                            aria-describedby="feedback-avaliacao erro-pontuacao-avaliacao"
                         >
                             @foreach ($pontuacoesDisponiveis as $pontuacao)
                                 <button
