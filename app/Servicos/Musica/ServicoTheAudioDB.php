@@ -576,16 +576,32 @@ final class ServicoTheAudioDB
             $dominiosPermitidos[] = 'twitter.com';
         }
 
+        $hostSemEsquema = mb_strtolower(
+            (string) parse_url('https://'.$texto, PHP_URL_HOST),
+        );
+
+        $dominioSemEsquemaPermitido = false;
+
+        foreach ($dominiosPermitidos as $dominioPermitido) {
+            if (
+                $hostSemEsquema === $dominioPermitido
+                || str_ends_with(
+                    $hostSemEsquema,
+                    '.'.$dominioPermitido,
+                )
+            ) {
+                $dominioSemEsquemaPermitido = true;
+
+                break;
+            }
+        }
+
         if (
             str_starts_with($valorMinusculas, 'http://')
             || str_starts_with($valorMinusculas, 'https://')
             || str_starts_with($valorMinusculas, 'www.')
             || str_contains($texto, '/')
-            || in_array($valorMinusculas, $dominiosPermitidos, true)
-            || str_ends_with(
-                $valorMinusculas,
-                '.'.$dominioPlataforma,
-            )
+            || $dominioSemEsquemaPermitido
         ) {
             $url = $this->normalizarUrl($texto);
 
