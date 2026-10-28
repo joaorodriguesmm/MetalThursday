@@ -412,6 +412,10 @@ final class ServicoImportacaoArtista
                 'url' => $ligacao['url'],
 
                 'tipo_musicbrainz' => null,
+
+                'site_oficial_theaudiodb' => (
+                    $ligacao['titulo'] ?? null
+                ) === 'Site oficial',
             ];
         }
 
@@ -428,7 +432,8 @@ final class ServicoImportacaoArtista
      *
      * @param  list<array{
      *     url: mixed,
-     *     tipo_musicbrainz: mixed
+     *     tipo_musicbrainz: mixed,
+     *     site_oficial_theaudiodb?: bool
      * }>  $candidatas  Ligações candidatas.
      * @return list<array{titulo: string, url: string}> Ligações filtradas.
      *
@@ -471,6 +476,7 @@ final class ServicoImportacaoArtista
                 $this->obterCategoriaLigacao(
                     $endereco,
                     $tipoMusicBrainz,
+                    $candidata['site_oficial_theaudiodb'] ?? false,
                 );
 
             if (
@@ -522,6 +528,7 @@ final class ServicoImportacaoArtista
      *
      * @param  string  $endereco  Endereço externo.
      * @param  string|null  $tipoMusicBrainz  Tipo da relação MusicBrainz.
+     * @param  bool  $siteOficialTheAudioDB  Indicação de site oficial do TheAudioDB.
      * @return string|null Categoria permitida ou nulo.
      *
      * @since 2.0.0
@@ -529,6 +536,7 @@ final class ServicoImportacaoArtista
     private function obterCategoriaLigacao(
         string $endereco,
         ?string $tipoMusicBrainz,
+        bool $siteOficialTheAudioDB,
     ): ?string {
         $host =
             $this->obterHostNormalizado(
@@ -581,6 +589,8 @@ final class ServicoImportacaoArtista
                 $host,
                 'metal-archives.com',
             ) => 'metal_archives',
+
+            $siteOficialTheAudioDB => 'site_oficial',
 
             $tipoMusicBrainz !== null
                 && mb_strtolower(
