@@ -547,13 +547,37 @@ final class ServicoTheAudioDB
             return null;
         }
 
-        $url =
-            $this->normalizarUrl(
+        $dominioPlataforma =
+            mb_strtolower(
+                (string) parse_url(
+                    $prefixo,
+                    PHP_URL_HOST,
+                ),
+            );
+
+        $dominioPlataforma = preg_replace(
+            '/^www\./',
+            '',
+            $dominioPlataforma,
+        ) ?? $dominioPlataforma;
+
+        $valorMinusculas =
+            mb_strtolower(
                 $texto,
             );
 
-        if ($url !== null) {
-            return $url;
+        if (
+            str_starts_with($valorMinusculas, 'http://')
+            || str_starts_with($valorMinusculas, 'https://')
+            || str_starts_with($valorMinusculas, 'www.')
+            || str_contains($texto, '/')
+            || $valorMinusculas === $dominioPlataforma
+            || str_ends_with(
+                $valorMinusculas,
+                '.'.$dominioPlataforma,
+            )
+        ) {
+            return $this->normalizarUrl($texto);
         }
 
         $identificador =
