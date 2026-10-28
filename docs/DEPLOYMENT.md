@@ -111,11 +111,17 @@ um worker ativo em produção.
 Comando base:
 
 ```bash
-php artisan queue:work --queue=principal
+php artisan queue:work database --queue=principal --timeout=60 --tries=3
 ```
 
 O worker deve ser supervisionado por um gestor de processos do sistema
 operativo, com arranque automático e reinício em caso de falha.
+
+O exemplo utiliza um limite de execução de 60 segundos e até três
+tentativas por trabalho, salvo regras específicas do próprio trabalho.
+O `retry_after` da ligação `database` deve ser superior ao `--timeout`;
+com os valores predefinidos atuais, são 90 e 60 segundos, respetivamente.
+O gestor de processos deve reiniciar o worker quando este terminar.
 
 Depois de publicar uma nova versão da aplicação, os workers existentes devem
 ser instruídos a terminar de forma graciosa e arrancar novamente com o código
@@ -124,6 +130,28 @@ novo:
 ```bash
 php artisan queue:restart
 ```
+
+## Diagnóstico e recuperação da fila
+
+Os trabalhos falhados ficam registados na base de dados. Devem ser
+inspecionados regularmente, em conjunto com os registos da aplicação.
+
+Para consultar os trabalhos falhados:
+
+```bash
+php artisan queue:failed
+```
+
+Depois de identificar e corrigir a causa da falha, um trabalho pode ser
+repetido individualmente:
+
+```bash
+php artisan queue:retry <identificador>
+```
+
+Antes de repetir um trabalho, confirmar se a execução anterior já
+produziu algum efeito persistente, para evitar operações duplicadas.
+Não repetir indiscriminadamente todos os trabalhos falhados.
 
 ## Scheduler
 
@@ -135,6 +163,10 @@ do servidor:
 * * * * * cd <diretorio-da-aplicacao> && <php> artisan schedule:run >> /dev/null 2>&1
 ```
 
+O exemplo descarta a saída do cron. Em produção, a execução do
+agendador deve ser monitorizada, para detetar falhas na sua invocação
+e consultar os respetivos registos.
+
 O scheduler utiliza o fuso horário configurado em `APP_TIMEZONE`. Atualmente
 estão definidas as seguintes tarefas:
 
@@ -144,6 +176,19 @@ estão definidas as seguintes tarefas:
 - lembretes de atrasos: diariamente às 08:05.
 
 As quatro tarefas utilizam `withoutOverlapping()`.
+
+Por predefinição, os bloqueios de sobreposição podem permanecer até
+24 horas. Se uma execução terminar inesperadamente, verificar primeiro
+se ainda existe alguma tarefa em curso.
+
+Em caso de bloqueios retidos, pode ser utilizado:
+
+```bash
+php artisan schedule:clear-cache
+```
+
+Este comando limpa bloqueios do agendador e só deve ser executado
+após confirmar que não existem tarefas legítimas ainda em execução.
 
 ## Deployment de uma nova versão
 
@@ -180,6 +225,7 @@ Depois da publicação devem ser confirmados, pelo menos:
 ```bash
 php artisan schedule:list
 php artisan migrate:status
+php artisan queue:failed
 ```
 
 Adicionalmente:
