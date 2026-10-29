@@ -30,6 +30,14 @@
 >
     @csrf
 
+    @if (! $emEdicao)
+        <input
+            type="hidden"
+            name="chave_submissao"
+            value="{{ old('chave_submissao', (string) \Illuminate\Support\Str::uuid()) }}"
+        >
+    @endif
+
     @if ($emEdicao)
         @method('PATCH')
     @endif

@@ -8,6 +8,7 @@ use App\Enumeracoes\EstadoAtividadeArtista;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Musica\AtualizarArtistaRequest;
 use App\Http\Requests\Musica\CriarArtistaRequest;
+use App\Models\Autenticacao\Utilizador;
 use App\Models\Comum\Ligacao;
 use App\Models\Geografia\OrigemGeografica;
 use App\Models\MetalThursday\MetalThursday;
@@ -15,6 +16,7 @@ use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Models\Musica\Artista;
 use App\Models\Musica\Genero;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -157,68 +159,178 @@ final class ControladorArtista extends Controller
         /** @var array<string, mixed> $dados */
         $dados = $pedido->validated();
 
-        $artistasHomonimos = Artista::query()
-            ->select([
-                'id',
-                'nome',
-                'origem_geografica_id',
-                'ano_inicio_atividade',
-            ])
-            ->with([
-                'origemGeografica:id,nome',
-            ])
-            ->where(
-                'nome',
-                $dados['nome'],
-            )
-            ->orderBy('id')
-            ->get();
+        $chaveSubmissao = $dados['chave_submissao'] ?? null;
+        $utilizador = $pedido->user('sessao');
 
-        if (
-            $artistasHomonimos->isNotEmpty()
-            && ! array_key_exists(
-                'confirmar_nome_repetido',
-                $dados,
-            )
-        ) {
-            $artistasHomonimosSerializados = [];
-
-            foreach ($artistasHomonimos as $artistaHomonimo) {
-                $artistasHomonimosSerializados[] = $this->serializarArtistaHomonimo(
-                    $artistaHomonimo,
-                );
-            }
-
-            $dadosConfirmacao = [
-                'codigo' => 'confirmacao_nome_repetido_necessaria',
-                'mensagem' => 'Já existem artistas com este nome. Confirma se pretendes criar um novo artista.',
-                'artistas_homonimos' => $artistasHomonimosSerializados,
-            ];
-
-            if ($pedido->expectsJson()) {
-                return response()->json(
-                    $dadosConfirmacao,
-                    Response::HTTP_CONFLICT,
-                );
-            }
-
-            return back()
-                ->withInput()
-                ->with(
-                    'confirmacao_nome_repetido',
-                    $dadosConfirmacao,
-                );
+        if (! $utilizador instanceof Utilizador) {
+            abort(Response::HTTP_FORBIDDEN);
         }
+
+        $identificadorUtilizador = $utilizador->id;
+
+        // A confirmação de um homónimo pertence à operação original.
+        // A chave e o sinal de confirmação não entram na assinatura.
+        $dadosAssinatura = $dados;
+        unset(
+            $dadosAssinatura['chave_submissao'],
+            $dadosAssinatura['confirmar_nome_repetido'],
+        );
+
+        ksort($dadosAssinatura);
+
+        $assinatura = hash(
+            'sha256',
+            json_encode($dadosAssinatura, JSON_THROW_ON_ERROR),
+        );
 
         $ligacoes = $this->prepararLigacoesPersistencia(
             $dados['ligacoes'] ?? [],
         );
 
-        $artista = DB::transaction(
+        /**
+         * @var array{artista: Artista|null, confirmacao: array<string, mixed>|null} $resultado
+         */
+        $resultado = DB::transaction(
             function () use (
                 $dados,
                 $ligacoes,
-            ): Artista {
+                $chaveSubmissao,
+                $identificadorUtilizador,
+                $assinatura,
+            ): array {
+                // Esta linha única sincroniza criações com o mesmo nome,
+                // incluindo nomes que ainda não existem na tabela artistas.
+                DB::table('bloqueios_nomes_artistas')
+                    ->insertOrIgnore([
+                        'nome' => $dados['nome'],
+                    ]);
+
+                $bloqueio = DB::table('bloqueios_nomes_artistas')
+                    ->where('nome', $dados['nome'])
+                    ->lockForUpdate()
+                    ->first(['nome']);
+
+                if ($bloqueio === null) {
+                    throw new LogicException(
+                        'Não foi possível bloquear o nome do artista.',
+                    );
+                }
+
+                $recuperarSubmissao = function () use (
+                    $chaveSubmissao,
+                    $identificadorUtilizador,
+                    $assinatura,
+                ): ?Artista {
+                    if (! is_string($chaveSubmissao)) {
+                        return null;
+                    }
+
+                    $submissao = DB::table('submissoes_artistas')
+                        ->where('utilizador_id', $identificadorUtilizador)
+                        ->where('chave', $chaveSubmissao)
+                        ->lockForUpdate()
+                        ->first(['assinatura', 'artista_id']);
+
+                    if ($submissao === null) {
+                        return null;
+                    }
+
+                    if (! hash_equals(
+                        (string) $submissao->assinatura,
+                        $assinatura,
+                    )) {
+                        abort(
+                            Response::HTTP_CONFLICT,
+                            'Chave de submissão já utilizada com dados diferentes.',
+                        );
+                    }
+
+                    $artista = Artista::query()
+                        ->whereKey((int) $submissao->artista_id)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (! $artista instanceof Artista) {
+                        abort(
+                            Response::HTTP_GONE,
+                            'O artista original já não está disponível.',
+                        );
+                    }
+
+                    return $artista;
+                };
+
+                $artistaAnterior = $recuperarSubmissao();
+
+                if ($artistaAnterior instanceof Artista) {
+                    return [
+                        'artista' => $artistaAnterior,
+                        'confirmacao' => null,
+                    ];
+                }
+
+                $artistasHomonimos = Artista::query()
+                    ->select([
+                        'id',
+                        'nome',
+                        'origem_geografica_id',
+                        'ano_inicio_atividade',
+                    ])
+                    ->with(['origemGeografica:id,nome'])
+                    ->where('nome', $dados['nome'])
+                    ->orderBy('id')
+                    ->get();
+
+                if (
+                    $artistasHomonimos->isNotEmpty()
+                    && ! array_key_exists('confirmar_nome_repetido', $dados)
+                ) {
+                    $artistasHomonimosSerializados = [];
+
+                    foreach ($artistasHomonimos as $artistaHomonimo) {
+                        $artistasHomonimosSerializados[] =
+                            $this->serializarArtistaHomonimo($artistaHomonimo);
+                    }
+
+                    return [
+                        'artista' => null,
+                        'confirmacao' => [
+                            'codigo' => 'confirmacao_nome_repetido_necessaria',
+                            'mensagem' => 'Já existem artistas com este nome. Confirma se pretendes criar um novo artista.',
+                            'artistas_homonimos' => $artistasHomonimosSerializados,
+                        ],
+                    ];
+                }
+
+                if (is_string($chaveSubmissao)) {
+                    try {
+                        DB::table('submissoes_artistas')
+                            ->insert([
+                                'utilizador_id' => $identificadorUtilizador,
+                                'chave' => $chaveSubmissao,
+                                'assinatura' => $assinatura,
+                                'artista_id' => null,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                    } catch (UniqueConstraintViolationException) {
+                        // Outra operação com a mesma chave pode ter ganho
+                        // a corrida, mesmo quando os nomes são diferentes.
+                        $artistaAnterior = $recuperarSubmissao();
+
+                        if (! $artistaAnterior instanceof Artista) {
+                            throw new LogicException(
+                                'Não foi possível recuperar a submissão do artista.',
+                            );
+                        }
+
+                        return [
+                            'artista' => $artistaAnterior,
+                            'confirmacao' => null,
+                        ];
+                    }
+                }
+
                 $artista = new Artista;
 
                 $this->aplicarDadosPerfil(
@@ -227,8 +339,7 @@ final class ControladorArtista extends Controller
                 );
 
                 $identificadorOrigemGeografica =
-                    $dados['origem_geografica_id']
-                    ?? null;
+                    $dados['origem_geografica_id'] ?? null;
 
                 if (
                     ! is_int($identificadorOrigemGeografica)
@@ -241,15 +352,11 @@ final class ControladorArtista extends Controller
 
                 $artista
                     ->origemGeografica()
-                    ->associate(
-                        $identificadorOrigemGeografica,
-                    );
+                    ->associate($identificadorOrigemGeografica);
 
                 $artista->saveOrFail();
 
-                $identificadoresGeneros =
-                    $dados['generos']
-                    ?? [];
+                $identificadoresGeneros = $dados['generos'] ?? [];
 
                 if (! is_array($identificadoresGeneros)) {
                     throw new LogicException(
@@ -259,22 +366,54 @@ final class ControladorArtista extends Controller
 
                 $artista
                     ->generos()
-                    ->sync(
-                        $identificadoresGeneros,
-                    );
+                    ->sync($identificadoresGeneros);
 
                 if ($ligacoes !== []) {
                     $artista
                         ->ligacoes()
-                        ->createMany(
-                            $ligacoes,
-                        );
+                        ->createMany($ligacoes);
                 }
 
-                return $artista;
+                if (is_string($chaveSubmissao)) {
+                    DB::table('submissoes_artistas')
+                        ->where('utilizador_id', $identificadorUtilizador)
+                        ->where('chave', $chaveSubmissao)
+                        ->update([
+                            'artista_id' => $artista->getKey(),
+                            'updated_at' => now(),
+                        ]);
+                }
+
+                return [
+                    'artista' => $artista,
+                    'confirmacao' => null,
+                ];
             },
             self::TENTATIVAS_TRANSACAO,
         );
+
+        $dadosConfirmacao = $resultado['confirmacao'];
+
+        if ($dadosConfirmacao !== null) {
+            if ($pedido->expectsJson()) {
+                return response()->json(
+                    $dadosConfirmacao,
+                    Response::HTTP_CONFLICT,
+                );
+            }
+
+            return back()
+                ->withInput()
+                ->with('confirmacao_nome_repetido', $dadosConfirmacao);
+        }
+
+        $artista = $resultado['artista'];
+
+        if (! $artista instanceof Artista) {
+            throw new LogicException(
+                'A criação do artista terminou sem um resultado válido.',
+            );
+        }
 
         if ($pedido->expectsJson()) {
             $artista->load([
@@ -286,17 +425,13 @@ final class ControladorArtista extends Controller
             return response()->json(
                 [
                     'mensagem' => 'Artista criado com sucesso.',
-                    'artista' => $this->serializarArtista(
-                        $artista,
-                    ),
+                    'artista' => $this->serializarArtista($artista),
                 ],
                 Response::HTTP_CREATED,
             );
         }
 
-        return to_route(
-            'artistas.indice',
-        )->with(
+        return to_route('artistas.indice')->with(
             'sucesso',
             'Artista criado com sucesso.',
         );

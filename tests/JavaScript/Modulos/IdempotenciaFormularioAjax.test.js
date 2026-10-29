@@ -356,3 +356,70 @@ describe('idempotência dos formulários AJAX', () => {
     );
 
 });
+
+describe('idempotência da criação de artistas por AJAX', () => {
+    let formulario;
+    let tratador;
+
+    beforeEach(() => {
+        document.body.innerHTML = `
+            <form id="teste-artista" data-idempotencia-submissao="perfil-artista">
+                <input name="_token" value="token-1">
+                <input name="nome" value="Ghost">
+                <input name="origem_geografica_id" value="1">
+                <input name="confirmar_nome_repetido" value="1" disabled>
+                <button type="submit">Criar</button>
+            </form>
+        `;
+
+        formulario = document.getElementById('teste-artista');
+        tratador = new TratadorFormularioAjax(
+            'teste-artista',
+            '/artistas',
+        );
+    });
+
+    afterEach(() => {
+        document.body.replaceChildren();
+    });
+
+    it('preserva a chave quando o servidor exige confirmação de homónimo', () => {
+        const primeira = tratador.prepararDadosSubmissao();
+
+        formulario.elements.namedItem('confirmar_nome_repetido')
+            .disabled = false;
+
+        const segunda = tratador.prepararDadosSubmissao();
+
+        expect(segunda.get('confirmar_nome_repetido')).toBe('1');
+        expect(segunda.get('chave_submissao'))
+            .toBe(primeira.get('chave_submissao'));
+    });
+
+    it('renova a chave quando o nome ou outros dados são alterados', () => {
+        const primeira = tratador.prepararDadosSubmissao();
+
+        formulario.elements.namedItem('origem_geografica_id')
+            .value = '2';
+
+        const segunda = tratador.prepararDadosSubmissao();
+        expect(segunda.get('chave_submissao'))
+            .not.toBe(primeira.get('chave_submissao'));
+
+        formulario.elements.namedItem('nome').value = 'Moonspell';
+
+        const terceira = tratador.prepararDadosSubmissao();
+        expect(terceira.get('chave_submissao'))
+            .not.toBe(segunda.get('chave_submissao'));
+    });
+
+    it('ignora mudanças do token CSRF na identidade da operação', () => {
+        const primeira = tratador.prepararDadosSubmissao();
+
+        formulario.elements.namedItem('_token').value = 'token-2';
+
+        const segunda = tratador.prepararDadosSubmissao();
+        expect(segunda.get('chave_submissao'))
+            .toBe(primeira.get('chave_submissao'));
+    });
+});

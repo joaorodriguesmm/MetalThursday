@@ -206,7 +206,32 @@ class TratadorFormularioAjax {
             return dados;
         }
 
-        const conteudo = dados.get('conteudo');
+        const tipoIdempotencia =
+            this.formulario.getAttribute('data-idempotencia-submissao');
+
+        let conteudo;
+
+        if (tipoIdempotencia === 'perfil-artista') {
+            // O sinal de confirmação faz parte do mesmo pedido lógico.
+            // CSRF e a chave não alteram a identidade da operação.
+            conteudo = JSON.stringify(
+                Array.from(
+                    dados.entries(),
+                    ([nome, valor]) => [
+                        nome,
+                        typeof valor === 'string' ? valor : null,
+                    ],
+                ).filter(([nome]) =>
+                    ![
+                        '_token',
+                        'chave_submissao',
+                        'confirmar_nome_repetido',
+                    ].includes(nome),
+                ),
+            );
+        } else {
+            conteudo = dados.get('conteudo');
+        }
 
         if (typeof conteudo !== 'string') {
             throw new TypeError('O conteúdo da submissão é inválido.');

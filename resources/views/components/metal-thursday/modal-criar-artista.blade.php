@@ -25,6 +25,7 @@
                 autocomplete="off"
                 data-ajax-form
                 data-formulario-criar-artista
+                data-idempotencia-submissao="perfil-artista"
                 data-formulario-perfil-artista
                 data-endereco="{{ $enderecoGuardarArtista }}"
                 data-mensagem-sucesso="Artista criado com sucesso."

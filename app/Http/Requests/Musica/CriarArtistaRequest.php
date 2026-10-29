@@ -52,6 +52,12 @@ final class CriarArtistaRequest extends PedidoArtistaRequest
         $regras =
             parent::rules();
 
+        $regras['chave_submissao'] = [
+            'sometimes',
+            'required',
+            'uuid',
+        ];
+
         $regras['confirmar_nome_repetido'] = [
             'sometimes',
             'accepted',
