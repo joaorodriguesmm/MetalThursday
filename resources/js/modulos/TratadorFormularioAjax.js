@@ -351,7 +351,7 @@ class TratadorFormularioAjax {
             observarModalOcultado,
         );
 
-        const erroObsoletoPorFecho = () =>
+        const respostaObsoletaPorFecho = () =>
             modalFechadoDurantePedido
             || (
                 modalAbertoNoInicio
@@ -396,7 +396,7 @@ class TratadorFormularioAjax {
                     !this.formulario.isConnected
                     || this.versaoConfiguracao
                         !== versaoConfiguracao
-                    || erroObsoletoPorFecho()
+                    || respostaObsoletaPorFecho()
                 ) {
                     return;
                 }
@@ -410,7 +410,7 @@ class TratadorFormularioAjax {
                     !this.formulario.isConnected
                     || this.versaoConfiguracao
                         !== versaoConfiguracao
-                    || erroObsoletoPorFecho()
+                    || respostaObsoletaPorFecho()
                 ) {
                     return;
                 }
@@ -448,6 +448,7 @@ class TratadorFormularioAjax {
                     !this.formulario.isConnected
                     || this.versaoConfiguracao
                         !== versaoConfiguracao
+                    || respostaObsoletaPorFecho()
                 ) {
                 return;
             }
@@ -462,6 +463,7 @@ class TratadorFormularioAjax {
                     !this.formulario.isConnected
                     || this.versaoConfiguracao
                         !== versaoConfiguracao
+                    || respostaObsoletaPorFecho()
                 ) {
                 return;
             }
