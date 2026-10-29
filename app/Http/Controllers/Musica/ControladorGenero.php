@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Musica;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Musica\AtualizarGeneroRequest;
 use App\Http\Requests\Musica\CriarGeneroRequest;
+use App\Models\Autenticacao\Utilizador;
 use App\Models\Geografia\OrigemGeografica;
 use App\Models\Musica\Artista;
 use App\Models\Musica\Genero;
@@ -16,7 +17,9 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use LogicException;
@@ -191,6 +194,11 @@ final class ControladorGenero extends Controller
                 ): Genero {
                     $identificadoresAtivos =
                         $this->bloquearHierarquiaAtiva();
+
+                    $this->autorizarEscritaTransacional(
+                        'create',
+                        Genero::class,
+                    );
 
                     $this->garantirGenerosPaisDisponiveis(
                         $dados['generos_pai'],
@@ -405,7 +413,7 @@ final class ControladorGenero extends Controller
                             ->lockForUpdate()
                             ->firstOrFail();
 
-                    $this->authorize(
+                    $this->autorizarEscritaTransacional(
                         'update',
                         $generoBloqueado,
                     );
@@ -506,7 +514,7 @@ final class ControladorGenero extends Controller
                         ->lockForUpdate()
                         ->firstOrFail();
 
-                $this->authorize(
+                $this->autorizarEscritaTransacional(
                     'delete',
                     $generoBloqueado,
                 );
@@ -1072,5 +1080,39 @@ final class ControladorGenero extends Controller
         return array_values(
             $identificadores,
         );
+    }
+
+    /**
+     * Revalida o acesso e a autorização dentro da transação de escrita.
+     *
+     * O bloqueio da conta impede uma suspensão ou alteração de papel entre
+     * a autorização e a persistência dos dados.
+     *
+     * @param  class-string<Genero>|Genero  $alvo  Classe ou registo protegido.
+     *
+     * @since 2.0.0
+     */
+    private function autorizarEscritaTransacional(
+        string $capacidade,
+        string|Genero $alvo,
+    ): void {
+        $autenticado = Auth::guard('sessao')->user();
+
+        if (! $autenticado instanceof Utilizador) {
+            abort(Response::HTTP_FORBIDDEN);
+        }
+
+        $utilizador = Utilizador::query()
+            ->whereKey($autenticado->id)
+            ->lockForUpdate()
+            ->first();
+
+        if (! $utilizador instanceof Utilizador
+            || ! $utilizador->temAcessoAtivo()
+        ) {
+            abort(Response::HTTP_FORBIDDEN);
+        }
+
+        Gate::forUser($utilizador)->authorize($capacidade, $alvo);
     }
 }

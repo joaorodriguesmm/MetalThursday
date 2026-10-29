@@ -21,7 +21,9 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use LogicException;
@@ -215,6 +217,11 @@ final class ControladorArtista extends Controller
                         'Não foi possível bloquear o nome do artista.',
                     );
                 }
+
+                $this->autorizarEscritaTransacional(
+                    'create',
+                    Artista::class,
+                );
 
                 $recuperarSubmissao = function () use (
                     $chaveSubmissao,
@@ -697,7 +704,7 @@ final class ControladorArtista extends Controller
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                $this->authorize(
+                $this->autorizarEscritaTransacional(
                     'update',
                     $artistaBloqueado,
                 );
@@ -815,7 +822,7 @@ final class ControladorArtista extends Controller
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                $this->authorize(
+                $this->autorizarEscritaTransacional(
                     'delete',
                     $artistaBloqueado,
                 );
@@ -1758,5 +1765,39 @@ final class ControladorArtista extends Controller
         }
 
         return $ligacoes;
+    }
+
+    /**
+     * Revalida o acesso e a autorização dentro da transação de escrita.
+     *
+     * O bloqueio da conta impede uma suspensão ou alteração de papel entre
+     * a autorização e a persistência dos dados.
+     *
+     * @param  class-string<Artista>|Artista  $alvo  Classe ou registo protegido.
+     *
+     * @since 2.0.0
+     */
+    private function autorizarEscritaTransacional(
+        string $capacidade,
+        string|Artista $alvo,
+    ): void {
+        $autenticado = Auth::guard('sessao')->user();
+
+        if (! $autenticado instanceof Utilizador) {
+            abort(Response::HTTP_FORBIDDEN);
+        }
+
+        $utilizador = Utilizador::query()
+            ->whereKey($autenticado->id)
+            ->lockForUpdate()
+            ->first();
+
+        if (! $utilizador instanceof Utilizador
+            || ! $utilizador->temAcessoAtivo()
+        ) {
+            abort(Response::HTTP_FORBIDDEN);
+        }
+
+        Gate::forUser($utilizador)->authorize($capacidade, $alvo);
     }
 }
