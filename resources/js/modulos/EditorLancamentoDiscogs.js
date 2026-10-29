@@ -293,6 +293,10 @@ class EditorLancamentoDiscogs {
                 || acao === 'descer'
             );
 
+        const indiceAnterior = Array.from(
+            linha.parentElement?.children ?? [],
+        ).indexOf(linha);
+
         let destinoFoco = null;
 
         if (acao === 'remover') {
@@ -334,6 +338,34 @@ class EditorLancamentoDiscogs {
         this.reindexarFaixas(
             seccao,
         );
+
+        const listaAtual = seccao.querySelector(
+            '[data-lista-faixas-lancamento]',
+        );
+
+        const linhasAtuais = Array.from(
+            listaAtual?.querySelectorAll(
+                ':scope > [data-faixa-lancamento]',
+            ) ?? [],
+        );
+
+        const quantidade = linhasAtuais.length;
+
+        if (acao === 'remover') {
+            this.anunciarFaixas(
+                seccao,
+                `Faixa removida. ${quantidade} ${quantidade === 1 ? 'faixa' : 'faixas'}.`,
+            );
+        } else {
+            const posicao = linhasAtuais.indexOf(linha);
+
+            if (posicao >= 0 && posicao !== indiceAnterior) {
+                this.anunciarFaixas(
+                    seccao,
+                    `Faixa movida para a posição ${posicao + 1} de ${quantidade}.`,
+                );
+            }
+        }
 
         if (destinoFoco instanceof HTMLElement) {
             destinoFoco.focus();
@@ -385,6 +417,25 @@ class EditorLancamentoDiscogs {
     }
 
     /**
+     * Anuncia as alteracoes realizadas na lista de faixas.
+     *
+     * @param {HTMLElement} seccao Seccao atual.
+     * @param {string} mensagem Operacao realizada.
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    anunciarFaixas(seccao, mensagem) {
+        const estado = seccao.querySelector(
+            '[data-estado-faixas-lancamento]',
+        );
+
+        if (estado instanceof HTMLElement) {
+            estado.textContent = mensagem;
+        }
+    }
+
+    /**
      * Adiciona uma nova faixa vazia ao fim da tracklist.
      *
      * @param {HTMLElement} seccao Secção atual.
@@ -420,6 +471,15 @@ class EditorLancamentoDiscogs {
 
         this.reindexarFaixas(
             seccao,
+        );
+
+        const quantidade = lista.querySelectorAll(
+            ':scope > [data-faixa-lancamento]',
+        ).length;
+
+        this.anunciarFaixas(
+            seccao,
+            `Faixa adicionada. ${quantidade} ${quantidade === 1 ? 'faixa' : 'faixas'}.`,
         );
 
         linha.querySelector(

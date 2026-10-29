@@ -128,6 +128,13 @@
 
                         Adicionar secção
                     </button>
+
+                    <p
+                        class="visually-hidden"
+                        data-estado-seccoes
+                        aria-live="polite"
+                        aria-atomic="true"
+                    ></p>
                 </section>
 
                 <div

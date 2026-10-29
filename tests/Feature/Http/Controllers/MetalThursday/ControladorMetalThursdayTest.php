@@ -98,6 +98,12 @@ final class ControladorMetalThursdayTest extends TestCase
             )
             ->assertDontSeeHtml(
                 'name="seccoes[__INDICE_SECCAO__][tipo_secao_id]"',
+            )
+            ->assertSeeHtml(
+                'data-estado-seccoes',
+            )
+            ->assertSeeHtml(
+                'data-estado-faixas-lancamento',
             );
     }
 

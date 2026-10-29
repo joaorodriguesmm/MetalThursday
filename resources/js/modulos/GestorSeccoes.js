@@ -220,6 +220,35 @@ class GestorSeccoes {
     }
 
     /**
+     * Anuncia a adicao ou remocao de uma seccao.
+     *
+     * @param {string} acao Operacao realizada.
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    anunciarAlteracao(acao) {
+        const estado = this.botaoAdicionar.parentElement?.querySelector(
+            '[data-estado-seccoes]',
+        );
+
+        if (!(estado instanceof HTMLElement)) {
+            return;
+        }
+
+        const quantidade = this.contentor.querySelectorAll(
+            ':scope > .item-seccao',
+        ).length;
+
+        const designacao = quantidade === 1
+            ? 'secção'
+            : 'secções';
+
+        estado.textContent =
+            `Secção ${acao}. ${quantidade} ${designacao}.`;
+    }
+
+    /**
      * Adiciona uma nova secção ao contentor.
      *
      * @returns {HTMLElement} Secção criada.
@@ -255,6 +284,8 @@ class GestorSeccoes {
         this.aoAdicionarSeccao?.(
             novaSeccao,
         );
+
+        this.anunciarAlteracao('adicionada');
 
         return novaSeccao;
     }
@@ -419,6 +450,8 @@ class GestorSeccoes {
                 destino.focus();
             }
         }
+
+        this.anunciarAlteracao('removida');
 
         return true;
     }

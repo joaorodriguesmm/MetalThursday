@@ -311,6 +311,12 @@ final class ControladorMetalThursdayLancamentoEstruturadoTest extends TestCase
             )
             ->assertSeeHtml(
                 'id="seccoes-0-faixa-0-titulo"',
+            )
+            ->assertSeeHtml(
+                'data-estado-seccoes',
+            )
+            ->assertSeeHtml(
+                'data-estado-faixas-lancamento',
             );
     }
 }

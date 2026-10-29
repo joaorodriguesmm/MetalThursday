@@ -461,6 +461,13 @@
                 </button>
             </div>
 
+            <p
+                class="visually-hidden"
+                data-estado-faixas-lancamento
+                aria-live="polite"
+                aria-atomic="true"
+            ></p>
+
             <div data-lista-faixas-lancamento>
                 @foreach ($dadosLancamento['faixas'] as $indiceFaixa => $faixa)
                     <div

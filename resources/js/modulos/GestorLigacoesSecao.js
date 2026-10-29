@@ -473,6 +473,8 @@ class GestorLigacoesSecao {
             campoUrl.focus();
         }
 
+        this.anunciarOperacao('Ligação adicionada.');
+
         return linha;
     }
 
@@ -516,6 +518,8 @@ class GestorLigacoesSecao {
         if (reporFoco && destino instanceof HTMLElement) {
             destino.focus();
         }
+
+        this.anunciarOperacao('Ligação removida.');
 
         return true;
     }
@@ -588,7 +592,31 @@ class GestorLigacoesSecao {
             }
         }
 
+        const linhas = this.obterLinhas();
+        const posicao = linhas.indexOf(linha) + 1;
+
+        this.anunciarOperacao(
+            `Ligação movida para a posição ${posicao} de ${linhas.length}.`,
+        );
+
         return true;
+    }
+
+    /**
+     * Acrescenta a operacao ao estado acessivel das ligacoes.
+     *
+     * @param {string} descricao Operacao realizada.
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    anunciarOperacao(descricao) {
+        if (!(this.estado instanceof HTMLElement)) {
+            return;
+        }
+
+        this.estado.textContent =
+            `${this.estado.textContent.trim()} ${descricao}`.trim();
     }
 
     /**
@@ -880,8 +908,12 @@ class GestorLigacoesSecao {
             !this.detalhesAtivos()
             || quantidade >= this.maximoLigacoes;
 
-        this.estado.textContent =
+        const mensagem =
             `${quantidade} de ${this.maximoLigacoes} ligações.`;
+
+        if (this.estado.textContent !== mensagem) {
+            this.estado.textContent = mensagem;
+        }
     }
 
     /**

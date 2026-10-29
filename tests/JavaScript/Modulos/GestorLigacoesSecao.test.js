@@ -258,7 +258,7 @@ describe(
                 expect(
                     estado.textContent,
                 ).toBe(
-                    '3 de 3 ligações.',
+                    '3 de 3 ligações. Ligação adicionada.',
                 );
 
                 expect(
@@ -280,7 +280,7 @@ describe(
                 expect(
                     estado.textContent,
                 ).toBe(
-                    '2 de 3 ligações.',
+                    '2 de 3 ligações. Ligação removida.',
                 );
             },
         );
