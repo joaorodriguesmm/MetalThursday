@@ -873,6 +873,17 @@ class TratadorFormularioAjax {
                 'is-invalid',
             );
         }
+
+        const controlo =
+            campo.tomselect
+                ?.control_input;
+
+        if (controlo instanceof HTMLElement) {
+            controlo.setAttribute(
+                'aria-invalid',
+                'true',
+            );
+        }
     }
 
     /**
@@ -1160,7 +1171,7 @@ class TratadorFormularioAjax {
 
         this.formulario
             .querySelectorAll(
-                '.is-invalid',
+                '.is-invalid, [aria-invalid="true"]',
             )
             .forEach(
                 (elemento) => {

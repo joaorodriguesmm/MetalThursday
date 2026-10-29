@@ -165,6 +165,11 @@ class InicializadorTomSelect {
             elemento.tomselect;
 
         if (instanciaExistente) {
+            this.sincronizarAtributosAcessiveis(
+                elemento,
+                instanciaExistente,
+            );
+
             this.registarInstancia(
                 instanciaExistente,
             );
@@ -184,11 +189,64 @@ class InicializadorTomSelect {
                 ),
             );
 
+        this.sincronizarAtributosAcessiveis(
+            elemento,
+            instancia,
+        );
+
         this.registarInstancia(
             instancia,
         );
 
         return instancia;
+    }
+
+    /**
+     * Sincroniza a descricao e o estado invalido do select.
+     *
+     * Preserva as referencias existentes e evita duplicados.
+     *
+     * @param {HTMLSelectElement} elemento Campo original.
+     * @param {TomSelect} instancia Instancia do Tom Select.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    sincronizarAtributosAcessiveis(elemento, instancia) {
+        const controlo = instancia.control_input;
+
+        if (!(controlo instanceof HTMLElement)) {
+            return;
+        }
+
+        if (
+            elemento.getAttribute('aria-invalid')
+            === 'true'
+        ) {
+            controlo.setAttribute(
+                'aria-invalid',
+                'true',
+            );
+        }
+
+        const identificadores = [
+            ...(
+                controlo.getAttribute('aria-describedby') ?? ''
+            ).split(/\s+/u),
+            ...(
+                elemento.getAttribute('aria-describedby') ?? ''
+            ).split(/\s+/u),
+        ].filter(Boolean);
+
+        if (identificadores.length === 0) {
+            return;
+        }
+
+        controlo.setAttribute(
+            'aria-describedby',
+            [...new Set(identificadores)].join(' '),
+        );
     }
 
     /**
