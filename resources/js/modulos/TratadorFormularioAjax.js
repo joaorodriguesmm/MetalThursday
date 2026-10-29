@@ -329,6 +329,35 @@ class TratadorFormularioAjax {
         this.limparErros();
         this.apresentarEstadoCarregamento();
 
+        // Uma resposta de erro pertence ao ciclo de abertura
+        // em que o pedido foi iniciado.
+        const modalSubmissao =
+            this.formulario.closest('.modal');
+
+        const modalAbertoNoInicio =
+            modalSubmissao?.classList.contains('show')
+            ?? false;
+
+        let modalFechadoDurantePedido = false;
+
+        const observarModalOcultado = (evento) => {
+            if (evento.target === modalSubmissao) {
+                modalFechadoDurantePedido = true;
+            }
+        };
+
+        modalSubmissao?.addEventListener(
+            'hidden.bs.modal',
+            observarModalOcultado,
+        );
+
+        const erroObsoletoPorFecho = () =>
+            modalFechadoDurantePedido
+            || (
+                modalAbertoNoInicio
+                && !modalSubmissao?.classList.contains('show')
+            );
+
         const eventosReposicao = [];
 
         const observarReposicao = (evento) => {
@@ -367,6 +396,7 @@ class TratadorFormularioAjax {
                     !this.formulario.isConnected
                     || this.versaoConfiguracao
                         !== versaoConfiguracao
+                    || erroObsoletoPorFecho()
                 ) {
                     return;
                 }
@@ -380,6 +410,7 @@ class TratadorFormularioAjax {
                     !this.formulario.isConnected
                     || this.versaoConfiguracao
                         !== versaoConfiguracao
+                    || erroObsoletoPorFecho()
                 ) {
                     return;
                 }
@@ -454,6 +485,11 @@ class TratadorFormularioAjax {
                 this.limparErros();
             }
         } finally {
+            modalSubmissao?.removeEventListener(
+                'hidden.bs.modal',
+                observarModalOcultado,
+            );
+
             this.formulario.removeEventListener(
                 'reset',
                 observarReposicao,
