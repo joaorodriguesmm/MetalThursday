@@ -266,7 +266,7 @@ describe('B25.41 — ciclo de vida com Bootstrap verdadeiro', () => {
         vi.restoreAllMocks();
     });
 
-    function criarModal(identificador, animado = false) {
+    function criarModal(identificador, animado = false, gerirFoco = false) {
         const elemento = document.getElementById(
             identificador,
         );
@@ -279,7 +279,7 @@ describe('B25.41 — ciclo de vida com Bootstrap verdadeiro', () => {
             elemento,
             {
                 backdrop: false,
-                focus: false,
+                focus: gerirFoco,
             },
         );
 
@@ -2370,6 +2370,218 @@ describe('B25.41 — ciclo de vida com Bootstrap verdadeiro', () => {
                     'show',
                 ),
             ).toBe(true);
+        },
+    );
+
+    it(
+        'B27.10 — devolve foco ao acionador original',
+        async () => {
+            prepararPagina();
+
+            const acionador = document.createElement('button');
+
+            acionador.type = 'button';
+            acionador.textContent = 'Criar artista';
+
+            acionador.setAttribute(
+                'data-bs-toggle',
+                'modal',
+            );
+
+            acionador.setAttribute(
+                'data-bs-target',
+                '#modal-criar-artista',
+            );
+
+            document.body.prepend(acionador);
+
+            // O jsdom nao calcula geometria real.
+            // Simula um acionador visivel para o Bootstrap.
+            vi.spyOn(
+                acionador,
+                'getClientRects',
+            ).mockReturnValue({
+                length: 1,
+            });
+
+            const artista = criarModal(
+                'modal-criar-artista',
+                false,
+                true,
+            );
+
+            artista.elemento.setAttribute(
+                'tabindex',
+                '-1',
+            );
+
+            const aberto = esperarEvento(
+                artista.elemento,
+                'shown.bs.modal',
+            );
+
+            acionador.focus();
+            acionador.click();
+
+            await aberto;
+
+            const campoNome =
+                artista.elemento.querySelector(
+                    '[name="nome"]',
+                );
+
+            expect(campoNome).toBeInstanceOf(
+                HTMLInputElement,
+            );
+
+            campoNome.focus();
+
+            expect(document.activeElement).toBe(
+                campoNome,
+            );
+
+            const fechado = esperarEvento(
+                artista.elemento,
+                'hidden.bs.modal',
+            );
+
+            artista.instancia.hide();
+
+            await fechado;
+
+            expect(document.activeElement).toBe(
+                acionador,
+            );
+        },
+    );
+
+    it(
+        'B27.10 — devolve foco ao acionador do genero apos regressar ao artista',
+        async () => {
+            prepararPagina();
+
+            const artista = criarModal(
+                'modal-criar-artista',
+                false,
+                true,
+            );
+
+            const genero = criarModal(
+                'modal-criar-genero',
+                false,
+                true,
+            );
+
+            artista.elemento.setAttribute(
+                'tabindex',
+                '-1',
+            );
+
+            genero.elemento.setAttribute(
+                'tabindex',
+                '-1',
+            );
+
+            const acionadorGenero =
+                document.createElement('button');
+
+            acionadorGenero.type = 'button';
+            acionadorGenero.textContent = 'Criar género';
+
+            acionadorGenero.setAttribute(
+                'data-bs-toggle',
+                'modal',
+            );
+
+            acionadorGenero.setAttribute(
+                'data-bs-target',
+                '#modal-criar-genero',
+            );
+
+            artista.elemento.querySelector(
+                '.modal-dialog',
+            ).append(acionadorGenero);
+
+            vi.spyOn(
+                acionadorGenero,
+                'getClientRects',
+            ).mockReturnValue({
+                length: 1,
+            });
+
+            const campoGenero =
+                document.createElement('input');
+
+            campoGenero.type = 'text';
+
+            genero.elemento.querySelector(
+                '.modal-dialog',
+            ).append(campoGenero);
+
+            const artistaAberto = esperarEvento(
+                artista.elemento,
+                'shown.bs.modal',
+            );
+
+            artista.instancia.show();
+
+            await artistaAberto;
+
+            acionadorGenero.focus();
+
+            expect(document.activeElement).toBe(
+                acionadorGenero,
+            );
+
+            const artistaOculto = esperarEvento(
+                artista.elemento,
+                'hidden.bs.modal',
+            );
+
+            const generoAberto = esperarEvento(
+                genero.elemento,
+                'shown.bs.modal',
+            );
+
+            acionadorGenero.click();
+
+            await Promise.all([
+                artistaOculto,
+                generoAberto,
+            ]);
+
+            campoGenero.focus();
+
+            expect(document.activeElement).toBe(
+                campoGenero,
+            );
+
+            const generoOculto = esperarEvento(
+                genero.elemento,
+                'hidden.bs.modal',
+            );
+
+            const artistaReaberto = esperarEvento(
+                artista.elemento,
+                'shown.bs.modal',
+            );
+
+            genero.instancia.hide();
+
+            await Promise.all([
+                generoOculto,
+                artistaReaberto,
+            ]);
+
+            expect(
+                artista.elemento.classList.contains(
+                    'show',
+                ),
+            ).toBe(true);
+
+            expect(document.activeElement).toBe(
+                acionadorGenero,
+            );
         },
     );
 
