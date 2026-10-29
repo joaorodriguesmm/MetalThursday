@@ -381,6 +381,24 @@ class GestorSeccoes {
             return false;
         }
 
+        const reporFoco =
+            seccao.contains(document.activeElement);
+
+        const seccoes = Array.from(
+            this.contentor.querySelectorAll('.item-seccao'),
+        );
+
+        const indice = seccoes.indexOf(seccao);
+
+        const vizinha =
+            seccoes[indice + 1]
+            ?? seccoes[indice - 1];
+
+        const destino =
+            vizinha?.querySelector('.seletor-tipo-seccao')
+            ?? vizinha?.querySelector('.botao-remover-seccao')
+            ?? this.botaoAdicionar;
+
         this.destruirTooltipsDaSeccao(
             seccao,
         );
@@ -390,6 +408,17 @@ class GestorSeccoes {
         );
 
         seccao.remove();
+
+        if (reporFoco) {
+            if (
+                destino instanceof HTMLSelectElement
+                && destino.tomselect
+            ) {
+                destino.tomselect.focus();
+            } else if (destino instanceof HTMLElement) {
+                destino.focus();
+            }
+        }
 
         return true;
     }

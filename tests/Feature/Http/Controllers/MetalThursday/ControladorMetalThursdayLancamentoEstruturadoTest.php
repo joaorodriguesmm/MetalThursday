@@ -299,6 +299,18 @@ final class ControladorMetalThursdayLancamentoEstruturadoTest extends TestCase
             )
             ->assertSeeHtml(
                 'value="'.$lancamento->getKey().'"',
+            )
+            ->assertSeeHtml(
+                'for="seccoes-0-faixa-0-posicao"',
+            )
+            ->assertSeeHtml(
+                'id="seccoes-0-faixa-0-posicao"',
+            )
+            ->assertSeeHtml(
+                'for="seccoes-0-faixa-0-titulo"',
+            )
+            ->assertSeeHtml(
+                'id="seccoes-0-faixa-0-titulo"',
             );
     }
 }

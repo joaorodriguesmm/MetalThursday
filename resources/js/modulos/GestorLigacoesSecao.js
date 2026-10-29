@@ -498,9 +498,24 @@ class GestorLigacoesSecao {
             return false;
         }
 
+        const reporFoco =
+            linha.contains(document.activeElement);
+
+        const vizinha =
+            linha.nextElementSibling
+            ?? linha.previousElementSibling;
+
+        const destino =
+            vizinha?.querySelector('[data-campo-url-ligacao]')
+            ?? this.botaoAdicionar;
+
         linha.remove();
 
         this.normalizar();
+
+        if (reporFoco && destino instanceof HTMLElement) {
+            destino.focus();
+        }
 
         return true;
     }
@@ -543,6 +558,9 @@ class GestorLigacoesSecao {
             return false;
         }
 
+        const manterFoco =
+            document.activeElement === botao;
+
         if (direcao === -1) {
             this.lista.insertBefore(
                 linha,
@@ -556,6 +574,19 @@ class GestorLigacoesSecao {
         }
 
         this.normalizar();
+
+        if (manterFoco) {
+            const destino = botao.disabled
+                ? linha.querySelector('[data-campo-url-ligacao]')
+                    ?? linha.querySelector(
+                        '[data-acao-ligacao-seccao="remover"]',
+                    )
+                : botao;
+
+            if (destino instanceof HTMLElement) {
+                destino.focus();
+            }
+        }
 
         return true;
     }

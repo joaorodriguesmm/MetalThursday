@@ -7,6 +7,8 @@
  * @since 2.0.0
  */
 class EditorLancamentoDiscogs {
+    static proximoIdentificadorFaixa = 0;
+
     /**
      * Cria o editor e regista os eventos delegados do formulário.
      *
@@ -284,7 +286,28 @@ class EditorLancamentoDiscogs {
             return;
         }
 
+        const manterFocoReordenacao =
+            document.activeElement === botao
+            && (
+                acao === 'subir'
+                || acao === 'descer'
+            );
+
+        let destinoFoco = null;
+
         if (acao === 'remover') {
+            if (linha.contains(document.activeElement)) {
+                const vizinha =
+                    linha.nextElementSibling
+                    ?? linha.previousElementSibling;
+
+                destinoFoco =
+                    vizinha?.querySelector('[data-campo-titulo-faixa]')
+                    ?? seccao.querySelector(
+                        '[data-acao-faixa-lancamento="adicionar"]',
+                    );
+            }
+
             linha.remove();
         } else if (acao === 'subir') {
             const anterior = linha.previousElementSibling;
@@ -311,6 +334,21 @@ class EditorLancamentoDiscogs {
         this.reindexarFaixas(
             seccao,
         );
+
+        if (destinoFoco instanceof HTMLElement) {
+            destinoFoco.focus();
+        } else if (manterFocoReordenacao) {
+            const destino = botao.disabled
+                ? linha.querySelector('[data-campo-titulo-faixa]')
+                    ?? linha.querySelector(
+                        '[data-acao-faixa-lancamento="remover"]',
+                    )
+                : botao;
+
+            if (destino instanceof HTMLElement) {
+                destino.focus();
+            }
+        }
     }
 
     /**
@@ -398,6 +436,11 @@ class EditorLancamentoDiscogs {
      * @since 2.0.0
      */
     criarLinhaFaixa(faixa) {
+        EditorLancamentoDiscogs.proximoIdentificadorFaixa += 1;
+
+        const identificador =
+            EditorLancamentoDiscogs.proximoIdentificadorFaixa;
+
         const linha = document.createElement('div');
         linha.className =
             'row g-2 align-items-end border rounded p-2 mb-2';
@@ -424,10 +467,13 @@ class EditorLancamentoDiscogs {
         const rotuloPosicao = document.createElement('label');
         rotuloPosicao.className = 'form-label small mb-1';
         rotuloPosicao.textContent = 'Posição';
+        rotuloPosicao.htmlFor =
+            `faixa-dinamica-${identificador}-posicao`;
 
         const campoPosicao = document.createElement('input');
         campoPosicao.className = 'form-control form-control-sm';
         campoPosicao.type = 'text';
+        campoPosicao.id = rotuloPosicao.htmlFor;
         campoPosicao.maxLength = 100;
         campoPosicao.value = faixa.posicao ?? '';
         campoPosicao.dataset.campoPosicaoFaixa = '';
@@ -443,10 +489,13 @@ class EditorLancamentoDiscogs {
         const rotuloTitulo = document.createElement('label');
         rotuloTitulo.className = 'form-label small mb-1';
         rotuloTitulo.textContent = 'Título';
+        rotuloTitulo.htmlFor =
+            `faixa-dinamica-${identificador}-titulo`;
 
         const campoTitulo = document.createElement('input');
         campoTitulo.className = 'form-control form-control-sm';
         campoTitulo.type = 'text';
+        campoTitulo.id = rotuloTitulo.htmlFor;
         campoTitulo.maxLength = 255;
         campoTitulo.required = true;
         campoTitulo.value = faixa.titulo;

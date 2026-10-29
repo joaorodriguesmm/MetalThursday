@@ -489,13 +489,17 @@
                         >
 
                         <div class="col-sm-2">
-                            <label class="form-label small mb-1">
+                            <label
+                                class="form-label small mb-1"
+                                for="seccoes-{{ $indice }}-faixa-{{ $indiceFaixa }}-posicao"
+                            >
                                 Posição
                             </label>
 
                             <input
                                 class="form-control form-control-sm"
                                 type="text"
+                                id="seccoes-{{ $indice }}-faixa-{{ $indiceFaixa }}-posicao"
                                 name="{{ $nomeBaseCampo }}[lancamento][faixas][{{ $indiceFaixa }}][posicao]"
                                 value="{{ $faixa['posicao'] }}"
                                 maxlength="100"
@@ -504,13 +508,17 @@
                         </div>
 
                         <div class="col">
-                            <label class="form-label small mb-1">
+                            <label
+                                class="form-label small mb-1"
+                                for="seccoes-{{ $indice }}-faixa-{{ $indiceFaixa }}-titulo"
+                            >
                                 Título
                             </label>
 
                             <input
                                 class="form-control form-control-sm"
                                 type="text"
+                                id="seccoes-{{ $indice }}-faixa-{{ $indiceFaixa }}-titulo"
                                 name="{{ $nomeBaseCampo }}[lancamento][faixas][{{ $indiceFaixa }}][titulo]"
                                 value="{{ $faixa['titulo'] }}"
                                 maxlength="255"
