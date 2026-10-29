@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Servicos\MetalThursday;
 
+use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MusicaFavoritaEdicao;
 use App\Servicos\MetalThursday\ServicoMusicasFavoritasEdicao;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use PHPUnit\Framework\Attributes\Test;
@@ -43,7 +45,9 @@ final class ServicoMusicasFavoritasEdicaoTest extends TestCase
             ->create();
 
         $registador = Utilizador::factory()
-            ->create();
+            ->create([
+                'papel' => PapelUtilizador::Administrador,
+            ]);
 
         $this->criarMusicaFavorita(
             $edicao,
@@ -159,7 +163,9 @@ final class ServicoMusicasFavoritasEdicaoTest extends TestCase
             ->create();
 
         $registador = Utilizador::factory()
-            ->create();
+            ->create([
+                'papel' => PapelUtilizador::Administrador,
+            ]);
 
         $this->criarMusicaFavorita(
             $edicao,
@@ -220,7 +226,9 @@ final class ServicoMusicasFavoritasEdicaoTest extends TestCase
             ->create();
 
         $registador = Utilizador::factory()
-            ->create();
+            ->create([
+                'papel' => PapelUtilizador::Administrador,
+            ]);
 
         $escolhaAnterior = $this->criarMusicaFavorita(
             $edicao,
@@ -283,7 +291,9 @@ final class ServicoMusicasFavoritasEdicaoTest extends TestCase
             ->create();
 
         $registador = Utilizador::factory()
-            ->create();
+            ->create([
+                'papel' => PapelUtilizador::Administrador,
+            ]);
 
         $escolhaAnterior = $this->criarMusicaFavorita(
             $edicao,
@@ -329,6 +339,43 @@ final class ServicoMusicasFavoritasEdicaoTest extends TestCase
                 'musica' => 'Escolha anterior',
             ],
         );
+    }
+
+    /**
+     * Confirma que a sincronização direta exige privilégios administrativos.
+     *
+     * O serviço deve recusar a operação mesmo sem passar pelo controlador HTTP.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function utilizador_comum_nao_pode_sincronizar_musicas_favoritas(): void
+    {
+        $edicao = Edicao::factory()->create();
+        $utilizador = Utilizador::factory()->create();
+        $registador = Utilizador::factory()->create([
+            'papel' => PapelUtilizador::Utilizador,
+        ]);
+
+        try {
+            $this->servico()->sincronizar(
+                edicao: $edicao,
+                musicasFavoritas: [
+                    (int) $utilizador->getKey() => [
+                        'Música indevida',
+                        null,
+                        null,
+                    ],
+                ],
+                registador: $registador,
+            );
+
+            self::fail('Era esperada a rejeição da operação não autorizada.');
+        } catch (AuthorizationException) {
+            // A operação foi recusada antes de alterar os dados.
+        }
+
+        $this->assertDatabaseCount('musicas_favoritas_edicao', 0);
     }
 
     /**

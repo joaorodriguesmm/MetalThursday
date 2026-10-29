@@ -22,6 +22,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use LogicException;
@@ -154,12 +155,22 @@ final class ControladorEdicao extends Controller
             Edicao::class,
         );
 
-        $edicao = Edicao::query()->create(
-            $pedido->safe()->only([
-                'nome',
-                'data_inicio',
-                'data_fim',
-            ]),
+        $dados = $pedido->safe()->only([
+            'nome',
+            'data_inicio',
+            'data_fim',
+        ]);
+
+        $edicao = DB::transaction(
+            function () use ($dados): Edicao {
+                $this->autorizarEscritaTransacional(
+                    'create',
+                    Edicao::class,
+                );
+
+                return Edicao::query()->create($dados);
+            },
+            self::TENTATIVAS_TRANSACAO,
         );
 
         if ($pedido->expectsJson()) {
@@ -283,6 +294,11 @@ final class ControladorEdicao extends Controller
                         $edicao,
                     );
 
+                $this->autorizarEscritaTransacional(
+                    'update',
+                    $edicaoBloqueada,
+                );
+
                 $edicaoBloqueada->fill(
                     $dados,
                 );
@@ -354,6 +370,11 @@ final class ControladorEdicao extends Controller
                     $this->bloquearEdicao(
                         $edicao,
                     );
+
+                $this->autorizarEscritaTransacional(
+                    'delete',
+                    $edicaoBloqueada,
+                );
 
                 $possuiMetalThursdays =
                     MetalThursday::query()
@@ -485,6 +506,11 @@ final class ControladorEdicao extends Controller
                     $this->bloquearEdicao(
                         $edicao,
                     );
+
+                $this->autorizarEscritaTransacional(
+                    'update',
+                    $edicaoBloqueada,
+                );
 
                 $edicaoBloqueada->fill([
                     'ligacao_compilacao' => $ligacaoCompilacao,
@@ -661,6 +687,36 @@ final class ControladorEdicao extends Controller
         throw ValidationException::withMessages([
             'data_fim' => 'A data de fim não pode excluir MetalThursdays já associadas à edição.',
         ]);
+    }
+
+    /**
+     * Revalida o acesso e os privilégios administrativos dentro da transação.
+     *
+     * O bloqueio do utilizador impede que uma alteração de papel ou suspensão
+     * seja concluída entre a autorização e a persistência.
+     *
+     * @param  class-string<Edicao>|Edicao  $alvo  Classe ou edição autorizada.
+     *
+     * @since 2.0.0
+     */
+    private function autorizarEscritaTransacional(
+        string $capacidade,
+        string|Edicao $alvo,
+    ): void {
+        $identificador = $this->obterUtilizadorAutenticado()->id;
+
+        $utilizador = Utilizador::query()
+            ->whereKey($identificador)
+            ->lockForUpdate()
+            ->first();
+
+        if (! $utilizador instanceof Utilizador
+            || ! $utilizador->temAcessoAtivo()
+        ) {
+            abort(Response::HTTP_FORBIDDEN);
+        }
+
+        Gate::forUser($utilizador)->authorize($capacidade, $alvo);
     }
 
     /**

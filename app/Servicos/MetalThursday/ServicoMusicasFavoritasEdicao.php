@@ -9,9 +9,11 @@ use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MusicaFavoritaEdicao;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
 /**
@@ -81,7 +83,7 @@ final class ServicoMusicasFavoritasEdicao
                 $identificadorRegistador,
                 $musicasFavoritasNormalizadas,
             ): void {
-                $this->bloquearEdicao(
+                $edicaoBloqueada = $this->bloquearEdicao(
                     $identificadorEdicao,
                 );
 
@@ -93,6 +95,7 @@ final class ServicoMusicasFavoritasEdicao
                 $this->bloquearEValidarUtilizadores(
                     $identificadorRegistador,
                     $identificadoresUtilizadores,
+                    $edicaoBloqueada,
                 );
 
                 $this->substituirMusicasFavoritas(
@@ -626,6 +629,7 @@ final class ServicoMusicasFavoritasEdicao
      * Bloqueia e confirma a existência da edição.
      *
      * @param  int  $identificadorEdicao  Identificador da edição.
+     * @return Edicao Edição bloqueada.
      *
      * @throws ValidationException Quando a edição deixou de existir.
      *
@@ -633,7 +637,7 @@ final class ServicoMusicasFavoritasEdicao
      */
     private function bloquearEdicao(
         int $identificadorEdicao,
-    ): void {
+    ): Edicao {
         $edicao = Edicao::query()
             ->whereKey(
                 $identificadorEdicao,
@@ -642,7 +646,7 @@ final class ServicoMusicasFavoritasEdicao
             ->first();
 
         if ($edicao instanceof Edicao) {
-            return;
+            return $edicao;
         }
 
         throw ValidationException::withMessages([
@@ -655,11 +659,12 @@ final class ServicoMusicasFavoritasEdicao
      *
      * Os registos são bloqueados por ordem crescente de identificador para
      * reduzir a possibilidade de impasses entre sincronizações concorrentes.
-     * O registador pode possuir qualquer papel, mas os utilizadores cujas
-     * escolhas são alteradas têm de pertencer ao âmbito `selecionaveis`.
+     * O registador mantém privilégios administrativos ativos e os utilizadores
+     * cujas escolhas são alteradas pertencem ao âmbito `selecionaveis`.
      *
      * @param  int  $identificadorRegistador  Utilizador responsável.
      * @param  list<int>  $identificadoresUtilizadores  Utilizadores alterados.
+     * @param  Edicao  $edicao  Edição bloqueada e autorizada.
      *
      * @throws ValidationException Quando algum utilizador deixou de existir ou
      *                             não pode ser selecionado.
@@ -669,6 +674,7 @@ final class ServicoMusicasFavoritasEdicao
     private function bloquearEValidarUtilizadores(
         int $identificadorRegistador,
         array $identificadoresUtilizadores,
+        Edicao $edicao,
     ): void {
         $identificadoresEnvolvidos = array_values(
             array_unique([
@@ -682,7 +688,7 @@ final class ServicoMusicasFavoritasEdicao
             SORT_NUMERIC,
         );
 
-        $identificadoresExistentes =
+        $utilizadoresBloqueados =
             Utilizador::query()
                 ->whereKey(
                     $identificadoresEnvolvidos,
@@ -693,13 +699,17 @@ final class ServicoMusicasFavoritasEdicao
                 ->lockForUpdate()
                 ->get([
                     'id',
-                ])
-                ->map(
-                    static fn (
-                        Utilizador $utilizador,
-                    ): int => $utilizador->id,
-                )
-                ->all();
+                    'papel',
+                    'suspenso_em',
+                ]);
+
+        $identificadoresExistentes = $utilizadoresBloqueados
+            ->map(
+                static fn (
+                    Utilizador $utilizador,
+                ): int => $utilizador->id,
+            )
+            ->all();
 
         if (
             ! in_array(
@@ -712,6 +722,17 @@ final class ServicoMusicasFavoritasEdicao
                 'musicas_favoritas' => 'O utilizador responsável pelo registo deixou de estar disponível.',
             ]);
         }
+
+        $registador = $utilizadoresBloqueados
+            ->firstWhere('id', $identificadorRegistador);
+
+        if (! $registador instanceof Utilizador
+            || ! $registador->temAcessoAtivo()
+        ) {
+            abort(Response::HTTP_FORBIDDEN);
+        }
+
+        Gate::forUser($registador)->authorize('update', $edicao);
 
         $identificadoresSelecionaveis =
             Utilizador::query()
