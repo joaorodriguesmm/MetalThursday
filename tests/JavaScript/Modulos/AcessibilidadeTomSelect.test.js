@@ -213,4 +213,126 @@ describe('B27.7 — acessibilidade do Tom Select', () => {
         },
     );
 
+    it(
+        'B27.10 — seletor multiplo de generos mantem acessibilidade',
+        () => {
+            const grupo = document.createElement('div');
+
+            grupo.innerHTML = [
+                '<label for="generos-pai-novo-genero">',
+                'Géneros pais',
+                '</label>',
+                '<select',
+                ' id="generos-pai-novo-genero"',
+                ' name="generos_pai[]"',
+                ' class="tom-select-multiplo"',
+                ' aria-describedby="ajuda-generos-pai-novo-genero erro-generos-pai-novo-genero"',
+                ' multiple>',
+                '<option value="1">Metal</option>',
+                '<option value="2">Rock</option>',
+                '</select>',
+                '<div id="ajuda-generos-pai-novo-genero">',
+                'Seleciona os géneros pais.',
+                '</div>',
+                '<div',
+                ' id="erro-generos-pai-novo-genero"',
+                ' class="invalid-feedback">',
+                '</div>',
+            ].join('');
+
+            formulario.append(grupo);
+
+            const selecao = grupo.querySelector(
+                'select',
+            );
+
+            const rotulo = grupo.querySelector(
+                'label',
+            );
+
+            try {
+                const inicializador =
+                    new InicializadorTomSelect();
+
+                const instancia =
+                    inicializador.iniciar(selecao);
+
+                expect(instancia).not.toBeNull();
+
+                const entrada = instancia.control_input;
+
+                expect(entrada).toBeInstanceOf(
+                    HTMLElement,
+                );
+
+                // O rótulo deve identificar o controlo
+                // que recebe efetivamente o foco.
+                expect(rotulo.control).toBe(entrada);
+
+                const obterDescricoes = () => (
+                    entrada.getAttribute(
+                        'aria-describedby',
+                    ) ?? ''
+                ).split(/\s+/u).filter(Boolean);
+
+                expect(obterDescricoes()).toContain(
+                    'ajuda-generos-pai-novo-genero',
+                );
+
+                expect(obterDescricoes()).toContain(
+                    'erro-generos-pai-novo-genero',
+                );
+
+                expect(
+                    new Set(obterDescricoes()).size,
+                ).toBe(obterDescricoes().length);
+
+                instancia.focus();
+
+                expect(document.activeElement).toBe(
+                    entrada,
+                );
+
+                const tratador = Object.create(
+                    TratadorFormularioAjax.prototype,
+                );
+
+                tratador.formulario = formulario;
+
+                tratador.definirCampoInvalido(selecao);
+
+                expect(
+                    selecao.getAttribute('aria-invalid'),
+                ).toBe('true');
+
+                expect(
+                    entrada.getAttribute('aria-invalid'),
+                ).toBe('true');
+
+                tratador.limparErros();
+
+                expect(
+                    selecao.hasAttribute('aria-invalid'),
+                ).toBe(false);
+
+                expect(
+                    entrada.hasAttribute('aria-invalid'),
+                ).toBe(false);
+
+                // A limpeza dos erros não pode retirar
+                // a ajuda permanente nem a referência
+                // ao elemento de feedback.
+                expect(obterDescricoes()).toContain(
+                    'ajuda-generos-pai-novo-genero',
+                );
+
+                expect(obterDescricoes()).toContain(
+                    'erro-generos-pai-novo-genero',
+                );
+            } finally {
+                selecao.tomselect?.destroy();
+            }
+        },
+    );
+
 });
