@@ -57,7 +57,6 @@
                     <div
                         class="aviso-artista-homonimo"
                         role="alert"
-                        aria-live="polite"
                         data-confirmacao-nome-repetido
                         hidden
                     >
@@ -74,6 +73,7 @@
 
                                 <p
                                     class="aviso-artista-homonimo__mensagem"
+                                    id="mensagem-confirmacao-nome-repetido-artista"
                                     data-mensagem-confirmacao-nome-repetido
                                 ></p>
                             </div>

@@ -1282,6 +1282,59 @@ function definirConfirmacaoNomeRepetidoArtista(
 }
 
 /**
+ * Associa a mensagem de homonimos ao campo Nome sem alterar
+ * as restantes descricoes acessiveis.
+ *
+ * @param {HTMLFormElement} formulario Formulario do artista.
+ * @param {HTMLElement} mensagem Mensagem do conflito.
+ * @param {boolean} ativa Indica se a mensagem esta visivel.
+ *
+ * @returns {void}
+ */
+function atualizarDescricaoHomonimosArtista(
+    formulario,
+    mensagem,
+    ativa,
+) {
+    const campoNome = formulario.elements.namedItem(
+        'nome',
+    );
+
+    if (
+        !(campoNome instanceof HTMLInputElement)
+        || !mensagem.id
+    ) {
+        return;
+    }
+
+    const descricoes = (
+        campoNome.getAttribute('aria-describedby')
+        ?? ''
+    )
+        .split(/\s+/)
+        .filter(Boolean)
+        .filter(
+            (identificador) =>
+                identificador !== mensagem.id,
+        );
+
+    if (ativa) {
+        descricoes.push(mensagem.id);
+    }
+
+    if (descricoes.length > 0) {
+        campoNome.setAttribute(
+            'aria-describedby',
+            descricoes.join(' '),
+        );
+
+        return;
+    }
+
+    campoNome.removeAttribute('aria-describedby');
+}
+
+/**
  * Apresenta no modal os artistas com o mesmo nome devolvidos pelo servidor.
  *
  * Depois de apresentar o conflito, ativa a confirmação que será enviada
@@ -1357,6 +1410,12 @@ function apresentarConfirmacaoNomeRepetidoArtista(
     contentorConfirmacao.hidden =
         false;
 
+    atualizarDescricaoHomonimosArtista(
+        formulario,
+        elementoMensagem,
+        true,
+    );
+
     return true;
 }
 
@@ -1407,6 +1466,12 @@ function reporConfirmacaoNomeRepetidoArtista(
         elementoMensagem
         instanceof HTMLElement
     ) {
+        atualizarDescricaoHomonimosArtista(
+            formulario,
+            elementoMensagem,
+            false,
+        );
+
         elementoMensagem.textContent =
             '';
     }

@@ -2585,4 +2585,126 @@ describe('B25.41 — ciclo de vida com Bootstrap verdadeiro', () => {
         },
     );
 
+    it(
+        'B27.10 — associa conflito de homonimos ao campo nome',
+        () => {
+            prepararPagina();
+
+            const formulario = document.getElementById(
+                'formulario-criar-artista',
+            );
+
+            const campoNome = formulario.elements.namedItem(
+                'nome',
+            );
+
+            campoNome.setAttribute(
+                'aria-describedby',
+                'erro-nome-novo-artista',
+            );
+
+            formulario.insertAdjacentHTML(
+                'beforeend',
+                [
+                    '<input type="hidden"',
+                    ' name="confirmar_nome_repetido"',
+                    ' value="1" disabled>',
+                    '<div role="alert"',
+                    ' data-confirmacao-nome-repetido hidden>',
+                    '<p id="mensagem-confirmacao-nome-repetido-artista"',
+                    ' data-mensagem-confirmacao-nome-repetido></p>',
+                    '<div data-lista-artistas-homonimos></div>',
+                    '</div>',
+                ].join(''),
+            );
+
+            const configuracao =
+                efeitos.gestorModais.mock.calls.at(-1)[0].find(
+                    (entrada) =>
+                        entrada.idFormulario ===
+                        'formulario-criar-artista',
+                );
+
+            expect(configuracao).toBeDefined();
+
+            const aviso = formulario.querySelector(
+                '[data-confirmacao-nome-repetido]',
+            );
+
+            const confirmacao = formulario.elements.namedItem(
+                'confirmar_nome_repetido',
+            );
+
+            const erro = {
+                response: {
+                    status: 409,
+                    data: {
+                        codigo:
+                            'confirmacao_nome_repetido_necessaria',
+                        mensagem:
+                            'Já existe um artista com este nome.',
+                        artistas_homonimos: [{
+                            id: 42,
+                            nome: 'Artista de teste',
+                            origem_geografica: null,
+                            ano_inicio_atividade: null,
+                        }],
+                    },
+                },
+            };
+
+            const identificadorMensagem =
+                'mensagem-confirmacao-nome-repetido-artista';
+
+            const obterDescricoes = () => (
+                campoNome.getAttribute('aria-describedby')
+                    ?.split(/\s+/)
+                    .filter(Boolean)
+                ?? []
+            );
+
+            expect(configuracao.aoErro(erro)).toBe(true);
+
+            expect(aviso.hidden).toBe(false);
+            expect(confirmacao.disabled).toBe(false);
+
+            expect(obterDescricoes()).toContain(
+                'erro-nome-novo-artista',
+            );
+
+            expect(obterDescricoes()).toContain(
+                identificadorMensagem,
+            );
+
+            // Respostas repetidas nao duplicam a referencia.
+            expect(configuracao.aoErro(erro)).toBe(true);
+
+            expect(
+                obterDescricoes().filter(
+                    (id) => id === identificadorMensagem,
+                ),
+            ).toHaveLength(1);
+
+            // Alterar o nome invalida o conflito.
+            campoNome.value = 'Nome diferente';
+
+            campoNome.dispatchEvent(
+                new Event('input', {
+                    bubbles: true,
+                }),
+            );
+
+            expect(aviso.hidden).toBe(true);
+            expect(confirmacao.disabled).toBe(true);
+
+            expect(obterDescricoes()).toContain(
+                'erro-nome-novo-artista',
+            );
+
+            expect(obterDescricoes()).not.toContain(
+                identificadorMensagem,
+            );
+        },
+    );
+
 });
