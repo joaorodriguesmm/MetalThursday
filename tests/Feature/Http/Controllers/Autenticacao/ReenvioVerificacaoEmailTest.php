@@ -18,11 +18,11 @@ final class ReenvioVerificacaoEmailTest extends TestCase
     use RefreshDatabase;
 
     #[Test]
-    public function apresenta_formulario_e_ligacao_no_inicio_de_sessao(): void
+    public function apresenta_formulario_sem_ligacao_inicial(): void
     {
         $this->get(route('login'))
             ->assertOk()
-            ->assertSee(route('autenticacao.reenviar-verificacao-email'));
+            ->assertDontSee(route('autenticacao.reenviar-verificacao-email'));
 
         $this->get(route('autenticacao.reenviar-verificacao-email'))
             ->assertOk()

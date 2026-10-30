@@ -293,6 +293,11 @@ final class AutenticarUtilizadorRequest extends FormRequest
                     $chaveLimitacao,
                 );
 
+                $this->session()->flash(
+                    'mostrar_reenvio_verificacao',
+                    true,
+                );
+
                 throw ValidationException::withMessages([
                     'email' => 'Verifica o teu endereço de e-mail antes de iniciares sessão.',
                 ]);

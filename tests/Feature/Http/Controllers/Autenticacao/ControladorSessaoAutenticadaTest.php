@@ -42,6 +42,9 @@ final class ControladorSessaoAutenticadaTest extends TestCase
             ->assertOk()
             ->assertViewIs(
                 'autenticacao.iniciar-sessao',
+            )
+            ->assertDontSee(
+                'Não recebeste o e-mail de verificação? Pedir nova ligação.',
             );
     }
 
@@ -458,11 +461,49 @@ final class ControladorSessaoAutenticadaTest extends TestCase
             ->assertSessionHasInput(
                 'email',
                 $utilizador->email,
+            )
+            ->assertSessionHas(
+                'mostrar_reenvio_verificacao',
+                true,
             );
 
         $this->assertGuest(
             'sessao',
         );
+
+        $this
+            ->get(route('login'))
+            ->assertOk()
+            ->assertSee('Não recebeste o e-mail de verificação? Pedir nova ligação.');
+    }
+
+    /**
+     * Evita revelar que o e-mail precisa de verificação a quem desconhece a palavra-passe.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function nao_mostra_ligacao_de_reenvio_com_palavra_passe_incorreta(): void
+    {
+        $utilizador = Utilizador::factory()
+            ->naoVerificado()
+            ->create();
+
+        $this
+            ->from(route('login'))
+            ->post(route('autenticacao.iniciar'), [
+                'email' => $utilizador->email,
+                'palavra_passe' => 'PalavraPasseIncorreta!123',
+            ])
+            ->assertRedirect(route('login'))
+            ->assertSessionHasErrors([
+                'email' => trans('auth.failed'),
+            ])
+            ->assertSessionMissing('mostrar_reenvio_verificacao');
+
+        $this
+            ->get(route('login'))
+            ->assertDontSee('Não recebeste o e-mail de verificação? Pedir nova ligação.');
     }
 
     /**

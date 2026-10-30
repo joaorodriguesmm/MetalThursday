@@ -87,6 +87,11 @@ final class ControladorSessaoAutenticada extends Controller
                 $pedido,
             );
 
+            $pedido->session()->flash(
+                'mostrar_reenvio_verificacao',
+                true,
+            );
+
             return back()
                 ->withInput([
                     'email' => $email,

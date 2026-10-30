@@ -1,11 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
-test('permite encontrar o reenvio de verificação e apresenta um formulário acessível', async ({ page }) => {
-    await page.goto('/entrar');
-    await page.getByRole('link', {
-        name: 'Não recebeste a ligação de verificação ou já expirou?',
-    }).click();
+test('apresenta o formulário de reenvio de verificação com acessibilidade', async ({ page }) => {
+    await page.goto('/verificacao-email/reenviar');
 
     await expect(page).toHaveURL(/\/verificacao-email\/reenviar$/u);
     await expect(page.getByRole('heading', {

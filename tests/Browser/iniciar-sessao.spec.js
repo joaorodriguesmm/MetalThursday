@@ -66,6 +66,12 @@ test(
                 },
             ),
         ).toBeVisible();
+
+        await expect(
+            page.getByRole('link', {
+                name: 'Não recebeste o e-mail de verificação? Pedir nova ligação.',
+            }),
+        ).toHaveCount(0);
     },
 );
 
@@ -168,5 +174,11 @@ test(
         await expect(
             campoPalavraPasse,
         ).toHaveValue('');
+
+        await expect(
+            page.getByRole('link', {
+                name: 'Não recebeste o e-mail de verificação? Pedir nova ligação.',
+            }),
+        ).toHaveCount(0);
     },
 );

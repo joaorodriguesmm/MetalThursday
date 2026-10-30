@@ -72,6 +72,17 @@
                     {{ $message }}
                 @enderror
             </div>
+
+            @if (session('mostrar_reenvio_verificacao') === true)
+                <div class="mt-1">
+                    <a
+                        class="small text-decoration-none"
+                        href="{{ route('autenticacao.reenviar-verificacao-email') }}"
+                    >
+                        Não recebeste o e-mail de verificação? Pedir nova ligação.
+                    </a>
+                </div>
+            @endif
         </div>
 
         <div class="grupo-campo-formulario mb-3">
@@ -187,15 +198,6 @@
             Iniciar sessão
         </button>
     </form>
-
-    <div class="mt-3 text-center">
-        <a
-            class="small text-decoration-none"
-            href="{{ route('autenticacao.reenviar-verificacao-email') }}"
-        >
-            Não recebeste a ligação de verificação ou já expirou?
-        </a>
-    </div>
 
     @push('scripts-pagina')
         @vite(
