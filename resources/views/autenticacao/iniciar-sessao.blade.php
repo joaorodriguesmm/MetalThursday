@@ -188,6 +188,15 @@
         </button>
     </form>
 
+    <div class="mt-3 text-center">
+        <a
+            class="small text-decoration-none"
+            href="{{ route('autenticacao.reenviar-verificacao-email') }}"
+        >
+            Não recebeste a ligação de verificação ou já expirou?
+        </a>
+    </div>
+
     @push('scripts-pagina')
         @vite(
             'resources/js/paginas/iniciarSessao.js'

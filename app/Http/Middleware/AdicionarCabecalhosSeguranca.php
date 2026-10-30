@@ -224,7 +224,7 @@ final class AdicionarCabecalhosSeguranca
                     .self::HASH_ESTILO_SWEETALERT
                     ."'",
 
-                "img-src 'self' http: https:",
+                "img-src 'self' http: https: blob:",
 
                 'font-src '
                     .implode(

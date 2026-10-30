@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Autenticacao\ControladorLigacaoRedefinicaoPalavraPasse;
 use App\Http\Controllers\Autenticacao\ControladorRedefinicaoPalavraPasse;
+use App\Http\Controllers\Autenticacao\ControladorReenvioVerificacaoEmail;
 use App\Http\Controllers\Autenticacao\ControladorRegistoConvite;
 use App\Http\Controllers\Autenticacao\ControladorSessaoAutenticada;
 use App\Http\Controllers\Autenticacao\ControladorVerificacaoEmail;
@@ -36,6 +37,18 @@ Route::middleware(
     'guest:sessao',
 )->group(
     static function (): void {
+        Route::get(
+            'verificacao-email/reenviar',
+            [ControladorReenvioVerificacaoEmail::class, 'apresentar'],
+        )->name('autenticacao.reenviar-verificacao-email');
+
+        Route::post(
+            'verificacao-email/reenviar',
+            [ControladorReenvioVerificacaoEmail::class, 'enviar'],
+        )
+            ->middleware('throttle:6,1')
+            ->name('verification.send');
+
         /*
         |--------------------------------------------------------------------------
         | Aceitação de convites

@@ -92,6 +92,25 @@ final class ServicoNotificacaoPublicacaoMetalThursday
                         $publicacao,
                     );
 
+                /*
+                 * Os trabalhos e a marca de processamento têm de pertencer
+                 * à mesma transação. Uma falha parcial na fila deve reverter
+                 * ambos, permitindo repetir a publicação sem duplicados.
+                 */
+                if (
+                    config('queue.connections.database.driver') !== 'database'
+                    || config('queue.connections.database.connection')
+                        !== DB::getDefaultConnection()
+                ) {
+                    throw new LogicException(
+                        'As notificações de publicação exigem a fila database na mesma ligação MariaDB.',
+                    );
+                }
+
+                $notificacao
+                    ->onConnection('database')
+                    ->beforeCommit();
+
                 $this->notificarDestinatarios(
                     $publicacao,
                     $notificacao,

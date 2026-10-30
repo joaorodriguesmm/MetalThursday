@@ -84,6 +84,7 @@ npm run compilar
 php artisan key:generate --force
 php artisan optimize:clear
 php artisan migrate --force
+php artisan db:seed --force
 php artisan storage:link
 php artisan optimize
 ```
@@ -94,6 +95,13 @@ gerada deve ser preservada nos deployments seguintes.
 
 A ligação `public/storage` é necessária para os ficheiros guardados no disco
 `publico` e deve ser criada uma vez com `php artisan storage:link`.
+
+Numa base de dados nova, `php artisan db:seed --force` instala os dados de
+referência: origens geográficas, permissões de e-mail e tipos de secção.
+O `DatabaseSeeder` não cria contas de utilizador. A conta inicial de
+superadministrador deve ser provisionada de forma controlada antes de
+disponibilizar o registo por convite. Se forem importados dados existentes,
+confirmar a presença destes catálogos e da conta administrativa.
 
 Os diretórios `storage/` e `bootstrap/cache/` têm de ser graváveis pelo
 utilizador que executa a aplicação.
@@ -107,6 +115,11 @@ servidor.
 A aplicação utiliza a ligação `database` e a fila `principal`. As notificações
 da aplicação implementam `ShouldQueue`, pelo que é necessário manter pelo menos
 um worker ativo em produção.
+
+As notificações de publicação e de interações são inseridas na fila dentro
+da transação que guarda o respetivo estado. A ligação da fila `database`
+tem de utilizar a mesma ligação MariaDB da aplicação; uma configuração
+incompatível é rejeitada para preservar a atomicidade.
 
 Comando base:
 

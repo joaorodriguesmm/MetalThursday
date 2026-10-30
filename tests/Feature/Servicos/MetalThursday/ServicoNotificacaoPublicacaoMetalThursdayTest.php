@@ -11,8 +11,11 @@ use App\Notifications\NotificacaoMetalThursdayCriada;
 use App\Servicos\MetalThursday\ServicoNotificacaoPublicacaoMetalThursday;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Queue\Events\JobQueueing;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
+use LogicException;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
 use Tests\TestCase;
@@ -345,6 +348,86 @@ final class ServicoNotificacaoPublicacaoMetalThursdayTest extends TestCase
                 )
                 ->exists(),
         );
+    }
+
+    #[Test]
+    public function enfileira_publicacao_atomicamente_e_nao_duplica_trabalhos(): void
+    {
+        config()->set('queue.default', 'database');
+        config()->set('queue.connections.database.after_commit', true);
+        $criador = Utilizador::factory()->create();
+        $nomeado = Utilizador::factory()->create();
+        Utilizador::factory()->count(2)->create();
+        $publicacao = $this->criarMetalThursday('2026-08-27', $criador, $nomeado);
+        $servico = app(ServicoNotificacaoPublicacaoMetalThursday::class);
+        $antes = DB::table('trabalhos_fila')->count();
+
+        self::assertTrue($servico->processar($publicacao));
+        self::assertNotNull($publicacao->refresh()->publicacao_notificada_em);
+        self::assertSame($antes + 2, DB::table('trabalhos_fila')->count());
+
+        self::assertFalse($servico->processar($publicacao));
+        self::assertSame($antes + 2, DB::table('trabalhos_fila')->count());
+    }
+
+    #[Test]
+    public function falha_no_segundo_enfileiramento_reverte_lote_e_marca_e_permite_repetir(): void
+    {
+        config()->set('queue.default', 'database');
+        config()->set('queue.connections.database.after_commit', true);
+        $criador = Utilizador::factory()->create();
+        $nomeado = Utilizador::factory()->create();
+        Utilizador::factory()->count(2)->create();
+        $publicacao = $this->criarMetalThursday('2026-08-27', $criador, $nomeado);
+        $servico = app(ServicoNotificacaoPublicacaoMetalThursday::class);
+        $antes = DB::table('trabalhos_fila')->count();
+        $tentativas = 0;
+
+        Event::listen(JobQueueing::class, static function (JobQueueing $evento) use (&$tentativas): void {
+            if ($evento->connectionName === 'database' && ++$tentativas === 2) {
+                throw new RuntimeException('Falha no segundo trabalho da publicação.');
+            }
+        });
+
+        try {
+            $servico->processar($publicacao);
+            self::fail('Era esperada uma falha durante a inserção na fila.');
+        } catch (RuntimeException $excecao) {
+            self::assertSame('Falha no segundo trabalho da publicação.', $excecao->getMessage());
+        } finally {
+            Event::forget(JobQueueing::class);
+        }
+
+        self::assertSame(2, $tentativas);
+        self::assertSame($antes, DB::table('trabalhos_fila')->count());
+        self::assertNull($publicacao->refresh()->publicacao_notificada_em);
+
+        self::assertTrue($servico->processar($publicacao));
+        self::assertSame($antes + 2, DB::table('trabalhos_fila')->count());
+        self::assertNotNull($publicacao->refresh()->publicacao_notificada_em);
+    }
+
+    #[Test]
+    public function rejeita_fila_numa_ligacao_diferente_sem_marcar_publicacao(): void
+    {
+        Notification::fake();
+        $criador = Utilizador::factory()->create();
+        $nomeado = Utilizador::factory()->create();
+        $publicacao = $this->criarMetalThursday('2026-08-27', $criador, $nomeado);
+        config()->set('queue.connections.database.connection', 'outra_ligacao');
+
+        try {
+            app(ServicoNotificacaoPublicacaoMetalThursday::class)->processar($publicacao);
+            self::fail('Era esperada a rejeição da ligação incompatível.');
+        } catch (LogicException $excecao) {
+            self::assertSame(
+                'As notificações de publicação exigem a fila database na mesma ligação MariaDB.',
+                $excecao->getMessage(),
+            );
+        }
+
+        self::assertNull($publicacao->refresh()->publicacao_notificada_em);
+        Notification::assertNothingSent();
     }
 
     /**

@@ -33,6 +33,12 @@ e este projeto segue [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Corrigido
 
+- Recuperação da verificação de e-mail após expiração da ligação ou falha de
+  envio, com reenvio limitado e sem revelar contas registadas.
+- Enfileiramento atómico das notificações de publicação, permitindo repetir
+  falhas parciais sem perder notificações nem duplicar trabalhos.
+- Pré-visualização de fotografias locais sob a política de segurança de
+  conteúdos e instalação dos catálogos de referência no primeiro deployment.
 - Fluxos de autenticação, recuperação de palavra-passe, perfil e formulários.
 - Comentários, gostos, audições, avaliações e restantes interações de
   MetalThursday.
