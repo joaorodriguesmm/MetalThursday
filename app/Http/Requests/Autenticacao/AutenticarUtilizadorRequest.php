@@ -178,7 +178,7 @@ final class AutenticarUtilizadorRequest extends FormRequest
 
             'email.string' => 'O endereço de e-mail deve ser uma sequência de caracteres.',
 
-            'palavra_passe.required' => 'Por favor, insere a palavra-passe.',
+            'palavra_passe.required' => 'Por favor, insere a tua palavra-passe.',
 
             'palavra_passe.string' => 'A palavra-passe deve ser uma sequência de caracteres.',
 

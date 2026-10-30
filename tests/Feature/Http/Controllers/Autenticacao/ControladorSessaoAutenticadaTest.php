@@ -85,6 +85,18 @@ final class ControladorSessaoAutenticadaTest extends TestCase
             )
             ->assertStatus(
                 429,
+            )
+            ->assertSee(
+                'Demasiados pedidos',
+            )
+            ->assertSee(
+                'Aguarda um pouco antes de tentares novamente.',
+            )
+            ->assertSee(
+                'Voltar à página inicial',
+            )
+            ->assertDontSee(
+                'Too Many Requests',
             );
     }
 
