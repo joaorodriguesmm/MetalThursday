@@ -560,7 +560,7 @@ function iniciarValidacaoPalavraPasse() {
                         'A confirmação da nova palavra-passe não é válida.',
 
                     confirmado:
-                        'A confirmação da nova palavra-passe não coincide.',
+                        'A nova palavra-passe e a confirmação não coincidem.',
                 },
             },
         },
