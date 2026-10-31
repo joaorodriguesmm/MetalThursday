@@ -284,14 +284,159 @@ final class RecuperacaoPalavraPasseTest extends TestCase
             ->assertViewIs(
                 'autenticacao.redefinir-palavra-passe',
             )
-            ->assertSee(
+            ->assertViewHas('ligacaoValida', false)
+            ->assertDontSee(
                 $enderecoAtualizacao,
                 false,
+            )
+            ->assertSee(
+                'A ligação de redefinição é inválida ou já não está disponível.',
             )
             ->assertSee(
                 $enderecoRecuperacao,
                 false,
             );
+    }
+
+    /**
+     * Uma ligação válida apresenta os campos de redefinição.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function apresenta_formulario_com_ligacao_valida(): void
+    {
+        $utilizador = Utilizador::factory()->create();
+        $token = Password::createToken($utilizador);
+
+        $this->get(route('autenticacao.redefinir-palavra-passe', [
+            'token' => $token,
+            'email' => $utilizador->email,
+        ]))
+            ->assertOk()
+            ->assertViewHas('ligacaoValida', true)
+            ->assertSee('id="formulario-redefinir-palavra-passe"', false)
+            ->assertSee('name="palavra_passe"', false)
+            ->assertDontSee('alert-danger', false);
+    }
+
+    /**
+     * Uma ligação inválida não apresenta os campos nem identifica a conta.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function oculta_formulario_com_ligacao_invalida(): void
+    {
+        $utilizador = Utilizador::factory()->create();
+
+        $this->get(route('autenticacao.redefinir-palavra-passe', [
+            'token' => 'token-invalido',
+            'email' => $utilizador->email,
+        ]))
+            ->assertOk()
+            ->assertViewHas('ligacaoValida', false)
+            ->assertDontSee('id="formulario-redefinir-palavra-passe"', false)
+            ->assertSee('A ligação de redefinição é inválida ou já não está disponível.')
+            ->assertSee('Pedir uma nova ligação');
+    }
+
+    /**
+     * Uma ligação expirada não permite preencher a palavra-passe.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function oculta_formulario_com_ligacao_expirada(): void
+    {
+        $utilizador = Utilizador::factory()->create();
+        $token = Password::createToken($utilizador);
+
+        $this->travel(61)->minutes();
+
+        $this->get(route('autenticacao.redefinir-palavra-passe', [
+            'token' => $token,
+            'email' => $utilizador->email,
+        ]))
+            ->assertOk()
+            ->assertViewHas('ligacaoValida', false)
+            ->assertDontSee('id="formulario-redefinir-palavra-passe"', false)
+            ->assertSee('Pedir uma nova ligação');
+
+        $this->travelBack();
+    }
+
+    /**
+     * O token deixa de apresentar o formulário depois de ser utilizado.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function oculta_formulario_depois_de_utilizar_ligacao(): void
+    {
+        $utilizador = Utilizador::factory()->create();
+        $token = Password::createToken($utilizador);
+
+        $this->post(route('autenticacao.atualizar-palavra-passe'), [
+            'codigo_redefinicao' => $token,
+            'email' => $utilizador->email,
+            'palavra_passe' => 'OutraPalavraPasse#2026',
+            'confirmacao_palavra_passe' => 'OutraPalavraPasse#2026',
+        ])->assertRedirect(route('login'));
+
+        $this->get(route('autenticacao.redefinir-palavra-passe', [
+            'token' => $token,
+            'email' => $utilizador->email,
+        ]))
+            ->assertOk()
+            ->assertViewHas('ligacaoValida', false)
+            ->assertDontSee('id="formulario-redefinir-palavra-passe"', false)
+            ->assertSee('Pedir uma nova ligação');
+    }
+
+    /**
+     * Confirma a mensagem de erro e a preservação da ligação quando
+     * as palavras-passe indicadas não coincidem.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function rejeita_confirmacao_diferente_sem_consumir_a_ligacao(): void
+    {
+        $utilizador = Utilizador::factory()
+            ->create();
+
+        $codigoRedefinicao = Password::createToken(
+            $utilizador,
+        );
+
+        $this
+            ->post(
+                route('autenticacao.atualizar-palavra-passe'),
+                [
+                    'codigo_redefinicao' => $codigoRedefinicao,
+                    'email' => $utilizador->email,
+                    'palavra_passe' => 'NovaPalavraPasse#2026',
+                    'confirmacao_palavra_passe' => 'PalavraPasseDiferente#2026',
+                ],
+            )
+            ->assertSessionHasErrors([
+                'confirmacao_palavra_passe' => 'A confirmação não corresponde à nova palavra-passe.',
+            ]);
+
+        self::assertTrue(
+            Password::broker()->tokenExists(
+                $utilizador,
+                $codigoRedefinicao,
+            ),
+        );
+
+        self::assertTrue(
+            Hash::check(
+                UtilizadorFactory::PALAVRA_PASSE_PREDEFINIDA,
+                $utilizador->refresh()->password,
+            ),
+        );
     }
 
     /**

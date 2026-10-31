@@ -52,15 +52,17 @@ final class ControladorRedefinicaoPalavraPasse extends Controller
     private const COMPRIMENTO_TOKEN_PERSISTENTE = 60;
 
     /**
-     * Apresenta o formulário de redefinição da palavra-passe.
+     * Apresenta o formulário apenas quando a ligação é utilizável.
      *
-     * O endereço recebido na consulta é apenas utilizado para preencher o
-     * formulário. A validação definitiva do endereço e do código pertence ao
-     * pedido submetido e ao broker de palavras-passe.
+     * O broker verifica o token sem o consumir. Ligações expiradas,
+     * utilizadas ou inválidas apresentam a mesma mensagem, sem revelar
+     * se existe uma conta associada ao endereço recebido.
+     *
+     * A validação definitiva repete-se na submissão do formulário.
      *
      * @param  Request  $pedido  Pedido HTTP.
      * @param  string  $token  Código recebido na ligação.
-     * @return View Formulário de redefinição.
+     * @return View Formulário ou aviso de ligação inválida.
      *
      * @since 1.0.0
      */
@@ -69,14 +71,35 @@ final class ControladorRedefinicaoPalavraPasse extends Controller
         #[SensitiveParameter]
         string $token,
     ): View {
+        $email =
+            $this->obterEmailDaConsulta(
+                $pedido,
+            );
+
+        $utilizador = $email !== ''
+            ? Utilizador::query()
+                ->where('email', $email)
+                ->first()
+            : null;
+
+        $ligacaoValida =
+            $utilizador instanceof Utilizador
+            && strlen($token) <= 255
+            && Password::broker()->tokenExists(
+                $utilizador,
+                $token,
+            );
+
         return view(
             'autenticacao.redefinir-palavra-passe',
             [
                 'codigoRedefinicao' => $token,
 
-                'email' => $this->obterEmailDaConsulta(
-                    $pedido,
-                ),
+                'email' => $email,
+
+                'ligacaoValida' => $ligacaoValida,
+
+                'mensagemLigacaoInvalida' => self::MENSAGEM_LIGACAO_INVALIDA,
 
                 'comprimentoMinimoPalavraPasse' => RequisitosPalavraPasse::comprimentoMinimo(),
 

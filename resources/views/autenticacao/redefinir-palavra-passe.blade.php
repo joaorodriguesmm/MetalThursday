@@ -15,22 +15,16 @@
             Redefinir palavra-passe
         </h1>
 
-        <p class="mb-0 text-muted">
-            Define uma nova palavra-passe para a tua conta.
-        </p>
+        @if ($ligacaoValida && ! $errors->has('ligacao_redefinicao'))
+            <p class="mb-0 text-muted">
+                Define uma nova palavra-passe para a tua conta.
+            </p>
+        @endif
     </div>
 
     <x-estado-sessao class="mb-4" />
 
-    @error('ligacao_redefinicao')
-        <div
-            class="alert alert-danger"
-            role="alert"
-        >
-            {{ $message }}
-        </div>
-    @enderror
-
+    @if ($ligacaoValida && ! $errors->has('ligacao_redefinicao'))
     <form
         id="formulario-redefinir-palavra-passe"
         method="POST"
@@ -190,20 +184,25 @@
         >
             Redefinir palavra-passe
         </button>
-
-        <div class="mt-3 text-center">
-            <a
-                class="small text-decoration-none"
-                href="{{
-                    route(
-                        'autenticacao.recuperar-palavra-passe',
-                    )
-                }}"
-            >
-                Pedir uma nova ligação
-            </a>
-        </div>
     </form>
+    @else
+        <div class="alert alert-danger" role="alert">
+            {{ $mensagemLigacaoInvalida }}
+        </div>
+    @endif
+
+    <div class="mt-3 text-center">
+        <a
+            class="small text-decoration-none"
+            href="{{
+                route(
+                    'autenticacao.recuperar-palavra-passe',
+                )
+            }}"
+        >
+            Pedir uma nova ligação
+        </a>
+    </div>
 
     @push('scripts-pagina')
         @vite(

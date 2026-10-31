@@ -213,7 +213,7 @@ final class RedefinirPalavraPasseRequest extends FormRequest
 
             'confirmacao_palavra_passe.max' => 'A confirmação da nova palavra-passe é demasiado longa.',
 
-            'confirmacao_palavra_passe.same' => 'A nova palavra-passe e a confirmação não coincidem.',
+            'confirmacao_palavra_passe.same' => 'A confirmação não corresponde à nova palavra-passe.',
         ];
     }
 
