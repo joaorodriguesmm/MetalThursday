@@ -565,6 +565,26 @@ h6,
     }
 }
 
+/**
+ * Botão preenchido de seleção da fotografia no perfil.
+ */
+.etiqueta-campo-ficheiro-perfil {
+    background-color: $vermelho-destaque;
+    border-color: $vermelho-destaque;
+
+    &:hover {
+        background-color: color.adjust(
+            $vermelho-destaque,
+            $lightness: 8%,
+        );
+
+        border-color: color.adjust(
+            $vermelho-destaque,
+            $lightness: 8%,
+        );
+    }
+}
+
 .campo-ficheiro.is-invalid
     + .etiqueta-campo-ficheiro {
     border-color:

@@ -134,11 +134,11 @@
                             Fotografia
 
                             <span class="fw-normal">
-                                (opcional, máximo de 10 MiB)
+                                (opcional, máximo de 10 MB)
                             </span>
                         </label>
 
-                        <div class="contentor-campo-ficheiro">
+                        <div class="contentor-campo-ficheiro flex-wrap gap-2">
                             <input
                                 id="fotografia"
                                 class="campo-ficheiro @error('fotografia', 'perfil') is-invalid @enderror"
@@ -152,13 +152,23 @@
                             >
 
                             <label
-                                class="etiqueta-campo-ficheiro"
+                                class="etiqueta-campo-ficheiro etiqueta-campo-ficheiro-perfil"
                                 for="fotografia"
                             >
                                 <span id="texto-fotografia">
                                     Selecionar fotografia
                                 </span>
                             </label>
+
+                            @if ($utilizador->fotografia !== null)
+                                <button
+                                    class="btn btn-danger py-2 px-3"
+                                    type="submit"
+                                    form="formulario-remover-fotografia"
+                                >
+                                    Remover fotografia
+                                </button>
+                            @endif
                         </div>
 
                         <div
@@ -304,5 +314,16 @@
                 </button>
             </div>
         </form>
+
+        @if ($utilizador->fotografia !== null)
+            <form
+                id="formulario-remover-fotografia"
+                method="POST"
+                action="{{ route('perfil.fotografia.remover') }}"
+            >
+                @csrf
+                @method('DELETE')
+            </form>
+        @endif
     </div>
 </section>

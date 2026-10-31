@@ -275,6 +275,8 @@ function iniciarFotografiaPerfil() {
             tamanhoMaximo:
                 TAMANHO_MAXIMO_FOTOGRAFIA,
 
+            etiquetaTamanhoMaximo: '10 MB',
+
             seletorMensagemErro:
                 SELETORES.erroFotografia,
 

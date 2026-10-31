@@ -219,6 +219,54 @@ final class ServicoAtualizacaoPerfil
     }
 
     /**
+     * Remove a fotografia do perfil sem alterar os outros dados do utilizador.
+     *
+     * A remoção do caminho na base de dados ocorre dentro de uma transação,
+     * com bloqueio do registo. O ficheiro anterior só é eliminado depois
+     * do commit, seguindo a mesma política de compensação da substituição.
+     * Pedidos repetidos sem fotografia não produzem alterações.
+     *
+     * @param  Utilizador  $utilizador  Utilizador autenticado.
+     *
+     * @throws InvalidArgumentException Quando o utilizador não está persistido.
+     * @throws ModelNotFoundException Quando o utilizador deixou de existir.
+     * @throws Throwable Quando a atualização falha.
+     *
+     * @since 2.0.0
+     */
+    public function removerFotografia(Utilizador $utilizador): void
+    {
+        $identificadorUtilizador = $this->obterIdentificadorUtilizador(
+            $utilizador,
+        );
+
+        $caminhoAnterior = DB::transaction(
+            static function () use ($identificadorUtilizador): ?string {
+                $utilizadorBloqueado = Utilizador::query()
+                    ->whereKey($identificadorUtilizador)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                $caminho = $utilizadorBloqueado->fotografia;
+
+                if ($caminho !== null) {
+                    $utilizadorBloqueado->fotografia = null;
+                    $utilizadorBloqueado->saveOrFail();
+                }
+
+                return $caminho;
+            },
+            self::TENTATIVAS_TRANSACAO,
+        );
+
+        if ($caminhoAnterior !== null) {
+            $this->eliminarFotografiaAnterior(
+                $caminhoAnterior,
+            );
+        }
+    }
+
+    /**
      * Obtém o identificador de um utilizador persistido.
      *
      * @param  Utilizador  $utilizador  Utilizador recebido.

@@ -265,6 +265,31 @@ final class ControladorPerfil extends Controller
     }
 
     /**
+     * Remove a fotografia do utilizador autenticado, preservando os restantes
+     * dados do perfil e a sessão. A operação pode ser repetida em segurança.
+     *
+     * @return RedirectResponse Redirecionamento para o perfil.
+     *
+     * @throws AuthenticationException Quando não há sessão autenticada.
+     * @throws Throwable Quando a atualização falha.
+     *
+     * @since 2.0.0
+     */
+    public function removerFotografia(): RedirectResponse
+    {
+        $this->servicoPerfil->removerFotografia(
+            $this->obterUtilizadorAutenticado(),
+        );
+
+        return to_route(
+            'perfil.editar',
+        )->with(
+            'sucesso',
+            'A fotografia de perfil foi removida com sucesso.',
+        );
+    }
+
+    /**
      * Obtém os identificadores das permissões de e-mail do utilizador.
      *
      * @param  Utilizador  $utilizador  Utilizador consultado.

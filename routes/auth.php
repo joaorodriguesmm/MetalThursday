@@ -260,6 +260,16 @@ Route::middleware([
                         'atualizar',
                     );
 
+                    Route::delete(
+                        'fotografia',
+                        [
+                            ControladorPerfil::class,
+                            'removerFotografia',
+                        ],
+                    )->name(
+                        'fotografia.remover',
+                    );
+
                     Route::patch(
                         'permissoes-email',
                         [

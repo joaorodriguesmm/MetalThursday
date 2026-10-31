@@ -18,6 +18,8 @@ class ValidadorFicheiro {
      *     `image/*`.
      * @param {number} [opcoes.tamanhoMaximo=0]
      *     Tamanho máximo em bytes. O valor zero desativa esta validação.
+     * @param {string|null} [opcoes.etiquetaTamanhoMaximo=null]
+     *     Texto opcional da dimensão máxima para apresentação ao utilizador.
      * @param {string|null} [opcoes.seletorMensagemErro=null]
      *     Seletor do elemento que apresenta os erros.
      * @param {string|null} [opcoes.seletorTextoFicheiro=null]
@@ -122,6 +124,7 @@ class ValidadorFicheiro {
         const configuracao = {
             tiposPermitidos: [],
             tamanhoMaximo: 0,
+            etiquetaTamanhoMaximo: null,
             seletorMensagemErro: null,
             seletorTextoFicheiro: null,
             textoPadrao: 'Selecionar ficheiro',
@@ -190,6 +193,18 @@ class ValidadorFicheiro {
             );
         }
 
+        if (
+            configuracao.etiquetaTamanhoMaximo !== null
+            && (
+                typeof configuracao.etiquetaTamanhoMaximo !== 'string'
+                || configuracao.etiquetaTamanhoMaximo.trim() === ''
+            )
+        ) {
+            throw new TypeError(
+                'A indicação do tamanho máximo deve ser um texto não vazio.',
+            );
+        }
+
         const seletorMensagemErro =
             this.normalizarSeletorOpcional(
                 configuracao.seletorMensagemErro,
@@ -240,6 +255,10 @@ class ValidadorFicheiro {
 
             tamanhoMaximo:
                 configuracao.tamanhoMaximo,
+
+            etiquetaTamanhoMaximo:
+                configuracao.etiquetaTamanhoMaximo?.trim()
+                ?? null,
 
             seletorMensagemErro,
             seletorTextoFicheiro,
@@ -518,9 +537,12 @@ class ValidadorFicheiro {
                     'tamanho_excedido',
 
                 mensagem:
-                    `O ficheiro é demasiado grande. O tamanho máximo permitido é ${this.formatarBytes(
-                        this.opcoes.tamanhoMaximo,
-                    )}.`,
+                    `O ficheiro é demasiado grande. O tamanho máximo permitido é ${
+                        this.opcoes.etiquetaTamanhoMaximo
+                        ?? this.formatarBytes(
+                            this.opcoes.tamanhoMaximo,
+                        )
+                    }.`,
             };
         }
 

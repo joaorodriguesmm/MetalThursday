@@ -180,7 +180,7 @@ final class AtualizarPerfilRequest extends FormRequest
 
             'fotografia.mimetypes' => 'A fotografia deve estar no formato JPG, PNG ou WebP.',
 
-            'fotografia.max' => 'A fotografia não pode ter mais de 10 MiB.',
+            'fotografia.max' => 'A fotografia não pode ter mais de 10 MB.',
 
             'nome.required' => 'Por favor, insere o teu nome.',
 

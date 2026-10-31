@@ -696,6 +696,94 @@ final class ControladorPerfilTest extends TestCase
     }
 
     /**
+     * Remove a fotografia e conserva o restante perfil e a autenticação.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function remove_fotografia_do_perfil_sem_terminar_sessao(): void
+    {
+        $caminho = 'fotografias/utilizadores/remover.png';
+
+        $this->discoPublico->put(
+            $caminho,
+            'fotografia-guardada',
+        );
+
+        $utilizador = $this->criarUtilizador(
+            fotografia: $caminho,
+        );
+
+        $verificacaoOriginal = $utilizador->email_verified_at;
+
+        $resposta = $this
+            ->actingAs($utilizador, 'sessao')
+            ->delete(route('perfil.fotografia.remover'));
+
+        $resposta
+            ->assertRedirect(route('perfil.editar'))
+            ->assertSessionHas(
+                'sucesso',
+                'A fotografia de perfil foi removida com sucesso.',
+            )
+            ->assertSessionHasNoErrors();
+
+        $this->assertAuthenticatedAs($utilizador, 'sessao');
+        $this->discoPublico->assertMissing($caminho);
+
+        $utilizador->refresh();
+
+        self::assertNull($utilizador->fotografia);
+        self::assertSame('Utilizador Teste', $utilizador->nome);
+        self::assertSame('utilizador@exemplo.pt', $utilizador->email);
+        self::assertTrue($verificacaoOriginal->equalTo(
+            $utilizador->email_verified_at,
+        ));
+
+        $this->get(route('perfil.editar'))
+            ->assertOk()
+            ->assertDontSee('formulario-remover-fotografia');
+    }
+
+    /**
+     * A remoção é idempotente mesmo quando já não existe fotografia.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function remover_fotografia_repetidamente_e_seguro(): void
+    {
+        $utilizador = $this->criarUtilizador();
+
+        $this->actingAs($utilizador, 'sessao')
+            ->delete(route('perfil.fotografia.remover'))
+            ->assertRedirect(route('perfil.editar'))
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($utilizador, 'sessao')
+            ->delete(route('perfil.fotografia.remover'))
+            ->assertRedirect(route('perfil.editar'))
+            ->assertSessionHasNoErrors();
+
+        self::assertNull($utilizador->refresh()->fotografia);
+        $this->assertAuthenticatedAs($utilizador, 'sessao');
+    }
+
+    /**
+     * O acesso à remoção exige uma sessão autenticada.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function visitante_nao_pode_remover_fotografia(): void
+    {
+        $this->delete(route('perfil.fotografia.remover'))
+            ->assertRedirect(route('login'));
+
+        $this->assertGuest('sessao');
+    }
+
+    /**
      * Rejeita um ficheiro PHP apresentado como fotografia JPEG.
      *
      * A fotografia anterior deve permanecer intacta e nenhum
