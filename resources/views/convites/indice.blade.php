@@ -107,9 +107,9 @@
                     </div>
 
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <div class="d-grid gap-2">
+                        <div class="d-flex flex-wrap gap-2">
                             <button
-                                class="btn btn-secondary"
+                                class="btn btn-primary flex-grow-1"
                                 type="submit"
                             >
                                 <i
@@ -122,9 +122,14 @@
 
                             @if ($filtrosAtivos)
                                 <a
-                                    class="btn btn-outline-secondary"
+                                    class="btn btn-secondary flex-grow-1"
                                     href="{{ route('convites.indice') }}"
                                 >
+                                    <i
+                                        class="bi bi-arrow-counterclockwise me-1"
+                                        aria-hidden="true"
+                                    ></i>
+
                                     Limpar
                                 </a>
                             @endif
@@ -312,52 +317,21 @@
 
                                 <td class="text-end">
                                     @can('revogar', $convite)
-                                        @if (! $convite->foiRevogado())
-                                            <form
-                                                class="d-inline-block text-start"
-                                                method="POST"
-                                                action="{{
-                                                    route(
-                                                        'convites.revogar',
-                                                        $convite,
-                                                    )
-                                                }}"
-                                                novalidate
+                                        @if ($convite->estaDisponivel())
+                                            <button
+                                                class="btn btn-sm btn-danger text-nowrap"
+                                                type="button"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#modal-revogar-convite-{{ $convite->getKey() }}"
+                                                aria-label="Revogar convite de {{ $convite->nome_convidado }}"
                                             >
-                                                @csrf
-                                                @method('PATCH')
+                                                <i
+                                                    class="bi bi-x-circle me-1"
+                                                    aria-hidden="true"
+                                                ></i>
 
-                                                <div class="form-check mb-2">
-                                                    <input
-                                                        id="confirmar-revogacao-{{ $convite->getKey() }}"
-                                                        class="form-check-input"
-                                                        type="checkbox"
-                                                        name="confirmar_revogacao"
-                                                        value="1"
-                                                        required
-                                                    >
-
-                                                    <label
-                                                        class="form-check-label small"
-                                                        for="confirmar-revogacao-{{ $convite->getKey() }}"
-                                                    >
-                                                        Confirmar
-                                                    </label>
-                                                </div>
-
-                                                <button
-                                                    class="btn btn-sm btn-danger"
-                                                    type="submit"
-                                                    aria-label="Revogar convite de {{ $convite->nome_convidado }}"
-                                                >
-                                                    <i
-                                                        class="bi bi-x-circle me-1"
-                                                        aria-hidden="true"
-                                                    ></i>
-
-                                                    Revogar
-                                                </button>
-                                            </form>
+                                                Revogar
+                                            </button>
                                         @endif
                                     @endcan
                                 </td>
@@ -379,6 +353,87 @@
                     </tbody>
                 </table>
             </div>
+
+            @foreach ($convites as $convite)
+                @can('revogar', $convite)
+                    @if ($convite->estaDisponivel())
+                        <div
+                            id="modal-revogar-convite-{{ $convite->getKey() }}"
+                            class="modal fade"
+                            tabindex="-1"
+                            aria-labelledby="titulo-revogar-convite-{{ $convite->getKey() }}"
+                            aria-describedby="aviso-revogar-convite-{{ $convite->getKey() }}"
+                            aria-hidden="true"
+                        >
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content bg-dark text-light border-secondary">
+                                    <div class="modal-header">
+                                        <h2
+                                            id="titulo-revogar-convite-{{ $convite->getKey() }}"
+                                            class="modal-title fs-5"
+                                        >
+                                            Revogar convite
+                                        </h2>
+
+                                        <button
+                                            class="btn btn-secondary btn-sm bi bi-x-lg ms-auto"
+                                            type="button"
+                                            data-bs-dismiss="modal"
+                                            aria-label="Fechar"
+                                        ></button>
+                                    </div>
+
+                                    <div class="modal-body">
+                                        <p>
+                                            Tens a certeza de que queres revogar o convite de
+                                            <strong>{{ $convite->nome_convidado }}</strong>?
+                                        </p>
+
+                                        <p
+                                            id="aviso-revogar-convite-{{ $convite->getKey() }}"
+                                            class="text-warning mb-0"
+                                        >
+                                            Esta ação impede a utilização da ligação de convite
+                                            e não pode ser anulada.
+                                        </p>
+                                    </div>
+
+                                    <div class="modal-footer">
+                                        <button
+                                            class="btn btn-secondary"
+                                            type="button"
+                                            data-bs-dismiss="modal"
+                                        >
+                                            Cancelar
+                                        </button>
+
+                                        <form
+                                            method="POST"
+                                            action="{{ route('convites.revogar', $convite) }}"
+                                        >
+                                            @csrf
+                                            @method('PATCH')
+
+                                            <input
+                                                type="hidden"
+                                                name="confirmar_revogacao"
+                                                value="1"
+                                            >
+
+                                            <button
+                                                class="btn btn-danger"
+                                                type="submit"
+                                            >
+                                                Confirmar revogação
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                @endcan
+            @endforeach
         </div>
 
         @if ($convites->hasPages())

@@ -285,6 +285,39 @@ final class ControladorConviteTest extends TestCase
     }
 
     /**
+     * A revogação é confirmada numa janela própria, sem checkbox na listagem.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function listagem_apresenta_confirmacao_explicita_de_revogacao(): void
+    {
+        $superAdministrador =
+            $this->criarSuperAdministrador();
+
+        $convite =
+            Convite::factory()
+                ->criadoPor($superAdministrador)
+                ->create([
+                    'nome_convidado' => 'Convite a revogar',
+                ]);
+
+        $this
+            ->actingAs($superAdministrador, 'sessao')
+            ->get(route('convites.indice'))
+            ->assertOk()
+            ->assertSee(
+                'data-bs-target="#modal-revogar-convite-'.$convite->getKey().'"',
+                false,
+            )
+            ->assertSeeText('Confirmar revogação')
+            ->assertSee('class="btn btn-secondary btn-sm bi bi-x-lg ms-auto"', false)
+            ->assertSeeText('Esta ação impede a utilização da ligação de convite')
+            ->assertSee('name="confirmar_revogacao"', false)
+            ->assertDontSee('type="checkbox"', false);
+    }
+
+    /**
      * Confirma a pesquisa pelo nome.
      *
      * @since 2.0.0
@@ -454,6 +487,11 @@ final class ControladorConviteTest extends TestCase
                 ->assertSeeText(
                     $nomeEsperado,
                 );
+
+            if ($estado === 'expirado') {
+                $resposta->assertDontSeeText('Confirmar revogação');
+                $resposta->assertDontSeeText('Revogar');
+            }
 
             foreach ($estados as $outroNome) {
                 if ($outroNome === $nomeEsperado) {
