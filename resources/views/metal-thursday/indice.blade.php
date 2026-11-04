@@ -31,6 +31,31 @@
                 'metal-thursday.parciais._filtros'
             )
 
+            @php
+                $paginadorResultados = $vistaAtual === $vistaSimplificada
+                    ? $seccoesSimplificadas
+                    : $registosMetalThursday;
+            @endphp
+
+            <p
+                id="resumo-resultados-arquivo"
+                class="small text-muted mb-3"
+                data-total-resultados="{{ $paginadorResultados->total() }}"
+            >
+                @if ($paginadorResultados->count() === 0)
+                    Nenhum resultado nesta página.
+                    Total: <strong>{{ $paginadorResultados->total() }}</strong> resultados.
+                @else
+                    A mostrar
+                    <strong>{{ $paginadorResultados->firstItem() }}</strong>
+                    a
+                    <strong>{{ $paginadorResultados->lastItem() }}</strong>
+                    de
+                    <strong>{{ $paginadorResultados->total() }}</strong>
+                    resultados
+                @endif
+            </p>
+
             @if ($vistaAtual === $vistaSimplificada)
                 <x-metal-thursday.tabela-vista-simplificada
                     :seccoes-simplificadas="$seccoesSimplificadas"
@@ -44,6 +69,7 @@
                         {{
                             $registosMetalThursday->links(
                                 'vendor.pagination.bootstrap-5',
+                                ['mostrarResumo' => false],
                             )
                         }}
                     </nav>
@@ -75,6 +101,7 @@
                         {{
                             $registosMetalThursday->links(
                                 'vendor.pagination.bootstrap-5',
+                                ['mostrarResumo' => false],
                             )
                         }}
                     </nav>

@@ -352,3 +352,42 @@ describe(
         );
     },
 );
+
+describe('remoção individual de filtros', () => {
+    it('remove apenas o filtro selecionado', () => {
+        window.history.replaceState({}, '', '/');
+
+        const gestor = criarGestor([]);
+
+        for (const [nome, rotulo] of [
+            ['filtro_artista', 'Artista'],
+            ['filtro_edicao', 'Edição'],
+        ]) {
+            const componente = gestor.criarComponenteFiltro(
+                rotulo,
+                nome,
+                `campo-${nome}`,
+                document.createElement('input'),
+            );
+
+            gestor.areaFiltrosAtivos.append(componente);
+            gestor.componentesAtivos.set(nome, componente);
+        }
+
+        const botao = document.querySelector(
+            '[data-remover-filtro="filtro_artista"]',
+        );
+
+        expect(botao).toBeInstanceOf(HTMLButtonElement);
+        expect(botao.classList.contains('bi-x-lg')).toBe(true);
+        expect(botao.getAttribute('aria-label')).toBe(
+            'Remover o filtro Artista',
+        );
+
+        botao.click();
+
+        expect(gestor.componentesAtivos.has('filtro_artista')).toBe(false);
+        expect(gestor.componentesAtivos.has('filtro_edicao')).toBe(true);
+        expect(gestor.areaFiltrosAtivos.children).toHaveLength(1);
+    });
+});

@@ -223,6 +223,7 @@
         {{
             $seccoesSimplificadas->links(
                 'vendor.pagination.bootstrap-5',
+                ['mostrarResumo' => false],
             )
         }}
     </nav>

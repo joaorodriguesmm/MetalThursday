@@ -602,7 +602,7 @@ class GestorFiltrosDinamicos {
 
         botaoRemover.type = 'button';
         botaoRemover.className =
-            'btn-close btn-close-white';
+            'btn btn-sm btn-outline-light bi bi-x-lg';
 
         botaoRemover.dataset.removerFiltro =
             nomeFiltro;

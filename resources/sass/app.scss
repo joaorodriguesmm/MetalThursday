@@ -826,6 +826,45 @@ a:not(.btn) {
 }
 
 /**
+ * Remoção individual dos filtros dinâmicos.
+ *
+ * Mantém a ação visível, discreta e acessível no tema escuro.
+ */
+#area-filtros-ativos [data-remover-filtro] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    color: $branco;
+    font-size: 0.85rem;
+    line-height: 1;
+    background-color: color.change(
+        $vermelho-destaque,
+        $alpha: 0.18
+    );
+    border-color: color.change(
+        $branco,
+        $alpha: 0.3
+    );
+    border-radius: 50%;
+
+    &:hover,
+    &:focus-visible {
+        color: $branco;
+        background-color: $vermelho-destaque;
+        border-color: $vermelho-destaque;
+    }
+
+    &:focus-visible {
+        outline: 2px solid $branco;
+        outline-offset: 2px;
+        box-shadow: none;
+    }
+}
+
+/**
  * Avaliação interativa.
  */
 .estrelas-avaliacao-interativas {

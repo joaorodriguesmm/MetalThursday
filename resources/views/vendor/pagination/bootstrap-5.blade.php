@@ -61,6 +61,7 @@
         <div
             class="d-none flex-sm-fill d-sm-flex align-items-sm-center justify-content-sm-between gap-3"
         >
+            @if ($mostrarResumo ?? true)
             <p class="small text-muted mb-0">
                 A mostrar
                 <strong>{{ $paginator->firstItem() }}</strong>
@@ -70,8 +71,9 @@
                 <strong>{{ $paginator->total() }}</strong>
                 resultados
             </p>
+            @endif
 
-            <ul class="pagination mb-0">
+            <ul class="pagination mb-0 ms-sm-auto">
                 @if ($paginator->onFirstPage())
                     <li
                         class="page-item disabled"
