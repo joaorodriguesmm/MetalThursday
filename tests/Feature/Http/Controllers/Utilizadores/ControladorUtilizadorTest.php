@@ -216,6 +216,34 @@ final class ControladorUtilizadorTest extends TestCase
     }
 
     /**
+     * Confirma a consistência visual dos botões de pesquisa e limpeza.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function listagem_apresenta_botoes_de_filtro_uniformizados(): void
+    {
+        $superAdministrador =
+            $this->criarSuperAdministrador();
+
+        $this
+            ->actingAs($superAdministrador, 'sessao')
+            ->get(route('utilizadores.indice'))
+            ->assertOk()
+            ->assertSee('class="d-flex flex-wrap gap-2"', false)
+            ->assertSee('class="btn btn-primary flex-grow-1"', false)
+            ->assertDontSee('class="btn btn-secondary flex-grow-1"', false);
+
+        $this
+            ->get(route('utilizadores.indice', ['pesquisa' => 'Metal']))
+            ->assertOk()
+            ->assertSee('class="btn btn-primary flex-grow-1"', false)
+            ->assertSee('class="btn btn-secondary flex-grow-1"', false)
+            ->assertSee('class="bi bi-arrow-counterclockwise me-1"', false)
+            ->assertSeeText('Limpar');
+    }
+
+    /**
      * Confirma a pesquisa pelo nome.
      *
      * @since 2.0.0
@@ -561,6 +589,11 @@ final class ControladorUtilizadorTest extends TestCase
             )
             ->assertSeeText(
                 'Ainda não existem alterações do papel.',
+            )
+            ->assertSee('id="formulario-alterar-papel"', false)
+            ->assertSee(
+                'data-papel-atual="'.$utilizador->papel->value.'"',
+                false,
             )
             ->assertSee(
                 route(

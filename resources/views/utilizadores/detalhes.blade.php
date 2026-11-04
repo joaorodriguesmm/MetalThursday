@@ -540,6 +540,7 @@
                 </div>
 
                 <form
+                    id="formulario-alterar-papel"
                     method="POST"
                     action="{{
                         route(
@@ -562,6 +563,7 @@
 
                         <select
                             id="papel-utilizador"
+                            data-papel-atual="{{ $utilizador->papel->value }}"
                             class="form-select @error('papel', 'papel') is-invalid @enderror"
                             name="papel"
                             aria-describedby="ajuda-papel-utilizador erro-papel-utilizador"
@@ -678,6 +680,7 @@
                 </div>
 
                 <form
+                    id="formulario-suspender-acesso"
                     method="POST"
                     action="{{
                         route(
@@ -766,6 +769,7 @@
                 </div>
 
                 <form
+                    id="formulario-reativar-acesso"
                     method="POST"
                     action="{{
                         route(
@@ -921,4 +925,9 @@
             Voltar aos utilizadores
         </a>
     </div>
+    @push('scripts-pagina')
+        @vite(
+            'resources/js/paginas/utilizadores.js'
+        )
+    @endpush
 </x-layout-aplicacao>

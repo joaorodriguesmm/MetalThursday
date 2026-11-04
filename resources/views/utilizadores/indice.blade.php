@@ -109,9 +109,9 @@
                     </div>
 
                     <div class="col-12 col-lg-2">
-                        <div class="d-grid gap-2">
+                        <div class="d-flex flex-wrap gap-2">
                             <button
-                                class="btn btn-secondary"
+                                class="btn btn-primary flex-grow-1"
                                 type="submit"
                             >
                                 <i
@@ -124,9 +124,14 @@
 
                             @if ($filtrosAtivos)
                                 <a
-                                    class="btn btn-outline-secondary"
+                                    class="btn btn-secondary flex-grow-1"
                                     href="{{ route('utilizadores.indice') }}"
                                 >
+                                    <i
+                                        class="bi bi-arrow-counterclockwise me-1"
+                                        aria-hidden="true"
+                                    ></i>
+
                                     Limpar
                                 </a>
                             @endif

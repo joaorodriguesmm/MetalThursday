@@ -25,6 +25,7 @@ const ENTRADAS_APLICACAO = Object.freeze([
     'resources/js/paginas/recuperarPalavraPasse.js',
     'resources/js/paginas/redefinirPalavraPasse.js',
     'resources/js/paginas/registoConvite.js',
+    'resources/js/paginas/utilizadores.js',
 ]);
 
 /**

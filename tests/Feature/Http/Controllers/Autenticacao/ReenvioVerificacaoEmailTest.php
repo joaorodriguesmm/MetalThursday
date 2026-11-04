@@ -39,7 +39,10 @@ final class ReenvioVerificacaoEmailTest extends TestCase
 
         $this->travel(61)->minutes();
 
-        $this->get($ligacaoOriginal)->assertForbidden();
+        $this->get($ligacaoOriginal)
+            ->assertForbidden()
+            ->assertSeeText('A ligação pode ser inválida ou ter expirado.')
+            ->assertSeeText('Pedir nova ligação de verificação');
         self::assertFalse($utilizador->refresh()->hasVerifiedEmail());
 
         $this->post(route('verification.send'), [
