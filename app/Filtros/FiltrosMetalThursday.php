@@ -988,6 +988,34 @@ final class FiltrosMetalThursday
                 ->obterIdentificadoresComDescendentes();
 
         if ($this->eConsultaDeMetalThursdays()) {
+            $identificadorArtista =
+                $this->converterParaIdentificador(
+                    $this->pedido->query('filtro_artista'),
+                );
+
+            if ($identificadorArtista !== null) {
+                $this->construtor->whereHas(
+                    'seccoes',
+                    static fn (
+                        Builder $consulta,
+                    ): Builder => $consulta
+                        ->where(
+                            'artista_id',
+                            $identificadorArtista,
+                        )
+                        ->whereHas(
+                            'artista.generos',
+                            static fn (
+                                Builder $consultaGeneros,
+                            ): Builder => $consultaGeneros->whereKey(
+                                $identificadoresGeneros,
+                            ),
+                        ),
+                );
+
+                return;
+            }
+
             $this->construtor->whereHas(
                 'seccoes.artista.generos',
                 static fn (

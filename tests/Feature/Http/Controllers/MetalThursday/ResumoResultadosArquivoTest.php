@@ -76,10 +76,10 @@ final class ResumoResultadosArquivoTest extends TestCase
         if ($comResultado) {
             $resposta
                 ->assertSeeText('A mostrar')
-                ->assertDontSeeText('Nenhum resultado nesta página.');
+                ->assertDontSeeText('Nenhum resultado encontrado.');
         } else {
             $resposta
-                ->assertSeeText('Nenhum resultado nesta página.')
+                ->assertSeeText('0 resultados')
                 ->assertDontSeeText('A mostrar');
         }
     }

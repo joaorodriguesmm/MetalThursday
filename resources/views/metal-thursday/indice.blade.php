@@ -43,8 +43,7 @@
                 data-total-resultados="{{ $paginadorResultados->total() }}"
             >
                 @if ($paginadorResultados->count() === 0)
-                    Nenhum resultado nesta página.
-                    Total: <strong>{{ $paginadorResultados->total() }}</strong> resultados.
+                    <strong>{{ $paginadorResultados->total() }}</strong> resultados.
                 @else
                     A mostrar
                     <strong>{{ $paginadorResultados->firstItem() }}</strong>
