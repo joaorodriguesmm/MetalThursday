@@ -171,7 +171,7 @@
 
                             <div class="mt-2 text-end">
                                 <button
-                                    class="btn btn-sm btn-outline-light"
+                                    class="btn btn-sm btn-dark border border-light"
                                     type="button"
                                     data-tipo-interacao="cancelar-edicao-comentario"
                                     aria-controls="contentor-edicao-comentario-{{ $identificadorComentario }}"
@@ -378,7 +378,7 @@
 
                                 <div class="mt-2 text-end">
                                     <button
-                                        class="btn btn-sm btn-outline-light"
+                                        class="btn btn-sm btn-secondary"
                                         type="button"
                                         data-tipo-interacao="cancelar-resposta-comentario"
                                         aria-controls="contentor-resposta-comentario-{{ $identificadorComentario }}"
