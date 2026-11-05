@@ -311,7 +311,9 @@ class GestorFiltrosDinamicos {
         this.areaFiltrosAtivos.append(componente);
 
         if (
-            configuracao.tipo === 'selecao'
+            ['selecao', 'sim_nao'].includes(
+                configuracao.tipo,
+            )
             && campo instanceof HTMLSelectElement
         ) {
             this.inicializarTomSelect(
@@ -433,7 +435,7 @@ class GestorFiltrosDinamicos {
         selecao.id = identificadorCampo;
         selecao.name = nomeFiltro;
         selecao.className =
-            'form-select bg-secondary text-white border-secondary';
+            'form-select bg-dark text-white border-secondary';
 
         const opcaoInicial =
             document.createElement('option');
@@ -527,7 +529,7 @@ class GestorFiltrosDinamicos {
         selecao.id = identificadorCampo;
         selecao.name = nomeFiltro;
         selecao.className =
-            'form-select bg-secondary text-white border-secondary';
+            'form-select bg-dark text-white border-secondary filtro-binario';
 
         const valorSelecionado =
             ['sim', 'nao'].includes(valorAtual)
@@ -774,9 +776,20 @@ class GestorFiltrosDinamicos {
             campo.value ?? valorAtual;
 
         const opcoes =
-            this.obterOpcoesFiltro(
-                configuracao,
-            )
+            configuracao.tipo === 'sim_nao'
+                ? [
+                    {
+                        identificador: 'sim',
+                        nome: 'Sim',
+                    },
+                    {
+                        identificador: 'nao',
+                        nome: 'Não',
+                    },
+                ]
+                : this.obterOpcoesFiltro(
+                    configuracao,
+                )
                 .filter(
                     (opcao) =>
                         this.eOpcaoFiltroValida(
@@ -863,6 +876,10 @@ class GestorFiltrosDinamicos {
         configuracao,
         valorAtual,
     ) {
+        if (configuracao.tipo === 'sim_nao') {
+            return;
+        }
+
         campo.replaceChildren();
 
         const opcaoInicial =

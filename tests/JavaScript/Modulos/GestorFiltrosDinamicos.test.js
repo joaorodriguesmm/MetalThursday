@@ -391,3 +391,142 @@ describe('remoção individual de filtros', () => {
         expect(gestor.areaFiltrosAtivos.children).toHaveLength(1);
     });
 });
+
+describe('apresentação dos filtros binários', () => {
+    it('mantém o mesmo fundo dos restantes campos', () => {
+        const gestor = criarGestor([]);
+
+        const campoSimNao = gestor.criarCampoSimNao(
+            'filtro_audicao',
+            'campo-audicao',
+            'nao',
+        );
+
+        const campoSelecao = gestor.criarCampoSelecao(
+            gestor.filtrosDisponiveis.artista,
+            'filtro_artista',
+            'campo-artista',
+            '',
+        );
+
+        const campoData = gestor.criarCampoData(
+            'filtro_data',
+            'campo-data',
+            '',
+        );
+
+        for (const campo of [campoSimNao, campoSelecao, campoData]) {
+            expect(campo.classList.contains('bg-dark')).toBe(true);
+        }
+
+        expect(campoSimNao.classList.contains('filtro-binario')).toBe(true);
+        expect(campoSimNao.value).toBe('nao');
+
+        expect(
+            Array.from(campoSimNao.options).map(opcao => opcao.value),
+        ).toEqual(['sim', 'nao']);
+
+        expect(
+            gestor.criarCampoSimNao('outro', 'outro', '').value,
+        ).toBe('sim');
+    });
+});
+
+describe('Tom Select dos filtros binários', () => {
+    const criarGestorBinario = () => {
+        window.history.replaceState({}, '', '/');
+
+        document.body.innerHTML = [
+            '<select id="lista-binarios"></select>',
+            '<div id="area-binarios"></div>',
+        ].join('');
+
+        return new GestorFiltrosDinamicos({
+            seletorListaFiltros: '#lista-binarios',
+            seletorContentorFiltros: '#area-binarios',
+            filtrosDisponiveis: {
+                autoria_utilizador: {
+                    parametro: 'autoria_utilizador',
+                    tipo: 'sim_nao',
+                    rotulo: 'Da minha autoria',
+                },
+            },
+        });
+    };
+
+    it('utiliza Tom Select e preserva a opção selecionada', async () => {
+        const gestor = criarGestorBinario();
+
+        let configuracaoRecebida;
+        let instanciaCriada;
+
+        class TomSelectFalso {
+            constructor(campo, configuracao) {
+                this.input = campo;
+                this.destroy = vi.fn();
+
+                configuracaoRecebida = configuracao;
+                instanciaCriada = this;
+            }
+        }
+
+        gestor.carregarTomSelect = vi.fn()
+            .mockResolvedValue(TomSelectFalso);
+
+        expect(
+            gestor.renderizar('autoria_utilizador', 'nao'),
+        ).toBe(true);
+
+        const campo = gestor.areaFiltrosAtivos.querySelector(
+            '[name="filtro_autoria_utilizador"]',
+        );
+
+        expect(campo).toBeInstanceOf(HTMLSelectElement);
+
+        await gestor.inicializacoesTomSelect.get(campo);
+
+        expect(configuracaoRecebida.options).toEqual([
+            {identificador: 'sim', nome: 'Sim'},
+            {identificador: 'nao', nome: 'Não'},
+        ]);
+
+        expect(configuracaoRecebida.items).toEqual(['nao']);
+
+        expect(
+            gestor.instanciasTomSelect.get('filtro_autoria_utilizador'),
+        ).toBe(instanciaCriada);
+
+        expect(
+            gestor.removerFiltro('filtro_autoria_utilizador'),
+        ).toBe(true);
+
+        expect(instanciaCriada.destroy).toHaveBeenCalledTimes(1);
+    });
+
+    it('preserva o seletor nativo quando Tom Select falha', async () => {
+        const gestor = criarGestorBinario();
+
+        gestor.carregarTomSelect = vi.fn()
+            .mockRejectedValue(new Error('Falha simulada'));
+
+        expect(
+            gestor.renderizar('autoria_utilizador', 'nao'),
+        ).toBe(true);
+
+        const campo = gestor.areaFiltrosAtivos.querySelector(
+            '[name="filtro_autoria_utilizador"]',
+        );
+
+        await gestor.inicializacoesTomSelect.get(campo);
+
+        expect(
+            Array.from(campo.options, opcao => opcao.value),
+        ).toEqual(['sim', 'nao']);
+
+        expect(campo.value).toBe('nao');
+
+        expect(
+            gestor.instanciasTomSelect.has('filtro_autoria_utilizador'),
+        ).toBe(false);
+    });
+});
