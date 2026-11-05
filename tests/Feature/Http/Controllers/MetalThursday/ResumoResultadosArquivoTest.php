@@ -156,6 +156,8 @@ final class ResumoResultadosArquivoTest extends TestCase
 
         $html = (string) $resposta->getContent();
 
+        self::assertSame(2, substr_count($html, 'aria-label="Paginação dos resultados"'));
+
         self::assertSame(1, substr_count($html, 'A mostrar'));
 
         self::assertSame(

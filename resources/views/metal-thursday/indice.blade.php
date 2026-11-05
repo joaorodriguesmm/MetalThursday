@@ -37,9 +37,10 @@
                     : $registosMetalThursday;
             @endphp
 
-            <p
+            <div class="d-flex flex-column flex-xl-row justify-content-xl-between align-items-xl-center gap-3 mb-4">
+<p
                 id="resumo-resultados-arquivo"
-                class="small text-muted mb-3"
+                class="small text-muted mb-0"
                 data-total-resultados="{{ $paginadorResultados->total() }}"
             >
                 @if ($paginadorResultados->count() === 0)
@@ -54,25 +55,31 @@
                     resultados
                 @endif
             </p>
+    @if ($vistaAtual === $vistaSimplificada)
+        @if ($seccoesSimplificadas->hasPages())
+{{
+    $seccoesSimplificadas->links(
+        'vendor.pagination.bootstrap-5',
+        ['mostrarResumo' => false],
+    )
+}}
+        @endif
+    @elseif ($registosMetalThursday->hasPages())
+{{
+    $registosMetalThursday->links(
+        'vendor.pagination.bootstrap-5',
+        ['mostrarResumo' => false],
+    )
+}}
+    @endif
+</div>
 
             @if ($vistaAtual === $vistaSimplificada)
                 <x-metal-thursday.tabela-vista-simplificada
                     :seccoes-simplificadas="$seccoesSimplificadas"
                 />
             @else
-                @if ($registosMetalThursday->hasPages())
-                    <nav
-                        class="mb-4"
-                        aria-label="Paginação superior das MetalThursdays"
-                    >
-                        {{
-                            $registosMetalThursday->links(
-                                'vendor.pagination.bootstrap-5',
-                                ['mostrarResumo' => false],
-                            )
-                        }}
-                    </nav>
-                @endif
+
 
                 @forelse (
                     $registosMetalThursday
