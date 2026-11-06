@@ -79,6 +79,14 @@ final class NormalizadorDadosMetalThursday
                 );
             }
 
+            // Uma tracklist vazia não origina campos na submissão HTML.
+            if (
+                is_array($seccao['lancamento'] ?? null)
+                && ! array_key_exists('faixas', $seccao['lancamento'])
+            ) {
+                $seccao['lancamento']['faixas'] = [];
+            }
+
             $seccao['ano'] = self::normalizarIdentificador(
                 $seccao['ano']
                     ?? null,

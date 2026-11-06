@@ -704,6 +704,23 @@ final class ServicoPersistenciaMetalThursday
             );
 
         if ($tipoSeccao->identificador === 'lancamento') {
+            // Editar uma secção antiga não deve criar um lançamento no catálogo.
+            $dadosLancamento = $dados['lancamento'];
+
+            if (
+                $seccao->exists
+                && $seccao->lancamento_id === null
+                && $dados['lancamento_id'] === null
+                && is_array($dadosLancamento)
+                && $dadosLancamento['tipo'] === null
+                && $dadosLancamento['faixas'] === []
+            ) {
+                $seccao->titulo = $dadosLancamento['titulo'];
+                $seccao->ano = $dadosLancamento['ano_original'];
+
+                return;
+            }
+
             $lancamento =
                 $this->servicoLancamentos->sincronizar(
                     $dados,

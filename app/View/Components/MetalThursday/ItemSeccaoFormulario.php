@@ -484,6 +484,22 @@ final class ItemSeccaoFormulario extends Component
             }
         }
 
+        // As secções antigas conservam o título e o ano sem lançamento associado.
+        if (
+            $seccao instanceof SeccaoMetalThursday
+            && $seccao->exists
+            && $seccao->lancamento_id === null
+            && is_string($seccao->titulo)
+            && trim($seccao->titulo) !== ''
+        ) {
+            return [
+                'titulo' => $seccao->titulo,
+                'tipo' => '',
+                'ano_original' => $this->normalizarTexto($seccao->ano),
+                'faixas' => [],
+            ];
+        }
+
         return [
             'titulo' => '',
             'tipo' => '',
