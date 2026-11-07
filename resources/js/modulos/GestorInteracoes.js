@@ -448,6 +448,19 @@ class GestorInteracoes {
             elementoEliminado = tipo === 'eliminar'
                 && !botao.isConnected;
 
+            // O total e a paginação pertencem à listagem gerada pelo servidor.
+            if (
+                eliminacaoDoCartao
+                && elementoEliminado
+                && document.querySelector(
+                    '#formulario-filtros-ordenacao',
+                ) instanceof HTMLFormElement
+            ) {
+                this.recarregarListagemDepoisEliminacao();
+
+                return;
+            }
+
             const mensagemResposta =
                 typeof dados.mensagem === 'string'
                     ? dados.mensagem.trim()
@@ -1655,6 +1668,24 @@ class GestorInteracoes {
                 }
             },
         );
+    }
+
+    /**
+     * Recarrega a listagem depois da eliminação de uma MetalThursday.
+     *
+     * Mantém os filtros e a ordenação, mas regressa à primeira página para
+     * evitar uma página vazia caso a última tenha ficado sem resultados.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    recarregarListagemDepoisEliminacao() {
+        const endereco = new URL(window.location.href);
+
+        endereco.searchParams.delete('page');
+
+        window.location.assign(endereco.href);
     }
 
     /**

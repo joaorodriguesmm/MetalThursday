@@ -2463,7 +2463,11 @@ final class ControladorMetalThursdayTest extends TestCase
                     $metalThursday,
                 ),
             )
-            ->assertNoContent();
+            ->assertNoContent()
+            ->assertSessionHas(
+                'sucesso',
+                'MetalThursday eliminada com sucesso.',
+            );
 
         $this->assertSoftDeleted(
             'metal_thursdays',

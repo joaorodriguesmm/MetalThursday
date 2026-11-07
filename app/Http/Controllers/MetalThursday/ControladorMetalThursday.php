@@ -852,6 +852,12 @@ final class ControladorMetalThursday extends Controller implements HasMiddleware
         );
 
         if ($pedido->expectsJson()) {
+            // A listagem AJAX será recarregada depois da eliminação.
+            $pedido->session()->flash(
+                'sucesso',
+                'MetalThursday eliminada com sucesso.',
+            );
+
             return response()->json(
                 null,
                 Response::HTTP_NO_CONTENT,
