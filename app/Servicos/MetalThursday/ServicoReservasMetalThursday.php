@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Servicos\MetalThursday;
 
 use App\Models\Autenticacao\Utilizador;
+use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\ReservaMetalThursday;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -143,6 +144,10 @@ final class ServicoReservasMetalThursday
                         return null;
                     }
 
+                    if ($this->existeMetalThursdayNaData($dataPersistivel)) {
+                        return null;
+                    }
+
                     Utilizador::query()
                         ->elegiveisParaNomeacao()
                         ->select([
@@ -256,6 +261,10 @@ final class ServicoReservasMetalThursday
                         $reservaExistente
                         instanceof ReservaMetalThursday
                     ) {
+                        return null;
+                    }
+
+                    if ($this->existeMetalThursdayNaData($dataPersistivel)) {
                         return null;
                     }
 
@@ -456,6 +465,24 @@ final class ServicoReservasMetalThursday
                 'id',
             )
             ->first();
+    }
+
+    /**
+     * Evita criar reservas para datas já ocupadas, incluindo registos
+     * eliminados logicamente que ainda reservam a mesma data.
+     *
+     * A consulta ocorre dentro da transação e bloqueia o registo encontrado.
+     *
+     * @param  string  $data  Data no formato AAAA-MM-DD.
+     *
+     * @since 2.0.0
+     */
+    private function existeMetalThursdayNaData(string $data): bool
+    {
+        return MetalThursday::withTrashed()
+            ->where('data', $data)
+            ->lockForUpdate()
+            ->first() instanceof MetalThursday;
     }
 
     /**

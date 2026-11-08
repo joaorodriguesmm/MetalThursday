@@ -863,6 +863,7 @@ function configurarValidacaoTempoRealSeccoes(
     validador,
 ) {
     let validacaoAtiva = false;
+    let seccoesValidadas = new WeakSet();
 
     const revalidarSeccao = (evento) => {
         if (
@@ -881,6 +882,7 @@ function configurarValidacaoTempoRealSeccoes(
             || !formulario.contains(
                 seccao,
             )
+            || !seccoesValidadas.has(seccao)
         ) {
             return;
         }
@@ -903,6 +905,14 @@ function configurarValidacaoTempoRealSeccoes(
             }
 
             validacaoAtiva = true;
+
+            formulario.querySelectorAll(
+                '.item-seccao',
+            ).forEach((seccao) => {
+                if (seccao instanceof HTMLElement) {
+                    seccoesValidadas.add(seccao);
+                }
+            });
         },
     );
 
@@ -910,6 +920,7 @@ function configurarValidacaoTempoRealSeccoes(
         'reset',
         () => {
             validacaoAtiva = false;
+            seccoesValidadas = new WeakSet();
         },
     );
 
@@ -2448,6 +2459,10 @@ function executarInicializacaoFormularioMetalThursday(
                     .enderecos
                     .obterUtilizadorHaMaisTempoSemNomeacao,
 
+            campoAutor: formulario.querySelector(
+                '[name="autor_id"]',
+            ),
+
             obterValorExcluido: () => {
                 const campoAutor =
                     formulario.querySelector(
@@ -2707,4 +2722,5 @@ function inicializarFormularioMetalThursday(
     }
 }
 
+export { configurarValidacaoTempoRealSeccoes };
 export default inicializarFormularioMetalThursday;

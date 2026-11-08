@@ -520,7 +520,7 @@ class GestorEdicaoMetalThursday {
         );
 
         this.elementoEstado.classList.add(
-            'text-warning-emphasis',
+            'text-warning',
         );
     }
 

@@ -21,6 +21,8 @@ class SeletorNomeados {
      *     Endereço utilizado para obter o nomeado mais antigo.
      * @param {Function|null} opcoes.obterValorExcluido
      *     Callback que devolve o identificador que não pode ser nomeado.
+     * @param {HTMLInputElement|HTMLSelectElement|null} opcoes.campoAutor
+     *     Campo cujo valor deve ser excluído da seleção manual.
      *
      * @throws {TypeError} Quando algum seletor CSS ou elemento é inválido.
      *
@@ -32,6 +34,7 @@ class SeletorNomeados {
         instanciaTomSelect = null,
         urlNomeadoMaisAntigo = null,
         obterValorExcluido = null,
+        campoAutor = null,
     } = {}) {
         this.botaoAleatorio =
             this.obterBotaoOpcional(
@@ -61,8 +64,45 @@ class SeletorNomeados {
         this.emPedidoMaisAntigo =
             false;
 
+        this.campoAutor = (
+            campoAutor instanceof HTMLInputElement
+            || campoAutor instanceof HTMLSelectElement
+        ) ? campoAutor : null;
+
+        this.opcaoAutorExcluida = null;
+        this.valorAutorExcluido = '';
+
+        // O Tom Select do autor já foi inicializado pelo formulário.
+        this.tomSelectAutor = this.campoAutor
+            instanceof HTMLSelectElement
+            ? this.campoAutor.tomselect ?? null
+            : null;
+
+        this.opcaoNomeadoExcluida = null;
+        this.valorNomeadoExcluido = '';
+
         if (!this.temTomSelectValido()) {
             return;
+        }
+
+        if (this.campoAutor !== null) {
+            this.campoAutor.addEventListener(
+                'change',
+                () => this.sincronizarExclusaoAutor(),
+            );
+            this.sincronizarExclusaoAutor();
+        }
+
+        // As alterações do próximo nomeado também atualizam o autor.
+        if (
+            this.tomSelectAutor !== null
+            && typeof this.tomSelect.on === 'function'
+        ) {
+            this.tomSelect.on(
+                'change',
+                () => this.sincronizarExclusaoNomeado(),
+            );
+            this.sincronizarExclusaoNomeado();
         }
 
         this.botaoAleatorio?.addEventListener(
@@ -78,6 +118,123 @@ class SeletorNomeados {
                 void this.selecionarMaisAntigo();
             },
         );
+    }
+
+    /**
+     * Exclui o autor da lista manual sem perder a opção original.
+     *
+     * Quando o autor muda, a opção anteriormente excluída é reposta.
+     * Uma nomeação que passe a coincidir com o novo autor é limpa.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    sincronizarExclusaoAutor() {
+        if (
+            this.campoAutor === null
+            || !this.temTomSelectValido()
+            || typeof this.tomSelect.addOption !== 'function'
+            || typeof this.tomSelect.removeOption !== 'function'
+            || typeof this.tomSelect.refreshOptions !== 'function'
+            || typeof this.tomSelect.getValue !== 'function'
+            || typeof this.tomSelect.clear !== 'function'
+        ) {
+            return;
+        }
+
+        const valorAutor = this.obterValorExcluidoNormalizado();
+
+        if (valorAutor === this.valorAutorExcluido) {
+            return;
+        }
+
+        if (this.opcaoAutorExcluida !== null) {
+            this.tomSelect.addOption(this.opcaoAutorExcluida);
+            this.opcaoAutorExcluida = null;
+        }
+
+        this.valorAutorExcluido = valorAutor;
+
+        if (
+            valorAutor !== ''
+            && Object.hasOwn(this.tomSelect.options, valorAutor)
+        ) {
+            this.opcaoAutorExcluida = {
+                ...this.tomSelect.options[valorAutor],
+            };
+
+            if (this.tomSelect.getValue() === valorAutor) {
+                this.tomSelect.clear();
+            }
+
+            this.tomSelect.removeOption(valorAutor);
+        }
+
+        this.tomSelect.refreshOptions(false);
+    }
+
+    /**
+     * Exclui o próximo nomeado das opções de autor.
+     *
+     * Repõe o nomeado anterior quando a seleção muda ou é limpa.
+     * Se a seleção programática coincidir com o autor, limpa primeiro
+     * o autor para evitar manter uma combinação inválida.
+     *
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    sincronizarExclusaoNomeado() {
+        const autor = this.tomSelectAutor;
+
+        if (
+            autor === null
+            || typeof autor.addOption !== 'function'
+            || typeof autor.removeOption !== 'function'
+            || typeof autor.refreshOptions !== 'function'
+            || typeof autor.getValue !== 'function'
+            || typeof autor.clear !== 'function'
+            || typeof autor.options !== 'object'
+            || autor.options === null
+            || typeof this.tomSelect.getValue !== 'function'
+        ) {
+            return;
+        }
+
+        const recebido = this.tomSelect.getValue();
+        const valorNomeado = typeof recebido === 'string'
+            && /^[1-9]\d*$/u.test(recebido.trim())
+            ? recebido.trim()
+            : '';
+
+        if (valorNomeado === this.valorNomeadoExcluido) {
+            return;
+        }
+
+        if (this.opcaoNomeadoExcluida !== null) {
+            autor.addOption(this.opcaoNomeadoExcluida);
+            this.opcaoNomeadoExcluida = null;
+        }
+
+        this.valorNomeadoExcluido = valorNomeado;
+
+        if (
+            valorNomeado !== ''
+            && Object.hasOwn(autor.options, valorNomeado)
+        ) {
+            this.opcaoNomeadoExcluida = {
+                ...autor.options[valorNomeado],
+            };
+
+            if (autor.getValue() === valorNomeado) {
+                autor.clear();
+            }
+
+            autor.removeOption(valorNomeado);
+        }
+
+        autor.refreshOptions(false);
     }
 
     /**
