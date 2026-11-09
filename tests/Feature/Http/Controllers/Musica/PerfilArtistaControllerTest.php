@@ -262,6 +262,97 @@ final class PerfilArtistaControllerTest extends TestCase
     }
 
     #[Test]
+    public function campos_adicionais_ficam_ocultos_sem_metadados(): void
+    {
+        $utilizador = $this->criarUtilizador();
+        $this->actingAs($utilizador, 'sessao');
+
+        $artista = Artista::factory()->create([
+            'ano_inicio_atividade' => null,
+            'ano_fim_atividade' => null,
+            'estado_atividade' => null,
+            'biografia' => null,
+            'imagem' => null,
+            'musicbrainz_id' => null,
+            'discogs_id' => null,
+        ]);
+
+        foreach ([
+            route('artistas.criar'),
+            route('artistas.editar', $artista),
+        ] as $endereco) {
+            $conteudo = $this->get($endereco)
+                ->assertOk()
+                ->getContent();
+
+            self::assertIsString($conteudo);
+
+            self::assertMatchesRegularExpression(
+                '/id="campos-adicionais-artista"\s+class="collapse\s*"\s+data-campos-adicionais-artista/',
+                $conteudo,
+            );
+
+            self::assertMatchesRegularExpression(
+                '/aria-expanded="false"[^>]*data-alternar-campos-adicionais/s',
+                $conteudo,
+            );
+        }
+    }
+
+    #[Test]
+    public function edicao_expande_campos_quando_existem_metadados(): void
+    {
+        $utilizador = $this->criarUtilizador();
+        $this->actingAs($utilizador, 'sessao');
+
+        $cenarios = [
+            'ano de inicio' => ['ano_inicio_atividade' => 1989],
+            'ano de fim' => [
+                'ano_inicio_atividade' => 1989,
+                'ano_fim_atividade' => 2000,
+            ],
+            'estado de atividade' => ['estado_atividade' => 'ativo'],
+            'biografia' => ['biografia' => 'Biografia do artista.'],
+            'imagem' => ['imagem' => 'https://example.com/artista.jpg'],
+            'musicbrainz' => [
+                'musicbrainz_id' => '65f4f0c5-ef9e-490c-aee3-909e7ae6b2ab',
+            ],
+            'discogs' => ['discogs_id' => 93817],
+            'ligacoes' => [],
+        ];
+
+        foreach ($cenarios as $cenario => $atributos) {
+            $artista = Artista::factory()->create($atributos);
+
+            if ($cenario === 'ligacoes') {
+                $artista->ligacoes()->create([
+                    'titulo' => 'Site oficial',
+                    'url' => 'https://example.com',
+                    'ordem' => 1,
+                ]);
+            }
+
+            $conteudo = $this->get(
+                route('artistas.editar', $artista),
+            )->assertOk()->getContent();
+
+            self::assertIsString($conteudo);
+
+            self::assertMatchesRegularExpression(
+                '/id="campos-adicionais-artista"\s+class="collapse show"\s+data-campos-adicionais-artista/',
+                $conteudo,
+                $cenario,
+            );
+
+            self::assertMatchesRegularExpression(
+                '/aria-expanded="true"[^>]*data-alternar-campos-adicionais/s',
+                $conteudo,
+                $cenario,
+            );
+        }
+    }
+
+    #[Test]
     public function formularios_escondem_metadados_atras_de_toggle(): void
     {
         $utilizador = $this->criarUtilizador();

@@ -18,6 +18,18 @@
         || $errors->has('ligacoes')
         || $errors->has('ligacoes.*')
         || $errors->has('musicbrainz_id');
+
+    if ($emEdicao && ! $mostrarCamposAdicionais) {
+        $mostrarCamposAdicionais =
+            $artista->ano_inicio_atividade !== null
+            || $artista->ano_fim_atividade !== null
+            || filled($artista->estado_atividade)
+            || filled($artista->biografia)
+            || filled($artista->imagem)
+            || filled($artista->musicbrainz_id)
+            || filled($artista->discogs_id)
+            || $artista->ligacoes()->exists();
+    }
 @endphp
 
 <form
