@@ -204,6 +204,14 @@
                 @enderror
             @enderror
         </div>
+
+        <div
+            id="sugestoes-generos-artista"
+            data-sugestoes-generos-importacao
+            class="mt-2 border rounded p-3"
+            aria-live="polite"
+            hidden
+        ></div>
     </div>
 
     <div class="mb-3">

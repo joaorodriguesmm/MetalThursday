@@ -1558,6 +1558,129 @@ function apresentarAssociacaoImportacao(
 }
 
 /**
+ * Apresenta sugestões externas sem alterar a seleção de géneros.
+ *
+ * @param {HTMLFormElement} formulario Formulário do artista.
+ * @param {unknown} sugestoes Sugestões recebidas das integrações.
+ * @returns {void}
+ */
+function apresentarSugestoesGenerosImportacao(
+    formulario,
+    sugestoes,
+) {
+    const contentor = formulario.querySelector(
+        '[data-sugestoes-generos-importacao]',
+    );
+
+    if (!(contentor instanceof HTMLElement)) {
+        return;
+    }
+
+    contentor.replaceChildren();
+    contentor.hidden = true;
+
+    if (!Array.isArray(sugestoes)) {
+        return;
+    }
+
+    const validas = sugestoes
+        .filter(
+            (sugestao) =>
+                sugestao !== null
+                && typeof sugestao === 'object'
+                && typeof sugestao.nome === 'string'
+                && sugestao.nome.trim() !== '',
+        )
+        .slice(0, 20);
+
+    if (validas.length === 0) {
+        return;
+    }
+
+    const titulo = document.createElement('p');
+    titulo.className = 'fw-semibold mb-1';
+    titulo.textContent = 'Sugestões de géneros e estilos';
+
+    const aviso = document.createElement('p');
+    aviso.className = 'small text-muted mb-2';
+    aviso.textContent =
+        'Sugestões das fontes externas. Nenhum género é selecionado automaticamente.';
+
+    const lista = document.createElement('ul');
+    lista.className = 'list-unstyled mb-0';
+
+    for (const sugestao of validas) {
+        const item = document.createElement('li');
+        item.className = 'mb-2';
+
+        const nome = document.createElement('strong');
+        nome.classList.add('text-capitalize');
+        nome.textContent = sugestao.nome.trim();
+
+        const fontes = Array.isArray(sugestao.fontes)
+            ? sugestao.fontes
+                .map((fonte) => {
+                    if (fonte === 'musicbrainz') {
+                        return 'MusicBrainz';
+                    }
+
+                    if (fonte === 'theaudiodb') {
+                        return 'TheAudioDB';
+                    }
+
+                    return null;
+                })
+                .filter(Boolean)
+            : [];
+
+        const informacao = document.createElement('span');
+        informacao.className = 'small text-muted';
+        informacao.textContent =
+            ' — '
+            + (sugestao.tipo === 'estilo' ? 'Estilo' : 'Género')
+            + (fontes.length > 0 ? ' · ' + fontes.join(' + ') : '');
+
+        const detalhe = document.createElement('div');
+        detalhe.className = 'small text-muted';
+
+        const local = sugestao.genero_local;
+
+        if (
+            sugestao.disponivel === true
+            && local !== null
+            && typeof local === 'object'
+            && typeof local.nome === 'string'
+        ) {
+            const pais = Array.isArray(sugestao.generos_pais)
+                ? sugestao.generos_pais
+                    .filter(
+                        (pai) =>
+                            pai !== null
+                            && typeof pai === 'object'
+                            && typeof pai.nome === 'string',
+                    )
+                    .map((pai) => pai.nome)
+                : [];
+
+            detalhe.textContent = pais.length > 0
+                ? 'Correspondência local: ' + local.nome
+                    + '. Géneros pais: ' + pais.join(', ') + '.'
+                : 'Correspondência local: ' + local.nome
+                    + '. Sem géneros pais registados.';
+        } else {
+            detalhe.textContent =
+                'Sem correspondência nos géneros registados.';
+        }
+
+        item.append(nome, informacao, detalhe);
+        lista.append(item);
+    }
+
+    contentor.append(titulo, aviso, lista);
+    contentor.hidden = false;
+}
+
+/**
  * Aplica uma proposta externa aos campos editáveis.
  *
  * Valores não disponibilizados pelas fontes não apagam dados que o utilizador
@@ -1697,6 +1820,11 @@ function aplicarPropostaImportacao(
             artista.imagem.trim(),
         );
     }
+
+    apresentarSugestoesGenerosImportacao(
+        formulario,
+        artista.sugestoes_generos,
+    );
 
     fundirLigacoesImportadas(
         formulario,
@@ -2057,6 +2185,11 @@ function removerAssociacaoImportacao(
         contentor,
     );
 
+    apresentarSugestoesGenerosImportacao(
+        formulario,
+        [],
+    );
+
     const associacao =
         contentor.querySelector(
             '[data-associacao-importacao]',
@@ -2175,6 +2308,16 @@ function inicializarImportacao(
     if (!(contentor instanceof HTMLElement)) {
         return;
     }
+
+    formulario.addEventListener(
+        'reset',
+        () => {
+            apresentarSugestoesGenerosImportacao(
+                formulario,
+                [],
+            );
+        },
+    );
 
     const botaoPesquisar =
         contentor.querySelector(

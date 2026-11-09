@@ -29,6 +29,8 @@ use RuntimeException;
  *     dissolvido: bool|null,
  *     biografia: string|null,
  *     idioma_biografia: 'pt'|'en'|null,
+ *     genero: string|null,
+ *     estilo: string|null,
  *     imagem: string|null,
  *     logo: string|null,
  *     ligacoes: list<array{titulo: string, url: string}>
@@ -355,9 +357,23 @@ final class ServicoTheAudioDB
             $biografiaIngles = null;
         }
 
+        $biografiaGenerica =
+            $this->obterTexto(
+                $artista['strBiography'] ?? null,
+                true,
+            );
+
+        if (
+            $biografiaGenerica !== null
+            && ! $this->eBiografiaImportavel($biografiaGenerica)
+        ) {
+            $biografiaGenerica = null;
+        }
+
         $biografia =
             $biografiaPortugues
-            ?? $biografiaIngles;
+            ?? $biografiaIngles
+            ?? $biografiaGenerica;
 
         return [
             'id' => $this->normalizarIdentificadorPositivo(
@@ -393,6 +409,14 @@ final class ServicoTheAudioDB
             ),
 
             'biografia' => $biografia,
+
+            'genero' => $this->obterTexto(
+                $artista['strGenre'] ?? null,
+            ),
+
+            'estilo' => $this->obterTexto(
+                $artista['strStyle'] ?? null,
+            ),
 
             'idioma_biografia' => $biografiaPortugues !== null
                 ? 'pt'

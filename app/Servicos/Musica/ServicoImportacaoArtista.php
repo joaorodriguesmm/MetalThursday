@@ -179,6 +179,11 @@ final class ServicoImportacaoArtista
 
             'biografia' => $biografia,
 
+            'sugestoes_generos' => $this->obterSugestoesGeneros(
+                $musicBrainz,
+                $theAudioDB,
+            ),
+
             'imagem' => $imagem,
 
             'ligacoes' => $this->obterLigacoes(
@@ -207,6 +212,98 @@ final class ServicoImportacaoArtista
                     : null,
             ],
         ];
+    }
+
+    /**
+     * Agrupa sugestões externas sem associar géneros ao artista.
+     *
+     * @param  array<string, mixed>  $musicBrainz
+     * @param  array<string, mixed>|null  $theAudioDB
+     * @return list<array{nome: string, tipo: string, fontes: list<string>}>
+     */
+    private function obterSugestoesGeneros(
+        array $musicBrainz,
+        ?array $theAudioDB,
+    ): array {
+        /** @var list<array{nome: string, tipo: string, fontes: list<string>}> $sugestoes */
+        $sugestoes = [];
+
+        /** @var array<string, int> $indices */
+        $indices = [];
+
+        $adicionar = static function (
+            mixed $nome,
+            string $fonte,
+            string $tipo,
+        ) use (&$sugestoes, &$indices): void {
+            if (! is_string($nome)) {
+                return;
+            }
+
+            $nome = trim($nome);
+
+            if ($nome === '' || mb_strlen($nome) > 100) {
+                return;
+            }
+
+            $chave = mb_strtolower($nome);
+
+            if (isset($indices[$chave])) {
+                $indice = $indices[$chave];
+                $existente = $sugestoes[$indice];
+                $fontes = $existente['fontes'];
+
+                if (! in_array($fonte, $fontes, true)) {
+                    $fontes[] = $fonte;
+                }
+
+                $sugestoes[$indice] = [
+                    'nome' => $existente['nome'],
+                    'tipo' => $tipo === 'genero'
+                        ? 'genero'
+                        : $existente['tipo'],
+                    'fontes' => $fontes,
+                ];
+
+                return;
+            }
+
+            if (count($sugestoes) >= 20) {
+                return;
+            }
+
+            $indices[$chave] = count($sugestoes);
+
+            $sugestoes[] = [
+                'nome' => $nome,
+                'tipo' => $tipo,
+                'fontes' => [$fonte],
+            ];
+        };
+
+        $nomesGeneros = $musicBrainz['generos'] ?? [];
+
+        if (is_array($nomesGeneros)) {
+            foreach ($nomesGeneros as $nome) {
+                $adicionar($nome, 'musicbrainz', 'genero');
+            }
+        }
+
+        if ($theAudioDB !== null) {
+            $adicionar(
+                $theAudioDB['genero'] ?? null,
+                'theaudiodb',
+                'genero',
+            );
+
+            $adicionar(
+                $theAudioDB['estilo'] ?? null,
+                'theaudiodb',
+                'estilo',
+            );
+        }
+
+        return $sugestoes;
     }
 
     /**

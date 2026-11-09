@@ -65,6 +65,12 @@ async function prepararPagina() {
                 value=""
             >
 
+            <select name="generos[]" multiple>
+                <option value="51" selected>Género manual</option>
+            </select>
+
+            <div data-sugestoes-generos-importacao hidden></div>
+
             <div
                 data-importacao-artista
                 data-endereco-pesquisa-importacao="/artistas/importacao/pesquisar"
@@ -681,4 +687,180 @@ describe('B25.13 — concorrencia na pesquisa de artistas', () => {
         ).toBe('A obter e combinar os dados disponíveis…');
     });
 
+
+    describe('A09.12.91 — sugestões de géneros', () => {
+        async function importarSugestoes(mbid, sugestoes) {
+            pedidos.get.mockResolvedValueOnce({
+                data: {
+                    artista: {
+                        ...criarPropostaArtista(mbid, 'Moonspell'),
+                        sugestoes_generos: sugestoes,
+                    },
+                },
+            });
+
+            criarBotaoSelecao(contentor, mbid).click();
+
+            const painel = formulario.querySelector(
+                '[data-sugestoes-generos-importacao]',
+            );
+
+            await vi.waitFor(() => {
+                expect(painel.hidden).toBe(false);
+            });
+
+            return painel;
+        }
+
+        it('apresenta fontes e varios pais sem selecionar generos', async () => {
+            const seletor = formulario.querySelector(
+                '[name="generos[]"]',
+            );
+
+            const painel = await importarSugestoes(
+                'mbid-generos',
+                [
+                    {
+                        nome: 'gothic metal',
+                        tipo: 'genero',
+                        fontes: ['musicbrainz'],
+                        disponivel: true,
+                        genero_local: {
+                            id: 12,
+                            nome: 'Gothic Metal',
+                        },
+                        generos_pais: [
+                            { id: 1, nome: 'Metal' },
+                            { id: 2, nome: 'Rock' },
+                        ],
+                    },
+                    {
+                        nome: 'Rock/Pop',
+                        tipo: 'estilo',
+                        fontes: ['theaudiodb'],
+                        disponivel: false,
+                        genero_local: null,
+                        generos_pais: [],
+                    },
+                ],
+            );
+
+            expect(painel.textContent).toContain('gothic metal');
+            expect(painel.querySelector('li strong')
+                .classList.contains('text-capitalize')).toBe(true);
+            expect(painel.textContent).toContain('MusicBrainz');
+            expect(painel.textContent).toContain('Metal, Rock');
+            expect(painel.textContent).toContain('Rock/Pop');
+            expect(painel.textContent).toContain('Estilo');
+            expect(painel.textContent).toContain('TheAudioDB');
+            expect(painel.textContent).toContain(
+                'Sem correspondência nos géneros registados.',
+            );
+
+            expect(
+                Array.from(seletor.selectedOptions, (opcao) => opcao.value),
+            ).toEqual(['51']);
+        });
+
+        it('nao interpreta HTML recebido das fontes externas', async () => {
+            const textoPerigoso =
+                '<img src=x onerror=alert(1)>';
+
+            const painel = await importarSugestoes(
+                'mbid-html',
+                [
+                    {
+                        nome: textoPerigoso,
+                        tipo: 'genero',
+                        fontes: ['musicbrainz'],
+                        disponivel: true,
+                        genero_local: {
+                            id: 8,
+                            nome: '<strong>Metal</strong>',
+                        },
+                        generos_pais: [
+                            {
+                                id: 1,
+                                nome: '<svg onload=alert(1)>',
+                            },
+                        ],
+                    },
+                ],
+            );
+
+            expect(painel.textContent).toContain(textoPerigoso);
+            expect(painel.textContent).toContain(
+                '<strong>Metal</strong>',
+            );
+
+            expect(painel.querySelector('img')).toBeNull();
+            expect(painel.querySelectorAll('strong')).toHaveLength(1);
+            expect(painel.querySelector('strong').textContent)
+                .toBe(textoPerigoso);
+            expect(painel.querySelector('svg')).toBeNull();
+        });
+
+        it('substitui as sugestoes quando importa outro artista', async () => {
+            const painel = await importarSugestoes(
+                'mbid-primeiro',
+                [
+                    {
+                        nome: 'Black Metal',
+                        tipo: 'genero',
+                        fontes: ['musicbrainz'],
+                    },
+                ],
+            );
+
+            expect(painel.textContent).toContain('Black Metal');
+
+            await importarSugestoes(
+                'mbid-segundo',
+                [
+                    {
+                        nome: 'Heavy Metal',
+                        tipo: 'genero',
+                        fontes: ['theaudiodb'],
+                    },
+                ],
+            );
+
+            expect(painel.textContent).toContain('Heavy Metal');
+            expect(painel.textContent).not.toContain('Black Metal');
+        });
+
+        it('limpa sugestoes ao remover associacao e ao reinicializar', async () => {
+            const sugestoes = [
+                {
+                    nome: 'Gothic Metal',
+                    tipo: 'genero',
+                    fontes: ['musicbrainz'],
+                },
+            ];
+
+            const painel = await importarSugestoes(
+                'mbid-remocao',
+                sugestoes,
+            );
+
+            contentor.querySelector(
+                '[data-acao-remover-importacao]',
+            ).click();
+
+            expect(painel.hidden).toBe(true);
+            expect(painel.childElementCount).toBe(0);
+
+            await importarSugestoes(
+                'mbid-reset',
+                sugestoes,
+            );
+
+            formulario.reset();
+
+            await vi.waitFor(() => {
+                expect(painel.hidden).toBe(true);
+                expect(painel.childElementCount).toBe(0);
+            });
+        });
+    });
 });

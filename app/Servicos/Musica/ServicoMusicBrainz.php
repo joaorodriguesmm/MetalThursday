@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Servicos\Musica;
 
 use App\Models\Musica\Artista;
+use App\Models\Musica\Genero;
 use App\Servicos\Integracoes\LimitadorPedidosExternos;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
@@ -33,6 +34,7 @@ use RuntimeException;
  *     ano_fim: int|null,
  *     terminado: bool|null,
  *     relacoes: list<array{tipo: string|null, url: string}>,
+ *     generos: list<string>,
  *     discogs_id: int|null,
  *     url_musicbrainz: string
  * }
@@ -169,7 +171,7 @@ final class ServicoMusicBrainz
             $this->executarPedido(
                 '/ws/2/artist/'.$mbidNormalizado,
                 [
-                    'inc' => 'url-rels',
+                    'inc' => 'url-rels genres',
 
                     'fmt' => 'json',
                 ],
@@ -558,6 +560,8 @@ final class ServicoMusicBrainz
 
             'relacoes' => $relacoes,
 
+            'generos' => $this->normalizarGeneros($artista['genres'] ?? null),
+
             'discogs_id' => $this->obterDiscogsId(
                 $relacoes,
             ),
@@ -566,6 +570,52 @@ final class ServicoMusicBrainz
                 $mbid,
             ),
         ];
+    }
+
+    /**
+     * Normaliza os géneros externos, sem os associar ao artista.
+     *
+     * @param  mixed  $generos  Géneros devolvidos pelo MusicBrainz.
+     * @return list<string>
+     */
+    private function normalizarGeneros(mixed $generos): array
+    {
+        if (! is_array($generos)) {
+            return [];
+        }
+
+        $resultado = [];
+        $identificadores = [];
+
+        foreach ($generos as $genero) {
+            if (! is_array($genero)) {
+                continue;
+            }
+
+            $nome = $this->obterTexto($genero['name'] ?? null);
+
+            if (
+                $nome === null
+                || mb_strlen($nome) > Genero::COMPRIMENTO_MAXIMO_NOME
+            ) {
+                continue;
+            }
+
+            $chave = mb_strtolower($nome);
+
+            if (isset($identificadores[$chave])) {
+                continue;
+            }
+
+            $identificadores[$chave] = true;
+            $resultado[] = $nome;
+
+            if (count($resultado) >= 20) {
+                break;
+            }
+        }
+
+        return $resultado;
     }
 
     /**
