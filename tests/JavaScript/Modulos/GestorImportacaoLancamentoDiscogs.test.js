@@ -28,6 +28,29 @@ describe(
         );
 
         it(
+            'nao apresenta aviso Discogs para lancamento manual existente',
+            () => {
+                const gestor = criarGestor();
+                const seccao = document.querySelector('.item-seccao');
+                const campo = seccao.querySelector(
+                    '[name$="[lancamento_id]"]',
+                );
+                const associacao = seccao.querySelector(
+                    '[data-lancamento-associado]',
+                );
+
+                campo.value = '77';
+                gestor.editorLancamentos.atualizarCamposGenericos = vi.fn();
+                gestor.editorLancamentos.inicializarSeccao = vi.fn();
+
+                gestor.atualizarEstadoSeccao(seccao, false);
+
+                expect(associacao.hidden).toBe(true);
+                expect(campo.value).toBe('77');
+            },
+        );
+
+        it(
             'extrai apenas identificadores de releases Discogs validas',
             () => {
                 const gestor =

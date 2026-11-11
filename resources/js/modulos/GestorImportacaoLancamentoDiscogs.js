@@ -277,9 +277,6 @@ class GestorImportacaoLancamentoDiscogs {
             return;
         }
 
-        this.apresentarAssociacaoExistente(
-            seccao,
-        );
     }
 
     /**
@@ -605,43 +602,6 @@ class GestorImportacaoLancamentoDiscogs {
             seccao,
             lancamento,
         );
-    }
-
-    /**
-     * Mostra uma associação já existente numa secção em edição.
-     *
-     * @param {HTMLElement} seccao Secção consultada.
-     *
-     * @returns {void}
-     *
-     * @since 2.0.0
-     */
-    apresentarAssociacaoExistente(seccao) {
-        const campo = seccao.querySelector(
-            '[name$="[lancamento_id]"]',
-        );
-
-        const elemento = seccao.querySelector(
-            '[data-lancamento-associado]',
-        );
-
-        if (
-            !(campo instanceof HTMLInputElement)
-            || !(elemento instanceof HTMLElement)
-            || !/^[1-9]\d*$/u.test(
-                campo.value,
-            )
-        ) {
-            return;
-        }
-
-        if (!elemento.hidden) {
-            return;
-        }
-
-        elemento.textContent =
-            'Lançamento associado. Cola outra ligação do Discogs para o substituir.';
-        elemento.hidden = false;
     }
 
     /**

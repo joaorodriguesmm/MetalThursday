@@ -281,8 +281,20 @@
                 class="alert alert-success py-2 px-3 mt-2 mb-0"
                 role="status"
                 data-lancamento-associado
-                hidden
-            ></div>
+                @if ($identificadorDiscogsAssociado === null)
+                    hidden
+                @endif
+            >
+                @if ($identificadorDiscogsAssociado !== null)
+                    <a
+                        href="https://www.discogs.com/release/{{ $identificadorDiscogsAssociado }}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        Discogs #{{ $identificadorDiscogsAssociado }}
+                    </a>
+                @endif
+            </div>
         </div>
 
         <div

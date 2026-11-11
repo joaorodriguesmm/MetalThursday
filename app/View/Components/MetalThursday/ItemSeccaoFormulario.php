@@ -148,6 +148,13 @@ final class ItemSeccaoFormulario extends Component
     public readonly array $dadosLancamento;
 
     /**
+     * Identificador Discogs do lançamento associado.
+     *
+     * @since 2.0.0
+     */
+    public readonly ?int $identificadorDiscogsAssociado;
+
+    /**
      * Ligações públicas associadas à secção.
      *
      * @var list<array{url: string, etiqueta: string, incorporar: bool}>
@@ -362,6 +369,13 @@ final class ItemSeccaoFormulario extends Component
             $pedido,
             $seccao,
         );
+
+        $this->identificadorDiscogsAssociado =
+            $seccao instanceof SeccaoMetalThursday
+            && $seccao->lancamento instanceof Lancamento
+            && $this->valores['lancamento'] === (string) $seccao->lancamento->id
+                ? $seccao->lancamento->discogs_release_id
+                : null;
 
         $this->ligacoes = $this->obterLigacoesFormulario(
             $pedido,
