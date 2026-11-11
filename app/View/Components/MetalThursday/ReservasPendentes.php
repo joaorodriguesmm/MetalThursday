@@ -24,7 +24,8 @@ use LogicException;
  * MetalThursdays já finalizadas cuja data de publicação ainda não chegou.
  * Conteúdo de uma MetalThursday preparada não é exposto pelo componente.
  *
- * As reservas pendentes permanecem visíveis como informação operacional. Uma
+ * As reservas pendentes só são visíveis ao respetivo responsável ou a utilizadores
+ * com privilégios administrativos. Uma
  * MetalThursday preparada apenas é incluída quando o utilizador autenticado
  * possui permissão para a alterar.
  *
@@ -149,7 +150,7 @@ final class ReservasPendentes extends Component
         Utilizador $utilizador,
         CarbonInterface $hoje,
     ): array {
-        $reservas =
+        $consultaReservas =
             ReservaMetalThursday::query()
                 ->select([
                     'id',
@@ -158,7 +159,17 @@ final class ReservasPendentes extends Component
                 ])
                 ->whereNull(
                     'metal_thursday_id',
-                )
+                );
+
+        if (! $utilizador->possuiPrivilegiosAdministrativos()) {
+            $consultaReservas->where(
+                'responsavel_id',
+                $utilizador->id,
+            );
+        }
+
+        $reservas =
+            $consultaReservas
                 ->with([
                     'responsavel:id,nome',
 
