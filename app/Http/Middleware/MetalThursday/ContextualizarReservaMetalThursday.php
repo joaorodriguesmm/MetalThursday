@@ -55,6 +55,8 @@ final class ContextualizarReservaMetalThursday
             )
             || $reserva->responsavel_id
             !== $utilizador->id
+            || ($utilizador->possuiPrivilegiosAdministrativos()
+                && ! $utilizador->eSuperAdministrador())
         ) {
             abort(
                 Response::HTTP_FORBIDDEN,

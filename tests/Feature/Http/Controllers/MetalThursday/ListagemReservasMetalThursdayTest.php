@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Http\Controllers\MetalThursday;
 
+use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\MetalThursday;
@@ -42,7 +43,7 @@ final class ListagemReservasMetalThursdayTest extends TestCase
      * @since 2.0.0
      */
     #[Test]
-    public function listagem_apresenta_reservas_pendentes_por_ordem_cronologica(): void
+    public function superadministrador_ve_reservas_por_ordem_cronologica(): void
     {
         $responsavelPrimeira = Utilizador::factory()
             ->create([
@@ -83,9 +84,13 @@ final class ListagemReservasMetalThursdayTest extends TestCase
             ),
         );
 
+        $superAdministrador = Utilizador::factory()
+            ->comPapel(PapelUtilizador::SuperAdministrador)
+            ->create();
+
         $resposta = $this
             ->actingAs(
-                $responsavelPrimeira,
+                $superAdministrador,
                 'sessao',
             )
             ->get(
@@ -112,7 +117,7 @@ final class ListagemReservasMetalThursdayTest extends TestCase
             ]);
 
         self::assertSame(
-            1,
+            0,
             substr_count(
                 $resposta->getContent(),
                 'Preparar MetalThursday',
@@ -127,7 +132,7 @@ final class ListagemReservasMetalThursdayTest extends TestCase
      * @since 2.0.0
      */
     #[Test]
-    public function utilizador_diferente_do_responsavel_nao_ve_acao_preparar(): void
+    public function utilizador_diferente_do_responsavel_nao_ve_reserva_alheia(): void
     {
         $utilizadorAutenticado = Utilizador::factory()
             ->create();
@@ -159,7 +164,7 @@ final class ListagemReservasMetalThursdayTest extends TestCase
                 ),
             )
             ->assertOk()
-            ->assertSee(
+            ->assertDontSee(
                 'Responsável da Reserva',
             )
             ->assertDontSee(
@@ -174,9 +179,10 @@ final class ListagemReservasMetalThursdayTest extends TestCase
      * @since 2.0.0
      */
     #[Test]
-    public function listagem_apresenta_reserva_sem_responsavel(): void
+    public function superadministrador_ve_reserva_sem_responsavel(): void
     {
-        $utilizador = Utilizador::factory()
+        $superAdministrador = Utilizador::factory()
+            ->comPapel(PapelUtilizador::SuperAdministrador)
             ->create();
 
         ReservaMetalThursday::factory()
@@ -190,7 +196,7 @@ final class ListagemReservasMetalThursdayTest extends TestCase
 
         $this
             ->actingAs(
-                $utilizador,
+                $superAdministrador,
                 'sessao',
             )
             ->get(

@@ -161,11 +161,15 @@ final class ReservasPendentes extends Component
                     'metal_thursday_id',
                 );
 
-        if (! $utilizador->possuiPrivilegiosAdministrativos()) {
-            $consultaReservas->where(
-                'responsavel_id',
-                $utilizador->id,
-            );
+        if (! $utilizador->eSuperAdministrador()) {
+            if ($utilizador->possuiPrivilegiosAdministrativos()) {
+                $consultaReservas->whereRaw('1 = 0');
+            } else {
+                $consultaReservas->where(
+                    'responsavel_id',
+                    $utilizador->id,
+                );
+            }
         }
 
         $reservas =

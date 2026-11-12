@@ -79,7 +79,7 @@ final class ControladorMetalThursdayLancamentoEstruturadoTest extends TestCase
             ]);
 
         $this->actingAs(
-            $administrador,
+            Utilizador::factory()->comPapel(PapelUtilizador::SuperAdministrador)->create(),
             'sessao',
         );
 
@@ -186,7 +186,7 @@ final class ControladorMetalThursdayLancamentoEstruturadoTest extends TestCase
 
         $this
             ->actingAs(
-                $administrador,
+                Utilizador::factory()->comPapel(PapelUtilizador::SuperAdministrador)->create(),
                 'sessao',
             )
             ->postJson(

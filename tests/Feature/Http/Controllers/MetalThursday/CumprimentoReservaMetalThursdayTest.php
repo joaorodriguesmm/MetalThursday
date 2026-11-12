@@ -268,14 +268,7 @@ final class CumprimentoReservaMetalThursdayTest extends TestCase
                     ],
                 ],
             )
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors([
-                'autor_id',
-            ])
-            ->assertJsonPath(
-                'errors.autor_id.0',
-                'O autor deve corresponder ao responsável da reserva desta data.',
-            );
+            ->assertForbidden();
 
         $this->assertDatabaseMissing(
             'metal_thursdays',

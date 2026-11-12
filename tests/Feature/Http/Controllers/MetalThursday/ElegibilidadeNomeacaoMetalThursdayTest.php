@@ -267,7 +267,7 @@ final class ElegibilidadeNomeacaoMetalThursdayTest extends TestCase
             ->create();
 
         $this->actingAs(
-            $administrador,
+            Utilizador::factory()->comPapel(PapelUtilizador::SuperAdministrador)->create(),
             'sessao',
         );
 

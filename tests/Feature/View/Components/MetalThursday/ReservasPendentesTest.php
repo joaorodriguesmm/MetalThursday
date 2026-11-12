@@ -42,25 +42,30 @@ final class ReservasPendentesTest extends TestCase
     }
 
     #[Test]
-    public function administradores_veem_todas_as_reservas(): void
+    public function apenas_superadministrador_ve_todas_as_reservas(): void
     {
         $responsavel = Utilizador::factory()->create();
         $this->criarReserva($responsavel, '2027-01-07');
 
-        foreach ([
-            PapelUtilizador::Administrador,
-            PapelUtilizador::SuperAdministrador,
-        ] as $papel) {
-            $administrador = Utilizador::factory()
-                ->comPapel($papel)
-                ->create();
+        $administrador = Utilizador::factory()
+            ->comPapel(PapelUtilizador::Administrador)
+            ->create();
 
-            $this->actingAs($administrador, 'sessao');
+        $this->actingAs($administrador, 'sessao');
 
-            $this->get(route('inicio'))
-                ->assertOk()
-                ->assertSee('07/01/2027');
-        }
+        $this->get(route('inicio'))
+            ->assertOk()
+            ->assertDontSee('07/01/2027');
+
+        $superAdministrador = Utilizador::factory()
+            ->comPapel(PapelUtilizador::SuperAdministrador)
+            ->create();
+
+        $this->actingAs($superAdministrador, 'sessao');
+
+        $this->get(route('inicio'))
+            ->assertOk()
+            ->assertSee('07/01/2027');
     }
 
     private function criarReserva(Utilizador $responsavel, string $data): void

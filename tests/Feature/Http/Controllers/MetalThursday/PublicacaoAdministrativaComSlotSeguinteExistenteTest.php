@@ -45,13 +45,13 @@ final class PublicacaoAdministrativaComSlotSeguinteExistenteTest extends TestCas
      * @since 2.0.0
      */
     #[Test]
-    public function administrador_publica_em_data_nao_quinta_sem_nomeado_quando_proxima_quinta_ja_tem_reserva(): void
+    public function superadministrador_publica_em_data_nao_quinta_sem_nomeado_quando_proxima_quinta_ja_tem_reserva(): void
     {
         Notification::fake();
 
-        $administrador = Utilizador::factory()
+        $superAdministrador = Utilizador::factory()
             ->comPapel(
-                PapelUtilizador::Administrador,
+                PapelUtilizador::SuperAdministrador,
             )
             ->create();
 
@@ -59,7 +59,7 @@ final class PublicacaoAdministrativaComSlotSeguinteExistenteTest extends TestCas
             ->create();
 
         $this->actingAs(
-            $administrador,
+            $superAdministrador,
             'sessao',
         );
 

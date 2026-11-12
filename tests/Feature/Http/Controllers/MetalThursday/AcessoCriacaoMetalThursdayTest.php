@@ -162,13 +162,13 @@ final class AcessoCriacaoMetalThursdayTest extends TestCase
     }
 
     /**
-     * Confirma que um administrador pode abrir o formulário genérico sem
+     * Confirma que um administrador não pode abrir o formulário genérico sem
      * possuir reserva.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function administrador_sem_reserva_abre_formulario_generico(): void
+    public function administrador_sem_reserva_nao_abre_formulario_generico(): void
     {
         $administrador = Utilizador::factory()
             ->comPapel(
@@ -186,17 +186,17 @@ final class AcessoCriacaoMetalThursdayTest extends TestCase
                     'metal-thursday.criar',
                 ),
             )
-            ->assertOk();
+            ->assertForbidden();
     }
 
     /**
-     * Confirma que o POST genérico chega à validação quando o utilizador é
+     * Confirma que o POST genérico é bloqueado antes da validação quando o utilizador é
      * administrador.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function administrador_pode_aceder_a_submissao_generica(): void
+    public function administrador_nao_pode_submeter_criacao_generica(): void
     {
         $administrador = Utilizador::factory()
             ->comPapel(
@@ -215,7 +215,7 @@ final class AcessoCriacaoMetalThursdayTest extends TestCase
                 ),
                 [],
             )
-            ->assertUnprocessable();
+            ->assertForbidden();
     }
 
     /**

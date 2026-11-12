@@ -191,13 +191,13 @@ final class VisibilidadeDetalhesMetalThursdayTest extends TestCase
     }
 
     /**
-     * Confirma que o utilizador que criou o registo pode consultar uma
+     * Confirma que o criador não pode consultar uma
      * MetalThursday preparada mesmo quando não é o autor.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function criador_ve_metal_thursday_preparada(): void
+    public function criador_nao_ve_metal_thursday_preparada(): void
     {
         $criador =
             Utilizador::factory()
@@ -231,20 +231,17 @@ final class VisibilidadeDetalhesMetalThursdayTest extends TestCase
                     $metalThursday,
                 ),
             )
-            ->assertOk()
-            ->assertSee(
-                'Preparada do Criador',
-            );
+            ->assertNotFound();
     }
 
     /**
-     * Confirma que um administrador pode acompanhar diretamente uma
+     * Confirma que um administrador não pode consultar diretamente uma
      * MetalThursday ainda preparada.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function administrador_ve_metal_thursday_preparada(): void
+    public function administrador_nao_ve_metal_thursday_preparada(): void
     {
         $autor =
             Utilizador::factory()
@@ -276,10 +273,7 @@ final class VisibilidadeDetalhesMetalThursdayTest extends TestCase
                     $metalThursday,
                 ),
             )
-            ->assertOk()
-            ->assertSee(
-                'Preparada Administrativa',
-            );
+            ->assertNotFound();
     }
 
     /**

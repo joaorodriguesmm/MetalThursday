@@ -294,8 +294,8 @@ final class AutorizacaoTransacionalImportacaoLancamentoTest extends TestCase
     #[Test]
     public function nao_importa_apos_revogacao_de_privilegios(): void
     {
-        $administrador = Utilizador::factory()
-            ->comPapel(PapelUtilizador::Administrador)
+        $superAdministrador = Utilizador::factory()
+            ->comPapel(PapelUtilizador::SuperAdministrador)
             ->create([
                 'email_verified_at' => now(),
             ]);
@@ -304,7 +304,7 @@ final class AutorizacaoTransacionalImportacaoLancamentoTest extends TestCase
 
         Http::fake(
             static function (Request $pedido) use (
-                $administrador,
+                $superAdministrador,
                 &$privilegiosRevogados,
             ) {
                 if (
@@ -312,8 +312,8 @@ final class AutorizacaoTransacionalImportacaoLancamentoTest extends TestCase
                     && $pedido->url()
                     === 'https://api.discogs.com/releases/249504'
                 ) {
-                    DB::table($administrador->getTable())
-                        ->where('id', $administrador->getKey())
+                    DB::table($superAdministrador->getTable())
+                        ->where('id', $superAdministrador->getKey())
                         ->update([
                             'papel' => PapelUtilizador::Utilizador->value,
                         ]);
@@ -331,7 +331,7 @@ final class AutorizacaoTransacionalImportacaoLancamentoTest extends TestCase
         );
 
         $resposta = $this
-            ->actingAs($administrador, 'sessao')
+            ->actingAs($superAdministrador, 'sessao')
             ->postJson(
                 route(
                     'lancamentos.importacao.importar',
@@ -352,8 +352,8 @@ final class AutorizacaoTransacionalImportacaoLancamentoTest extends TestCase
             'discogs_release_id' => 249504,
         ]);
 
-        $this->assertDatabaseHas($administrador->getTable(), [
-            'id' => $administrador->getKey(),
+        $this->assertDatabaseHas($superAdministrador->getTable(), [
+            'id' => $superAdministrador->getKey(),
             'papel' => PapelUtilizador::Utilizador->value,
         ]);
     }

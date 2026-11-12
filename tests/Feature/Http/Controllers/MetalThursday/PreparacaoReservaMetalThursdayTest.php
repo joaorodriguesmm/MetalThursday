@@ -124,20 +124,17 @@ final class PreparacaoReservaMetalThursdayTest extends TestCase
     }
 
     /**
-     * Confirma que a preparação também bloqueia data e autor quando o
-     * responsável é administrador.
+     * Confirma que a preparação bloqueia data e autor para o
+     * utilizador comum responsável pela reserva.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function administrador_responsavel_prepara_reserva_com_data_e_autor_fixos(): void
+    public function utilizador_responsavel_prepara_reserva_com_data_e_autor_fixos(): void
     {
-        $administrador = Utilizador::factory()
-            ->comPapel(
-                PapelUtilizador::Administrador,
-            )
+        $responsavel = Utilizador::factory()
             ->create([
-                'nome' => 'Administrador Responsável',
+                'nome' => 'Utilizador Responsável',
             ]);
 
         $reserva = ReservaMetalThursday::factory()
@@ -147,13 +144,13 @@ final class PreparacaoReservaMetalThursdayTest extends TestCase
                 ),
             )
             ->comResponsavel(
-                $administrador,
+                $responsavel,
             )
             ->create();
 
         $this
             ->actingAs(
-                $administrador,
+                $responsavel,
                 'sessao',
             )
             ->get(
@@ -175,7 +172,7 @@ final class PreparacaoReservaMetalThursdayTest extends TestCase
                 'value="2026-09-10"',
             )
             ->assertSee(
-                'Administrador Responsável',
+                'Utilizador Responsável',
             );
     }
 
@@ -487,10 +484,7 @@ final class PreparacaoReservaMetalThursdayTest extends TestCase
     #[Test]
     public function submissao_da_reserva_impoe_data_e_autor_da_slot(): void
     {
-        $administradorResponsavel = Utilizador::factory()
-            ->comPapel(
-                PapelUtilizador::Administrador,
-            )
+        $responsavel = Utilizador::factory()
             ->create();
 
         $outroAutor = Utilizador::factory()
@@ -508,7 +502,7 @@ final class PreparacaoReservaMetalThursdayTest extends TestCase
                 $dataReserva,
             )
             ->comResponsavel(
-                $administradorResponsavel,
+                $responsavel,
             )
             ->create();
 
@@ -525,7 +519,7 @@ final class PreparacaoReservaMetalThursdayTest extends TestCase
 
         $this
             ->actingAs(
-                $administradorResponsavel,
+                $responsavel,
                 'sessao',
             )
             ->postJson(
@@ -565,7 +559,7 @@ final class PreparacaoReservaMetalThursdayTest extends TestCase
             ->firstOrFail();
 
         self::assertSame(
-            $administradorResponsavel->getKey(),
+            $responsavel->getKey(),
             $metalThursday->autor_id,
         );
 

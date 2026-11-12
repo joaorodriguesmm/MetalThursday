@@ -402,14 +402,14 @@ final class PerfilArtistaControllerTest extends TestCase
     #[Test]
     public function modal_metal_thursday_esconde_metadados_atras_de_toggle(): void
     {
-        $administrador = Utilizador::factory()
-            ->comPapel(PapelUtilizador::Administrador)
+        $superAdministrador = Utilizador::factory()
+            ->comPapel(PapelUtilizador::SuperAdministrador)
             ->create([
                 'email_verified_at' => now(),
             ]);
 
         $conteudo = $this
-            ->actingAs($administrador, 'sessao')
+            ->actingAs($superAdministrador, 'sessao')
             ->get(route('metal-thursday.criar'))
             ->assertOk()
             ->getContent();
@@ -544,10 +544,10 @@ final class PerfilArtistaControllerTest extends TestCase
     #[Test]
     public function modal_metal_thursday_apresenta_perfil_completo_do_artista(): void
     {
-        $administrador =
+        $superAdministrador =
             Utilizador::factory()
                 ->comPapel(
-                    PapelUtilizador::Administrador,
+                    PapelUtilizador::SuperAdministrador,
                 )
                 ->create([
                     'email_verified_at' => now(),
@@ -556,7 +556,7 @@ final class PerfilArtistaControllerTest extends TestCase
         $conteudo =
             $this
                 ->actingAs(
-                    $administrador,
+                    $superAdministrador,
                     'sessao',
                 )
                 ->get(
@@ -630,10 +630,10 @@ final class PerfilArtistaControllerTest extends TestCase
     #[Test]
     public function modal_metal_thursday_permite_deslocamento_vertical(): void
     {
-        $administrador =
+        $superAdministrador =
             Utilizador::factory()
                 ->comPapel(
-                    PapelUtilizador::Administrador,
+                    PapelUtilizador::SuperAdministrador,
                 )
                 ->create([
                     'email_verified_at' => now(),
@@ -642,7 +642,7 @@ final class PerfilArtistaControllerTest extends TestCase
         $conteudo =
             $this
                 ->actingAs(
-                    $administrador,
+                    $superAdministrador,
                     'sessao',
                 )
                 ->get(

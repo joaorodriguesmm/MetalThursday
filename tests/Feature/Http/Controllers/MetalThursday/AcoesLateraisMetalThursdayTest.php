@@ -104,13 +104,13 @@ final class AcoesLateraisMetalThursdayTest extends TestCase
     }
 
     /**
-     * Confirma que um administrador mantém o atalho genérico de criação mesmo
+     * Confirma que um administrador não recebe o atalho genérico de criação mesmo
      * sem possuir uma reserva.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function administrador_sem_reserva_ve_acao_generica_criacao(): void
+    public function administrador_sem_reserva_nao_ve_acao_generica_criacao(): void
     {
         $administrador = Utilizador::factory()
             ->comPapel(
@@ -129,7 +129,7 @@ final class AcoesLateraisMetalThursdayTest extends TestCase
                 ),
             )
             ->assertOk()
-            ->assertSee(
+            ->assertDontSee(
                 'Criar MetalThursday',
             );
     }

@@ -33,9 +33,9 @@ final class NomeacaoEdicaoMetalThursdayTest extends TestCase
     #[Test]
     public function criacao_mantem_seletor_de_proximo_nomeado(): void
     {
-        $administrador = Utilizador::factory()
+        $superAdministrador = Utilizador::factory()
             ->comPapel(
-                PapelUtilizador::Administrador,
+                PapelUtilizador::SuperAdministrador,
             )
             ->create();
 
@@ -45,7 +45,7 @@ final class NomeacaoEdicaoMetalThursdayTest extends TestCase
             ]);
 
         $this->actingAs(
-            $administrador,
+            $superAdministrador,
             'sessao',
         );
 

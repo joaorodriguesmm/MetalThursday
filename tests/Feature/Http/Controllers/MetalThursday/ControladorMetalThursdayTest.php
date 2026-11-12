@@ -60,7 +60,7 @@ final class ControladorMetalThursdayTest extends TestCase
             ->create();
 
         $this->actingAs(
-            $administrador,
+            Utilizador::factory()->comPapel(PapelUtilizador::SuperAdministrador)->create(),
             'sessao',
         );
 
@@ -123,7 +123,7 @@ final class ControladorMetalThursdayTest extends TestCase
             ->create();
 
         $this->actingAs(
-            $administrador,
+            Utilizador::factory()->comPapel(PapelUtilizador::SuperAdministrador)->create(),
             'sessao',
         );
 
@@ -216,7 +216,7 @@ final class ControladorMetalThursdayTest extends TestCase
      * @since 2.0.0
      */
     #[Test]
-    public function formulario_criacao_administrador_permite_selecionar_autor(): void
+    public function formulario_criacao_superadministrador_permite_selecionar_autor(): void
     {
         $administrador = Utilizador::factory()
             ->comPapel(
@@ -227,7 +227,7 @@ final class ControladorMetalThursdayTest extends TestCase
         $autor = $this->criarUtilizador();
 
         $this->actingAs(
-            $administrador,
+            Utilizador::factory()->comPapel(PapelUtilizador::SuperAdministrador)->create(),
             'sessao',
         );
 
@@ -295,7 +295,7 @@ final class ControladorMetalThursdayTest extends TestCase
      * @since 2.0.0
      */
     #[Test]
-    public function formulario_criacao_administrador_permite_alterar_data(): void
+    public function formulario_criacao_superadministrador_permite_alterar_data(): void
     {
         $administrador = Utilizador::factory()
             ->comPapel(
@@ -304,7 +304,7 @@ final class ControladorMetalThursdayTest extends TestCase
             ->create();
 
         $this->actingAs(
-            $administrador,
+            Utilizador::factory()->comPapel(PapelUtilizador::SuperAdministrador)->create(),
             'sessao',
         );
 
@@ -440,7 +440,7 @@ final class ControladorMetalThursdayTest extends TestCase
             ]);
 
         $this->actingAs(
-            $administrador,
+            $superAdministrador,
             'sessao',
         );
 
@@ -465,7 +465,7 @@ final class ControladorMetalThursdayTest extends TestCase
      * @since 2.0.0
      */
     #[Test]
-    public function administrador_nao_pode_definir_superadministrador_como_autor(): void
+    public function administrador_nao_pode_criar_por_pedido_direto(): void
     {
         Notification::fake();
 
@@ -518,14 +518,7 @@ final class ControladorMetalThursdayTest extends TestCase
                 ],
             ],
         )
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors([
-                'autor_id',
-            ])
-            ->assertJsonPath(
-                'errors.autor_id.0',
-                'O autor selecionado não existe ou não está disponível.',
-            );
+            ->assertForbidden();
 
         $this->assertDatabaseMissing(
             'metal_thursdays',
@@ -618,7 +611,7 @@ final class ControladorMetalThursdayTest extends TestCase
      * @since 2.0.0
      */
     #[Test]
-    public function administrador_nao_pode_definir_utilizador_suspenso_como_autor(): void
+    public function superadministrador_nao_pode_definir_utilizador_suspenso_como_autor(): void
     {
         Notification::fake();
 
@@ -643,7 +636,7 @@ final class ControladorMetalThursdayTest extends TestCase
         $proximoNomeado = $this->criarUtilizador();
 
         $this->actingAs(
-            $administrador,
+            $superAdministrador,
             'sessao',
         );
 
@@ -1593,7 +1586,7 @@ final class ControladorMetalThursdayTest extends TestCase
         $proximoNomeado = $this->criarUtilizador();
 
         $this->actingAs(
-            $utilizador,
+            Utilizador::factory()->comPapel(PapelUtilizador::SuperAdministrador)->create(),
             'sessao',
         );
 
@@ -1682,7 +1675,7 @@ final class ControladorMetalThursdayTest extends TestCase
         $proximoNomeado = $this->criarUtilizador();
 
         $this->actingAs(
-            $utilizador,
+            Utilizador::factory()->comPapel(PapelUtilizador::SuperAdministrador)->create(),
             'sessao',
         );
 
@@ -1851,7 +1844,7 @@ final class ControladorMetalThursdayTest extends TestCase
             ->create();
 
         $this->actingAs(
-            $utilizador,
+            Utilizador::factory()->comPapel(PapelUtilizador::SuperAdministrador)->create(),
             'sessao',
         );
 
@@ -2498,7 +2491,7 @@ final class ControladorMetalThursdayTest extends TestCase
 
         $resposta = $this
             ->actingAs(
-                $administrador,
+                Utilizador::factory()->comPapel(PapelUtilizador::SuperAdministrador)->create(),
                 'sessao',
             )
             ->get(
@@ -2604,7 +2597,7 @@ final class ControladorMetalThursdayTest extends TestCase
 
         $resposta = $this
             ->actingAs(
-                $administrador,
+                Utilizador::factory()->comPapel(PapelUtilizador::SuperAdministrador)->create(),
                 'sessao',
             )
             ->get(
@@ -2639,7 +2632,7 @@ final class ControladorMetalThursdayTest extends TestCase
             ->create();
 
         $this->actingAs(
-            $administrador,
+            Utilizador::factory()->comPapel(PapelUtilizador::SuperAdministrador)->create(),
             'sessao',
         );
 
@@ -2777,7 +2770,7 @@ final class ControladorMetalThursdayTest extends TestCase
 
         $this
             ->actingAs(
-                $administrador,
+                Utilizador::factory()->comPapel(PapelUtilizador::SuperAdministrador)->create(),
                 'sessao',
             )
             ->get(
@@ -2844,7 +2837,7 @@ final class ControladorMetalThursdayTest extends TestCase
                 ->create();
 
         $this->actingAs(
-            $administrador,
+            Utilizador::factory()->comPapel(PapelUtilizador::SuperAdministrador)->create(),
             'sessao',
         );
 
@@ -3311,7 +3304,7 @@ final class ControladorMetalThursdayTest extends TestCase
                 ->create();
 
         $this->actingAs(
-            $administrador,
+            Utilizador::factory()->comPapel(PapelUtilizador::SuperAdministrador)->create(),
             'sessao',
         );
 
@@ -3488,7 +3481,7 @@ final class ControladorMetalThursdayTest extends TestCase
                 ->create();
 
         $this->actingAs(
-            $administrador,
+            Utilizador::factory()->comPapel(PapelUtilizador::SuperAdministrador)->create(),
             'sessao',
         );
 
@@ -3530,7 +3523,7 @@ final class ControladorMetalThursdayTest extends TestCase
                 ->create();
 
         $this->actingAs(
-            $administrador,
+            Utilizador::factory()->comPapel(PapelUtilizador::SuperAdministrador)->create(),
             'sessao',
         );
 
@@ -3574,7 +3567,7 @@ final class ControladorMetalThursdayTest extends TestCase
                 ->create();
 
         $this->actingAs(
-            $administrador,
+            Utilizador::factory()->comPapel(PapelUtilizador::SuperAdministrador)->create(),
             'sessao',
         );
 

@@ -55,7 +55,7 @@ final class ControladorMetalThursdayLigacoesTest extends TestCase
 
         $resposta = $this
             ->actingAs(
-                $administrador,
+                Utilizador::factory()->comPapel(PapelUtilizador::SuperAdministrador)->create(),
                 'sessao',
             )
             ->postJson(
@@ -137,7 +137,7 @@ final class ControladorMetalThursdayLigacoesTest extends TestCase
 
         $this
             ->actingAs(
-                $administrador,
+                Utilizador::factory()->comPapel(PapelUtilizador::SuperAdministrador)->create(),
                 'sessao',
             )
             ->postJson(
@@ -177,7 +177,7 @@ final class ControladorMetalThursdayLigacoesTest extends TestCase
 
         $this
             ->actingAs(
-                $administrador,
+                Utilizador::factory()->comPapel(PapelUtilizador::SuperAdministrador)->create(),
                 'sessao',
             )
             ->postJson(

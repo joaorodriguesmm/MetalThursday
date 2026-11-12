@@ -37,9 +37,9 @@ final class PerfilArtistaMetalThursdayTest extends TestCase
     #[Test]
     public function formulario_apresenta_ano_inicio_no_rotulo_do_artista(): void
     {
-        $administrador = Utilizador::factory()
+        $superAdministrador = Utilizador::factory()
             ->comPapel(
-                PapelUtilizador::Administrador,
+                PapelUtilizador::SuperAdministrador,
             )
             ->create([
                 'email_verified_at' => now(),
@@ -74,7 +74,7 @@ final class PerfilArtistaMetalThursdayTest extends TestCase
 
         $this
             ->actingAs(
-                $administrador,
+                $superAdministrador,
                 'sessao',
             )
             ->get(
@@ -96,9 +96,9 @@ final class PerfilArtistaMetalThursdayTest extends TestCase
     #[Test]
     public function modal_criacao_rapida_apresenta_generos_como_opcionais(): void
     {
-        $administrador = Utilizador::factory()
+        $superAdministrador = Utilizador::factory()
             ->comPapel(
-                PapelUtilizador::Administrador,
+                PapelUtilizador::SuperAdministrador,
             )
             ->create([
                 'email_verified_at' => now(),
@@ -106,7 +106,7 @@ final class PerfilArtistaMetalThursdayTest extends TestCase
 
         $resposta = $this
             ->actingAs(
-                $administrador,
+                $superAdministrador,
                 'sessao',
             )
             ->get(
@@ -136,9 +136,9 @@ final class PerfilArtistaMetalThursdayTest extends TestCase
     #[Test]
     public function formulario_apresenta_rotulo_valido_para_artista_sem_generos(): void
     {
-        $administrador = Utilizador::factory()
+        $superAdministrador = Utilizador::factory()
             ->comPapel(
-                PapelUtilizador::Administrador,
+                PapelUtilizador::SuperAdministrador,
             )
             ->create([
                 'email_verified_at' => now(),
@@ -160,7 +160,7 @@ final class PerfilArtistaMetalThursdayTest extends TestCase
 
         $resposta = $this
             ->actingAs(
-                $administrador,
+                $superAdministrador,
                 'sessao',
             )
             ->get(
@@ -885,9 +885,9 @@ final class PerfilArtistaMetalThursdayTest extends TestCase
     #[Test]
     public function formulario_criacao_nao_apresenta_artista_eliminado_logicamente(): void
     {
-        $administrador = Utilizador::factory()
+        $superAdministrador = Utilizador::factory()
             ->comPapel(
-                PapelUtilizador::Administrador,
+                PapelUtilizador::SuperAdministrador,
             )
             ->create([
                 'email_verified_at' => now(),
@@ -909,7 +909,7 @@ final class PerfilArtistaMetalThursdayTest extends TestCase
 
         $this
             ->actingAs(
-                $administrador,
+                $superAdministrador,
                 'sessao',
             )
             ->get(

@@ -34,14 +34,14 @@ final class ControladorMetalThursdayFormularioLigacoesTest extends TestCase
     #[Test]
     public function formulario_criacao_expoe_editor_de_ligacoes_multiplas(): void
     {
-        $administrador = Utilizador::factory()
+        $superAdministrador = Utilizador::factory()
             ->comPapel(
-                PapelUtilizador::Administrador,
+                PapelUtilizador::SuperAdministrador,
             )
             ->create();
 
         $this->actingAs(
-            $administrador,
+            $superAdministrador,
             'sessao',
         );
 

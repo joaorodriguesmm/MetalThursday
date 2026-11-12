@@ -10,13 +10,14 @@ use App\Models\MetalThursday\MetalThursday;
 /**
  * Define as regras de autorização aplicáveis às MetalThursdays.
  *
- * Qualquer utilizador autenticado pode consultar MetalThursdays. A criação é
- * permitida livremente a utilizadores com privilégios administrativos e, para
- * utilizadores comuns, apenas quando existe uma reserva ainda pendente.
+ * As publicações são acessíveis aos utilizadores autenticados.
+ * Antes da publicação, a consulta e edição ficam limitadas ao autor
+ * comum e ao superadministrador.
  *
- * A alteração é permitida ao autor e ao utilizador que criou o registo.
- * A eliminação e restauração ficam limitadas ao criador, exceto para o
- * superadministrador.
+ * A criação administrativa pertence exclusivamente ao superadministrador.
+ * Os utilizadores comuns preparam publicações através das suas reservas.
+ * Depois da publicação, os administradores também podem editar.
+ * A eliminação e restauração obedecem às regras de autorização.
  *
  * @since 1.0.0
  */
@@ -66,7 +67,7 @@ final class PoliticaMetalThursday
      *
      * MetalThursdays já publicadas podem ser consultadas por qualquer utilizador
      * autenticado. Antes da publicação, o acesso fica limitado ao autor, ao
-     * criador e a utilizadores com privilégios administrativos.
+     * superadministrador.
      *
      * O nome permanece em inglês por corresponder à capacidade convencional
      * utilizada pelo Laravel.
@@ -85,21 +86,15 @@ final class PoliticaMetalThursday
             return true;
         }
 
-        return $utilizador->possuiPrivilegiosAdministrativos()
-            || $this->utilizadorEAutor(
-                $utilizador,
-                $metalThursday,
-            )
-            || $this->utilizadorECriador(
-                $utilizador,
-                $metalThursday,
-            );
+        return $utilizador->eSuperAdministrador()
+            || (! $utilizador->possuiPrivilegiosAdministrativos()
+                && $this->utilizadorEAutor($utilizador, $metalThursday));
     }
 
     /**
      * Determina se o utilizador pode criar uma MetalThursday.
      *
-     * Utilizadores com privilégios administrativos podem criar livremente.
+     * Apenas o superadministrador pode utilizar a criação administrativa.
      * Um utilizador comum apenas pode criar quando possui uma reserva ainda
      * pendente, isto é, sem MetalThursday associada.
      *
@@ -115,7 +110,7 @@ final class PoliticaMetalThursday
         Utilizador $utilizador,
     ): bool {
         if ($utilizador->possuiPrivilegiosAdministrativos()) {
-            return true;
+            return $utilizador->eSuperAdministrador();
         }
 
         return $utilizador
@@ -129,7 +124,8 @@ final class PoliticaMetalThursday
     /**
      * Determina se o utilizador pode alterar uma MetalThursday.
      *
-     * A alteração é permitida ao autor e ao utilizador que criou o registo.
+     * Antes da publicação, apenas o autor comum e o superadministrador podem editar.
+     * Depois da publicação, os administradores também podem editar.
      *
      * O nome permanece em inglês por corresponder à capacidade convencional
      * utilizada pelo Laravel.
@@ -144,14 +140,15 @@ final class PoliticaMetalThursday
         Utilizador $utilizador,
         MetalThursday $metalThursday,
     ): bool {
-        return $this->utilizadorEAutor(
-            $utilizador,
-            $metalThursday,
-        )
-            || $this->utilizadorECriador(
-                $utilizador,
-                $metalThursday,
-            );
+        if (! $metalThursday->estaPublicada()) {
+            return $utilizador->eSuperAdministrador()
+                || (! $utilizador->possuiPrivilegiosAdministrativos()
+                    && $this->utilizadorEAutor($utilizador, $metalThursday));
+        }
+
+        return $utilizador->possuiPrivilegiosAdministrativos()
+            || $this->utilizadorEAutor($utilizador, $metalThursday)
+            || $this->utilizadorECriador($utilizador, $metalThursday);
     }
 
     /**
@@ -170,7 +167,10 @@ final class PoliticaMetalThursday
         Utilizador $utilizador,
         MetalThursday $metalThursday,
     ): bool {
-        return $this->utilizadorECriador(
+        return (
+            ! $utilizador->possuiPrivilegiosAdministrativos()
+            || $metalThursday->estaPublicada()
+        ) && $this->utilizadorECriador(
             $utilizador,
             $metalThursday,
         );
@@ -192,7 +192,10 @@ final class PoliticaMetalThursday
         Utilizador $utilizador,
         MetalThursday $metalThursday,
     ): bool {
-        return $this->utilizadorECriador(
+        return (
+            ! $utilizador->possuiPrivilegiosAdministrativos()
+            || $metalThursday->estaPublicada()
+        ) && $this->utilizadorECriador(
             $utilizador,
             $metalThursday,
         );

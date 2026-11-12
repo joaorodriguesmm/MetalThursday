@@ -68,8 +68,8 @@ final class LimitadoresIntegracoesTest extends TestCase
             ),
         ]);
 
-        $primeiroUtilizador = $this->criarAdministrador();
-        $segundoUtilizador = $this->criarAdministrador();
+        $primeiroUtilizador = $this->criarSuperAdministrador();
+        $segundoUtilizador = $this->criarSuperAdministrador();
 
         $this->limparLimite('discogs', $primeiroUtilizador);
         $this->limparLimite('discogs', $segundoUtilizador);
@@ -188,6 +188,18 @@ final class LimitadoresIntegracoesTest extends TestCase
      *
      * @since 2.0.0
      */
+    /**
+     * Cria um superadministrador para testar o limitador Discogs.
+     */
+    private function criarSuperAdministrador(): Utilizador
+    {
+        return Utilizador::factory()
+            ->comPapel(PapelUtilizador::SuperAdministrador)
+            ->create([
+                'email_verified_at' => now(),
+            ]);
+    }
+
     private function criarAdministrador(): Utilizador
     {
         return Utilizador::factory()

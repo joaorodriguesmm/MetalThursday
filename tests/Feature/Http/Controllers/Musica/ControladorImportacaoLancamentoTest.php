@@ -68,10 +68,10 @@ final class ControladorImportacaoLancamentoTest extends TestCase
     #[Test]
     public function pesquisa_lancamentos_para_importacao(): void
     {
-        $administrador =
+        $superAdministrador =
             Utilizador::factory()
                 ->comPapel(
-                    PapelUtilizador::Administrador,
+                    PapelUtilizador::SuperAdministrador,
                 )
                 ->create([
                     'email_verified_at' => now(),
@@ -102,7 +102,7 @@ final class ControladorImportacaoLancamentoTest extends TestCase
 
         $this
             ->actingAs(
-                $administrador,
+                $superAdministrador,
                 'sessao',
             )
             ->getJson(
@@ -201,10 +201,10 @@ final class ControladorImportacaoLancamentoTest extends TestCase
     #[Test]
     public function importa_lancamento_selecionado(): void
     {
-        $administrador =
+        $superAdministrador =
             Utilizador::factory()
                 ->comPapel(
-                    PapelUtilizador::Administrador,
+                    PapelUtilizador::SuperAdministrador,
                 )
                 ->create([
                     'email_verified_at' => now(),
@@ -259,7 +259,7 @@ final class ControladorImportacaoLancamentoTest extends TestCase
         $resposta =
             $this
                 ->actingAs(
-                    $administrador,
+                    $superAdministrador,
                     'sessao',
                 )
                 ->postJson(
@@ -551,10 +551,10 @@ final class ControladorImportacaoLancamentoTest extends TestCase
         $segredoFicticio =
             'AUDITORIA_SEGREDO_FICTICIO_B19_21_PESQUISA_LANCAMENTOS';
 
-        $administrador =
+        $superAdministrador =
             Utilizador::factory()
                 ->comPapel(
-                    PapelUtilizador::Administrador,
+                    PapelUtilizador::SuperAdministrador,
                 )
                 ->create([
                     'email_verified_at' => now(),
@@ -573,7 +573,7 @@ final class ControladorImportacaoLancamentoTest extends TestCase
         $resposta =
             $this
                 ->actingAs(
-                    $administrador,
+                    $superAdministrador,
                     'sessao',
                 )
                 ->getJson(
@@ -609,10 +609,10 @@ final class ControladorImportacaoLancamentoTest extends TestCase
         $segredoFicticio =
             'AUDITORIA_SEGREDO_FICTICIO_B19_21_IMPORTAR_LANCAMENTO';
 
-        $administrador =
+        $superAdministrador =
             Utilizador::factory()
                 ->comPapel(
-                    PapelUtilizador::Administrador,
+                    PapelUtilizador::SuperAdministrador,
                 )
                 ->create([
                     'email_verified_at' => now(),
@@ -631,7 +631,7 @@ final class ControladorImportacaoLancamentoTest extends TestCase
         $resposta =
             $this
                 ->actingAs(
-                    $administrador,
+                    $superAdministrador,
                     'sessao',
                 )
                 ->postJson(

@@ -40,7 +40,7 @@ final class ExigirCriacaoAdministrativaMetalThursday
 
         if (
             ! $utilizador instanceof Utilizador
-            || ! $utilizador->possuiPrivilegiosAdministrativos()
+            || ! $utilizador->eSuperAdministrador()
         ) {
             abort(
                 Response::HTTP_FORBIDDEN,
