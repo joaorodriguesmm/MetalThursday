@@ -370,11 +370,32 @@ final class ItemSeccaoFormulario extends Component
             $seccao,
         );
 
-        $this->identificadorDiscogsAssociado =
+        $lancamentoAssociado =
             $seccao instanceof SeccaoMetalThursday
-            && $seccao->lancamento instanceof Lancamento
-            && $this->valores['lancamento'] === (string) $seccao->lancamento->id
-                ? $seccao->lancamento->discogs_release_id
+                ? $seccao->lancamento
+                : null;
+
+        if (
+            is_array($seccao)
+            && preg_match(
+                ' /^[1-9][0-9]*$/D ',
+                $this->valores['lancamento'],
+            ) === 1
+        ) {
+            $lancamentoAssociado = Lancamento::query()
+                ->select([
+                    'id',
+                    'discogs_release_id',
+                ])
+                ->find(
+                    (int) $this->valores['lancamento'],
+                );
+        }
+
+        $this->identificadorDiscogsAssociado =
+            $lancamentoAssociado instanceof Lancamento
+            && $this->valores['lancamento'] === (string) $lancamentoAssociado->id
+                ? $lancamentoAssociado->discogs_release_id
                 : null;
 
         $this->ligacoes = $this->obterLigacoesFormulario(
