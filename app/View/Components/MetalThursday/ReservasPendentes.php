@@ -44,7 +44,8 @@ final class ReservasPendentes extends Component
      *     estado: string,
      *     emAtraso: bool,
      *     rotaAcao: string|null,
-     *     textoAcao: string|null
+     *     textoAcao: string|null,
+     *     rotaPreVisualizacao: string|null
      * }>
      *
      * @since 2.0.0
@@ -139,7 +140,8 @@ final class ReservasPendentes extends Component
      *     estado: string,
      *     emAtraso: bool,
      *     rotaAcao: string|null,
-     *     textoAcao: string|null
+     *     textoAcao: string|null,
+     *     rotaPreVisualizacao: string|null
      * }> Reservas preparadas para apresentação.
      *
      * @throws LogicException Quando uma reserva possui dados inválidos.
@@ -242,6 +244,8 @@ final class ReservasPendentes extends Component
                     $hoje,
                 ),
 
+                'rotaPreVisualizacao' => null,
+
                 'rotaAcao' => $podePreparar
                     ? route(
                         'metal-thursday.reservas.preparar',
@@ -278,7 +282,8 @@ final class ReservasPendentes extends Component
      *     estado: string,
      *     emAtraso: bool,
      *     rotaAcao: string|null,
-     *     textoAcao: string|null
+     *     textoAcao: string|null,
+     *     rotaPreVisualizacao: string|null
      * }> MetalThursdays preparadas para apresentação.
      *
      * @throws LogicException Quando uma MetalThursday possui dados inválidos.
@@ -360,6 +365,11 @@ final class ReservasPendentes extends Component
                 'estado' => 'Preparada',
 
                 'emAtraso' => false,
+
+                'rotaPreVisualizacao' => route(
+                    'metal-thursday.detalhes',
+                    $metalThursday,
+                ),
 
                 'rotaAcao' => route(
                     'metal-thursday.editar',

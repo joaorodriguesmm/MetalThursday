@@ -93,6 +93,20 @@
                                 {{ $itemPorPublicar['textoAcao'] }}
                             </a>
                         @endif
+
+                        @if ($itemPorPublicar['rotaPreVisualizacao'] !== null)
+                            <a
+                                class="btn btn-outline-primary mt-3"
+                                href="{{ $itemPorPublicar['rotaPreVisualizacao'] }}"
+                            >
+                                <i
+                                    class="bi bi-eye me-2"
+                                    aria-hidden="true"
+                                ></i>
+
+                                Pré-visualizar
+                            </a>
+                        @endif
                     </div>
                 </article>
             @endforeach

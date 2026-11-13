@@ -187,6 +187,17 @@ final class VisibilidadeDetalhesMetalThursdayTest extends TestCase
             ->assertOk()
             ->assertSee(
                 'Preparada do Autor',
+            )
+            ->assertSee(
+                'Pré-visualização',
+            )
+            ->assertDontSee(
+                'aria-label="Editar esta MetalThursday"',
+                false,
+            )
+            ->assertDontSee(
+                'aria-label="Eliminar esta MetalThursday"',
+                false,
             );
     }
 

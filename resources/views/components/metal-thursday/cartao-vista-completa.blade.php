@@ -57,57 +57,59 @@
                 </p>
             </div>
 
-            <div
-                class="d-flex align-items-center gap-2 flex-shrink-0"
-                role="group"
-                aria-label="Ações da MetalThursday"
-            >
-                @can('update', $registoMetalThursday)
-                    <a
-                        class="btn btn-sm btn-secondary"
-                        href="{{
-                            route(
-                                'metal-thursday.editar',
-                                $registoMetalThursday,
-                            )
-                        }}"
-                        aria-label="Editar esta MetalThursday"
-                        title="Editar"
-                    >
-                        <i
-                            class="bi bi-pencil-square"
-                            aria-hidden="true"
-                        ></i>
-                    </a>
-                @endcan
+            @if ($registoMetalThursday->estaPublicada())
+                <div
+                    class="d-flex align-items-center gap-2 flex-shrink-0"
+                    role="group"
+                    aria-label="Ações da MetalThursday"
+                >
+                    @can('update', $registoMetalThursday)
+                        <a
+                            class="btn btn-sm btn-secondary"
+                            href="{{
+                                route(
+                                    'metal-thursday.editar',
+                                    $registoMetalThursday,
+                                )
+                            }}"
+                            aria-label="Editar esta MetalThursday"
+                            title="Editar"
+                        >
+                            <i
+                                class="bi bi-pencil-square"
+                                aria-hidden="true"
+                            ></i>
+                        </a>
+                    @endcan
 
-                @can('delete', $registoMetalThursday)
-                    <button
-                        class="btn btn-sm btn-danger"
-                        type="button"
-                        data-tipo-interacao="eliminar"
-                        data-endereco="{{
-                            route(
-                                'metal-thursday.eliminar',
-                                $registoMetalThursday,
-                            )
-                        }}"
-                        data-seletor-elemento-removivel="#metal-thursday-{{
-                            $identificadorMetalThursday
-                        }}"
-                        data-mensagem-confirmacao="Tens a certeza de que pretendes eliminar esta MetalThursday?"
-                        data-mensagem-sucesso="MetalThursday eliminada com sucesso."
-                        data-mensagem-erro="Não foi possível eliminar a MetalThursday."
-                        aria-label="Eliminar esta MetalThursday"
-                        title="Eliminar"
-                    >
-                        <i
-                            class="bi bi-trash"
-                            aria-hidden="true"
-                        ></i>
-                    </button>
-                @endcan
-            </div>
+                    @can('delete', $registoMetalThursday)
+                        <button
+                            class="btn btn-sm btn-danger"
+                            type="button"
+                            data-tipo-interacao="eliminar"
+                            data-endereco="{{
+                                route(
+                                    'metal-thursday.eliminar',
+                                    $registoMetalThursday,
+                                )
+                            }}"
+                            data-seletor-elemento-removivel="#metal-thursday-{{
+                                $identificadorMetalThursday
+                            }}"
+                            data-mensagem-confirmacao="Tens a certeza de que pretendes eliminar esta MetalThursday?"
+                            data-mensagem-sucesso="MetalThursday eliminada com sucesso."
+                            data-mensagem-erro="Não foi possível eliminar a MetalThursday."
+                            aria-label="Eliminar esta MetalThursday"
+                            title="Eliminar"
+                        >
+                            <i
+                                class="bi bi-trash"
+                                aria-hidden="true"
+                            ></i>
+                        </button>
+                    @endcan
+                </div>
+            @endif
         </div>
     </header>
 

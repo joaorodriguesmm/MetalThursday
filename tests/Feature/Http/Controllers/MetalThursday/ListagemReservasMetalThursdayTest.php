@@ -447,6 +447,17 @@ final class ListagemReservasMetalThursdayTest extends TestCase
             ->assertSee(
                 'Editar preparação',
             )
+            ->assertSee(
+                'Pré-visualizar',
+            )
+            ->assertSeeHtml(
+                'href="'.
+                    route(
+                        'metal-thursday.detalhes',
+                        $metalThursday,
+                    ).
+                    '"',
+            )
             ->assertSeeHtml(
                 'href="'.
                     route(

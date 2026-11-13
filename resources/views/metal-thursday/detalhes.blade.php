@@ -36,6 +36,18 @@
 
     <x-estado-sessao class="mb-4" />
 
+    @unless ($metalThursday->estaPublicada())
+        <div class="alert alert-info mb-4" role="status">
+            <strong>Pré-visualização</strong>
+
+            <p class="mb-0 mt-2">
+                Esta MetalThursday ainda não está publicada.
+                Apenas os utilizadores autorizados podem consultar
+                o conteúdo. As interações sociais estão indisponíveis.
+            </p>
+        </div>
+    @endunless
+
     <x-metal-thursday.cartao-vista-completa
         :registo-metal-thursday="$metalThursday"
         class="mb-0"

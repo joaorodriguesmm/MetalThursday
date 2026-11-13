@@ -260,6 +260,13 @@ final class VisibilidadeInteracoesDetalhesMetalThursdayTest extends TestCase
             ->assertSee(
                 'Comentário social publicado.',
             )
+            ->assertDontSee(
+                'Pré-visualização',
+            )
+            ->assertSee(
+                'aria-label="Editar esta MetalThursday"',
+                false,
+            )
             ->assertSee(
                 'Utilizador Social Publicado',
             )
