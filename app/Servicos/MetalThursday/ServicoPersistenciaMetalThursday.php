@@ -50,9 +50,7 @@ use Throwable;
  *     ligacoes: list<array{
  *         etiqueta: string|null,
  *         url: string,
- *         incorporar: bool,
- *         tipo_incorporacao: string|null,
- *         url_incorporacao_alternativa: string|null
+ *         incorporar: bool
  *     }>,
  *     ano: int|null,
  *     descricao: string

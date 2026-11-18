@@ -1,5 +1,5 @@
 import GestorSeccoes from './GestorSeccoes';
-import TestadorIncorporacoesYouTube from './TestadorIncorporacoesYouTube';
+import AnalisadorUrlYouTube from './AnalisadorUrlYouTube';
 
 /**
  * Gere as ligações públicas associadas a uma secção musical.
@@ -373,15 +373,6 @@ class GestorLigacoesSecao {
                 );
                 break;
 
-            case 'testar': {
-                const linha = botao.closest('[data-ligacao-seccao]');
-
-                if (linha instanceof HTMLElement) {
-                    TestadorIncorporacoesYouTube.testar(linha);
-                }
-
-                break;
-            }
 
             default:
                 break;
@@ -402,7 +393,7 @@ class GestorLigacoesSecao {
         if (
             !(campo instanceof HTMLInputElement)
             || !campo.matches(
-                '[data-campo-url-ligacao], [data-campo-url-incorporacao-alternativa]',
+                '[data-campo-url-ligacao]',
             )
         ) {
             return;
@@ -413,25 +404,6 @@ class GestorLigacoesSecao {
         );
 
         if (linha instanceof HTMLElement) {
-            TestadorIncorporacoesYouTube.invalidarTeste(linha);
-
-            if (campo.matches('[data-campo-url-ligacao]')) {
-                const seletor = linha.querySelector(
-                    '[data-campo-tipo-incorporacao]',
-                );
-
-                const alternativa = linha.querySelector(
-                    '[data-campo-url-incorporacao-alternativa]',
-                );
-
-                if (seletor instanceof HTMLSelectElement) {
-                    seletor.value = '';
-                }
-
-                if (alternativa instanceof HTMLInputElement) {
-                    alternativa.value = '';
-                }
-            }
 
             this.atualizarEstadoLinha(
                 linha,
@@ -440,7 +412,7 @@ class GestorLigacoesSecao {
     }
 
     /**
-     * Invalida o teste quando a escolha de incorporação muda.
+     * Atualiza a linha quando a escolha de incorporação muda.
      *
      * @param {Event} evento Evento recebido.
      * @returns {void}
@@ -448,15 +420,12 @@ class GestorLigacoesSecao {
     tratarAlteracaoIncorporacao(evento) {
         const campo = evento.target;
 
-        if (
-            !(campo instanceof HTMLInputElement)
-            && !(campo instanceof HTMLSelectElement)
-        ) {
+        if (!(campo instanceof HTMLInputElement)) {
             return;
         }
 
         if (!campo.matches(
-            '[data-campo-incorporar-ligacao], [data-campo-tipo-incorporacao]',
+            '[data-campo-incorporar-ligacao]',
         )) {
             return;
         }
@@ -464,7 +433,6 @@ class GestorLigacoesSecao {
         const linha = campo.closest('[data-ligacao-seccao]');
 
         if (linha instanceof HTMLElement) {
-            TestadorIncorporacoesYouTube.invalidarTeste(linha);
             this.atualizarEstadoLinha(linha);
         }
     }
@@ -812,39 +780,6 @@ class GestorLigacoesSecao {
                 `${idBase}-incorporar`;
         }
 
-        const seletorTipo = linha.querySelector(
-            '[data-campo-tipo-incorporacao]',
-        );
-
-        const etiquetaTipo = linha.querySelector(
-            '[data-etiqueta-tipo-incorporacao]',
-        );
-
-        if (seletorTipo instanceof HTMLSelectElement) {
-            seletorTipo.name = `${nomeBase}[tipo_incorporacao]`;
-            seletorTipo.id = `${idBase}-tipo-incorporacao`;
-        }
-
-        if (etiquetaTipo instanceof HTMLLabelElement) {
-            etiquetaTipo.htmlFor = `${idBase}-tipo-incorporacao`;
-        }
-
-        const campoAlternativa = linha.querySelector(
-            '[data-campo-url-incorporacao-alternativa]',
-        );
-
-        const etiquetaAlternativa = linha.querySelector(
-            '[data-etiqueta-url-incorporacao-alternativa]',
-        );
-
-        if (campoAlternativa instanceof HTMLInputElement) {
-            campoAlternativa.name = `${nomeBase}[url_incorporacao_alternativa]`;
-            campoAlternativa.id = `${idBase}-url-incorporacao-alternativa`;
-        }
-
-        if (etiquetaAlternativa instanceof HTMLLabelElement) {
-            etiquetaAlternativa.htmlFor = `${idBase}-url-incorporacao-alternativa`;
-        }
     }
 
     /**
@@ -981,9 +916,30 @@ class GestorLigacoesSecao {
             return;
         }
 
+        const ePlaylist = plataforma?.valor === 'youtube'
+            && campoUrl instanceof HTMLInputElement
+            && AnalisadorUrlYouTube.analisarUrl(campoUrl.value).playlist;
+
+        const contentorIncorporar = linha.querySelector(
+            '[data-contentor-incorporar-ligacao]',
+        );
+
+        const avisoPlaylist = linha.querySelector('[data-aviso-playlist-ligacao]');
+
+        if (contentorIncorporar instanceof HTMLElement) {
+            contentorIncorporar.hidden = ePlaylist;
+        }
+
+        if (avisoPlaylist instanceof HTMLElement) {
+            avisoPlaylist.hidden = !ePlaylist;
+        }
+
         if (
-            plataforma !== null
-            && !plataforma.suportaIncorporacao
+            ePlaylist
+            || (
+                plataforma !== null
+                && !plataforma.suportaIncorporacao
+            )
         ) {
             campoIncorporar.checked =
                 false;
@@ -991,17 +947,13 @@ class GestorLigacoesSecao {
 
         campoIncorporar.disabled =
             !this.detalhesAtivos()
+            || ePlaylist
             || (
                 plataforma !== null
                 && !plataforma.suportaIncorporacao
             );
 
-        TestadorIncorporacoesYouTube.atualizarLinha(
-            linha,
-            this.detalhesAtivos()
-                && plataforma?.valor === 'youtube'
-                && campoIncorporar.checked,
-        );
+
     }
 
     /**

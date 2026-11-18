@@ -52,12 +52,12 @@ final class RenderizadorIncorporacoesTest extends TestCase
     }
 
     /**
-     * Confirma que uma lista de reprodução é inferida a partir do URL.
+     * Playlists do YouTube mantêm apenas a ligação externa.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function youtube_incorpora_lista_reproducao_quando_url_e_compativel(): void
+    public function youtube_nao_incorpora_playlist(): void
     {
         $conteudo = app(
             RenderizadorIncorporacoes::class,
@@ -69,15 +69,8 @@ final class RenderizadorIncorporacoesTest extends TestCase
             ),
         )->toHtml();
 
-        $this->assertStringContainsString(
-            'https://www.youtube-nocookie.com/embed/videoseries?list=PL1234567890&amp;rel=0',
-            $conteudo,
-        );
-
-        $this->assertStringContainsString(
-            'referrerpolicy="strict-origin-when-cross-origin"',
-            $conteudo,
-        );
+        $this->assertStringNotContainsString('<iframe', $conteudo);
+        $this->assertStringContainsString('href="https://www.youtube.com/playlist?list=PL1234567890"', $conteudo);
     }
 
     /**
@@ -105,12 +98,12 @@ final class RenderizadorIncorporacoesTest extends TestCase
     }
 
     /**
-     * Confirma a incorporação de playlists provenientes do YouTube Music.
+     * Playlists do YouTube Music também permanecem externas.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function youtube_music_incorpora_lista_reproducao_quando_url_e_compativel(): void
+    public function youtube_music_nao_incorpora_playlist(): void
     {
         $conteudo = app(
             RenderizadorIncorporacoes::class,
@@ -122,46 +115,15 @@ final class RenderizadorIncorporacoesTest extends TestCase
             ),
         )->toHtml();
 
-        $this->assertStringContainsString(
-            'https://www.youtube-nocookie.com/embed/videoseries?list=OLAK5uy_Test1234567890&amp;rel=0',
-            $conteudo,
-        );
+        $this->assertStringNotContainsString('<iframe', $conteudo);
+        $this->assertStringContainsString('href="https://music.youtube.com/playlist?list=OLAK5uy_Test1234567890"', $conteudo);
     }
 
     /**
-     * A escolha explícita de playlist prevalece sobre o vídeo do mesmo URL.
+     * Um URL com vídeo e lista é tratado como playlist, sem iframe.
      */
     #[Test]
-    public function youtube_permite_escolher_playlist_quando_url_tem_video_e_lista(): void
-    {
-        $ligacao = $this->criarLigacao(
-            PlataformaLigacao::YouTube,
-            'https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL1234567890',
-            true,
-        );
-
-        $ligacao->tipo_incorporacao = 'playlist';
-
-        $conteudo = app(RenderizadorIncorporacoes::class)
-            ->renderizarLigacao($ligacao)
-            ->toHtml();
-
-        $this->assertStringContainsString(
-            'https://www.youtube-nocookie.com/embed/videoseries?list=PL1234567890&amp;rel=0',
-            $conteudo,
-        );
-
-        $this->assertStringNotContainsString(
-            '/embed/dQw4w9WgXcQ',
-            $conteudo,
-        );
-    }
-
-    /**
-     * Sem escolha manual continua a ser dada prioridade ao vídeo.
-     */
-    #[Test]
-    public function youtube_preserva_preferencia_automatica_por_video(): void
+    public function youtube_nao_incorpora_video_associado_a_playlist(): void
     {
         $ligacao = $this->criarLigacao(
             PlataformaLigacao::YouTube,
@@ -173,17 +135,33 @@ final class RenderizadorIncorporacoesTest extends TestCase
             ->renderizarLigacao($ligacao)
             ->toHtml();
 
-        $this->assertStringContainsString(
-            '/embed/dQw4w9WgXcQ?rel=0',
-            $conteudo,
-        );
+        $this->assertStringNotContainsString('<iframe', $conteudo);
     }
 
     /**
-     * A palavra videoseries não pode ser confundida com um identificador.
+     * Mesmo um parâmetro de lista vazio impede a incorporação.
      */
     #[Test]
-    public function youtube_reconhece_url_de_incorporacao_de_playlist(): void
+    public function youtube_nao_incorpora_video_com_lista_invalida(): void
+    {
+        $ligacao = $this->criarLigacao(
+            PlataformaLigacao::YouTube,
+            'https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=',
+            true,
+        );
+
+        $conteudo = app(RenderizadorIncorporacoes::class)
+            ->renderizarLigacao($ligacao)
+            ->toHtml();
+
+        $this->assertStringNotContainsString('<iframe', $conteudo);
+    }
+
+    /**
+     * A origem videoseries nunca é usada para incorporação.
+     */
+    #[Test]
+    public function youtube_nao_incorpora_url_de_videoseries(): void
     {
         $ligacao = $this->criarLigacao(
             PlataformaLigacao::YouTube,
@@ -195,22 +173,14 @@ final class RenderizadorIncorporacoesTest extends TestCase
             ->renderizarLigacao($ligacao)
             ->toHtml();
 
-        $this->assertStringContainsString(
-            '/embed/videoseries?list=PL1234567890&amp;rel=0',
-            $conteudo,
-        );
-
-        $this->assertStringNotContainsString(
-            '/embed/videoseries?rel=0',
-            $conteudo,
-        );
+        $this->assertStringNotContainsString('<iframe', $conteudo);
     }
 
     /**
-     * A incorporação alternativa nunca substitui a ligação original.
+     * Configurações antigas não podem forçar a incorporação de playlists.
      */
     #[Test]
-    public function youtube_incorpora_alternativa_mantendo_ligacao_original(): void
+    public function youtube_ignora_configuracao_antiga_de_incorporacao(): void
     {
         $original = 'https://music.youtube.com/playlist?list=OLAK5uy_Test1234567890';
 
@@ -227,10 +197,7 @@ final class RenderizadorIncorporacoesTest extends TestCase
             ->renderizarLigacao($ligacao)
             ->toHtml();
 
-        $this->assertStringContainsString(
-            '/embed/dQw4w9WgXcQ?rel=0',
-            $conteudo,
-        );
+        $this->assertStringNotContainsString('<iframe', $conteudo);
 
         $this->assertStringContainsString(
             'href="'.$original.'"',
@@ -239,18 +206,16 @@ final class RenderizadorIncorporacoesTest extends TestCase
     }
 
     /**
-     * O host alternativo não pode introduzir conteúdo arbitrário num iframe.
+     * Hosts enganosos nunca são incorporados.
      */
     #[Test]
-    public function youtube_nao_incorpora_alternativa_de_dominio_falso(): void
+    public function youtube_nao_incorpora_dominio_falso(): void
     {
         $ligacao = $this->criarLigacao(
             PlataformaLigacao::YouTube,
-            'https://www.youtube.com/playlist?list=PL1234567890',
+            'https://youtube.com.exemplo.test/watch?v=dQw4w9WgXcQ',
             true,
         );
-
-        $ligacao->url_incorporacao_alternativa = 'https://youtube.com.exemplo.test/watch?v=dQw4w9WgXcQ';
 
         $conteudo = app(RenderizadorIncorporacoes::class)
             ->renderizarLigacao($ligacao)
@@ -262,25 +227,22 @@ final class RenderizadorIncorporacoesTest extends TestCase
         );
 
         $this->assertStringContainsString(
-            'href="https://www.youtube.com/playlist?list=PL1234567890"',
+            'href="https://youtube.com.exemplo.test/watch?v=dQw4w9WgXcQ"',
             $conteudo,
         );
     }
 
     /**
-     * Desativar a incorporação prevalece sobre quaisquer escolhas guardadas.
+     * Desativar a incorporação mantém apenas a ligação externa do vídeo.
      */
     #[Test]
-    public function youtube_nao_incorpora_alternativa_quando_desativado(): void
+    public function youtube_nao_incorpora_video_quando_desativado(): void
     {
         $ligacao = $this->criarLigacao(
             PlataformaLigacao::YouTube,
-            'https://music.youtube.com/playlist?list=OLAK5uy_Test1234567890',
+            'https://music.youtube.com/watch?v=dQw4w9WgXcQ',
             false,
         );
-
-        $ligacao->tipo_incorporacao = 'video';
-        $ligacao->url_incorporacao_alternativa = 'https://youtu.be/dQw4w9WgXcQ';
 
         $conteudo = app(RenderizadorIncorporacoes::class)
             ->renderizarLigacao($ligacao)

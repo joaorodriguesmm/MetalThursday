@@ -10,12 +10,12 @@ use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 /**
- * Verifica o contrato de configuração das incorporações por ligação.
+ * Verifica que apenas vídeos individuais podem ser incorporados.
  */
 final class ServicoLigacoesSecaoIncorporacaoTest extends TestCase
 {
     /**
-     * O comportamento anterior permanece predefinido.
+     * Ligações individuais continuam incorporáveis.
      */
     #[Test]
     public function ligacoes_antigas_mantem_incorporacao_automatica(): void
@@ -29,48 +29,41 @@ final class ServicoLigacoesSecaoIncorporacaoTest extends TestCase
                 ],
             ]);
 
-        self::assertNull($normalizadas[0]['tipo_incorporacao']);
-        self::assertNull($normalizadas[0]['url_incorporacao_alternativa']);
         self::assertTrue($normalizadas[0]['incorporar']);
     }
 
     /**
-     * Guarda as escolhas sem substituir o endereço original.
+     * Mesmo com a opção ativa, playlists ficam apenas como ligação externa.
      */
     #[Test]
-    public function youtube_aceita_playlist_e_incorporacao_alternativa(): void
+    public function youtube_desativa_incorporacao_de_playlists(): void
     {
         $original = 'https://music.youtube.com/playlist?list=OLAK5uy_Test1234567890';
-        $alternativa = 'https://youtu.be/dQw4w9WgXcQ';
-
         $normalizadas = app(ServicoLigacoesSecaoMetalThursday::class)
             ->normalizarDados([
                 [
                     'url' => $original,
                     'etiqueta' => null,
                     'incorporar' => true,
-                    'tipo_incorporacao' => 'video',
-                    'url_incorporacao_alternativa' => $alternativa,
                 ],
             ]);
 
         self::assertSame($original, $normalizadas[0]['url']);
-        self::assertSame('video', $normalizadas[0]['tipo_incorporacao']);
-        self::assertSame($alternativa, $normalizadas[0]['url_incorporacao_alternativa']);
+        self::assertFalse($normalizadas[0]['incorporar']);
     }
 
     /**
-     * Impede a utilização de incorporações alternativas noutras plataformas.
+     * Campos de configuração descontinuados deixam de ser aceites.
      */
     #[Test]
-    public function spotify_rejeita_configuracao_manual_youtube(): void
+    public function youtube_rejeita_configuracao_manual_descontinuada(): void
     {
         $this->expectException(InvalidArgumentException::class);
 
         app(ServicoLigacoesSecaoMetalThursday::class)
             ->normalizarDados([
                 [
-                    'url' => 'https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl',
+                    'url' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
                     'etiqueta' => null,
                     'incorporar' => true,
                     'tipo_incorporacao' => 'video',
@@ -79,10 +72,10 @@ final class ServicoLigacoesSecaoIncorporacaoTest extends TestCase
     }
 
     /**
-     * Um host semelhante não pode ser utilizado como origem alternativa.
+     * Não é possível introduzir um URL alternativo via submissão direta.
      */
     #[Test]
-    public function youtube_rejeita_url_alternativo_de_host_semelhante(): void
+    public function youtube_rejeita_url_alternativo(): void
     {
         $this->expectException(InvalidArgumentException::class);
 
@@ -92,8 +85,24 @@ final class ServicoLigacoesSecaoIncorporacaoTest extends TestCase
                     'url' => 'https://music.youtube.com/watch?v=dQw4w9WgXcQ',
                     'etiqueta' => null,
                     'incorporar' => true,
-                    'url_incorporacao_alternativa' => 'https://youtube.com.example.org/watch?v=dQw4w9WgXcQ',
+                    'url_incorporacao_alternativa' => 'https://youtu.be/M7lc1UVf-VE',
                 ],
             ]);
+    }
+
+    /**
+     * Um URL com vídeo e lista não pode incorporar a faixa isoladamente.
+     */
+    #[Test]
+    public function youtube_desativa_incorporacao_com_video_e_lista(): void
+    {
+        $normalizadas = app(ServicoLigacoesSecaoMetalThursday::class)
+            ->normalizarDados([[
+                'url' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL1234567890',
+                'etiqueta' => null,
+                'incorporar' => true,
+            ]]);
+
+        self::assertFalse($normalizadas[0]['incorporar']);
     }
 }

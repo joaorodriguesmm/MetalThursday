@@ -316,7 +316,7 @@ final class GuardarRascunhoMetalThursdayRequest extends FormRequest
 
             'seccoes.*.ligacoes.*' => [
                 'bail',
-                'array:url,etiqueta,incorporar,tipo_incorporacao,url_incorporacao_alternativa',
+                'array:url,etiqueta,incorporar',
             ],
 
             'seccoes.*.ligacoes.*.url' => [
@@ -345,22 +345,6 @@ final class GuardarRascunhoMetalThursdayRequest extends FormRequest
                 'bail',
                 'nullable',
                 'boolean',
-            ],
-            'seccoes.*.ligacoes.*.tipo_incorporacao' => [
-                'bail',
-                'nullable',
-                'string',
-                Rule::in(LigacaoSeccaoMetalThursday::TIPOS_INCORPORACAO_YOUTUBE),
-            ],
-            'seccoes.*.ligacoes.*.url_incorporacao_alternativa' => [
-                'bail',
-                'nullable',
-                'string',
-                $this->criarRegraTextoLinha(
-                    'O URL de incorporação alternativa contém texto inválido.',
-                    'O URL de incorporação alternativa contém caracteres inválidos.',
-                ),
-                'max:'.LigacaoSeccaoMetalThursday::COMPRIMENTO_MAXIMO_URL,
             ],
 
             'seccoes.*.ano' => [

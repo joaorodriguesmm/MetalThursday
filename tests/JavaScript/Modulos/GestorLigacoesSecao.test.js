@@ -387,7 +387,7 @@ describe(
         );
 
         it(
-            'testa uma playlist, invalida o leitor e reindexa a escolha',
+            'oculta a incorporação de playlists e restaura a opção para vídeos',
             () => {
                 const gestor = new GestorLigacoesSecao(
                     document.getElementById('seccao-5'),
@@ -396,45 +396,42 @@ describe(
                 const linha = gestor.obterLinhas()[0];
                 const original = linha.querySelector('[data-campo-url-ligacao]');
                 const incorporar = linha.querySelector('[data-campo-incorporar-ligacao]');
-                const tipo = linha.querySelector('[data-campo-tipo-incorporacao]');
-                const alternativa = linha.querySelector('[data-campo-url-incorporacao-alternativa]');
-
                 original.value = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL1234567890';
                 original.dispatchEvent(new Event('input', { bubbles: true }));
+
+                expect(incorporar.checked).toBe(false);
+                expect(incorporar.disabled).toBe(true);
+                expect(linha.querySelector('[data-contentor-incorporar-ligacao]').hidden)
+                    .toBe(true);
+                expect(linha.querySelector('[data-aviso-playlist-ligacao]').hidden)
+                    .toBe(false);
+                expect(linha.querySelector('[data-acao-ligacao-seccao="testar"]'))
+                    .toBeNull();
+
+                original.value = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+                original.dispatchEvent(new Event('input', { bubbles: true }));
+
+                expect(incorporar.disabled).toBe(false);
+                expect(linha.querySelector('[data-contentor-incorporar-ligacao]').hidden)
+                    .toBe(false);
 
                 incorporar.checked = true;
                 incorporar.dispatchEvent(new Event('change', { bubbles: true }));
 
-                expect(
-                    linha.querySelector('[data-configuracao-incorporacao-youtube]').hidden,
-                ).toBe(false);
+                expect(incorporar.checked).toBe(true);
 
-                tipo.value = 'playlist';
-                tipo.dispatchEvent(new Event('change', { bubbles: true }));
+                original.value = 'https://www.youtube.com/playlist?list=PL1234567890';
+                original.dispatchEvent(new Event('input', { bubbles: true }));
 
-                linha.querySelector('[data-acao-ligacao-seccao="testar"]').click();
 
-                expect(
-                    linha.querySelector('[data-previsualizacao-incorporacao] iframe')
-                        .src,
-                ).toContain('/embed/videoseries?list=PL1234567890');
-
-                alternativa.value = 'https://youtu.be/M7lc1UVf-VE';
-                alternativa.dispatchEvent(new Event('input', { bubbles: true }));
-
-                expect(
-                    linha.querySelector('[data-previsualizacao-incorporacao] iframe'),
-                ).toBeNull();
-
-                expect(tipo.value).toBe('');
+                expect(incorporar.checked).toBe(false);
 
                 gestor.mover(
                     linha.querySelector('[data-acao-ligacao-seccao="descer"]'),
                     1,
                 );
 
-                expect(tipo.name).toBe('seccoes[5][ligacoes][1][tipo_incorporacao]');
-                expect(alternativa.name).toBe('seccoes[5][ligacoes][1][url_incorporacao_alternativa]');
+                expect(incorporar.name).toBe('seccoes[5][ligacoes][1][incorporar]');
             },
         );
     },
@@ -499,42 +496,24 @@ function criarLinhaLigacao(
                 ></div>
             </div>
 
-            <input
-                type="hidden"
-                value="0"
-                data-campo-incorporar-ligacao-oculto
-            >
+            <div data-contentor-incorporar-ligacao>
+                <input
+                    type="hidden"
+                    value="0"
+                    data-campo-incorporar-ligacao-oculto
+                >
 
-            <input
-                type="checkbox"
-                value="1"
-                data-campo-incorporar-ligacao
-            >
+                <input
+                    type="checkbox"
+                    value="1"
+                    data-campo-incorporar-ligacao
+                >
 
-            <label
-                data-etiqueta-incorporar-ligacao
-            >
-                Incorporar
-            </label>
-
-            <div data-configuracao-incorporacao-youtube hidden>
-                <label data-etiqueta-tipo-incorporacao>Tipo</label>
-                <select data-campo-tipo-incorporacao>
-                    <option value="">Automático</option>
-                    <option value="video">Vídeo</option>
-                    <option value="playlist">Playlist</option>
-                </select>
-
-                <label data-etiqueta-url-incorporacao-alternativa>Alternativa</label>
-                <input type="url" data-campo-url-incorporacao-alternativa>
-
-                <button type="button" data-acao-ligacao-seccao="testar">Testar</button>
-
-                <div data-resultado-teste-incorporacao hidden>
-                    <p data-estado-teste-incorporacao></p>
-                    <div data-previsualizacao-incorporacao></div>
-                </div>
+                <label data-etiqueta-incorporar-ligacao>Incorporar</label>
             </div>
+
+            <p data-aviso-playlist-ligacao hidden>Playlist: apenas ligação externa.</p>
+
 
             <button
                 type="button"

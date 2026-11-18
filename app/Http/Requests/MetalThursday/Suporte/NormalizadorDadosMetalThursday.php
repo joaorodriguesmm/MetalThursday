@@ -141,18 +141,6 @@ final class NormalizadorDadosMetalThursday
                     ?? false,
             );
 
-            if (array_key_exists('tipo_incorporacao', $ligacao)) {
-                $ligacao['tipo_incorporacao'] = self::normalizarTextoLinhaOpcional(
-                    $ligacao['tipo_incorporacao'],
-                );
-            }
-
-            if (array_key_exists('url_incorporacao_alternativa', $ligacao)) {
-                $ligacao['url_incorporacao_alternativa'] = self::normalizarTextoOpcional(
-                    $ligacao['url_incorporacao_alternativa'],
-                );
-            }
-
             $ligacoes[] = $ligacao;
         }
 

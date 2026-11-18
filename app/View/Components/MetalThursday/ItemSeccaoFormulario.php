@@ -157,7 +157,7 @@ final class ItemSeccaoFormulario extends Component
     /**
      * Ligações públicas associadas à secção.
      *
-     * @var list<array{url: string, etiqueta: string, incorporar: bool, tipo_incorporacao: string|null, url_incorporacao_alternativa: string|null}>
+     * @var list<array{url: string, etiqueta: string, incorporar: bool}>
      *
      * @since 2.0.0
      */
@@ -623,7 +623,7 @@ final class ItemSeccaoFormulario extends Component
      *
      * @param  Request  $pedido  Pedido HTTP atual.
      * @param  SeccaoMetalThursday|array<string, mixed>|null  $seccao  Secção atual.
-     * @return list<array{url: string, etiqueta: string, incorporar: bool, tipo_incorporacao: string|null, url_incorporacao_alternativa: string|null}> Ligações.
+     * @return list<array{url: string, etiqueta: string, incorporar: bool}> Ligações.
      *
      * @since 2.0.0
      */
@@ -676,8 +676,6 @@ final class ItemSeccaoFormulario extends Component
                     'etiqueta' => $ligacao->etiqueta
                         ?? '',
                     'incorporar' => $ligacao->incorporar,
-                    'tipo_incorporacao' => $ligacao->tipo_incorporacao,
-                    'url_incorporacao_alternativa' => $ligacao->url_incorporacao_alternativa,
                 ];
             }
 
@@ -694,7 +692,7 @@ final class ItemSeccaoFormulario extends Component
      * num rascunho antes da publicação final.
      *
      * @param  mixed  $valor  Valor recebido.
-     * @return list<array{url: string, etiqueta: string, incorporar: bool, tipo_incorporacao: string|null, url_incorporacao_alternativa: string|null}> Ligações.
+     * @return list<array{url: string, etiqueta: string, incorporar: bool}> Ligações.
      *
      * @since 2.0.0
      */
@@ -725,14 +723,6 @@ final class ItemSeccaoFormulario extends Component
                     $ligacao['incorporar']
                         ?? false,
                 ),
-                'tipo_incorporacao' => $this->normalizarTexto(
-                    $ligacao['tipo_incorporacao']
-                        ?? '',
-                ) ?: null,
-                'url_incorporacao_alternativa' => $this->normalizarTexto(
-                    $ligacao['url_incorporacao_alternativa']
-                        ?? '',
-                ) ?: null,
             ];
         }
 

@@ -58,20 +58,6 @@ final class RenderizadorIncorporacoes
     private const COMPRIMENTO_IDENTIFICADOR_VIDEO = 11;
 
     /**
-     * Comprimento mínimo de um identificador de lista de reprodução.
-     *
-     * @since 2.0.0
-     */
-    private const COMPRIMENTO_MINIMO_IDENTIFICADOR_LISTA = 10;
-
-    /**
-     * Comprimento máximo de um identificador de lista de reprodução.
-     *
-     * @since 2.0.0
-     */
-    private const COMPRIMENTO_MAXIMO_IDENTIFICADOR_LISTA = 150;
-
-    /**
      * Renderiza uma ligação pertencente à nova coleção de uma secção.
      *
      * A incorporação concreta é disponibilizada para YouTube, YouTube Music,
@@ -97,23 +83,7 @@ final class RenderizadorIncorporacoes
 
         if ($ligacaoSecao->incorporar) {
             if ($ligacaoSecao->plataforma === PlataformaLigacao::YouTube) {
-                $alternativa = $this->normalizarLigacao(
-                    $ligacaoSecao->url_incorporacao_alternativa,
-                );
-
-                $origemIncorporacao = $alternativa ?? $ligacao;
-
-                $incorporacao = match ($ligacaoSecao->tipo_incorporacao) {
-                    'video' => $this->renderizarVideoYouTube(
-                        $origemIncorporacao,
-                    ),
-                    'playlist' => $this->renderizarListaReproducaoYouTube(
-                        $origemIncorporacao,
-                    ),
-                    default => $this->renderizarIncorporacaoYouTubeAutomatica(
-                        $origemIncorporacao,
-                    ),
-                };
+                $incorporacao = $this->renderizarVideoYouTube($ligacao);
             } elseif ($ligacaoSecao->plataforma === PlataformaLigacao::Spotify) {
                 $incorporacao =
                     $this->renderizarSpotify(
@@ -136,20 +106,6 @@ final class RenderizadorIncorporacoes
                     ),
                 ),
         );
-    }
-
-    /**
-     * Mantém a prioridade anterior: vídeo, seguido de playlist.
-     */
-    private function renderizarIncorporacaoYouTubeAutomatica(string $ligacao): string
-    {
-        $incorporacao = $this->renderizarVideoYouTube($ligacao);
-
-        if ($incorporacao === '') {
-            $incorporacao = $this->renderizarListaReproducaoYouTube($ligacao);
-        }
-
-        return $incorporacao;
     }
 
     /**
@@ -537,37 +493,6 @@ HTML;
     }
 
     /**
-     * Renderiza uma lista de reprodução do YouTube.
-     *
-     * @param  string  $ligacao  Ligação validada.
-     * @return string HTML da incorporação ou texto vazio.
-     *
-     * @since 2.0.0
-     */
-    private function renderizarListaReproducaoYouTube(
-        string $ligacao,
-    ): string {
-        $identificador =
-            $this->extrairIdentificadorListaYouTube(
-                $ligacao,
-            );
-
-        if ($identificador === null) {
-            return '';
-        }
-
-        return $this->renderizarIframe(
-            sprintf(
-                'https://www.youtube-nocookie.com/embed/videoseries?list=%s&rel=0',
-                rawurlencode(
-                    $identificador,
-                ),
-            ),
-            'Lista de reprodução do YouTube',
-        );
-    }
-
-    /**
      * Renderiza um iframe responsivo.
      *
      * A origem e o título são escapados antes de serem introduzidos nos
@@ -800,6 +725,18 @@ HTML;
             return null;
         }
 
+        // Uma ligação associada a uma playlist nunca é incorporada.
+        if (
+            array_key_exists('list', $componentes['consulta'])
+            || mb_strtolower($componentes['segmentos'][0] ?? '') === 'playlist'
+            || (
+                mb_strtolower($componentes['segmentos'][0] ?? '') === 'embed'
+                && mb_strtolower($componentes['segmentos'][1] ?? '') === 'videoseries'
+            )
+        ) {
+            return null;
+        }
+
         if (
             in_array(
                 $componentes['host'],
@@ -854,54 +791,6 @@ HTML;
             $componentes['segmentos'][1]
                 ?? null,
         );
-    }
-
-    /**
-     * Extrai o identificador de uma lista de reprodução do YouTube.
-     *
-     * @param  string  $ligacao  Ligação validada.
-     * @return string|null Identificador ou nulo.
-     *
-     * @since 2.0.0
-     */
-    private function extrairIdentificadorListaYouTube(
-        string $ligacao,
-    ): ?string {
-        $componentes =
-            $this->decomporLigacaoYouTube(
-                $ligacao,
-            );
-
-        if ($componentes === null) {
-            return null;
-        }
-
-        $identificador =
-            $componentes['consulta']['list']
-            ?? null;
-
-        if (! is_string($identificador)) {
-            return null;
-        }
-
-        $comprimento = strlen(
-            $identificador,
-        );
-
-        if (
-            $comprimento
-            < self::COMPRIMENTO_MINIMO_IDENTIFICADOR_LISTA
-            || $comprimento
-            > self::COMPRIMENTO_MAXIMO_IDENTIFICADOR_LISTA
-            || preg_match(
-                '/\A[A-Za-z0-9_-]+\z/',
-                $identificador,
-            ) !== 1
-        ) {
-            return null;
-        }
-
-        return $identificador;
     }
 
     /**

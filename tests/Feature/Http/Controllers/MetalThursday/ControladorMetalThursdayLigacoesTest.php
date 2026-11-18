@@ -121,10 +121,10 @@ final class ControladorMetalThursdayLigacoesTest extends TestCase
     }
 
     /**
-     * Guarda a escolha de playlist e um leitor alternativo sem alterar o URL público.
+     * Garante que uma playlist do YouTube é publicada sem incorporação.
      */
     #[Test]
-    public function publica_ligacao_youtube_com_incorporacao_alternativa(): void
+    public function publica_playlist_youtube_apenas_com_ligacao_externa(): void
     {
         [
             $administrador,
@@ -134,8 +134,6 @@ final class ControladorMetalThursdayLigacoesTest extends TestCase
         ] = $this->prepararContexto();
 
         $original = 'https://music.youtube.com/playlist?list=OLAK5uy_Test1234567890';
-        $alternativa = 'https://www.youtube.com/playlist?list=PL1234567890';
-
         $this
             ->actingAs(
                 Utilizador::factory()->comPapel(PapelUtilizador::SuperAdministrador)->create(),
@@ -153,8 +151,6 @@ final class ControladorMetalThursdayLigacoesTest extends TestCase
                             'url' => $original,
                             'etiqueta' => null,
                             'incorporar' => true,
-                            'tipo_incorporacao' => 'playlist',
-                            'url_incorporacao_alternativa' => $alternativa,
                         ],
                     ],
                 ),
@@ -166,17 +162,16 @@ final class ControladorMetalThursdayLigacoesTest extends TestCase
             [
                 'url' => $original,
                 'plataforma' => 'youtube',
-                'tipo_incorporacao' => 'playlist',
-                'url_incorporacao_alternativa' => $alternativa,
+                'incorporar' => false,
             ],
         );
     }
 
     /**
-     * A validação HTTP impede um URL alternativo de domínio estranho.
+     * O formulário deixa de aceitar campos de incorporação descontinuados.
      */
     #[Test]
-    public function rejeita_incorporacao_alternativa_de_dominio_falso(): void
+    public function rejeita_opcoes_manualmente_descontinuadas(): void
     {
         [
             $administrador,
@@ -199,18 +194,17 @@ final class ControladorMetalThursdayLigacoesTest extends TestCase
                     $artista,
                     [
                         [
-                            'url' => 'https://music.youtube.com/playlist?list=OLAK5uy_Test1234567890',
+                            'url' => 'https://music.youtube.com/watch?v=dQw4w9WgXcQ',
                             'etiqueta' => null,
                             'incorporar' => true,
-                            'tipo_incorporacao' => 'video',
-                            'url_incorporacao_alternativa' => 'https://youtube.com.exemplo.test/watch?v=dQw4w9WgXcQ',
+                            'url_incorporacao_alternativa' => 'https://youtu.be/M7lc1UVf-VE',
                         ],
                     ],
                 ),
             )
             ->assertUnprocessable()
             ->assertJsonValidationErrors([
-                'seccoes.0.ligacoes.0.url_incorporacao_alternativa',
+                'seccoes.0.ligacoes.0',
             ]);
 
         $this->assertDatabaseCount('ligacoes_seccao_metal_thursday', 0);
