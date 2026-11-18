@@ -27,6 +27,8 @@ use InvalidArgumentException;
  * @property string|null $etiqueta
  * @property string $url
  * @property bool $incorporar
+ * @property string|null $tipo_incorporacao
+ * @property string|null $url_incorporacao_alternativa
  * @property int $ordem
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
@@ -52,6 +54,18 @@ class LigacaoSeccaoMetalThursday extends Model
      * @since 2.0.0
      */
     public const COMPRIMENTO_MAXIMO_URL = 2048;
+
+    /**
+     * Tipos de incorporação do YouTube selecionáveis manualmente.
+     *
+     * O valor nulo mantém a deteção automática anterior.
+     *
+     * @var list<string>
+     */
+    public const TIPOS_INCORPORACAO_YOUTUBE = [
+        'video',
+        'playlist',
+    ];
 
     /**
      * Número máximo funcional de ligações permitido por secção.
@@ -98,6 +112,8 @@ class LigacaoSeccaoMetalThursday extends Model
         'etiqueta',
         'url',
         'incorporar',
+        'tipo_incorporacao',
+        'url_incorporacao_alternativa',
         'ordem',
     ];
 
@@ -124,6 +140,29 @@ class LigacaoSeccaoMetalThursday extends Model
 
                 if (! $plataforma->suportaIncorporacao()) {
                     $ligacao->incorporar = false;
+                }
+
+                if (
+                    $plataforma !== PlataformaLigacao::YouTube
+                    && (
+                        $ligacao->tipo_incorporacao !== null
+                        || $ligacao->url_incorporacao_alternativa !== null
+                    )
+                ) {
+                    throw new InvalidArgumentException(
+                        'As opções manuais de incorporação destinam-se apenas ao YouTube.',
+                    );
+                }
+
+                if (
+                    $ligacao->url_incorporacao_alternativa !== null
+                    && ! $servico->eUrlIncorporacaoYouTube(
+                        $ligacao->url_incorporacao_alternativa,
+                    )
+                ) {
+                    throw new InvalidArgumentException(
+                        'O URL de incorporação alternativa deve pertencer ao YouTube.',
+                    );
                 }
             },
         );
@@ -335,6 +374,64 @@ class LigacaoSeccaoMetalThursday extends Model
                 }
 
                 return $url;
+            },
+        );
+    }
+
+    /**
+     * Valida a escolha manual; nulo representa a deteção automática.
+     *
+     * @return Attribute<string|null, string|null>
+     */
+    protected function tipoIncorporacao(): Attribute
+    {
+        return Attribute::make(
+            set: static function (mixed $valor): ?string {
+                if ($valor === null || $valor === '') {
+                    return null;
+                }
+
+                if (
+                    ! is_string($valor)
+                    || ! in_array(
+                        $valor,
+                        self::TIPOS_INCORPORACAO_YOUTUBE,
+                        true,
+                    )
+                ) {
+                    throw new InvalidArgumentException(
+                        'O tipo de incorporação selecionado não é válido.',
+                    );
+                }
+
+                return $valor;
+            },
+        );
+    }
+
+    /**
+     * Valida o URL alternativo com as mesmas regras do URL público.
+     *
+     * @return Attribute<string|null, string|null>
+     */
+    protected function urlIncorporacaoAlternativa(): Attribute
+    {
+        return Attribute::make(
+            set: static function (mixed $valor): ?string {
+                if ($valor === null || $valor === '') {
+                    return null;
+                }
+
+                if (! is_string($valor)) {
+                    throw new InvalidArgumentException(
+                        'O URL de incorporação alternativa deve ser uma sequência de caracteres.',
+                    );
+                }
+
+                $validacao = new self;
+                $validacao->url = $valor;
+
+                return $validacao->url;
             },
         );
     }

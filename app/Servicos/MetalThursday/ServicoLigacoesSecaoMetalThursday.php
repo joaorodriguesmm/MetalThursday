@@ -77,6 +77,30 @@ final class ServicoLigacoesSecaoMetalThursday
     }
 
     /**
+     * Aceita apenas os hosts YouTube suportados pelo renderizador.
+     *
+     * Os endereços de incorporação não são utilizados diretamente em iframes:
+     * o renderizador extrai sempre um identificador validado.
+     */
+    public function eUrlIncorporacaoYouTube(string $url): bool
+    {
+        return in_array(
+            $this->obterDominio($url),
+            [
+                'youtube.com',
+                'www.youtube.com',
+                'm.youtube.com',
+                'music.youtube.com',
+                'youtu.be',
+                'www.youtu.be',
+                'youtube-nocookie.com',
+                'www.youtube-nocookie.com',
+            ],
+            true,
+        );
+    }
+
+    /**
      * Normaliza a lista de ligações recebida pela camada de persistência.
      *
      * A ordem da lista é autoritativa. A plataforma nunca é recebida do
@@ -86,7 +110,7 @@ final class ServicoLigacoesSecaoMetalThursday
      * @param  string  $campo  Nome do campo para mensagens de erro.
      * @param  bool  $exigirEtiquetaOutro  Obriga uma etiqueta nas novas
      *                                     ligações de plataforma desconhecida.
-     * @return list<array{etiqueta: string|null, url: string, incorporar: bool}>
+     * @return list<array{etiqueta: string|null, url: string, incorporar: bool, tipo_incorporacao: string|null, url_incorporacao_alternativa: string|null}>
      *
      * @throws InvalidArgumentException Quando a lista não é válida.
      *
@@ -150,6 +174,8 @@ final class ServicoLigacoesSecaoMetalThursday
                     'url',
                     'etiqueta',
                     'incorporar',
+                    'tipo_incorporacao',
+                    'url_incorporacao_alternativa',
                 ],
             );
 
@@ -188,11 +214,39 @@ final class ServicoLigacoesSecaoMetalThursday
                 );
             }
 
+            $tipoIncorporacao = $dadosLigacao['tipo_incorporacao']
+                ?? null;
+
+            if (! is_string($tipoIncorporacao) && $tipoIncorporacao !== null) {
+                throw new InvalidArgumentException(
+                    sprintf(
+                        'O campo %s.tipo_incorporacao não contém um tipo válido.',
+                        $campoLigacao,
+                    ),
+                );
+            }
+
+            $urlAlternativa = $dadosLigacao['url_incorporacao_alternativa']
+                ?? null;
+
+            if (! is_string($urlAlternativa) && $urlAlternativa !== null) {
+                throw new InvalidArgumentException(
+                    sprintf(
+                        'O campo %s.url_incorporacao_alternativa não contém um endereço válido.',
+                        $campoLigacao,
+                    ),
+                );
+            }
+
             $ligacao = new LigacaoSeccaoMetalThursday;
 
             $ligacao->url = $url;
 
             $ligacao->etiqueta = $etiqueta;
+
+            $ligacao->tipo_incorporacao = $tipoIncorporacao;
+
+            $ligacao->url_incorporacao_alternativa = $urlAlternativa;
 
             $incorporar = $this->normalizarBooleano(
                 $dadosLigacao['incorporar']
@@ -203,6 +257,35 @@ final class ServicoLigacoesSecaoMetalThursday
             $plataforma = $this->detetarPlataforma(
                 $ligacao->url,
             );
+
+            if (
+                $plataforma !== PlataformaLigacao::YouTube
+                && (
+                    $ligacao->tipo_incorporacao !== null
+                    || $ligacao->url_incorporacao_alternativa !== null
+                )
+            ) {
+                throw new InvalidArgumentException(
+                    sprintf(
+                        'O campo %s só permite opções de incorporação manual para o YouTube.',
+                        $campoLigacao,
+                    ),
+                );
+            }
+
+            if (
+                $ligacao->url_incorporacao_alternativa !== null
+                && ! $this->eUrlIncorporacaoYouTube(
+                    $ligacao->url_incorporacao_alternativa,
+                )
+            ) {
+                throw new InvalidArgumentException(
+                    sprintf(
+                        'O campo %s.url_incorporacao_alternativa deve indicar uma ligação do YouTube.',
+                        $campoLigacao,
+                    ),
+                );
+            }
 
             if (
                 $exigirEtiquetaOutro
@@ -225,6 +308,8 @@ final class ServicoLigacoesSecaoMetalThursday
                 'etiqueta' => $ligacao->etiqueta,
                 'url' => $ligacao->url,
                 'incorporar' => $incorporar,
+                'tipo_incorporacao' => $ligacao->tipo_incorporacao,
+                'url_incorporacao_alternativa' => $ligacao->url_incorporacao_alternativa,
             ];
         }
 
@@ -238,7 +323,7 @@ final class ServicoLigacoesSecaoMetalThursday
      * eliminação e a recriação ordenada não ficam num estado intermédio.
      *
      * @param  SeccaoMetalThursday  $seccao  Secção persistida.
-     * @param  list<array{etiqueta: string|null, url: string, incorporar: bool}>  $ligacoes  Ligações normalizadas.
+     * @param  list<array{etiqueta: string|null, url: string, incorporar: bool, tipo_incorporacao: string|null, url_incorporacao_alternativa: string|null}>  $ligacoes  Ligações normalizadas.
      *
      * @throws InvalidArgumentException Quando a secção ainda não está
      *                                  persistida.
@@ -265,6 +350,8 @@ final class ServicoLigacoesSecaoMetalThursday
                 'etiqueta' => $dadosLigacao['etiqueta'],
                 'url' => $dadosLigacao['url'],
                 'incorporar' => $dadosLigacao['incorporar'],
+                'tipo_incorporacao' => $dadosLigacao['tipo_incorporacao'],
+                'url_incorporacao_alternativa' => $dadosLigacao['url_incorporacao_alternativa'],
                 'ordem' => $indice + LigacaoSeccaoMetalThursday::ORDEM_MINIMA,
             ]);
 

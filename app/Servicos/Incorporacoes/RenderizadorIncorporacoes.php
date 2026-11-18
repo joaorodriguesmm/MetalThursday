@@ -97,17 +97,23 @@ final class RenderizadorIncorporacoes
 
         if ($ligacaoSecao->incorporar) {
             if ($ligacaoSecao->plataforma === PlataformaLigacao::YouTube) {
-                $incorporacao =
-                    $this->renderizarVideoYouTube(
-                        $ligacao,
-                    );
+                $alternativa = $this->normalizarLigacao(
+                    $ligacaoSecao->url_incorporacao_alternativa,
+                );
 
-                if ($incorporacao === '') {
-                    $incorporacao =
-                        $this->renderizarListaReproducaoYouTube(
-                            $ligacao,
-                        );
-                }
+                $origemIncorporacao = $alternativa ?? $ligacao;
+
+                $incorporacao = match ($ligacaoSecao->tipo_incorporacao) {
+                    'video' => $this->renderizarVideoYouTube(
+                        $origemIncorporacao,
+                    ),
+                    'playlist' => $this->renderizarListaReproducaoYouTube(
+                        $origemIncorporacao,
+                    ),
+                    default => $this->renderizarIncorporacaoYouTubeAutomatica(
+                        $origemIncorporacao,
+                    ),
+                };
             } elseif ($ligacaoSecao->plataforma === PlataformaLigacao::Spotify) {
                 $incorporacao =
                     $this->renderizarSpotify(
@@ -130,6 +136,20 @@ final class RenderizadorIncorporacoes
                     ),
                 ),
         );
+    }
+
+    /**
+     * Mantém a prioridade anterior: vídeo, seguido de playlist.
+     */
+    private function renderizarIncorporacaoYouTubeAutomatica(string $ligacao): string
+    {
+        $incorporacao = $this->renderizarVideoYouTube($ligacao);
+
+        if ($incorporacao === '') {
+            $incorporacao = $this->renderizarListaReproducaoYouTube($ligacao);
+        }
+
+        return $incorporacao;
     }
 
     /**
@@ -819,6 +839,13 @@ HTML;
                 self::SEGMENTOS_VIDEO_YOUTUBE,
                 true,
             )
+        ) {
+            return null;
+        }
+
+        if (
+            mb_strtolower($primeiroSegmento) === 'embed'
+            && ($componentes['segmentos'][1] ?? null) === 'videoseries'
         ) {
             return null;
         }

@@ -613,7 +613,7 @@
                     </span>
 
                     <button
-                        class="btn border-0 bg-transparent text-muted p-0 align-baseline ms-1"
+                        class="btn btn-sm btn-secondary align-baseline ms-1"
                         type="button"
                         data-bs-toggle="tooltip"
                         data-bs-title="Podes adicionar várias ligações. Spotify, Apple Music e YouTube são detetados automaticamente; as restantes usam uma etiqueta personalizada."
@@ -655,6 +655,8 @@
                         $idBaseLigacao = "seccoes-{$indice}-ligacao-{$indiceLigacao}";
                         $chaveUrlLigacao = "seccoes.{$indice}.ligacoes.{$indiceLigacao}.url";
                         $chaveEtiquetaLigacao = "seccoes.{$indice}.ligacoes.{$indiceLigacao}.etiqueta";
+                        $chaveTipoIncorporacao = "seccoes.{$indice}.ligacoes.{$indiceLigacao}.tipo_incorporacao";
+                        $chaveUrlAlternativa = "seccoes.{$indice}.ligacoes.{$indiceLigacao}.url_incorporacao_alternativa";
                     @endphp
 
                     <div
@@ -787,6 +789,82 @@
 
                                 <div class="small text-muted">
                                     Quando suportado.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            class="mt-3 border-top pt-3"
+                            data-configuracao-incorporacao-youtube
+                            hidden
+                        >
+                            <div class="row g-3">
+                                <div class="col-lg-4">
+                                    <label
+                                        class="form-label small mb-1"
+                                        for="{{ $idBaseLigacao }}-tipo-incorporacao"
+                                        data-etiqueta-tipo-incorporacao
+                                    >
+                                        Tipo de incorporação
+                                    </label>
+
+                                    <select
+                                        id="{{ $idBaseLigacao }}-tipo-incorporacao"
+                                        name="{{ $nomeBaseCampo }}[ligacoes][{{ $indiceLigacao }}][tipo_incorporacao]"
+                                        class="form-select form-select-sm @error($chaveTipoIncorporacao) is-invalid @enderror"
+                                        data-campo-tipo-incorporacao
+                                    >
+                                        <option value="" @selected(($ligacao['tipo_incorporacao'] ?? null) === null)>Automático</option>
+                                        <option value="video" @selected(($ligacao['tipo_incorporacao'] ?? null) === 'video')>Vídeo</option>
+                                        <option value="playlist" @selected(($ligacao['tipo_incorporacao'] ?? null) === 'playlist')>Playlist</option>
+                                    </select>
+
+                                    @error($chaveTipoIncorporacao)
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                </div>
+
+                                <div class="col-lg-8">
+                                    <label
+                                        class="form-label small mb-1"
+                                        for="{{ $idBaseLigacao }}-url-incorporacao-alternativa"
+                                        data-etiqueta-url-incorporacao-alternativa
+                                    >
+                                        URL de incorporação alternativa (opcional)
+                                    </label>
+
+                                    <input
+                                        id="{{ $idBaseLigacao }}-url-incorporacao-alternativa"
+                                        class="form-control form-control-sm @error($chaveUrlAlternativa) is-invalid @enderror"
+                                        type="url"
+                                        name="{{ $nomeBaseCampo }}[ligacoes][{{ $indiceLigacao }}][url_incorporacao_alternativa]"
+                                        value="{{ $ligacao['url_incorporacao_alternativa'] ?? '' }}"
+                                        placeholder="https://www.youtube.com/..."
+                                        maxlength="{{ $comprimentoMaximoLigacao }}"
+                                        data-campo-url-incorporacao-alternativa
+                                    >
+
+                                    @error($chaveUrlAlternativa)
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <button
+                                class="btn btn-sm btn-secondary mt-3"
+                                type="button"
+                                data-acao-ligacao-seccao="testar"
+                            >
+                                <i class="bi bi-play-circle" aria-hidden="true"></i>
+                                Testar incorporação
+                            </button>
+
+                            <div class="mt-3" data-resultado-teste-incorporacao hidden>
+                                <p class="small text-muted" data-estado-teste-incorporacao aria-live="polite"></p>
+                                <div class="row">
+                                    <div class="col-lg-8 col-xl-6">
+                                        <div class="ratio ratio-16x9" data-previsualizacao-incorporacao></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -953,6 +1031,74 @@
 
                             <div class="small text-muted">
                                 Quando suportado.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        class="mt-3 border-top pt-3"
+                        data-configuracao-incorporacao-youtube
+                        hidden
+                    >
+                        <div class="row g-3">
+                            <div class="col-lg-4">
+                                <label
+                                    class="form-label small mb-1"
+                                    for="seccoes-{{ $indice }}-ligacao-__INDICE_LIGACAO__-tipo-incorporacao"
+                                    data-etiqueta-tipo-incorporacao
+                                >
+                                    Tipo de incorporação
+                                </label>
+
+                                <select
+                                    id="seccoes-{{ $indice }}-ligacao-__INDICE_LIGACAO__-tipo-incorporacao"
+                                    class="form-select form-select-sm"
+                                    name="{{ $nomeBaseCampo }}[ligacoes][__INDICE_LIGACAO__][tipo_incorporacao]"
+                                    data-campo-tipo-incorporacao
+                                >
+                                    <option value="" selected>Automático</option>
+                                    <option value="video">Vídeo</option>
+                                    <option value="playlist">Playlist</option>
+                                </select>
+                            </div>
+
+                            <div class="col-lg-8">
+                                <label
+                                    class="form-label small mb-1"
+                                    for="seccoes-{{ $indice }}-ligacao-__INDICE_LIGACAO__-url-incorporacao-alternativa"
+                                    data-etiqueta-url-incorporacao-alternativa
+                                >
+                                    URL de incorporação alternativa (opcional)
+                                </label>
+
+                                <input
+                                    id="seccoes-{{ $indice }}-ligacao-__INDICE_LIGACAO__-url-incorporacao-alternativa"
+                                    class="form-control form-control-sm"
+                                    type="url"
+                                    name="{{ $nomeBaseCampo }}[ligacoes][__INDICE_LIGACAO__][url_incorporacao_alternativa]"
+                                    value=""
+                                    placeholder="https://www.youtube.com/..."
+                                    maxlength="{{ $comprimentoMaximoLigacao }}"
+                                    data-campo-url-incorporacao-alternativa
+                                >
+                            </div>
+                        </div>
+
+                        <button
+                            class="btn btn-sm btn-secondary mt-3"
+                            type="button"
+                            data-acao-ligacao-seccao="testar"
+                        >
+                            <i class="bi bi-play-circle" aria-hidden="true"></i>
+                            Testar incorporação
+                        </button>
+
+                        <div class="mt-3" data-resultado-teste-incorporacao hidden>
+                            <p class="small text-muted" data-estado-teste-incorporacao aria-live="polite"></p>
+                            <div class="row">
+                                <div class="col-lg-8 col-xl-6">
+                                    <div class="ratio ratio-16x9" data-previsualizacao-incorporacao></div>
+                                </div>
                             </div>
                         </div>
                     </div>

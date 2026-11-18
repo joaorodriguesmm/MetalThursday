@@ -41,6 +41,11 @@ final class RenderizadorIncorporacoesTest extends TestCase
         );
 
         $this->assertStringContainsString(
+            'referrerpolicy="strict-origin-when-cross-origin"',
+            $conteudo,
+        );
+
+        $this->assertStringContainsString(
             'Abrir no YouTube / YouTube Music',
             $conteudo,
         );
@@ -68,6 +73,221 @@ final class RenderizadorIncorporacoesTest extends TestCase
             'https://www.youtube-nocookie.com/embed/videoseries?list=PL1234567890&amp;rel=0',
             $conteudo,
         );
+
+        $this->assertStringContainsString(
+            'referrerpolicy="strict-origin-when-cross-origin"',
+            $conteudo,
+        );
+    }
+
+    /**
+     * Confirma a incorporação de vídeos provenientes do YouTube Music.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function youtube_music_incorpora_video_quando_url_e_compativel(): void
+    {
+        $conteudo = app(
+            RenderizadorIncorporacoes::class,
+        )->renderizarLigacao(
+            $this->criarLigacao(
+                PlataformaLigacao::YouTube,
+                'https://music.youtube.com/watch?v=dQw4w9WgXcQ',
+                true,
+            ),
+        )->toHtml();
+
+        $this->assertStringContainsString(
+            'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0',
+            $conteudo,
+        );
+    }
+
+    /**
+     * Confirma a incorporação de playlists provenientes do YouTube Music.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function youtube_music_incorpora_lista_reproducao_quando_url_e_compativel(): void
+    {
+        $conteudo = app(
+            RenderizadorIncorporacoes::class,
+        )->renderizarLigacao(
+            $this->criarLigacao(
+                PlataformaLigacao::YouTube,
+                'https://music.youtube.com/playlist?list=OLAK5uy_Test1234567890',
+                true,
+            ),
+        )->toHtml();
+
+        $this->assertStringContainsString(
+            'https://www.youtube-nocookie.com/embed/videoseries?list=OLAK5uy_Test1234567890&amp;rel=0',
+            $conteudo,
+        );
+    }
+
+    /**
+     * A escolha explícita de playlist prevalece sobre o vídeo do mesmo URL.
+     */
+    #[Test]
+    public function youtube_permite_escolher_playlist_quando_url_tem_video_e_lista(): void
+    {
+        $ligacao = $this->criarLigacao(
+            PlataformaLigacao::YouTube,
+            'https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL1234567890',
+            true,
+        );
+
+        $ligacao->tipo_incorporacao = 'playlist';
+
+        $conteudo = app(RenderizadorIncorporacoes::class)
+            ->renderizarLigacao($ligacao)
+            ->toHtml();
+
+        $this->assertStringContainsString(
+            'https://www.youtube-nocookie.com/embed/videoseries?list=PL1234567890&amp;rel=0',
+            $conteudo,
+        );
+
+        $this->assertStringNotContainsString(
+            '/embed/dQw4w9WgXcQ',
+            $conteudo,
+        );
+    }
+
+    /**
+     * Sem escolha manual continua a ser dada prioridade ao vídeo.
+     */
+    #[Test]
+    public function youtube_preserva_preferencia_automatica_por_video(): void
+    {
+        $ligacao = $this->criarLigacao(
+            PlataformaLigacao::YouTube,
+            'https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL1234567890',
+            true,
+        );
+
+        $conteudo = app(RenderizadorIncorporacoes::class)
+            ->renderizarLigacao($ligacao)
+            ->toHtml();
+
+        $this->assertStringContainsString(
+            '/embed/dQw4w9WgXcQ?rel=0',
+            $conteudo,
+        );
+    }
+
+    /**
+     * A palavra videoseries não pode ser confundida com um identificador.
+     */
+    #[Test]
+    public function youtube_reconhece_url_de_incorporacao_de_playlist(): void
+    {
+        $ligacao = $this->criarLigacao(
+            PlataformaLigacao::YouTube,
+            'https://www.youtube.com/embed/videoseries?list=PL1234567890',
+            true,
+        );
+
+        $conteudo = app(RenderizadorIncorporacoes::class)
+            ->renderizarLigacao($ligacao)
+            ->toHtml();
+
+        $this->assertStringContainsString(
+            '/embed/videoseries?list=PL1234567890&amp;rel=0',
+            $conteudo,
+        );
+
+        $this->assertStringNotContainsString(
+            '/embed/videoseries?rel=0',
+            $conteudo,
+        );
+    }
+
+    /**
+     * A incorporação alternativa nunca substitui a ligação original.
+     */
+    #[Test]
+    public function youtube_incorpora_alternativa_mantendo_ligacao_original(): void
+    {
+        $original = 'https://music.youtube.com/playlist?list=OLAK5uy_Test1234567890';
+
+        $ligacao = $this->criarLigacao(
+            PlataformaLigacao::YouTube,
+            $original,
+            true,
+        );
+
+        $ligacao->tipo_incorporacao = 'video';
+        $ligacao->url_incorporacao_alternativa = 'https://youtu.be/dQw4w9WgXcQ';
+
+        $conteudo = app(RenderizadorIncorporacoes::class)
+            ->renderizarLigacao($ligacao)
+            ->toHtml();
+
+        $this->assertStringContainsString(
+            '/embed/dQw4w9WgXcQ?rel=0',
+            $conteudo,
+        );
+
+        $this->assertStringContainsString(
+            'href="'.$original.'"',
+            $conteudo,
+        );
+    }
+
+    /**
+     * O host alternativo não pode introduzir conteúdo arbitrário num iframe.
+     */
+    #[Test]
+    public function youtube_nao_incorpora_alternativa_de_dominio_falso(): void
+    {
+        $ligacao = $this->criarLigacao(
+            PlataformaLigacao::YouTube,
+            'https://www.youtube.com/playlist?list=PL1234567890',
+            true,
+        );
+
+        $ligacao->url_incorporacao_alternativa = 'https://youtube.com.exemplo.test/watch?v=dQw4w9WgXcQ';
+
+        $conteudo = app(RenderizadorIncorporacoes::class)
+            ->renderizarLigacao($ligacao)
+            ->toHtml();
+
+        $this->assertStringNotContainsString(
+            '<iframe',
+            $conteudo,
+        );
+
+        $this->assertStringContainsString(
+            'href="https://www.youtube.com/playlist?list=PL1234567890"',
+            $conteudo,
+        );
+    }
+
+    /**
+     * Desativar a incorporação prevalece sobre quaisquer escolhas guardadas.
+     */
+    #[Test]
+    public function youtube_nao_incorpora_alternativa_quando_desativado(): void
+    {
+        $ligacao = $this->criarLigacao(
+            PlataformaLigacao::YouTube,
+            'https://music.youtube.com/playlist?list=OLAK5uy_Test1234567890',
+            false,
+        );
+
+        $ligacao->tipo_incorporacao = 'video';
+        $ligacao->url_incorporacao_alternativa = 'https://youtu.be/dQw4w9WgXcQ';
+
+        $conteudo = app(RenderizadorIncorporacoes::class)
+            ->renderizarLigacao($ligacao)
+            ->toHtml();
+
+        $this->assertStringNotContainsString('<iframe', $conteudo);
+        $this->assertStringContainsString('Abrir no YouTube', $conteudo);
     }
 
     /**

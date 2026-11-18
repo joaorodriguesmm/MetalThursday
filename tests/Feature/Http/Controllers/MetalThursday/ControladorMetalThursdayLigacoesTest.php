@@ -121,6 +121,102 @@ final class ControladorMetalThursdayLigacoesTest extends TestCase
     }
 
     /**
+     * Guarda a escolha de playlist e um leitor alternativo sem alterar o URL público.
+     */
+    #[Test]
+    public function publica_ligacao_youtube_com_incorporacao_alternativa(): void
+    {
+        [
+            $administrador,
+            $proximoNomeado,
+            $tipoSeccao,
+            $artista,
+        ] = $this->prepararContexto();
+
+        $original = 'https://music.youtube.com/playlist?list=OLAK5uy_Test1234567890';
+        $alternativa = 'https://www.youtube.com/playlist?list=PL1234567890';
+
+        $this
+            ->actingAs(
+                Utilizador::factory()->comPapel(PapelUtilizador::SuperAdministrador)->create(),
+                'sessao',
+            )
+            ->postJson(
+                route('metal-thursday.guardar'),
+                $this->dadosPublicacao(
+                    $administrador,
+                    $proximoNomeado,
+                    $tipoSeccao,
+                    $artista,
+                    [
+                        [
+                            'url' => $original,
+                            'etiqueta' => null,
+                            'incorporar' => true,
+                            'tipo_incorporacao' => 'playlist',
+                            'url_incorporacao_alternativa' => $alternativa,
+                        ],
+                    ],
+                ),
+            )
+            ->assertCreated();
+
+        $this->assertDatabaseHas(
+            'ligacoes_seccao_metal_thursday',
+            [
+                'url' => $original,
+                'plataforma' => 'youtube',
+                'tipo_incorporacao' => 'playlist',
+                'url_incorporacao_alternativa' => $alternativa,
+            ],
+        );
+    }
+
+    /**
+     * A validação HTTP impede um URL alternativo de domínio estranho.
+     */
+    #[Test]
+    public function rejeita_incorporacao_alternativa_de_dominio_falso(): void
+    {
+        [
+            $administrador,
+            $proximoNomeado,
+            $tipoSeccao,
+            $artista,
+        ] = $this->prepararContexto();
+
+        $this
+            ->actingAs(
+                Utilizador::factory()->comPapel(PapelUtilizador::SuperAdministrador)->create(),
+                'sessao',
+            )
+            ->postJson(
+                route('metal-thursday.guardar'),
+                $this->dadosPublicacao(
+                    $administrador,
+                    $proximoNomeado,
+                    $tipoSeccao,
+                    $artista,
+                    [
+                        [
+                            'url' => 'https://music.youtube.com/playlist?list=OLAK5uy_Test1234567890',
+                            'etiqueta' => null,
+                            'incorporar' => true,
+                            'tipo_incorporacao' => 'video',
+                            'url_incorporacao_alternativa' => 'https://youtube.com.exemplo.test/watch?v=dQw4w9WgXcQ',
+                        ],
+                    ],
+                ),
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'seccoes.0.ligacoes.0.url_incorporacao_alternativa',
+            ]);
+
+        $this->assertDatabaseCount('ligacoes_seccao_metal_thursday', 0);
+    }
+
+    /**
      * Confirma que uma secção musical final pode não possuir ligações.
      *
      * @since 2.0.0

@@ -385,6 +385,58 @@ describe(
                 ).toBe('Outro');
             },
         );
+
+        it(
+            'testa uma playlist, invalida o leitor e reindexa a escolha',
+            () => {
+                const gestor = new GestorLigacoesSecao(
+                    document.getElementById('seccao-5'),
+                );
+
+                const linha = gestor.obterLinhas()[0];
+                const original = linha.querySelector('[data-campo-url-ligacao]');
+                const incorporar = linha.querySelector('[data-campo-incorporar-ligacao]');
+                const tipo = linha.querySelector('[data-campo-tipo-incorporacao]');
+                const alternativa = linha.querySelector('[data-campo-url-incorporacao-alternativa]');
+
+                original.value = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL1234567890';
+                original.dispatchEvent(new Event('input', { bubbles: true }));
+
+                incorporar.checked = true;
+                incorporar.dispatchEvent(new Event('change', { bubbles: true }));
+
+                expect(
+                    linha.querySelector('[data-configuracao-incorporacao-youtube]').hidden,
+                ).toBe(false);
+
+                tipo.value = 'playlist';
+                tipo.dispatchEvent(new Event('change', { bubbles: true }));
+
+                linha.querySelector('[data-acao-ligacao-seccao="testar"]').click();
+
+                expect(
+                    linha.querySelector('[data-previsualizacao-incorporacao] iframe')
+                        .src,
+                ).toContain('/embed/videoseries?list=PL1234567890');
+
+                alternativa.value = 'https://youtu.be/M7lc1UVf-VE';
+                alternativa.dispatchEvent(new Event('input', { bubbles: true }));
+
+                expect(
+                    linha.querySelector('[data-previsualizacao-incorporacao] iframe'),
+                ).toBeNull();
+
+                expect(tipo.value).toBe('');
+
+                gestor.mover(
+                    linha.querySelector('[data-acao-ligacao-seccao="descer"]'),
+                    1,
+                );
+
+                expect(tipo.name).toBe('seccoes[5][ligacoes][1][tipo_incorporacao]');
+                expect(alternativa.name).toBe('seccoes[5][ligacoes][1][url_incorporacao_alternativa]');
+            },
+        );
     },
 );
 
@@ -464,6 +516,25 @@ function criarLinhaLigacao(
             >
                 Incorporar
             </label>
+
+            <div data-configuracao-incorporacao-youtube hidden>
+                <label data-etiqueta-tipo-incorporacao>Tipo</label>
+                <select data-campo-tipo-incorporacao>
+                    <option value="">Automático</option>
+                    <option value="video">Vídeo</option>
+                    <option value="playlist">Playlist</option>
+                </select>
+
+                <label data-etiqueta-url-incorporacao-alternativa>Alternativa</label>
+                <input type="url" data-campo-url-incorporacao-alternativa>
+
+                <button type="button" data-acao-ligacao-seccao="testar">Testar</button>
+
+                <div data-resultado-teste-incorporacao hidden>
+                    <p data-estado-teste-incorporacao></p>
+                    <div data-previsualizacao-incorporacao></div>
+                </div>
+            </div>
 
             <button
                 type="button"

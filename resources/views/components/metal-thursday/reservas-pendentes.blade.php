@@ -96,7 +96,7 @@
 
                         @if ($itemPorPublicar['rotaPreVisualizacao'] !== null)
                             <a
-                                class="btn btn-outline-primary mt-3"
+                                class="btn btn-primary mt-3"
                                 href="{{ $itemPorPublicar['rotaPreVisualizacao'] }}"
                             >
                                 <i

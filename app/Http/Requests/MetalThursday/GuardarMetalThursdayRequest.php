@@ -448,7 +448,7 @@ final class GuardarMetalThursdayRequest extends FormRequest
             'seccoes.*.ligacoes.*' => [
                 'bail',
                 'required',
-                'array:url,etiqueta,incorporar',
+                'array:url,etiqueta,incorporar,tipo_incorporacao,url_incorporacao_alternativa',
             ],
             'seccoes.*.ligacoes.*.url' => [
                 'bail',
@@ -472,6 +472,20 @@ final class GuardarMetalThursdayRequest extends FormRequest
                 'bail',
                 'required',
                 'boolean',
+            ],
+            'seccoes.*.ligacoes.*.tipo_incorporacao' => [
+                'bail',
+                'nullable',
+                'string',
+                Rule::in(LigacaoSeccaoMetalThursday::TIPOS_INCORPORACAO_YOUTUBE),
+            ],
+            'seccoes.*.ligacoes.*.url_incorporacao_alternativa' => [
+                'bail',
+                'nullable',
+                'string',
+                $this->criarRegraLigacao(),
+                'url:http,https',
+                'max:'.LigacaoSeccaoMetalThursday::COMPRIMENTO_MAXIMO_URL,
             ],
             'seccoes.*.ano' => [
                 'bail',
@@ -1512,22 +1526,59 @@ final class GuardarMetalThursdayRequest extends FormRequest
             if (
                 ! is_string($url)
                 || $validador->errors()->has($campoUrl)
-                || $servico->detetarPlataforma($url)
-                    !== PlataformaLigacao::Outro
-                || ! $this->valorEstaVazio(
-                    $ligacao['etiqueta']
-                        ?? null,
-                )
             ) {
                 continue;
             }
 
-            $validador
-                ->errors()
-                ->add(
+            $plataforma = $servico->detetarPlataforma($url);
+
+            if (
+                $plataforma === PlataformaLigacao::Outro
+                && $this->valorEstaVazio(
+                    $ligacao['etiqueta']
+                        ?? null,
+                )
+            ) {
+                $validador->errors()->add(
                     $prefixo.'.ligacoes.'.$indice.'.etiqueta',
                     'Indica uma etiqueta para a ligação personalizada.',
                 );
+            }
+
+            $tipo = $ligacao['tipo_incorporacao'] ?? null;
+            $alternativa = $ligacao['url_incorporacao_alternativa'] ?? null;
+
+            if ($plataforma !== PlataformaLigacao::YouTube) {
+                if (! $this->valorEstaVazio($tipo)) {
+                    $validador->errors()->add(
+                        $prefixo.'.ligacoes.'.$indice.'.tipo_incorporacao',
+                        'A escolha manual de incorporação só está disponível para o YouTube.',
+                    );
+                }
+
+                if (! $this->valorEstaVazio($alternativa)) {
+                    $validador->errors()->add(
+                        $prefixo.'.ligacoes.'.$indice.'.url_incorporacao_alternativa',
+                        'A incorporação alternativa só está disponível para o YouTube.',
+                    );
+                }
+
+                continue;
+            }
+
+            $campoAlternativa = $prefixo.'.ligacoes.'.$indice.'.url_incorporacao_alternativa';
+
+            if (
+                is_string($alternativa)
+                && ! $this->valorEstaVazio($alternativa)
+                && ! $validador->errors()->has($campoAlternativa)
+                && ! $servico->eUrlIncorporacaoYouTube($alternativa)
+            ) {
+                $validador->errors()->add(
+                    $campoAlternativa,
+                    'A incorporação alternativa deve utilizar um endereço do YouTube.',
+                );
+            }
         }
     }
 

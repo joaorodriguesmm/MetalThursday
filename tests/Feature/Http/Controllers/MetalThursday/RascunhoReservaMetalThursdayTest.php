@@ -174,6 +174,8 @@ final class RascunhoReservaMetalThursdayTest extends TestCase
                                     'url' => 'https://',
                                     'etiqueta' => '  Por   completar  ',
                                     'incorporar' => '1',
+                                    'tipo_incorporacao' => 'playlist',
+                                    'url_incorporacao_alternativa' => 'https://www.youtube.com/playlist?list=PL1234567890',
                                 ],
                                 [
                                     'url' => '',
@@ -221,6 +223,8 @@ final class RascunhoReservaMetalThursdayTest extends TestCase
                             'url' => 'https://',
                             'etiqueta' => 'Por completar',
                             'incorporar' => true,
+                            'tipo_incorporacao' => 'playlist',
+                            'url_incorporacao_alternativa' => 'https://www.youtube.com/playlist?list=PL1234567890',
                         ],
                         [
                             'url' => null,
