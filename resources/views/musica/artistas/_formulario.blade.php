@@ -66,13 +66,20 @@
     @endif
 
     <div class="grupo-campo-formulario mb-3">
-        <label
-            class="form-label"
-            for="nome-artista"
-        >
-            Nome
-            <span class="text-danger" aria-hidden="true">*</span>
-        </label>
+        <div class="d-flex align-items-start gap-2 mb-2">
+            <label
+                class="form-label mb-0"
+                for="nome-artista"
+            >
+                Nome
+                <span class="text-danger" aria-hidden="true">*</span>
+            </label>
+
+            <x-ajuda-campo
+                campo="Nome"
+                texto="Utiliza o nome artístico habitual, sem acrescentar país ou género. O sistema avisa se existirem possíveis homónimos."
+            />
+        </div>
 
         <input
             id="nome-artista"
@@ -101,13 +108,19 @@
     </div>
 
     <div class="grupo-campo-formulario mb-3">
-        <label
-            class="form-label"
-            for="origem-geografica-artista"
-        >
-            Origem geográfica
-            <span class="fw-normal text-muted">(opcional)</span>
-        </label>
+        <div class="d-flex align-items-start gap-2 mb-2">
+            <label
+                class="form-label mb-0"
+                for="origem-geografica-artista"
+            >
+                Origem geográfica
+            </label>
+
+            <x-ajuda-campo
+                campo="Origem geográfica"
+                texto="Indica o país ou território de origem do artista. Deixa em branco se a informação não for conhecida."
+            />
+        </div>
 
         <select
             id="origem-geografica-artista"
@@ -146,13 +159,19 @@
     </div>
 
     <div class="grupo-campo-formulario mb-3">
-        <label
-            class="form-label"
-            for="generos-artista"
-        >
-            Géneros
-            <span class="fw-normal text-muted">(opcional)</span>
-        </label>
+        <div class="d-flex align-items-start gap-2 mb-2">
+            <label
+                class="form-label mb-0"
+                for="generos-artista"
+            >
+                Géneros
+            </label>
+
+            <x-ajuda-campo
+                campo="Géneros"
+                texto="Podes selecionar vários géneros musicais. Utiliza o botão de adicionar se o género pretendido ainda não existir."
+            />
+        </div>
 
         <div class="input-group has-validation">
             <select
@@ -244,6 +263,10 @@
                     : 'Apresentar campos adicionais'
             }}
         </button>
+
+        <p class="form-text mt-2 mb-0">
+            Datas, estado de atividade, biografia, imagem, importação de dados e ligações.
+        </p>
     </div>
 
     <div
@@ -262,10 +285,16 @@
 
             <div class="row">
                 <div class="col-md-4 grupo-campo-formulario mb-3">
-                    <label class="form-label" for="ano-inicio-atividade-artista">
-                        Ano de início
-                        <span class="fw-normal text-muted">(opcional)</span>
-                    </label>
+                    <div class="d-flex align-items-start gap-2 mb-2">
+                        <label class="form-label mb-0" for="ano-inicio-atividade-artista">
+                            Ano de início
+                        </label>
+
+                        <x-ajuda-campo
+                            campo="Ano de início"
+                            texto="Ano em que o artista iniciou a atividade, que pode ser anterior ao primeiro lançamento."
+                        />
+                    </div>
 
                     <input
                         id="ano-inicio-atividade-artista"
@@ -285,10 +314,16 @@
                 </div>
 
                 <div class="col-md-4 grupo-campo-formulario mb-3">
-                    <label class="form-label" for="ano-fim-atividade-artista">
-                        Ano de fim
-                        <span class="fw-normal text-muted">(opcional)</span>
-                    </label>
+                    <div class="d-flex align-items-start gap-2 mb-2">
+                        <label class="form-label mb-0" for="ano-fim-atividade-artista">
+                            Ano de fim
+                        </label>
+
+                        <x-ajuda-campo
+                            campo="Ano de fim"
+                            texto="Indica o ano em que a atividade terminou. Deixa em branco se não se aplicar ou se for desconhecido."
+                        />
+                    </div>
 
                     <input
                         id="ano-fim-atividade-artista"
@@ -308,10 +343,16 @@
                 </div>
 
                 <div class="col-md-4 grupo-campo-formulario mb-3">
-                    <label class="form-label" for="estado-atividade-artista">
-                        Estado de atividade
-                        <span class="fw-normal text-muted">(opcional)</span>
-                    </label>
+                    <div class="d-flex align-items-start gap-2 mb-2">
+                        <label class="form-label mb-0" for="estado-atividade-artista">
+                            Estado de atividade
+                        </label>
+
+                        <x-ajuda-campo
+                            campo="Estado de atividade"
+                            texto="Seleciona a situação atual do artista. Utiliza Não indicado quando não houver informação suficiente."
+                        />
+                    </div>
 
                     <select
                         id="estado-atividade-artista"
@@ -337,10 +378,16 @@
             </div>
 
             <div class="grupo-campo-formulario mb-3">
-                <label class="form-label" for="biografia-artista">
-                    Biografia
-                    <span class="fw-normal text-muted">(opcional)</span>
-                </label>
+                <div class="d-flex align-items-start gap-2 mb-2">
+                    <label class="form-label mb-0" for="biografia-artista">
+                        Biografia
+                    </label>
+
+                    <x-ajuda-campo
+                        campo="Biografia"
+                        texto="Escreve uma síntese factual da história e evolução do artista, evitando repetir os dados dos restantes campos."
+                    />
+                </div>
 
                 <textarea
                     id="biografia-artista"
@@ -356,10 +403,17 @@
             </div>
 
             <div class="grupo-campo-formulario mb-3">
-                <label class="form-label" for="imagem-artista">
-                    Imagem
-                    <span class="fw-normal text-muted">(URL externa, opcional)</span>
-                </label>
+                <div class="d-flex align-items-start gap-2 mb-2">
+                    <label class="form-label mb-0" for="imagem-artista">
+                        Imagem
+                        <span class="fw-normal text-muted">(URL externa)</span>
+                    </label>
+
+                    <x-ajuda-campo
+                        campo="Imagem"
+                        texto="Indica o endereço de uma imagem pública do artista. Este campo também pode ser preenchido automaticamente através da importação de dados."
+                    />
+                </div>
 
                 <input
                     id="imagem-artista"
@@ -373,9 +427,6 @@
                     autocomplete="url"
                 >
 
-                <div class="form-text">
-                    A imagem não é carregada nem guardada no servidor do MetalThursday.
-                </div>
 
                 @error('imagem')
                     <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -412,6 +463,7 @@
                                     value="{{ $ligacaoFormulario['titulo'] }}"
                                     maxlength="{{ App\Models\Comum\Ligacao::COMPRIMENTO_MAXIMO_TITULO }}"
                                     placeholder="Ex.: Site oficial"
+                                    aria-label="Título da ligação"
                                     data-campo-ligacao="titulo"
                                 >
                             </div>
@@ -425,6 +477,7 @@
                                     maxlength="{{ App\Models\Comum\Ligacao::COMPRIMENTO_MAXIMO_URL }}"
                                     placeholder="https://..."
                                     inputmode="url"
+                                    aria-label="Endereço da ligação"
                                     data-campo-ligacao="url"
                                 >
                             </div>
@@ -452,6 +505,7 @@
                                 name="ligacoes[__INDICE__][titulo]"
                                 maxlength="{{ App\Models\Comum\Ligacao::COMPRIMENTO_MAXIMO_TITULO }}"
                                 placeholder="Ex.: Site oficial"
+                                aria-label="Título da ligação"
                                 data-campo-ligacao="titulo"
                             >
                         </div>
@@ -464,6 +518,7 @@
                                 maxlength="{{ App\Models\Comum\Ligacao::COMPRIMENTO_MAXIMO_URL }}"
                                 placeholder="https://..."
                                 inputmode="url"
+                                aria-label="Endereço da ligação"
                                 data-campo-ligacao="url"
                             >
                         </div>

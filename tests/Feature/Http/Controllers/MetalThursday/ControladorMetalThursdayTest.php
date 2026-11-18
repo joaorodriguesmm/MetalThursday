@@ -2617,13 +2617,13 @@ final class ControladorMetalThursdayTest extends TestCase
     }
 
     /**
-     * Confirma que a criação rápida de artistas apresenta a origem geográfica
-     * como opcional.
+     * Confirma que a criação rápida de artistas não exige origem geográfica
+     * nem apresenta indicações redundantes na etiqueta.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function modal_criacao_artista_apresenta_origem_geografica_como_opcional(): void
+    public function modal_criacao_artista_nao_exige_origem_geografica(): void
     {
         $administrador = Utilizador::factory()
             ->comPapel(
@@ -2647,7 +2647,7 @@ final class ControladorMetalThursdayTest extends TestCase
             ->assertSee(
                 'Origem geográfica',
             )
-            ->assertSee(
+            ->assertDontSee(
                 '(opcional)',
             );
 

@@ -134,7 +134,7 @@
                             Fotografia
 
                             <span class="fw-normal">
-                                (opcional, máximo de 10 MB)
+                                (máximo de 10 MB)
                             </span>
                         </label>
 

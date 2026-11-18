@@ -2070,13 +2070,13 @@ final class ControladorArtistaTest extends TestCase
     }
 
     /**
-     * Confirma que a origem geográfica é apresentada como opcional nos
-     * formulários de criação e edição.
+     * Confirma que a origem geográfica não é obrigatória nos formulários
+     * de criação e edição.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function formularios_apresentam_origem_geografica_como_opcional(): void
+    public function formularios_nao_exigem_origem_geografica(): void
     {
         $utilizador = $this->criarUtilizador();
 
@@ -2114,7 +2114,7 @@ final class ControladorArtistaTest extends TestCase
                 ->assertSee(
                     'Origem geográfica',
                 )
-                ->assertSee(
+                ->assertDontSee(
                     '(opcional)',
                 );
 
@@ -2126,13 +2126,13 @@ final class ControladorArtistaTest extends TestCase
     }
 
     /**
-     * Confirma que os géneros são apresentados como opcionais nos formulários de
+     * Confirma que os géneros não são obrigatórios nos formulários de
      * criação e edição.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function formularios_apresentam_generos_como_opcionais(): void
+    public function formularios_nao_exigem_generos(): void
     {
         $utilizador = $this->criarUtilizador();
 
@@ -2166,9 +2166,11 @@ final class ControladorArtistaTest extends TestCase
             $resposta->assertOk();
 
             self::assertMatchesRegularExpression(
-                '/<label\b(?=[^>]*\bfor="generos-artista")[^>]*>(?:(?!<\/label>).)*Géneros(?:(?!<\/label>).)*\(opcional\)(?:(?!<\/label>).)*<\/label>/s',
+                '/<label\b(?=[^>]*\bfor="generos-artista")[^>]*>(?:(?!<\/label>).)*Géneros(?:(?!<\/label>).)*<\/label>/s',
                 $resposta->getContent(),
             );
+
+            $resposta->assertDontSee('(opcional)');
 
             self::assertDoesNotMatchRegularExpression(
                 '/<select\b(?=[^>]*\bid="generos-artista")[^>]*\brequired\b[^>]*>/s',

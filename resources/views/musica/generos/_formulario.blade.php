@@ -73,9 +73,6 @@
         >
             Géneros pais
 
-            <span class="fw-normal text-muted">
-                (opcional)
-            </span>
         </label>
 
         <input

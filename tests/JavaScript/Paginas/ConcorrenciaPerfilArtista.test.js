@@ -260,7 +260,7 @@ describe('B25.13 — concorrencia na pesquisa de artistas', () => {
         expect(resultados.textContent).toContain('Slayer');
 
         expect(estado.textContent).toContain(
-            'Seleciona o artista correto.',
+            'Seleciona o artista correto para preencher os campos.',
         );
 
         expect(

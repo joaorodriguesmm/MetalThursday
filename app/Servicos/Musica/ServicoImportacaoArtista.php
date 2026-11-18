@@ -39,12 +39,15 @@ final class ServicoImportacaoArtista
      * @since 2.0.0
      */
     private const CATEGORIAS_LIGACOES_PERMITIDAS = [
-        'site_oficial',
-        'bandcamp',
-        'youtube',
-        'spotify',
         'apple_music',
+        'bandcamp',
+        'facebook',
+        'instagram',
         'metal_archives',
+        'site_oficial',
+        'spotify',
+        'youtube',
+        'youtube_music',
     ];
 
     /**
@@ -196,6 +199,11 @@ final class ServicoImportacaoArtista
             'url_discogs' => is_int($discogsId)
                 && $discogsId > 0
                 ? 'https://www.discogs.com/artist/'.$discogsId
+                : null,
+
+            'url_theaudiodb' => is_int($theAudioDB['id'] ?? null)
+                && $theAudioDB['id'] > 0
+                ? 'https://www.theaudiodb.com/artist/'.$theAudioDB['id']
                 : null,
 
             'fontes' => [
@@ -525,7 +533,7 @@ final class ServicoImportacaoArtista
      * Filtra e ordena as ligações externas pela lista branca da aplicação.
      *
      * A primeira ligação válida de cada categoria prevalece. A ordem final é
-     * estável e definida por CATEGORIAS_LIGACOES_PERMITIDAS.
+     * alfabética pelos títulos definidos em CATEGORIAS_LIGACOES_PERMITIDAS.
      *
      * @param  list<array{
      *     url: mixed,
@@ -661,6 +669,21 @@ final class ServicoImportacaoArtista
 
             $this->hostCorresponde(
                 $host,
+                'facebook.com',
+            ) => 'facebook',
+
+            $this->hostCorresponde(
+                $host,
+                'instagram.com',
+            ) => 'instagram',
+
+            $this->hostCorresponde(
+                $host,
+                'music.youtube.com',
+            ) => 'youtube_music',
+
+            $this->hostCorresponde(
+                $host,
                 'youtube.com',
             ),
             $this->hostCorresponde(
@@ -713,8 +736,12 @@ final class ServicoImportacaoArtista
             'site_oficial' => 'Site oficial',
 
             'bandcamp' => 'Bandcamp',
+            'facebook' => 'Facebook',
+            'instagram' => 'Instagram',
 
             'youtube' => 'YouTube',
+
+            'youtube_music' => 'YouTube Music',
 
             'spotify' => 'Spotify',
 

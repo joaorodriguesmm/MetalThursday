@@ -226,9 +226,6 @@
             <label class="form-label">
                 <strong>Discogs</strong>
 
-                <span class="badge text-bg-secondary ms-1">
-                    Opcional
-                </span>
             </label>
 
             <button
@@ -608,9 +605,6 @@
                 <div>
                     <strong>Ligações</strong>
 
-                    <span class="badge text-bg-secondary ms-1">
-                        Opcional
-                    </span>
 
                     <button
                         class="btn btn-sm btn-secondary align-baseline ms-1"

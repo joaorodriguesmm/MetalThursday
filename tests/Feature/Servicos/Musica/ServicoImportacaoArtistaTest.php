@@ -274,9 +274,9 @@ final class ServicoImportacaoArtistaTest extends TestCase
         self::assertSame(
             [
                 [
-                    'titulo' => 'Site oficial',
+                    'titulo' => 'Apple Music',
 
-                    'url' => 'https://www.metallica.com/',
+                    'url' => 'https://music.apple.com/us/artist/metallica/3996865',
                 ],
                 [
                     'titulo' => 'Bandcamp',
@@ -284,9 +284,19 @@ final class ServicoImportacaoArtistaTest extends TestCase
                     'url' => 'https://metallica.bandcamp.com/',
                 ],
                 [
-                    'titulo' => 'YouTube',
+                    'titulo' => 'Instagram',
 
-                    'url' => 'https://www.youtube.com/@metallica',
+                    'url' => 'https://www.instagram.com/metallica/',
+                ],
+                [
+                    'titulo' => 'Metal Archives',
+
+                    'url' => 'https://www.metal-archives.com/bands/Metallica/125',
+                ],
+                [
+                    'titulo' => 'Site oficial',
+
+                    'url' => 'https://www.metallica.com/',
                 ],
                 [
                     'titulo' => 'Spotify',
@@ -294,14 +304,9 @@ final class ServicoImportacaoArtistaTest extends TestCase
                     'url' => 'https://open.spotify.com/artist/2ye2Wgw4gimLv2eAKyk1NB',
                 ],
                 [
-                    'titulo' => 'Apple Music',
+                    'titulo' => 'YouTube',
 
-                    'url' => 'https://music.apple.com/us/artist/metallica/3996865',
-                ],
-                [
-                    'titulo' => 'Metal Archives',
-
-                    'url' => 'https://www.metal-archives.com/bands/Metallica/125',
+                    'url' => 'https://www.youtube.com/@metallica',
                 ],
             ],
             $resultado['ligacoes'],

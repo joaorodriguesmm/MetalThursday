@@ -92,19 +92,26 @@ final class ClassificacaoLigacoesArtistaIntegracoesTest extends TestCase
             self::relacao('official homepage', self::SITE_OFICIAL),
         ]);
 
-        self::assertSame(
+        $esperadas = [
             [
-                [
-                    'titulo' => 'Site oficial',
-                    'url' => self::SITE_OFICIAL,
-                ],
-                [
-                    'titulo' => $titulo,
-                    'url' => $url,
-                ],
+                'titulo' => 'Site oficial',
+                'url' => self::SITE_OFICIAL,
             ],
-            $proposta['ligacoes'],
+            [
+                'titulo' => $titulo,
+                'url' => $url,
+            ],
+        ];
+
+        usort(
+            $esperadas,
+            static fn (array $primeira, array $segunda): int => strcmp(
+                $primeira['titulo'],
+                $segunda['titulo'],
+            ),
         );
+
+        self::assertSame($esperadas, $proposta['ligacoes']);
     }
 
     /**
@@ -121,6 +128,10 @@ final class ClassificacaoLigacoesArtistaIntegracoesTest extends TestCase
                 'https://www.youtube.com/@artista-exemplo',
                 'YouTube',
             ],
+            'youtube_music' => [
+                'https://music.youtube.com/channel/UC012345',
+                'YouTube Music',
+            ],
             'apple_music' => [
                 'https://music.apple.com/pt/artist/exemplo/12345',
                 'Apple Music',
@@ -134,6 +145,109 @@ final class ClassificacaoLigacoesArtistaIntegracoesTest extends TestCase
                 'Spotify',
             ],
         ];
+    }
+
+    #[Test]
+    public function facebook_e_instagram_sao_importados_por_ordem_alfabetica(): void
+    {
+        $facebook = 'https://www.facebook.com/artista-exemplo';
+        $instagram = 'https://www.instagram.com/artista.exemplo/';
+
+        $proposta = $this->obterProposta([
+            self::relacao('social network', $instagram),
+            self::relacao('social network', $facebook),
+            self::relacao('official homepage', self::SITE_OFICIAL),
+        ]);
+
+        self::assertSame(
+            [
+                ['titulo' => 'Facebook', 'url' => $facebook],
+                ['titulo' => 'Instagram', 'url' => $instagram],
+                ['titulo' => 'Site oficial', 'url' => self::SITE_OFICIAL],
+            ],
+            $proposta['ligacoes'],
+        );
+    }
+
+    #[Test]
+    public function dominios_enganadores_nao_sao_importados_como_redes_sociais(): void
+    {
+        $proposta = $this->obterProposta([
+            self::relacao('social network', 'https://www.facebook.com.exemplo.pt/artista'),
+            self::relacao('social network', 'https://instagram.com.exemplo.pt/artista'),
+            self::relacao('official homepage', self::SITE_OFICIAL),
+        ]);
+
+        self::assertSame(
+            [['titulo' => 'Site oficial', 'url' => self::SITE_OFICIAL]],
+            $proposta['ligacoes'],
+        );
+    }
+
+    #[Test]
+    public function youtube_e_youtube_music_sao_importados_separadamente(): void
+    {
+        $youtube = 'https://www.youtube.com/@artista-exemplo';
+        $youtubeMusic = 'https://music.youtube.com/channel/UC012345';
+
+        $proposta = $this->obterProposta([
+            self::relacao('video channel', $youtubeMusic),
+            self::relacao('video channel', $youtube),
+            self::relacao('official homepage', self::SITE_OFICIAL),
+        ]);
+
+        self::assertSame(
+            [
+                ['titulo' => 'Site oficial', 'url' => self::SITE_OFICIAL],
+                ['titulo' => 'YouTube', 'url' => $youtube],
+                ['titulo' => 'YouTube Music', 'url' => $youtubeMusic],
+            ],
+            $proposta['ligacoes'],
+        );
+    }
+
+    #[Test]
+    public function dominio_enganador_nao_e_importado_como_youtube_music(): void
+    {
+        $proposta = $this->obterProposta([
+            self::relacao(
+                'video channel',
+                'https://music.youtube.com.exemplo.pt/channel/UC012345',
+            ),
+            self::relacao('official homepage', self::SITE_OFICIAL),
+        ]);
+
+        self::assertSame(
+            [['titulo' => 'Site oficial', 'url' => self::SITE_OFICIAL]],
+            $proposta['ligacoes'],
+        );
+    }
+
+    #[Test]
+    public function proposta_apresenta_url_theaudiodb_quando_existe_id(): void
+    {
+        Http::fake([
+            'https://musicbrainz.org/ws/2/artist/'.self::MBID.'*' => Http::response([
+                'id' => self::MBID,
+                'name' => 'Artista de teste',
+                'relations' => [],
+            ]),
+            'https://www.theaudiodb.com/api/v1/json/123/artist-mb.php*' => Http::response([
+                'artists' => [[
+                    'idArtist' => '123456',
+                    'strMusicBrainzID' => self::MBID,
+                    'strArtist' => 'Artista de teste',
+                ]],
+            ]),
+        ]);
+
+        $proposta = app(ServicoImportacaoArtista::class)
+            ->obterProposta(self::MBID);
+
+        self::assertSame(
+            'https://www.theaudiodb.com/artist/123456',
+            $proposta['url_theaudiodb'],
+        );
     }
 
     #[Test]

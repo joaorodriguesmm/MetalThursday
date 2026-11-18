@@ -1138,20 +1138,21 @@ function apresentarResultadosImportacao(
                 );
             }
 
-            const referencia =
-                document.createElement(
-                    'div',
+            const ligacaoMusicBrainz =
+                criarLigacaoExterna(
+                    'Abrir no MusicBrainz',
+                    `https://musicbrainz.org/artist/${encodeURIComponent(resultado.mbid.trim())}`,
                 );
 
-            referencia.className =
-                'small text-muted mt-1 text-truncate';
+            if (ligacaoMusicBrainz !== null) {
+                ligacaoMusicBrainz.classList.add(
+                    'mt-2',
+                );
 
-            referencia.textContent =
-                `MusicBrainz ${resultado.mbid.trim()}`;
-
-            texto.append(
-                referencia,
-            );
+                texto.append(
+                    ligacaoMusicBrainz,
+                );
+            }
 
             const botao =
                 document.createElement(
@@ -1442,64 +1443,6 @@ function apresentarAssociacaoImportacao(
         nome,
     );
 
-    if (
-        typeof artista.musicbrainz_id === 'string'
-        && artista.musicbrainz_id.trim() !== ''
-    ) {
-        const referencia =
-            document.createElement(
-                'div',
-            );
-
-        referencia.className =
-            'small text-secondary mt-1';
-
-        referencia.textContent =
-            `MusicBrainz ${artista.musicbrainz_id.trim()}`;
-
-        identidade.append(
-            referencia,
-        );
-    }
-
-    const fontes =
-        eObjeto(
-            artista.fontes,
-        )
-            ? artista.fontes
-            : {};
-
-    const nomesFontes = [
-        'MusicBrainz',
-    ];
-
-    if (fontes.theaudiodb === true) {
-        nomesFontes.push(
-            'TheAudioDB',
-        );
-    }
-
-    if (fontes.discogs === true) {
-        nomesFontes.push(
-            'Discogs',
-        );
-    }
-
-    const textoFontes =
-        document.createElement(
-            'div',
-        );
-
-    textoFontes.className =
-        'small text-muted mt-1';
-
-    textoFontes.textContent =
-        `Fontes utilizadas: ${nomesFontes.join(', ')}`;
-
-    identidade.append(
-        textoFontes,
-    );
-
     cabecalho.append(
         identidade,
     );
@@ -1525,6 +1468,18 @@ function apresentarAssociacaoImportacao(
     if (musicBrainz !== null) {
         acoes.append(
             musicBrainz,
+        );
+    }
+
+    const theAudioDB =
+        criarLigacaoExterna(
+            'Abrir no TheAudioDB',
+            artista.url_theaudiodb,
+        );
+
+    if (theAudioDB !== null) {
+        acoes.append(
+            theAudioDB,
         );
     }
 
@@ -2106,7 +2061,7 @@ async function pesquisarImportacao(
         definirEstadoImportacao(
             contentor,
             quantidade > 0
-                ? 'Seleciona o artista correto. Depois serão procurados automaticamente dados complementares no TheAudioDB.'
+                ? 'Seleciona o artista correto para preencher os campos.'
                 : 'Não foram encontrados artistas para esta pesquisa.',
         );
     } catch (erro) {

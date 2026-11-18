@@ -47,13 +47,8 @@
             </h3>
 
             <p class="small text-muted mb-0">
-                Pesquisa primeiro no MusicBrainz. O TheAudioDB pode complementar
-                automaticamente a ficha selecionada.
-            </p>
-
-            <p class="small text-muted mb-0 mt-1">
-                Os dados são copiados para os campos abaixo para revisão.
-                Os géneros nunca são alterados.
+                Pesquisa um artista para preencher automaticamente os seus dados.
+                Podes rever e alterar as informações antes de guardar.
             </p>
         </div>
 

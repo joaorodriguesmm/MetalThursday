@@ -144,7 +144,7 @@
                                     id="ajuda-data-fim-nova-edicao"
                                     class="form-text"
                                 >
-                                    Campo opcional.
+                                    Indica a data de fim se a edição decorrer durante vários dias.
                                 </div>
 
                                 <div

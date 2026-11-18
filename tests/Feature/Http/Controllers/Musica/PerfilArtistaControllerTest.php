@@ -382,7 +382,7 @@ final class PerfilArtistaControllerTest extends TestCase
                     'name="biografia"',
                     'type="url"',
                     'name="imagem"',
-                    'URL externa, opcional',
+                    'URL externa',
                     'name="discogs_id"',
                     'name="ligacoes[0][titulo]"',
                     'name="ligacoes[0][url]"',
@@ -427,7 +427,7 @@ final class PerfilArtistaControllerTest extends TestCase
                 'name="estado_atividade"',
                 'name="biografia"',
                 'name="imagem"',
-                'URL externa, opcional',
+                'URL externa',
                 'name="discogs_id"',
                 'data-importacao-artista',
             ] as $fragmento

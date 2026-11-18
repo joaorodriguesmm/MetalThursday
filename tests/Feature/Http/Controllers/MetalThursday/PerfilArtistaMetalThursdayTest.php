@@ -94,7 +94,7 @@ final class PerfilArtistaMetalThursdayTest extends TestCase
      * @since 2.0.0
      */
     #[Test]
-    public function modal_criacao_rapida_apresenta_generos_como_opcionais(): void
+    public function modal_criacao_rapida_nao_exige_generos(): void
     {
         $superAdministrador = Utilizador::factory()
             ->comPapel(
@@ -118,9 +118,11 @@ final class PerfilArtistaMetalThursdayTest extends TestCase
         $resposta->assertOk();
 
         self::assertMatchesRegularExpression(
-            '/<label\b(?=[^>]*\bfor="generos-novo-artista")[^>]*>(?:(?!<\/label>).)*Géneros(?:(?!<\/label>).)*\(opcional\)(?:(?!<\/label>).)*<\/label>/s',
+            '/<label\b(?=[^>]*\bfor="generos-novo-artista")[^>]*>(?:(?!<\/label>).)*Géneros(?:(?!<\/label>).)*<\/label>/s',
             $resposta->getContent(),
         );
+
+        $resposta->assertDontSee('(opcional)');
 
         self::assertDoesNotMatchRegularExpression(
             '/<select\b(?=[^>]*\bid="generos-novo-artista")[^>]*\brequired\b[^>]*>/s',
