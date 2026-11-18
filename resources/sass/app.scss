@@ -87,6 +87,30 @@ $cinzento-texto-suave:
     $primary:
         $vermelho-destaque,
 
+    $btn-close-bg:
+        url("/icones/fechar.svg"),
+
+    $form-select-indicator:
+        url("/icones/seta-selecao.svg"),
+
+    $form-check-input-checked-bg-image:
+        url("/icones/marca-selecao.svg"),
+
+    $form-check-input-indeterminate-bg-image:
+        url("/icones/marca-indeterminada.svg"),
+
+    $form-check-radio-checked-bg-image:
+        url("/icones/marca-radio.svg"),
+
+    $form-switch-bg-image:
+        url("/icones/indicador-interruptor.svg"),
+
+    $form-switch-focus-bg-image:
+        url("/icones/indicador-interruptor.svg"),
+
+    $form-switch-checked-bg-image:
+        url("/icones/indicador-interruptor.svg"),
+
     $secondary:
         $cinzento-secundario,
 
