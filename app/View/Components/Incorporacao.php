@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\View\Components;
 
+use App\Enumeracoes\ModoVisualizacaoLigacao;
+use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\LigacaoSeccaoMetalThursday;
 use App\Servicos\Incorporacoes\RenderizadorIncorporacoes;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\HtmlString;
 use Illuminate\View\Component;
 
@@ -42,9 +45,16 @@ final class Incorporacao extends Component
         LigacaoSeccaoMetalThursday $ligacao,
         RenderizadorIncorporacoes $renderizadorIncorporacoes,
     ) {
+        $utilizador = Auth::guard('sessao')->user();
+
+        $modo = $utilizador instanceof Utilizador
+            ? $utilizador->modoVisualizacaoLigacao($ligacao->plataforma)
+            : ModoVisualizacaoLigacao::Ligacao;
+
         $this->conteudo =
             $renderizadorIncorporacoes->renderizarLigacao(
                 $ligacao,
+                $modo,
             );
     }
 

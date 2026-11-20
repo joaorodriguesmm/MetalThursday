@@ -145,7 +145,7 @@
                     </h3>
 
                     @if ($seccaoPreparada['temLigacoes'])
-                        <div class="d-flex flex-column gap-3 mt-3">
+                        <div class="d-flex flex-wrap align-items-start gap-2 mt-3">
                             @foreach ($seccaoPreparada['ligacoes'] as $ligacao)
                                 <x-incorporacao
                                     :ligacao="$ligacao"

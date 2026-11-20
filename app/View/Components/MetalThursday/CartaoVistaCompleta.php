@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\View\Components\MetalThursday;
 
 use App\Enumeracoes\Interacoes\TipoEntidadeInteracao;
+use App\Enumeracoes\ModoVisualizacaoLigacao;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\Edicao;
 use App\Models\MetalThursday\LigacaoSeccaoMetalThursday;
@@ -16,6 +17,7 @@ use Carbon\CarbonInterface;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\HtmlString;
 use Illuminate\View\Component;
 use LogicException;
@@ -390,6 +392,16 @@ final class CartaoVistaCompleta extends Component
             }
 
             /** @var Collection<int, LigacaoSeccaoMetalThursday> $ligacoes */
+            $utilizadorVisualizacao = Auth::guard('sessao')->user();
+
+            if ($utilizadorVisualizacao instanceof Utilizador) {
+                $ligacoes = $ligacoes->filter(
+                    static fn (LigacaoSeccaoMetalThursday $ligacao): bool => $utilizadorVisualizacao->modoVisualizacaoLigacao(
+                        $ligacao->plataforma,
+                    ) !== ModoVisualizacaoLigacao::Ocultar,
+                );
+            }
+
             if (
                 $this->interacoesDisponiveis
                 && ! $this->carregarComentariosAssincronamente

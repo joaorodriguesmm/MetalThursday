@@ -17,9 +17,9 @@ use InvalidArgumentException;
 /**
  * Representa uma ligação pública pertencente a uma secção MetalThursday.
  *
- * A plataforma é sempre calculada no servidor a partir do URL. A opção de
- * incorporação é independente por ligação e é automaticamente desactivada
- * quando a plataforma não a suporta.
+ * A plataforma é sempre calculada no servidor a partir do URL. A coluna
+ * `incorporar` permanece apenas para compatibilidade com dados anteriores;
+ * a visualização é determinada pelas preferências do utilizador.
  *
  * @property int $id
  * @property int $seccao_metal_thursday_id

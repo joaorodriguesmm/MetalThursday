@@ -11,6 +11,7 @@ use App\Http\Controllers\Autenticacao\ControladorVerificacaoEmail;
 use App\Http\Controllers\Utilizadores\ControladorPalavraPasse;
 use App\Http\Controllers\Utilizadores\ControladorPerfil;
 use App\Http\Controllers\Utilizadores\ControladorPermissoesEmail;
+use App\Http\Controllers\Utilizadores\ControladorPreferenciasVisualizacao;
 use App\Models\Autenticacao\Convite;
 use Illuminate\Support\Facades\Route;
 
@@ -278,6 +279,16 @@ Route::middleware([
                         ],
                     )->name(
                         'permissoes-email.atualizar',
+                    );
+
+                    Route::patch(
+                        'preferencias-visualizacao',
+                        [
+                            ControladorPreferenciasVisualizacao::class,
+                            'atualizar',
+                        ],
+                    )->name(
+                        'visualizacao.atualizar',
                     );
 
                     Route::put(

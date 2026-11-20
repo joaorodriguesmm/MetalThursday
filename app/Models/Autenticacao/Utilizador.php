@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Models\Autenticacao;
 
+use App\Enumeracoes\ModoVisualizacaoLigacao;
 use App\Enumeracoes\PapelUtilizador;
+use App\Enumeracoes\PlataformaLigacao;
 use App\Models\Comunicacao\PermissaoEmail;
 use App\Models\Interacoes\Audicao;
 use App\Models\Interacoes\Avaliacao;
@@ -89,6 +91,7 @@ use SensitiveParameter;
  * @property-read Collection<int, MusicaFavoritaEdicao> $musicasFavoritasEdicao
  * @property-read Collection<int, MusicaFavoritaEdicao> $musicasFavoritasEdicaoRegistadas
  * @property bool $disponivel_para_nomeacao
+ * @property array<string, string>|null $preferencias_visualizacao_ligacoes
  * @property-read Collection<int, ReservaMetalThursday> $reservasMetalThursday
  *
  * @since 1.0.0
@@ -202,7 +205,47 @@ class Utilizador extends Authenticatable implements MustVerifyEmail
             'suspenso_por_id' => 'integer',
 
             'disponivel_para_nomeacao' => 'boolean',
+
+            'preferencias_visualizacao_ligacoes' => 'array',
         ];
+    }
+
+    /**
+     * Obtém a preferência para uma plataforma sem confiar em valores antigos
+     * ou desconhecidos. Ligações de outras plataformas permanecem visíveis.
+     *
+     * @since 2.0.0
+     */
+    public function modoVisualizacaoLigacao(
+        PlataformaLigacao $plataforma,
+    ): ModoVisualizacaoLigacao {
+        if ($plataforma === PlataformaLigacao::Outro) {
+            return ModoVisualizacaoLigacao::Ligacao;
+        }
+
+        // Um modelo recém-criado ou carregado parcialmente pode não incluir
+        // o atributo, mesmo quando a respetiva coluna já existe.
+        if (
+            ! array_key_exists(
+                'preferencias_visualizacao_ligacoes',
+                $this->getAttributes(),
+            )
+        ) {
+            return ModoVisualizacaoLigacao::Ligacao;
+        }
+
+        $preferencias = $this->preferencias_visualizacao_ligacoes;
+
+        $valor = is_array($preferencias)
+            ? ($preferencias[$plataforma->value] ?? null)
+            : null;
+
+        if (! is_string($valor)) {
+            return ModoVisualizacaoLigacao::Ligacao;
+        }
+
+        return ModoVisualizacaoLigacao::tryFrom($valor)
+            ?? ModoVisualizacaoLigacao::Ligacao;
     }
 
     /**

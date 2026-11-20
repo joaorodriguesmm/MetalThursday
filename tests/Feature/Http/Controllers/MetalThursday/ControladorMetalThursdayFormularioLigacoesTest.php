@@ -63,12 +63,10 @@ final class ControladorMetalThursdayFormularioLigacoesTest extends TestCase
             ->assertSeeHtml(
                 'name="seccoes[__INDICE_SECCAO__][ligacoes][__INDICE_LIGACAO__][url]"',
             )
-            ->assertSeeHtml(
-                'name="seccoes[__INDICE_SECCAO__][ligacoes][__INDICE_LIGACAO__][incorporar]"',
-            )
+            ->assertDontSee('data-campo-incorporar-ligacao')
             ->assertDontSee('data-campo-tipo-incorporacao')
             ->assertDontSee('data-campo-url-incorporacao-alternativa')
-            ->assertSeeHtml('data-aviso-playlist-ligacao');
+            ->assertDontSee('data-aviso-playlist-ligacao');
     }
 
     #[Test]

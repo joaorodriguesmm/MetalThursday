@@ -34,11 +34,6 @@ function criarLinha(identificador) {
                 >
             </div>
 
-            <input
-                type="checkbox"
-                data-campo-incorporar-ligacao
-            >
-
             <button
                 type="button"
                 data-acao-ligacao-seccao="subir"

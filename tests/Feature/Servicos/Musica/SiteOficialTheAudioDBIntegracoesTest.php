@@ -157,12 +157,12 @@ final class SiteOficialTheAudioDBIntegracoesTest extends TestCase
         self::assertSame(
             [
                 [
-                    'titulo' => 'Site oficial',
-                    'url' => $siteOficial,
-                ],
-                [
                     'titulo' => 'Bandcamp',
                     'url' => $bandcamp,
+                ],
+                [
+                    'titulo' => 'Site oficial',
+                    'url' => $siteOficial,
                 ],
             ],
             $proposta['ligacoes'],

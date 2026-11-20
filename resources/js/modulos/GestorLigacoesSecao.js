@@ -1,5 +1,4 @@
 import GestorSeccoes from './GestorSeccoes';
-import AnalisadorUrlYouTube from './AnalisadorUrlYouTube';
 
 /**
  * Gere as ligações públicas associadas a uma secção musical.
@@ -33,8 +32,7 @@ class GestorLigacoesSecao {
      *
      * @type {Readonly<Record<string, Readonly<{
      *     valor: string,
-     *     etiqueta: string,
-     *     suportaIncorporacao: boolean
+     *     etiqueta: string
      * }>>>}
      *
      * @since 2.0.0
@@ -43,25 +41,21 @@ class GestorLigacoesSecao {
         spotify: Object.freeze({
             valor: 'spotify',
             etiqueta: 'Spotify',
-            suportaIncorporacao: true,
         }),
 
         appleMusic: Object.freeze({
             valor: 'apple_music',
             etiqueta: 'Apple Music',
-            suportaIncorporacao: true,
         }),
 
         youtube: Object.freeze({
             valor: 'youtube',
             etiqueta: 'YouTube',
-            suportaIncorporacao: true,
         }),
 
         outro: Object.freeze({
             valor: 'outro',
             etiqueta: 'Outro',
-            suportaIncorporacao: false,
         }),
     });
 
@@ -176,16 +170,6 @@ class GestorLigacoesSecao {
             },
         );
 
-        this.editor.addEventListener(
-            'change',
-            (evento) => {
-                this.tratarAlteracaoIncorporacao(evento);
-            },
-            {
-                signal: this.controladorEventos.signal,
-            },
-        );
-
         this.seccao.addEventListener(
             GestorSeccoes.EVENTO_ESTADO_ATUALIZADO,
             () => {
@@ -210,8 +194,7 @@ class GestorLigacoesSecao {
      * @param {unknown} valor URL recebido.
      * @returns {{
      *     valor: string,
-     *     etiqueta: string,
-     *     suportaIncorporacao: boolean
+     *     etiqueta: string
      * }|null} Plataforma detetada ou nulo quando o URL ainda não é válido.
      *
      * @since 2.0.0
@@ -408,32 +391,6 @@ class GestorLigacoesSecao {
             this.atualizarEstadoLinha(
                 linha,
             );
-        }
-    }
-
-    /**
-     * Atualiza a linha quando a escolha de incorporação muda.
-     *
-     * @param {Event} evento Evento recebido.
-     * @returns {void}
-     */
-    tratarAlteracaoIncorporacao(evento) {
-        const campo = evento.target;
-
-        if (!(campo instanceof HTMLInputElement)) {
-            return;
-        }
-
-        if (!campo.matches(
-            '[data-campo-incorporar-ligacao]',
-        )) {
-            return;
-        }
-
-        const linha = campo.closest('[data-ligacao-seccao]');
-
-        if (linha instanceof HTMLElement) {
-            this.atualizarEstadoLinha(linha);
         }
     }
 
@@ -750,36 +707,6 @@ class GestorLigacoesSecao {
             `${idBase}-erro-etiqueta`,
         );
 
-        const campoOculto = linha.querySelector(
-            '[data-campo-incorporar-ligacao-oculto]',
-        );
-
-        const campoIncorporar = linha.querySelector(
-            '[data-campo-incorporar-ligacao]',
-        );
-
-        const etiquetaIncorporar = linha.querySelector(
-            '[data-etiqueta-incorporar-ligacao]',
-        );
-
-        if (campoOculto instanceof HTMLInputElement) {
-            campoOculto.name =
-                `${nomeBase}[incorporar]`;
-        }
-
-        if (campoIncorporar instanceof HTMLInputElement) {
-            campoIncorporar.name =
-                `${nomeBase}[incorporar]`;
-
-            campoIncorporar.id =
-                `${idBase}-incorporar`;
-        }
-
-        if (etiquetaIncorporar instanceof HTMLLabelElement) {
-            etiquetaIncorporar.htmlFor =
-                `${idBase}-incorporar`;
-        }
-
     }
 
     /**
@@ -907,52 +834,6 @@ class GestorLigacoesSecao {
                 !this.detalhesAtivos()
                 || !eOutro;
         }
-
-        const campoIncorporar = linha.querySelector(
-            '[data-campo-incorporar-ligacao]',
-        );
-
-        if (!(campoIncorporar instanceof HTMLInputElement)) {
-            return;
-        }
-
-        const ePlaylist = plataforma?.valor === 'youtube'
-            && campoUrl instanceof HTMLInputElement
-            && AnalisadorUrlYouTube.analisarUrl(campoUrl.value).playlist;
-
-        const contentorIncorporar = linha.querySelector(
-            '[data-contentor-incorporar-ligacao]',
-        );
-
-        const avisoPlaylist = linha.querySelector('[data-aviso-playlist-ligacao]');
-
-        if (contentorIncorporar instanceof HTMLElement) {
-            contentorIncorporar.hidden = ePlaylist;
-        }
-
-        if (avisoPlaylist instanceof HTMLElement) {
-            avisoPlaylist.hidden = !ePlaylist;
-        }
-
-        if (
-            ePlaylist
-            || (
-                plataforma !== null
-                && !plataforma.suportaIncorporacao
-            )
-        ) {
-            campoIncorporar.checked =
-                false;
-        }
-
-        campoIncorporar.disabled =
-            !this.detalhesAtivos()
-            || ePlaylist
-            || (
-                plataforma !== null
-                && !plataforma.suportaIncorporacao
-            );
-
 
     }
 

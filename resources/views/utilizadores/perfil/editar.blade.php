@@ -2,7 +2,7 @@
     Apresenta a página de edição do perfil do utilizador autenticado.
 
     A página reúne os formulários de atualização dos dados gerais,
-    das permissões de e-mail e da palavra-passe.
+    das permissões de e-mail, da visualização e da palavra-passe.
 
     Os dados necessários são preparados pelos respetivos controladores.
 
@@ -30,6 +30,10 @@
 
             @include(
                 'utilizadores.perfil.parciais._permissoes-email'
+            )
+
+            @include(
+                'utilizadores.perfil.parciais._preferencias-visualizacao'
             )
 
             @include(

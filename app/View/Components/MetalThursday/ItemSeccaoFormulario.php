@@ -157,7 +157,7 @@ final class ItemSeccaoFormulario extends Component
     /**
      * Ligações públicas associadas à secção.
      *
-     * @var list<array{url: string, etiqueta: string, incorporar: bool}>
+     * @var list<array{url: string, etiqueta: string}>
      *
      * @since 2.0.0
      */
@@ -623,7 +623,7 @@ final class ItemSeccaoFormulario extends Component
      *
      * @param  Request  $pedido  Pedido HTTP atual.
      * @param  SeccaoMetalThursday|array<string, mixed>|null  $seccao  Secção atual.
-     * @return list<array{url: string, etiqueta: string, incorporar: bool}> Ligações.
+     * @return list<array{url: string, etiqueta: string}> Ligações.
      *
      * @since 2.0.0
      */
@@ -675,7 +675,6 @@ final class ItemSeccaoFormulario extends Component
                     'url' => $ligacao->url,
                     'etiqueta' => $ligacao->etiqueta
                         ?? '',
-                    'incorporar' => $ligacao->incorporar,
                 ];
             }
 
@@ -692,7 +691,7 @@ final class ItemSeccaoFormulario extends Component
      * num rascunho antes da publicação final.
      *
      * @param  mixed  $valor  Valor recebido.
-     * @return list<array{url: string, etiqueta: string, incorporar: bool}> Ligações.
+     * @return list<array{url: string, etiqueta: string}> Ligações.
      *
      * @since 2.0.0
      */
@@ -719,30 +718,10 @@ final class ItemSeccaoFormulario extends Component
                     $ligacao['etiqueta']
                         ?? '',
                 ),
-                'incorporar' => $this->normalizarBooleanoFormulario(
-                    $ligacao['incorporar']
-                        ?? false,
-                ),
             ];
         }
 
         return $ligacoes;
-    }
-
-    /**
-     * Normaliza um booleano recebido por um campo HTML.
-     *
-     * @param  mixed  $valor  Valor recebido.
-     * @return bool Valor normalizado.
-     *
-     * @since 2.0.0
-     */
-    private function normalizarBooleanoFormulario(
-        mixed $valor,
-    ): bool {
-        return $valor === true
-            || $valor === 1
-            || $valor === '1';
     }
 
     /**

@@ -67,12 +67,10 @@ final class ItemSeccaoFormularioLigacoesTest extends TestCase
                 [
                     'url' => 'https://bandcamp.com/album/exemplo',
                     'etiqueta' => 'Comprar',
-                    'incorporar' => false,
                 ],
                 [
                     'url' => 'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC',
                     'etiqueta' => '',
-                    'incorporar' => true,
                 ],
             ],
             $componente->ligacoes,
@@ -93,12 +91,10 @@ final class ItemSeccaoFormularioLigacoesTest extends TestCase
                 [
                     'url' => 'https://',
                     'etiqueta' => 'Por completar',
-                    'incorporar' => true,
                 ],
                 [
                     'url' => '',
                     'etiqueta' => 'Mais tarde',
-                    'incorporar' => false,
                 ],
             ],
         ]);
@@ -108,12 +104,10 @@ final class ItemSeccaoFormularioLigacoesTest extends TestCase
                 [
                     'url' => 'https://',
                     'etiqueta' => 'Por completar',
-                    'incorporar' => true,
                 ],
                 [
                     'url' => '',
                     'etiqueta' => 'Mais tarde',
-                    'incorporar' => false,
                 ],
             ],
             $componente->ligacoes,

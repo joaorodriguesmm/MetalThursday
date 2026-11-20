@@ -1,8 +1,8 @@
 {{--
     Apresenta um item repetível do formulário de secções.
 
-    Os valores, identificadores, chaves de erro, tipos de incorporação e
-    visibilidade inicial dos detalhes são preparados pela classe
+    Os valores, identificadores, chaves de erro e a visibilidade inicial
+    dos detalhes são preparados pela classe
     App\View\Components\MetalThursday\ItemSeccaoFormulario.
 
     @since 1.0.0
@@ -657,7 +657,7 @@
                         data-indice-ligacao="{{ $indiceLigacao }}"
                     >
                         <div class="row g-3 align-items-start">
-                            <div class="col-xl-5 col-lg-6">
+                            <div class="col-xl-7 col-lg-6">
                                 <label
                                     class="form-label small mb-1"
                                     for="{{ $idBaseLigacao }}-url"
@@ -751,42 +751,6 @@
                                 </span>
                             </div>
 
-                            <div class="col-md-5 col-xl-2" data-contentor-incorporar-ligacao>
-                                <input
-                                    type="hidden"
-                                    name="{{ $nomeBaseCampo }}[ligacoes][{{ $indiceLigacao }}][incorporar]"
-                                    value="0"
-                                    data-campo-incorporar-ligacao-oculto
-                                >
-
-                                <div class="form-check form-switch mb-1">
-                                    <input
-                                        id="{{ $idBaseLigacao }}-incorporar"
-                                        class="form-check-input"
-                                        type="checkbox"
-                                        name="{{ $nomeBaseCampo }}[ligacoes][{{ $indiceLigacao }}][incorporar]"
-                                        value="1"
-                                        data-campo-incorporar-ligacao
-                                        @checked($ligacao['incorporar'])
-                                    >
-
-                                    <label
-                                        class="form-check-label"
-                                        for="{{ $idBaseLigacao }}-incorporar"
-                                        data-etiqueta-incorporar-ligacao
-                                    >
-                                        Incorporar
-                                    </label>
-                                </div>
-
-                                <div class="small text-muted">
-                                    Quando suportado.
-                                </div>
-                            </div>
-
-                            <div class="col-md-5 col-xl-2 small text-muted" data-aviso-playlist-ligacao hidden>
-                                Playlist: apenas ligação externa.
-                            </div>
                         </div>
 
                         <div class="d-flex justify-content-end align-items-center gap-1 mt-3">
@@ -842,7 +806,7 @@
                     data-indice-ligacao="__INDICE_LIGACAO__"
                 >
                     <div class="row g-3 align-items-start">
-                        <div class="col-xl-5 col-lg-6">
+                        <div class="col-xl-7 col-lg-6">
                             <label
                                 class="form-label small mb-1"
                                 for="seccoes-{{ $indice }}-ligacao-__INDICE_LIGACAO__-url"
@@ -922,41 +886,6 @@
                             </span>
                         </div>
 
-                        <div class="col-md-5 col-xl-2" data-contentor-incorporar-ligacao>
-                            <input
-                                type="hidden"
-                                name="{{ $nomeBaseCampo }}[ligacoes][__INDICE_LIGACAO__][incorporar]"
-                                value="0"
-                                data-campo-incorporar-ligacao-oculto
-                            >
-
-                            <div class="form-check form-switch mb-1">
-                                <input
-                                    id="seccoes-{{ $indice }}-ligacao-__INDICE_LIGACAO__-incorporar"
-                                    class="form-check-input"
-                                    type="checkbox"
-                                    name="{{ $nomeBaseCampo }}[ligacoes][__INDICE_LIGACAO__][incorporar]"
-                                    value="1"
-                                    data-campo-incorporar-ligacao
-                                >
-
-                                <label
-                                    class="form-check-label"
-                                    for="seccoes-{{ $indice }}-ligacao-__INDICE_LIGACAO__-incorporar"
-                                    data-etiqueta-incorporar-ligacao
-                                >
-                                    Incorporar
-                                </label>
-                            </div>
-
-                            <div class="small text-muted">
-                                Quando suportado.
-                            </div>
-                        </div>
-
-                        <div class="col-md-5 col-xl-2 small text-muted" data-aviso-playlist-ligacao hidden>
-                            Playlist: apenas ligação externa.
-                        </div>
                     </div>
 
                     <div class="d-flex justify-content-end align-items-center gap-1 mt-3">

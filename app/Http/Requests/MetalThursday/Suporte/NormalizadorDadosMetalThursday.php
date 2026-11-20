@@ -136,6 +136,8 @@ final class NormalizadorDadosMetalThursday
                     ?? null,
             );
 
+            // Compatibilidade com pedidos e rascunhos de versões anteriores.
+            // A apresentação já não depende desta opção.
             $ligacao['incorporar'] = self::normalizarBooleano(
                 $ligacao['incorporar']
                     ?? false,

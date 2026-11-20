@@ -79,7 +79,6 @@ describe(
                     ),
                 ).toMatchObject({
                     valor: 'spotify',
-                    suportaIncorporacao: true,
                 });
 
                 expect(
@@ -88,7 +87,6 @@ describe(
                     ),
                 ).toMatchObject({
                     valor: 'apple_music',
-                    suportaIncorporacao: true,
                 });
 
                 expect(
@@ -97,7 +95,6 @@ describe(
                     ),
                 ).toMatchObject({
                     valor: 'youtube',
-                    suportaIncorporacao: true,
                 });
 
                 expect(
@@ -106,7 +103,6 @@ describe(
                     ),
                 ).toMatchObject({
                     valor: 'outro',
-                    suportaIncorporacao: false,
                 });
 
                 expect(
@@ -286,7 +282,7 @@ describe(
         );
 
         it(
-            'ajusta etiqueta e incorporacao conforme a plataforma',
+            'ajusta a etiqueta conforme a plataforma',
             () => {
                 const gestor =
                     new GestorLigacoesSecao(
@@ -313,11 +309,6 @@ describe(
                         '[data-campo-etiqueta-ligacao]',
                     );
 
-                const campoIncorporar =
-                    linha.querySelector(
-                        '[data-campo-incorporar-ligacao]',
-                    );
-
                 expect(
                     linha.dataset
                         .plataforma,
@@ -334,12 +325,6 @@ describe(
                 expect(
                     campoEtiqueta.disabled,
                 ).toBe(true);
-
-                expect(
-                    campoIncorporar.disabled,
-                ).toBe(false);
-
-                campoIncorporar.checked = true;
 
                 campoUrl.value =
                     'https://example.com/audio';
@@ -371,14 +356,6 @@ describe(
                 ).toBe(false);
 
                 expect(
-                    campoIncorporar.checked,
-                ).toBe(false);
-
-                expect(
-                    campoIncorporar.disabled,
-                ).toBe(true);
-
-                expect(
                     linha.querySelector(
                         '[data-plataforma-ligacao]',
                     ).textContent,
@@ -387,7 +364,7 @@ describe(
         );
 
         it(
-            'oculta a incorporação de playlists e restaura a opção para vídeos',
+            'apresenta a plataforma de playlists sem configuração por ligação',
             () => {
                 const gestor = new GestorLigacoesSecao(
                     document.getElementById('seccao-5'),
@@ -395,43 +372,31 @@ describe(
 
                 const linha = gestor.obterLinhas()[0];
                 const original = linha.querySelector('[data-campo-url-ligacao]');
-                const incorporar = linha.querySelector('[data-campo-incorporar-ligacao]');
                 original.value = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL1234567890';
                 original.dispatchEvent(new Event('input', { bubbles: true }));
 
-                expect(incorporar.checked).toBe(false);
-                expect(incorporar.disabled).toBe(true);
-                expect(linha.querySelector('[data-contentor-incorporar-ligacao]').hidden)
-                    .toBe(true);
-                expect(linha.querySelector('[data-aviso-playlist-ligacao]').hidden)
-                    .toBe(false);
+                expect(linha.dataset.plataforma).toBe('youtube');
+                expect(linha.querySelector('[data-campo-incorporar-ligacao]'))
+                    .toBeNull();
                 expect(linha.querySelector('[data-acao-ligacao-seccao="testar"]'))
                     .toBeNull();
 
                 original.value = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
                 original.dispatchEvent(new Event('input', { bubbles: true }));
 
-                expect(incorporar.disabled).toBe(false);
-                expect(linha.querySelector('[data-contentor-incorporar-ligacao]').hidden)
-                    .toBe(false);
-
-                incorporar.checked = true;
-                incorporar.dispatchEvent(new Event('change', { bubbles: true }));
-
-                expect(incorporar.checked).toBe(true);
+                expect(linha.dataset.plataforma).toBe('youtube');
 
                 original.value = 'https://www.youtube.com/playlist?list=PL1234567890';
                 original.dispatchEvent(new Event('input', { bubbles: true }));
 
-
-                expect(incorporar.checked).toBe(false);
 
                 gestor.mover(
                     linha.querySelector('[data-acao-ligacao-seccao="descer"]'),
                     1,
                 );
 
-                expect(incorporar.name).toBe('seccoes[5][ligacoes][1][incorporar]');
+                expect(linha.querySelector('[data-campo-url-ligacao]').name)
+                    .toBe('seccoes[5][ligacoes][1][url]');
             },
         );
     },
@@ -495,25 +460,6 @@ function criarLinhaLigacao(
                     data-erro-etiqueta-ligacao
                 ></div>
             </div>
-
-            <div data-contentor-incorporar-ligacao>
-                <input
-                    type="hidden"
-                    value="0"
-                    data-campo-incorporar-ligacao-oculto
-                >
-
-                <input
-                    type="checkbox"
-                    value="1"
-                    data-campo-incorporar-ligacao
-                >
-
-                <label data-etiqueta-incorporar-ligacao>Incorporar</label>
-            </div>
-
-            <p data-aviso-playlist-ligacao hidden>Playlist: apenas ligação externa.</p>
-
 
             <button
                 type="button"

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Servicos\Incorporacoes;
 
+use App\Enumeracoes\ModoVisualizacaoLigacao;
 use App\Enumeracoes\PlataformaLigacao;
 use App\Models\MetalThursday\LigacaoSeccaoMetalThursday;
 use Illuminate\Support\HtmlString;
@@ -64,13 +65,19 @@ final class RenderizadorIncorporacoes
      * Spotify e Apple Music quando o URL possui um formato reconhecido.
      *
      * @param  LigacaoSeccaoMetalThursday  $ligacaoSecao  Ligação apresentada.
+     * @param  ModoVisualizacaoLigacao  $modo  Preferência do utilizador atual.
      * @return HtmlString Conteúdo HTML validado.
      *
      * @since 2.0.0
      */
     public function renderizarLigacao(
         LigacaoSeccaoMetalThursday $ligacaoSecao,
+        ModoVisualizacaoLigacao $modo = ModoVisualizacaoLigacao::Ligacao,
     ): HtmlString {
+        if ($modo === ModoVisualizacaoLigacao::Ocultar) {
+            return new HtmlString('');
+        }
+
         $ligacao = $this->normalizarLigacao(
             $ligacaoSecao->url,
         );
@@ -81,7 +88,7 @@ final class RenderizadorIncorporacoes
 
         $incorporacao = '';
 
-        if ($ligacaoSecao->incorporar) {
+        if ($modo === ModoVisualizacaoLigacao::Incorporar) {
             if ($ligacaoSecao->plataforma === PlataformaLigacao::YouTube) {
                 $incorporacao = $this->renderizarVideoYouTube($ligacao);
             } elseif ($ligacaoSecao->plataforma === PlataformaLigacao::Spotify) {
@@ -556,7 +563,7 @@ HTML;
             );
 
         return <<<HTML
-<div class="mt-2">
+<div>
     <a
         href="{$ligacaoEscapada}"
         target="_blank"
@@ -581,7 +588,7 @@ HTML;
         LigacaoSeccaoMetalThursday $ligacao,
     ): string {
         if ($ligacao->plataforma !== PlataformaLigacao::Outro) {
-            return 'Abrir no '.$ligacao->plataforma->nome();
+            return 'Abrir no '.$ligacao->plataforma->nomeLigacao($ligacao->url);
         }
 
         $etiqueta = $ligacao->etiqueta;

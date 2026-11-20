@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\View\Components\MetalThursday;
 
+use App\Enumeracoes\ModoVisualizacaoLigacao;
 use App\Enumeracoes\PlataformaLigacao;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\Geografia\OrigemGeografica;
@@ -18,6 +19,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\HtmlString;
 use Illuminate\View\Component;
 use LogicException;
@@ -431,11 +433,22 @@ final class TabelaVistaSimplificada extends Component
     ): array {
         $ligacoesPreparadas = [];
 
+        $utilizadorVisualizacao = Auth::guard('sessao')->user();
+
         foreach ($ligacoes as $ligacao) {
             if (! $ligacao instanceof LigacaoSeccaoMetalThursday) {
                 throw new LogicException(
                     'A relação "ligacoes" contém um modelo inesperado.',
                 );
+            }
+
+            if (
+                $utilizadorVisualizacao instanceof Utilizador
+                && $utilizadorVisualizacao->modoVisualizacaoLigacao(
+                    $ligacao->plataforma,
+                ) === ModoVisualizacaoLigacao::Ocultar
+            ) {
+                continue;
             }
 
             $etiqueta =
@@ -444,7 +457,7 @@ final class TabelaVistaSimplificada extends Component
                         $ligacao->etiqueta,
                     )
                     ?? 'Ligação externa'
-                    : $ligacao->plataforma->nome();
+                    : $ligacao->plataforma->nomeLigacao($ligacao->url);
 
             $ligacoesPreparadas[] = [
                 'url' => $ligacao->url,

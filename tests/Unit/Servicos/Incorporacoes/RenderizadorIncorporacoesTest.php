@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Servicos\Incorporacoes;
 
+use App\Enumeracoes\ModoVisualizacaoLigacao;
 use App\Enumeracoes\PlataformaLigacao;
 use App\Models\MetalThursday\LigacaoSeccaoMetalThursday;
 use App\Servicos\Incorporacoes\RenderizadorIncorporacoes;
@@ -17,6 +18,37 @@ use Tests\TestCase;
  */
 final class RenderizadorIncorporacoesTest extends TestCase
 {
+    /**
+     * O estado antigo da ligação não controla a visualização do utilizador.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function ignora_a_antiga_opcao_de_incorporacao_da_ligacao(): void
+    {
+        $ligacao = $this->criarLigacao(
+            PlataformaLigacao::Spotify,
+            'https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl',
+            true,
+        );
+
+        $renderizador = app(RenderizadorIncorporacoes::class);
+
+        $apenasLigacao = $renderizador->renderizarLigacao(
+            $ligacao,
+            ModoVisualizacaoLigacao::Ligacao,
+        )->toHtml();
+
+        $oculto = $renderizador->renderizarLigacao(
+            $ligacao,
+            ModoVisualizacaoLigacao::Ocultar,
+        )->toHtml();
+
+        $this->assertStringNotContainsString('<iframe', $apenasLigacao);
+        $this->assertStringContainsString('Abrir no Spotify', $apenasLigacao);
+        $this->assertSame('', $oculto);
+    }
+
     /**
      * Confirma a incorporação de um vídeo do YouTube e a ligação externa.
      *
@@ -33,6 +65,7 @@ final class RenderizadorIncorporacoesTest extends TestCase
                 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
                 true,
             ),
+            ModoVisualizacaoLigacao::Incorporar,
         )->toHtml();
 
         $this->assertStringContainsString(
@@ -46,7 +79,12 @@ final class RenderizadorIncorporacoesTest extends TestCase
         );
 
         $this->assertStringContainsString(
-            'Abrir no YouTube / YouTube Music',
+            'Abrir no YouTube',
+            $conteudo,
+        );
+
+        $this->assertStringNotContainsString(
+            'Abrir no YouTube Music',
             $conteudo,
         );
     }
@@ -67,6 +105,7 @@ final class RenderizadorIncorporacoesTest extends TestCase
                 'https://www.youtube.com/playlist?list=PL1234567890',
                 true,
             ),
+            ModoVisualizacaoLigacao::Incorporar,
         )->toHtml();
 
         $this->assertStringNotContainsString('<iframe', $conteudo);
@@ -89,12 +128,15 @@ final class RenderizadorIncorporacoesTest extends TestCase
                 'https://music.youtube.com/watch?v=dQw4w9WgXcQ',
                 true,
             ),
+            ModoVisualizacaoLigacao::Incorporar,
         )->toHtml();
 
         $this->assertStringContainsString(
             'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0',
             $conteudo,
         );
+
+        $this->assertStringContainsString('Abrir no YouTube Music', $conteudo);
     }
 
     /**
@@ -113,6 +155,7 @@ final class RenderizadorIncorporacoesTest extends TestCase
                 'https://music.youtube.com/playlist?list=OLAK5uy_Test1234567890',
                 true,
             ),
+            ModoVisualizacaoLigacao::Incorporar,
         )->toHtml();
 
         $this->assertStringNotContainsString('<iframe', $conteudo);
@@ -132,7 +175,7 @@ final class RenderizadorIncorporacoesTest extends TestCase
         );
 
         $conteudo = app(RenderizadorIncorporacoes::class)
-            ->renderizarLigacao($ligacao)
+            ->renderizarLigacao($ligacao, ModoVisualizacaoLigacao::Incorporar)
             ->toHtml();
 
         $this->assertStringNotContainsString('<iframe', $conteudo);
@@ -151,7 +194,7 @@ final class RenderizadorIncorporacoesTest extends TestCase
         );
 
         $conteudo = app(RenderizadorIncorporacoes::class)
-            ->renderizarLigacao($ligacao)
+            ->renderizarLigacao($ligacao, ModoVisualizacaoLigacao::Incorporar)
             ->toHtml();
 
         $this->assertStringNotContainsString('<iframe', $conteudo);
@@ -170,7 +213,7 @@ final class RenderizadorIncorporacoesTest extends TestCase
         );
 
         $conteudo = app(RenderizadorIncorporacoes::class)
-            ->renderizarLigacao($ligacao)
+            ->renderizarLigacao($ligacao, ModoVisualizacaoLigacao::Incorporar)
             ->toHtml();
 
         $this->assertStringNotContainsString('<iframe', $conteudo);
@@ -194,7 +237,7 @@ final class RenderizadorIncorporacoesTest extends TestCase
         $ligacao->url_incorporacao_alternativa = 'https://youtu.be/dQw4w9WgXcQ';
 
         $conteudo = app(RenderizadorIncorporacoes::class)
-            ->renderizarLigacao($ligacao)
+            ->renderizarLigacao($ligacao, ModoVisualizacaoLigacao::Incorporar)
             ->toHtml();
 
         $this->assertStringNotContainsString('<iframe', $conteudo);
@@ -218,7 +261,7 @@ final class RenderizadorIncorporacoesTest extends TestCase
         );
 
         $conteudo = app(RenderizadorIncorporacoes::class)
-            ->renderizarLigacao($ligacao)
+            ->renderizarLigacao($ligacao, ModoVisualizacaoLigacao::Incorporar)
             ->toHtml();
 
         $this->assertStringNotContainsString(
@@ -236,7 +279,7 @@ final class RenderizadorIncorporacoesTest extends TestCase
      * Desativar a incorporação mantém apenas a ligação externa do vídeo.
      */
     #[Test]
-    public function youtube_nao_incorpora_video_quando_desativado(): void
+    public function youtube_mostra_ligacao_quando_utilizador_prefere_ligacao(): void
     {
         $ligacao = $this->criarLigacao(
             PlataformaLigacao::YouTube,
@@ -245,11 +288,40 @@ final class RenderizadorIncorporacoesTest extends TestCase
         );
 
         $conteudo = app(RenderizadorIncorporacoes::class)
-            ->renderizarLigacao($ligacao)
+            ->renderizarLigacao($ligacao, ModoVisualizacaoLigacao::Ligacao)
             ->toHtml();
 
         $this->assertStringNotContainsString('<iframe', $conteudo);
-        $this->assertStringContainsString('Abrir no YouTube', $conteudo);
+        $this->assertStringContainsString('Abrir no YouTube Music', $conteudo);
+    }
+
+    /**
+     * As etiquetas distinguem os serviços, mas as preferências continuam comuns.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function youtube_distingue_os_nomes_sem_separar_as_preferencias(): void
+    {
+        $this->assertSame(
+            'YouTube / YouTube Music',
+            PlataformaLigacao::YouTube->nome(),
+        );
+
+        $this->assertSame(
+            'YouTube Music',
+            PlataformaLigacao::YouTube->nomeLigacao('https://music.youtube.com/watch?v=dQw4w9WgXcQ'),
+        );
+
+        $this->assertSame(
+            'YouTube',
+            PlataformaLigacao::YouTube->nomeLigacao('https://www.youtube.com/watch?v=dQw4w9WgXcQ'),
+        );
+
+        $this->assertSame(
+            'YouTube',
+            PlataformaLigacao::YouTube->nomeLigacao('https://music.youtube.com.exemplo.test/video'),
+        );
     }
 
     /**
@@ -268,6 +340,7 @@ final class RenderizadorIncorporacoesTest extends TestCase
                 'https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl',
                 true,
             ),
+            ModoVisualizacaoLigacao::Incorporar,
         )->toHtml();
 
         $this->assertStringContainsString(
@@ -302,6 +375,7 @@ final class RenderizadorIncorporacoesTest extends TestCase
                 'https://open.spotify.com/intl-pt/album/4aawyAB9vmqN3uQ7FjRGTy',
                 true,
             ),
+            ModoVisualizacaoLigacao::Incorporar,
         )->toHtml();
 
         $this->assertStringContainsString(
@@ -316,7 +390,7 @@ final class RenderizadorIncorporacoesTest extends TestCase
      * @since 2.0.0
      */
     #[Test]
-    public function spotify_nao_e_incorporado_quando_opcao_esta_desativada(): void
+    public function spotify_nao_e_incorporado_quando_utilizador_prefere_ligacao(): void
     {
         $conteudo = app(
             RenderizadorIncorporacoes::class,
@@ -324,8 +398,9 @@ final class RenderizadorIncorporacoesTest extends TestCase
             $this->criarLigacao(
                 PlataformaLigacao::Spotify,
                 'https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl',
-                false,
+                true,
             ),
+            ModoVisualizacaoLigacao::Ligacao,
         )->toHtml();
 
         $this->assertStringNotContainsString(
@@ -355,6 +430,7 @@ final class RenderizadorIncorporacoesTest extends TestCase
                 'https://spotify.link/exemplo',
                 true,
             ),
+            ModoVisualizacaoLigacao::Incorporar,
         )->toHtml();
 
         $this->assertStringNotContainsString(
@@ -384,6 +460,7 @@ final class RenderizadorIncorporacoesTest extends TestCase
                 'https://open.spotify.com.example.com/track/11dFghVXANMlKmJXsNCbNl',
                 true,
             ),
+            ModoVisualizacaoLigacao::Incorporar,
         )->toHtml();
 
         $this->assertStringNotContainsString(
@@ -408,6 +485,7 @@ final class RenderizadorIncorporacoesTest extends TestCase
                 'https://music.apple.com/pt/album/album-teste/1234567890',
                 true,
             ),
+            ModoVisualizacaoLigacao::Incorporar,
         )->toHtml();
 
         $this->assertStringContainsString(
@@ -442,6 +520,7 @@ final class RenderizadorIncorporacoesTest extends TestCase
                 'https://music.apple.com/pt/album/1603083637',
                 true,
             ),
+            ModoVisualizacaoLigacao::Incorporar,
         )->toHtml();
 
         $this->assertStringContainsString(
@@ -466,6 +545,7 @@ final class RenderizadorIncorporacoesTest extends TestCase
                 'https://music.apple.com/pt/album/creep/1097862062?i=1097862231',
                 true,
             ),
+            ModoVisualizacaoLigacao::Incorporar,
         )->toHtml();
 
         $this->assertStringContainsString(
@@ -495,6 +575,7 @@ final class RenderizadorIncorporacoesTest extends TestCase
                 'https://music.apple.com/us/song/fear-them/6764201503',
                 true,
             ),
+            ModoVisualizacaoLigacao::Incorporar,
         )->toHtml();
 
         $this->assertStringContainsString(
@@ -524,6 +605,7 @@ final class RenderizadorIncorporacoesTest extends TestCase
                 'https://music.apple.com/us/playlist/lista-teste/pl.123456789',
                 true,
             ),
+            ModoVisualizacaoLigacao::Incorporar,
         )->toHtml();
 
         $this->assertStringContainsString(
@@ -543,7 +625,7 @@ final class RenderizadorIncorporacoesTest extends TestCase
      * @since 2.0.0
      */
     #[Test]
-    public function apple_music_nao_incorpora_quando_opcao_esta_desativada(): void
+    public function apple_music_nao_incorpora_quando_utilizador_prefere_ligacao(): void
     {
         $conteudo = app(
             RenderizadorIncorporacoes::class,
@@ -551,8 +633,9 @@ final class RenderizadorIncorporacoesTest extends TestCase
             $this->criarLigacao(
                 PlataformaLigacao::AppleMusic,
                 'https://music.apple.com/pt/album/album-teste/1234567890',
-                false,
+                true,
             ),
+            ModoVisualizacaoLigacao::Ligacao,
         )->toHtml();
 
         $this->assertStringNotContainsString(
@@ -582,6 +665,7 @@ final class RenderizadorIncorporacoesTest extends TestCase
                 'https://music.apple.com/us/artist/artista-teste/1234567890',
                 true,
             ),
+            ModoVisualizacaoLigacao::Incorporar,
         )->toHtml();
 
         $this->assertStringNotContainsString(
@@ -612,6 +696,7 @@ final class RenderizadorIncorporacoesTest extends TestCase
                 false,
                 '<Crítica>',
             ),
+            ModoVisualizacaoLigacao::Incorporar,
         )->toHtml();
 
         $this->assertStringContainsString(

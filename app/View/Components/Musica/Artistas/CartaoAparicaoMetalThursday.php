@@ -302,7 +302,7 @@ final class CartaoAparicaoMetalThursday extends Component
                                     $ligacao->etiqueta,
                                 )
                                 ?? 'Ligação externa'
-                                : $ligacao->plataforma->nome();
+                                : $ligacao->plataforma->nomeLigacao($ligacao->url);
 
                         return [
                             'url' => $ligacao->url,
