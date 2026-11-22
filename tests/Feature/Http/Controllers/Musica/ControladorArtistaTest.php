@@ -123,6 +123,51 @@ final class ControladorArtistaTest extends TestCase
     }
 
     /**
+     * Permite recriar um artista com os identificadores de um registo eliminado.
+     */
+    #[Test]
+    public function recria_artista_com_identificadores_de_registo_eliminado(): void
+    {
+        $utilizador = $this->criarUtilizador();
+        $mbid = 'c17dcb9a-834c-4a47-92d8-c599e2b4af21';
+        $discogs = 912345;
+
+        $anterior = Artista::factory()->create([
+            'nome' => 'Anciients',
+            'musicbrainz_id' => $mbid,
+            'discogs_id' => $discogs,
+        ]);
+        $anterior->delete();
+
+        $resposta = $this
+            ->actingAs($utilizador, 'sessao')
+            ->postJson(route('artistas.guardar'), [
+                'nome' => 'Anciients',
+                'musicbrainz_id' => $mbid,
+                'discogs_id' => $discogs,
+            ]);
+
+        $resposta->assertCreated();
+        $identificadorNovo = $resposta->json('artista.id');
+
+        self::assertIsInt($identificadorNovo);
+        self::assertNotSame($anterior->id, $identificadorNovo);
+
+        $this->assertDatabaseHas('artistas', [
+            'id' => $anterior->id,
+            'musicbrainz_id' => $mbid,
+            'discogs_id' => $discogs,
+            'deleted_at' => $anterior->deleted_at,
+        ]);
+        $this->assertDatabaseHas('artistas', [
+            'id' => $identificadorNovo,
+            'musicbrainz_id' => $mbid,
+            'discogs_id' => $discogs,
+            'deleted_at' => null,
+        ]);
+    }
+
+    /**
      * Confirma que a criação JSON associa explicitamente a origem e os
      * géneros, respeitando o contrato de atribuição em massa do modelo.
      *

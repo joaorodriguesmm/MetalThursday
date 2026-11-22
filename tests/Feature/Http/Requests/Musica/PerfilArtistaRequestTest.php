@@ -143,6 +143,32 @@ final class PerfilArtistaRequestTest extends TestCase
         self::assertTrue($validador->errors()->has('discogs_id'));
     }
 
+    /**
+     * Os identificadores de artistas eliminados podem voltar a ser utilizados.
+     */
+    #[Test]
+    public function aceita_identificadores_de_artista_eliminado_logicamente(): void
+    {
+        $mbid = 'e1aa999b-9803-4acc-91bd-1cd2d4233c17';
+        $discogs = 987654;
+
+        $anterior = Artista::factory()->create([
+            'musicbrainz_id' => $mbid,
+            'discogs_id' => $discogs,
+        ]);
+        $anterior->delete();
+
+        $validador = $this->criarValidadorBase([
+            'musicbrainz_id' => $mbid,
+            'discogs_id' => $discogs,
+        ]);
+
+        self::assertFalse(
+            $validador->fails(),
+            implode(PHP_EOL, $validador->errors()->all()),
+        );
+    }
+
     /** Confirma que a imagem é sempre um endereço externo HTTP/HTTPS seguro. */
     #[Test]
     public function rejeita_imagem_que_nao_e_url_externa_segura(): void

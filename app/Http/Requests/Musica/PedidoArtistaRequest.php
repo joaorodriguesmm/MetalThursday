@@ -136,12 +136,16 @@ abstract class PedidoArtistaRequest extends FormRequest
             Rule::unique(
                 Artista::class,
                 'musicbrainz_id',
+            )->whereNull(
+                'deleted_at',
             );
 
         $regraDiscogs =
             Rule::unique(
                 Artista::class,
                 'discogs_id',
+            )->whereNull(
+                'deleted_at',
             );
 
         if ($artistaAtual instanceof Artista) {
