@@ -108,15 +108,15 @@
         data-associacao-importacao
     ></div>
 
-    @error('musicbrainz_id')
-        <div class="invalid-feedback d-block">
-            {{ $message }}
-        </div>
-    @enderror
+    <div
+        class="invalid-feedback @error('musicbrainz_id') d-block @enderror"
+        data-erro-campo="musicbrainz_id"
+        aria-live="polite"
+    >@error('musicbrainz_id'){{ $message }}@enderror</div>
 
-    @error('discogs_id')
-        <div class="invalid-feedback d-block">
-            {{ $message }}
-        </div>
-    @enderror
+    <div
+        class="invalid-feedback @error('discogs_id') d-block @enderror"
+        data-erro-campo="discogs_id"
+        aria-live="polite"
+    >@error('discogs_id'){{ $message }}@enderror</div>
 </section>

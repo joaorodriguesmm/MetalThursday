@@ -812,6 +812,26 @@ function inicializarLigacoes(
     reindexarLigacoes(
         formulario,
     );
+
+    // Repor um formulário não remove as linhas acrescentadas à DOM.
+    // A criação rápida deve regressar a uma única ligação vazia.
+    if (formulario.hasAttribute('data-formulario-criar-artista')) {
+        formulario.addEventListener(
+            'reset',
+            (evento) => {
+                queueMicrotask(() => {
+                    if (evento.defaultPrevented || !formulario.isConnected) {
+                        return;
+                    }
+
+                    escreverLigacoes(
+                        formulario,
+                        [],
+                    );
+                });
+            },
+        );
+    }
 }
 
 /**
@@ -2262,6 +2282,57 @@ function inicializarImportacao(
 
     if (!(contentor instanceof HTMLElement)) {
         return;
+    }
+
+    // Uma nova abertura pelo botão de criação não deve recuperar a
+    // associação nem os dados da criação anterior. O retorno de um
+    // modal de géneros não possui acionador e preserva o preenchimento.
+    if (formulario.hasAttribute('data-formulario-criar-artista')) {
+        const modal = formulario.closest('.modal');
+
+        if (modal instanceof HTMLElement) {
+            modal.addEventListener(
+                'show.bs.modal',
+                (evento) => {
+                    if (!(evento.relatedTarget instanceof Element)) {
+                        return;
+                    }
+
+                    queueMicrotask(() => {
+                        if (evento.defaultPrevented || !formulario.isConnected) {
+                            return;
+                        }
+
+                        formulario.reset();
+                    });
+                },
+            );
+        }
+
+        formulario.addEventListener(
+            'reset',
+            (evento) => {
+                queueMicrotask(() => {
+                    if (evento.defaultPrevented || !formulario.isConnected) {
+                        return;
+                    }
+
+                    // Os campos hidden atualizam o valor predefinido ao
+                    // receberem .value. Um reset nativo nao os limpa.
+                    for (const seletor of [
+                        '[data-musicbrainz-id]',
+                        '[data-discogs-id]',
+                    ]) {
+                        const campo = formulario.querySelector(seletor);
+
+                        if (campo instanceof HTMLInputElement) {
+                            campo.value = '';
+                            campo.defaultValue = '';
+                        }
+                    }
+                });
+            },
+        );
     }
 
     formulario.addEventListener(

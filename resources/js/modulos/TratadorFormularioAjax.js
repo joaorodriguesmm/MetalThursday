@@ -797,8 +797,7 @@ class TratadorFormularioAjax {
         let primeiroCampoInvalido =
             null;
 
-        let primeiraMensagemSemCampo =
-            null;
+        const mensagensSemCampo = [];
 
         Object.entries(
             erros,
@@ -819,8 +818,9 @@ class TratadorFormularioAjax {
                     );
 
                 if (campos.length === 0) {
-                    primeiraMensagemSemCampo ??=
-                        mensagem;
+                    mensagensSemCampo.push(
+                        mensagem,
+                    );
 
                     return;
                 }
@@ -859,32 +859,32 @@ class TratadorFormularioAjax {
                         );
                 }
 
-                primeiroCampoInvalido ??=
-                    campos.find(
-                        (campo) =>
-                            this.eCampoFocavel(
-                                campo,
-                            ),
-                    )
-                    ?? null;
+                const campoFocavel = campos.find(
+                    (campo) => this.eCampoFocavel(campo),
+                );
+
+                if (campoFocavel) {
+                    primeiroCampoInvalido ??= campoFocavel;
+                } else {
+                    // Campos hidden podem ter feedback no formulario,
+                    // mas o utilizador precisa tambem de um alerta visivel.
+                    mensagensSemCampo.push(
+                        mensagem,
+                    );
+                }
             },
         );
+
+        if (mensagensSemCampo.length > 0) {
+            void GestorAlertas.mostrarErro(
+                [...new Set(mensagensSemCampo)].join(' '),
+                'Dados inválidos',
+            );
+        }
 
         if (primeiroCampoInvalido !== null) {
             this.focarCampo(
                 primeiroCampoInvalido,
-            );
-
-            return;
-        }
-
-        if (
-            primeiraMensagemSemCampo
-            !== null
-        ) {
-            void GestorAlertas.mostrarErro(
-                primeiraMensagemSemCampo,
-                'Dados inválidos',
             );
         }
     }
@@ -1120,6 +1120,18 @@ class TratadorFormularioAjax {
                 instanceof HTMLFormElement)
         ) {
             return null;
+        }
+
+        const feedbackExplicito = Array.from(
+            this.formulario.querySelectorAll('[data-erro-campo]'),
+        ).find(
+            (elemento) => elemento instanceof HTMLElement
+                && elemento.dataset.erroCampo === campo.name
+                && elemento.classList.contains('invalid-feedback'),
+        );
+
+        if (feedbackExplicito instanceof HTMLElement) {
+            return feedbackExplicito;
         }
 
         const identificadoresDescritos =
