@@ -114,10 +114,46 @@
     </header>
 
     <div class="card-body">
+        @if (count($seccoesPreparadas) >= 3)
+            <nav
+                id="indice-seccoes-metal-thursday-{{ $identificadorMetalThursday }}"
+                class="mb-4 pb-3 border-bottom border-secondary"
+                aria-label="Índice de secções de {{ $tituloMetalThursday }}"
+            >
+                <h3 class="h6 mb-3">Índice de secções</h3>
+
+                <ol class="list-unstyled d-flex flex-wrap gap-2 mb-0">
+                    @foreach ($seccoesPreparadas as $seccaoIndice)
+                        @php
+                            $tituloIndice = $seccaoIndice['temDetalhes']
+                                ? $seccaoIndice['tituloApresentacao']
+                                : ($seccaoIndice['titulo']
+                                    ?? $seccaoIndice['descricao']
+                                    ?? 'Texto');
+                        @endphp
+
+                        <li>
+                            <a
+                                class="btn btn-sm btn-secondary"
+                                href="#seccao-{{ $seccaoIndice['identificador'] }}"
+                            >
+                                {{ $loop->iteration }}.
+                                {{ Illuminate\Support\Str::limit(
+                                    Illuminate\Support\Str::squish($tituloIndice),
+                                    70,
+                                ) }}
+                            </a>
+                        </li>
+                    @endforeach
+                </ol>
+            </nav>
+        @endif
+
         @forelse ($seccoesPreparadas as $seccaoPreparada)
             <section
                 id="seccao-{{ $seccaoPreparada['identificador'] }}"
                 class="seccao-metal-thursday"
+                tabindex="-1"
             >
                 @if (! $seccaoPreparada['temDetalhes'])
                     @if ($seccaoPreparada['titulo'] !== null)
@@ -362,6 +398,17 @@
                             @endif
                         </div>
                     @endif
+                @endif
+
+                @if (count($seccoesPreparadas) >= 3)
+                    <div class="d-flex justify-content-end mt-3">
+                        <a
+                            class="small text-muted"
+                            href="#indice-seccoes-metal-thursday-{{ $identificadorMetalThursday }}"
+                        >
+                            Voltar ao índice de secções
+                        </a>
+                    </div>
                 @endif
 
                 @if (! $loop->last)

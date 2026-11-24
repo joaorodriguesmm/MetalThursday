@@ -2225,6 +2225,87 @@ final class ControladorMetalThursdayTest extends TestCase
     }
 
     /**
+     * O índice de navegação apresenta ligações para as secções de uma
+     * MetalThursday com pelo menos três secções.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function detalhes_apresentam_indice_para_tres_seccoes(): void
+    {
+        $utilizador = $this->criarUtilizador();
+
+        $this->actingAs($utilizador, 'sessao');
+
+        $metalThursday = $this->criarMetalThursday(
+            $this->criarEdicao(),
+            $utilizador,
+            '2026-01-01',
+        );
+
+        $primeira = SeccaoMetalThursday::factory()
+            ->paraMetalThursday($metalThursday)
+            ->naOrdem(1)
+            ->create(['descricao' => 'Introdução ao evento.']);
+
+        $segunda = SeccaoMetalThursday::factory()
+            ->paraMetalThursday($metalThursday)
+            ->naOrdem(2)
+            ->create(['descricao' => 'Novidades musicais.']);
+
+        $terceira = SeccaoMetalThursday::factory()
+            ->paraMetalThursday($metalThursday)
+            ->naOrdem(3)
+            ->create(['descricao' => 'Considerações finais.']);
+
+        $this->get(route('metal-thursday.detalhes', $metalThursday))
+            ->assertOk()
+            ->assertSeeHtml(
+                'id="indice-seccoes-metal-thursday-'.$metalThursday->getKey().'"',
+            )
+            ->assertSee('Índice de secções')
+            ->assertSeeHtml('href="#seccao-'.$primeira->getKey().'"')
+            ->assertSeeHtml('href="#seccao-'.$segunda->getKey().'"')
+            ->assertSeeHtml('href="#seccao-'.$terceira->getKey().'"')
+            ->assertSeeHtml('id="seccao-'.$terceira->getKey().'"')
+            ->assertSee('Voltar ao índice de secções');
+    }
+
+    /**
+     * Uma MetalThursday curta não deve apresentar um índice desnecessário.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function detalhes_omitem_indice_com_duas_seccoes(): void
+    {
+        $utilizador = $this->criarUtilizador();
+
+        $this->actingAs($utilizador, 'sessao');
+
+        $metalThursday = $this->criarMetalThursday(
+            $this->criarEdicao(),
+            $utilizador,
+            '2026-01-01',
+        );
+
+        SeccaoMetalThursday::factory()
+            ->paraMetalThursday($metalThursday)
+            ->naOrdem(1)
+            ->create();
+
+        SeccaoMetalThursday::factory()
+            ->paraMetalThursday($metalThursday)
+            ->naOrdem(2)
+            ->create();
+
+        $this->get(route('metal-thursday.detalhes', $metalThursday))
+            ->assertOk()
+            ->assertDontSee('Índice de secções')
+            ->assertDontSee('Voltar ao índice de secções');
+    }
+
+    /**
      * Confirma que o utilizador nunca nomeado com precedência alfabética é
      * apresentado antes dos utilizadores já nomeados.
      *
