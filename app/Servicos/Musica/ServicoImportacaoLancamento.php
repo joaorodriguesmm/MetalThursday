@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Servicos\Musica;
 
 use App\Enumeracoes\TipoLancamento;
+use App\Models\Musica\Artista;
 use App\Models\Musica\FaixaLancamento;
 use App\Models\Musica\Lancamento;
 use App\Models\Musica\Musica;
@@ -13,6 +14,7 @@ use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
+use Throwable;
 
 /**
  * Importa lançamentos musicais obtidos através do Discogs.
@@ -71,7 +73,118 @@ final class ServicoImportacaoLancamento
      */
     public function __construct(
         private readonly ServicoDiscogs $discogs,
+        private readonly ServicoSugestoesAlbum $sugestoesAlbum,
     ) {}
+
+    /**
+     * Importa a edição e obtém ligações complementares independentes do
+     * catálogo. Uma falha ao obter as ligações nunca impede a reutilização de
+     * um lançamento que já esteja completo e disponível localmente.
+     *
+     * @return array{lancamento: Lancamento, sugestoes: array{
+     *     descricao: string|null,
+     *     descricao_fonte: string|null,
+     *     notas_edicao: string|null,
+     *     ligacoes: list<array{etiqueta: string, url: string}>
+     * }}
+     *
+     * @since 2.0.0
+     */
+    public function importarComSugestoes(
+        int $identificadorDiscogs,
+        ?Closure $validarAutorizacao = null,
+        ?Artista $artista = null,
+    ): array {
+        // Quando o lançamento já está completo, a reutilização e a autorização
+        // transacional têm de ocorrer antes de qualquer pedido externo opcional.
+        $existente = Lancamento::withTrashed()
+            ->where('discogs_release_id', $identificadorDiscogs)
+            ->first();
+
+        $lancamento = null;
+        if (
+            $existente instanceof Lancamento
+            && ! $this->necessitaMetadadosExternos($existente)
+        ) {
+            $lancamento = $this->importar(
+                $identificadorDiscogs,
+                $validarAutorizacao,
+            );
+        } elseif ($validarAutorizacao !== null) {
+            // A consulta complementar não deve iniciar-se se a autorização
+            // tiver sido entretanto revogada. A persistência volta a validar.
+            DB::transaction(static function () use ($validarAutorizacao): bool {
+                $validarAutorizacao();
+
+                return true;
+            });
+        }
+
+        $dados = null;
+
+        try {
+            $dados = $this->discogs->obterLancamento($identificadorDiscogs);
+        } catch (RuntimeException) {
+            // A edição pode já existir no catálogo local; as sugestões são opcionais.
+        }
+
+        if (
+            $dados !== null
+            && $dados['discogs_release_id'] !== $identificadorDiscogs
+        ) {
+            throw new RuntimeException('O Discogs devolveu uma edição diferente da solicitada.');
+        }
+
+        if ($lancamento === null) {
+            $lancamento = $this->importar(
+                $identificadorDiscogs,
+                $validarAutorizacao,
+                $dados,
+            );
+        }
+
+        $sugestoesExternas = [
+            'descricao' => null,
+            'descricao_fonte' => null,
+            'ligacoes' => [],
+        ];
+
+        if ($artista instanceof Artista && $dados !== null) {
+            try {
+                $sugestoesExternas = $this->sugestoesAlbum->obter($artista, $dados);
+            } catch (Throwable) {
+                // O enriquecimento nunca invalida uma importação Discogs concluída.
+            }
+        }
+
+        $ligacoesDiscogs = $dados['ligacoes_sugeridas'] ?? [
+            [
+                'etiqueta' => 'Discogs — edição',
+                'url' => 'https://www.discogs.com/release/'.$identificadorDiscogs,
+            ],
+        ];
+
+        $ligacoes = [];
+        $vistos = [];
+        foreach (array_merge($sugestoesExternas['ligacoes'], $ligacoesDiscogs) as $ligacao) {
+            $url = $ligacao['url'];
+            if (isset($vistos[$url])) {
+                continue;
+            }
+            $vistos[$url] = true;
+            $ligacoes[] = $ligacao;
+        }
+
+        return [
+            'lancamento' => $lancamento,
+            'sugestoes' => [
+                'descricao' => $sugestoesExternas['descricao'],
+                'descricao_fonte' => $sugestoesExternas['descricao_fonte'],
+                'notas_edicao' => $dados['notas_edicao'] ?? null,
+                'ligacoes' => $ligacoes,
+            ],
+        ];
+    }
 
     /**
      * Importa uma edição concreta do Discogs para o catálogo local.
@@ -88,6 +201,7 @@ final class ServicoImportacaoLancamento
      *
      * @param  int  $identificadorDiscogs  Identificador da Release Discogs.
      * @param  (Closure(): void)|null  $validarAutorizacao
+     * @param  DadosLancamentoDiscogs|null  $dadosPrecarregados  Ficha já obtida para sugestões.
      * @return Lancamento Lançamento persistido.
      *
      * @since 2.0.0
@@ -95,6 +209,7 @@ final class ServicoImportacaoLancamento
     public function importar(
         int $identificadorDiscogs,
         ?Closure $validarAutorizacao = null,
+        ?array $dadosPrecarregados = null,
     ): Lancamento {
         $existente =
             Lancamento::withTrashed()
@@ -123,12 +238,8 @@ final class ServicoImportacaoLancamento
                 $existente,
             )
         ) {
-            $dados =
-                $this
-                    ->discogs
-                    ->obterLancamento(
-                        $identificadorDiscogs,
-                    );
+            $dados = $dadosPrecarregados
+                ?? $this->discogs->obterLancamento($identificadorDiscogs);
         }
 
         try {

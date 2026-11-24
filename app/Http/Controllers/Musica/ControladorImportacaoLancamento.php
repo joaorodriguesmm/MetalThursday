@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\ReservaMetalThursday;
+use App\Models\Musica\Artista;
 use App\Models\Musica\FaixaLancamento;
 use App\Servicos\Musica\ServicoDiscogs;
 use App\Servicos\Musica\ServicoImportacaoLancamento;
@@ -16,6 +17,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -113,17 +115,32 @@ final class ControladorImportacaoLancamento extends Controller
             $pedido,
         );
 
+        $validado = $pedido->validate([
+            'artista_id' => [
+                'sometimes',
+                'nullable',
+                'integer',
+                'min:1',
+                Rule::exists(Artista::class, 'id')->whereNull('deleted_at'),
+            ],
+        ]);
+
+        $artista = isset($validado['artista_id'])
+            ? Artista::query()->whereKey($validado['artista_id'])->first()
+            : null;
+
         try {
-            $lancamento =
+            $resultado =
                 $this
                     ->servicoImportacao
-                    ->importar(
+                    ->importarComSugestoes(
                         (int) $identificadorDiscogs,
                         function () use ($pedido): void {
                             $this->autorizarUtilizacaoTransacional(
                                 $pedido,
                             );
                         },
+                        $artista,
                     );
         } catch (RuntimeException) {
             return response()->json(
@@ -134,11 +151,14 @@ final class ControladorImportacaoLancamento extends Controller
             );
         }
 
+        $lancamento = $resultado['lancamento'];
+
         $lancamento->load(
             'faixas.musica',
         );
 
         return response()->json([
+            'sugestoes' => $resultado['sugestoes'],
             'lancamento' => [
                 'id' => $lancamento->id,
                 'discogs_release_id' => (int) $lancamento->discogs_release_id,

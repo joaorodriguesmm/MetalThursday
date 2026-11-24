@@ -9,6 +9,7 @@ use App\Enumeracoes\TipoLancamento;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\ReservaMetalThursday;
+use App\Models\Musica\Lancamento;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -133,6 +134,32 @@ final class ControladorImportacaoLancamentoTest extends TestCase
     }
 
     /**
+     * A identidade contextual do artista é opcional, mas não pode apontar
+     * para um registo inexistente ou eliminado logicamente.
+     */
+    #[Test]
+    public function rejeita_artista_de_contexto_inexistente(): void
+    {
+        $administrador = Utilizador::factory()
+            ->comPapel(PapelUtilizador::SuperAdministrador)
+            ->create(['email_verified_at' => now()]);
+
+        Http::fake();
+
+        $this->actingAs($administrador, 'sessao')
+            ->postJson(
+                route('lancamentos.importacao.importar', [
+                    'identificadorDiscogs' => 249504,
+                ]),
+                ['artista_id' => 99999999],
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('artista_id');
+
+        Http::assertNothingSent();
+    }
+
+    /**
      * Confirma que um utilizador comum com reserva pendente pode pesquisar
      * lançamentos durante a preparação da MetalThursday.
      *
@@ -194,6 +221,56 @@ final class ControladorImportacaoLancamentoTest extends TestCase
     }
 
     /**
+     * Confirma que uma edição já completa é autorizada antes de consultar
+     * o Discogs para obter ligações complementares.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function reutiliza_lancamento_completo_e_obtem_ligacoes_complementares(): void
+    {
+        $superAdministrador = Utilizador::factory()
+            ->comPapel(PapelUtilizador::SuperAdministrador)
+            ->create(['email_verified_at' => now()]);
+
+        $lancamento = Lancamento::factory()->create([
+            'titulo' => 'Master Of Puppets',
+            'tipo' => TipoLancamento::AlbumEstudio,
+            'ano_original' => 1986,
+            'discogs_release_id' => 249504,
+        ]);
+
+        Http::fake([
+            'https://api.discogs.com/releases/249504' => Http::response([
+                'id' => 249504,
+                'title' => 'Master Of Puppets',
+                'artists' => [],
+                'tracklist' => [],
+                'videos' => [
+                    ['uri' => 'https://www.youtube.com/watch?v=abcdefghijk'],
+                ],
+            ], 200),
+        ]);
+
+        $this->actingAs($superAdministrador, 'sessao')
+            ->postJson(route('lancamentos.importacao.importar', [
+                'identificadorDiscogs' => 249504,
+            ]))
+            ->assertOk()
+            ->assertJsonPath('lancamento.id', $lancamento->getKey())
+            ->assertJsonPath(
+                'sugestoes.ligacoes.1.url',
+                'https://www.youtube.com/watch?v=abcdefghijk',
+            );
+
+        self::assertSame(1, Lancamento::withTrashed()
+            ->where('discogs_release_id', 249504)
+            ->count());
+
+        Http::assertSentCount(1);
+    }
+
+    /**
      * Confirma a importação da Release Discogs selecionada.
      *
      * @since 2.0.0
@@ -217,6 +294,10 @@ final class ControladorImportacaoLancamentoTest extends TestCase
                     'title' => 'Master Of Puppets',
                     'year' => 1991,
                     'master_id' => 12345,
+                    'notes' => 'Notas editoriais da edição.',
+                    'videos' => [
+                        ['uri' => 'https://www.youtube.com/watch?v=abcdefghijk'],
+                    ],
 
                     'formats' => [
                         [
@@ -273,6 +354,18 @@ final class ControladorImportacaoLancamentoTest extends TestCase
 
         $resposta
             ->assertOk()
+            ->assertJsonPath(
+                'sugestoes.notas_edicao',
+                'Notas editoriais da edição.',
+            )
+            ->assertJsonPath(
+                'sugestoes.ligacoes.0.url',
+                'https://www.discogs.com/release/249504',
+            )
+            ->assertJsonPath(
+                'sugestoes.ligacoes.1.url',
+                'https://www.youtube.com/watch?v=abcdefghijk',
+            )
             ->assertJsonPath(
                 'lancamento.discogs_release_id',
                 249504,

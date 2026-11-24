@@ -25,6 +25,8 @@ use RuntimeException;
  *     tipo_sugerido: string|null,
  *     pais: string|null,
  *     formatos: list<string>,
+ *     notas_edicao: string|null,
+ *     ligacoes_sugeridas: list<array{etiqueta: string, url: string}>,
  *     artistas: list<array{
  *         discogs_id: int,
  *         nome: string
@@ -283,6 +285,15 @@ final class ServicoDiscogs
 
             'formatos' => $formatos,
 
+            'notas_edicao' => $this->normalizarNotasEdicao(
+                $dados['notes'] ?? null,
+            ),
+
+            'ligacoes_sugeridas' => $this->normalizarLigacoesSugeridas(
+                $discogsReleaseId,
+                $dados['videos'] ?? null,
+            ),
+
             'artistas' => $this->normalizarArtistas(
                 $dados['artists']
                     ?? [],
@@ -293,6 +304,109 @@ final class ServicoDiscogs
                     ?? [],
             ),
         ];
+    }
+
+    /**
+     * Normaliza notas editoriais de uma edição concreta do Discogs.
+     *
+     * As notas são apenas uma sugestão: podem descrever uma prensagem ou
+     * créditos, e nunca são guardadas automaticamente como descrição do álbum.
+     *
+     * @since 2.0.0
+     */
+    private function normalizarNotasEdicao(mixed $valor): ?string
+    {
+        if (! is_string($valor) || preg_match('//u', $valor) !== 1) {
+            return null;
+        }
+
+        $texto = trim(str_replace(["\r\n", "\r"], "\n", $valor));
+
+        if (
+            $texto === ''
+            || mb_strlen($texto) > 5000
+            || preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $texto) === 1
+        ) {
+            return null;
+        }
+
+        return $texto;
+    }
+
+    /**
+     * Sugere apenas a página da edição e vídeos individuais YouTube cujos
+     * identificadores constam explicitamente da ficha Discogs.
+     *
+     * Os vídeos não são assumidos como reproduções integrais do álbum.
+     * O utilizador decide quais as ligações que pretende acrescentar.
+     *
+     * @return list<array{etiqueta: string, url: string}>
+     *
+     * @since 2.0.0
+     */
+    private function normalizarLigacoesSugeridas(
+        int $identificador,
+        mixed $videos,
+    ): array {
+        $ligacoes = [
+            [
+                'etiqueta' => 'Discogs — edição',
+                'url' => 'https://www.discogs.com/release/'.$identificador,
+            ],
+        ];
+
+        if (! is_array($videos)) {
+            return $ligacoes;
+        }
+
+        $identificadoresVistos = [];
+
+        foreach ($videos as $video) {
+            if (! is_array($video) || count($identificadoresVistos) >= 5) {
+                continue;
+            }
+
+            $endereco = $video['uri'] ?? null;
+
+            if (! is_string($endereco) || strlen($endereco) > 2048) {
+                continue;
+            }
+
+            $partes = parse_url($endereco);
+
+            if (! is_array($partes) || ($partes['scheme'] ?? '') !== 'https') {
+                continue;
+            }
+
+            $dominio = strtolower($partes['host'] ?? '');
+            $identificadorVideo = null;
+
+            if (in_array($dominio, ['youtube.com', 'www.youtube.com', 'm.youtube.com'], true)
+                && ($partes['path'] ?? '') === '/watch') {
+                parse_str($partes['query'] ?? '', $parametros);
+                $identificadorVideo = array_key_exists('list', $parametros)
+                    ? null
+                    : ($parametros['v'] ?? null);
+            } elseif (in_array($dominio, ['youtu.be', 'www.youtu.be'], true)) {
+                $identificadorVideo = ltrim($partes['path'] ?? '', '/');
+            }
+
+            if (
+                ! is_string($identificadorVideo)
+                || preg_match('/^[a-zA-Z0-9_-]{11}$/', $identificadorVideo) !== 1
+                || in_array($identificadorVideo, $identificadoresVistos, true)
+            ) {
+                continue;
+            }
+
+            $identificadoresVistos[] = $identificadorVideo;
+            $ligacoes[] = [
+                'etiqueta' => 'YouTube — vídeo associado no Discogs',
+                'url' => 'https://www.youtube.com/watch?v='.$identificadorVideo,
+            ];
+        }
+
+        return $ligacoes;
     }
 
     /**

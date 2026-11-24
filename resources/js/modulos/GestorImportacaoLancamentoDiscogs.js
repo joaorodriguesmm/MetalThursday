@@ -1,5 +1,6 @@
 import axios from './ClienteHttp';
 import EditorLancamentoDiscogs from './EditorLancamentoDiscogs';
+import GestorLigacoesSecao from './GestorLigacoesSecao';
 
 /**
  * Gere a associação de edições concretas do Discogs às secções de lançamento.
@@ -391,9 +392,10 @@ class GestorImportacaoLancamentoDiscogs {
                 String(identificador),
             );
 
+            const contextoSolicitado = this.criarParametrosContexto(seccao);
             const resposta = await axios.post(
                 endereco,
-                this.criarParametrosContexto(),
+                contextoSolicitado,
             );
 
             if (
@@ -416,10 +418,13 @@ class GestorImportacaoLancamentoDiscogs {
                 return;
             }
 
-            if (campoLigacao.value !== ligacaoSolicitada) {
+            if (
+                campoLigacao.value !== ligacaoSolicitada
+                || this.criarParametrosContexto(seccao).artista_id !== contextoSolicitado.artista_id
+            ) {
                 this.atualizarEstado(
                     area,
-                    'A ligação foi alterada. Importa novamente a edição pretendida.',
+                    'A ligação ou o artista foi alterado. Importa novamente a edição pretendida.',
                     'text-muted',
                 );
 
@@ -439,6 +444,11 @@ class GestorImportacaoLancamentoDiscogs {
             this.apresentarAssociacao(
                 seccao,
                 lancamento,
+            );
+
+            this.importarLigacoes(
+                seccao,
+                resposta?.data?.sugestoes?.ligacoes,
             );
 
             this.atualizarEstado(
@@ -795,6 +805,95 @@ class GestorImportacaoLancamentoDiscogs {
     }
 
     /**
+     * Adiciona automaticamente as ligações verificadas devolvidas pela
+     * importação, preservando as existentes e ignorando repetições.
+     *
+     * Não preenche nem altera a descrição da secção.
+     *
+     * @param {HTMLElement} seccao Secção do lançamento.
+     * @param {unknown} ligacoes Ligações recebidas do servidor.
+     * @returns {number} Número de ligações adicionadas.
+     *
+     * @since 2.0.0
+     */
+    importarLigacoes(seccao, ligacoes) {
+        if (!this.seccaoAceitaLancamento(seccao) || !Array.isArray(ligacoes)) {
+            return 0;
+        }
+
+        const editor = GestorLigacoesSecao.instanciasPorSeccao.get(seccao);
+        if (!editor) {
+            return 0;
+        }
+
+        const identificarUrl = (valor) => {
+            if (typeof valor !== 'string' || valor.length > 2048) {
+                return null;
+            }
+
+            try {
+                const url = new URL(valor.trim());
+                if (
+                    !['http:', 'https:'].includes(url.protocol)
+                    || url.username !== ''
+                    || url.password !== ''
+                ) {
+                    return null;
+                }
+
+                return url.href;
+            } catch {
+                return null;
+            }
+        };
+
+        const presentes = new Set(
+            editor.obterLinhas()
+                .map((linha) => linha.querySelector('[data-campo-url-ligacao]'))
+                .filter((campo) => campo instanceof HTMLInputElement)
+                .map((campo) => identificarUrl(campo.value))
+                .filter((url) => url !== null),
+        );
+
+        let adicionadas = 0;
+
+        for (const ligacao of ligacoes) {
+            const url = identificarUrl(ligacao?.url);
+            const etiqueta = typeof ligacao?.etiqueta === 'string'
+                ? ligacao.etiqueta.trim()
+                : '';
+
+            if (url === null || etiqueta === '' || presentes.has(url)) {
+                continue;
+            }
+
+            const linha = editor.adicionar();
+            if (!(linha instanceof HTMLElement)) {
+                break;
+            }
+
+            const campoUrl = linha.querySelector('[data-campo-url-ligacao]');
+            const campoEtiqueta = linha.querySelector('[data-campo-etiqueta-ligacao]');
+
+            if (!(campoUrl instanceof HTMLInputElement)) {
+                continue;
+            }
+
+            if (campoEtiqueta instanceof HTMLInputElement) {
+                campoEtiqueta.value = etiqueta;
+            }
+
+            campoUrl.value = url;
+            campoUrl.dispatchEvent(new Event('input', { bubbles: true }));
+
+            presentes.add(url);
+            adicionadas++;
+        }
+
+        return adicionadas;
+    }
+
+    /**
      * Confirma o contrato mínimo da resposta de importação.
      *
      * @param {unknown} lancamento Valor recebido.
@@ -829,15 +928,27 @@ class GestorImportacaoLancamentoDiscogs {
      *
      * @since 2.0.0
      */
-    criarParametrosContexto() {
-        if (this.identificadorMetalThursday === null) {
-            return {};
+    criarParametrosContexto(seccao = null) {
+        const contexto = {};
+
+        if (this.identificadorMetalThursday !== null) {
+            contexto.metal_thursday_id = this.identificadorMetalThursday;
         }
 
-        return {
-            metal_thursday_id:
-                this.identificadorMetalThursday,
-        };
+        const campoArtista = seccao instanceof HTMLElement
+            ? seccao.querySelector('[name$="[artista_id]"]')
+            : null;
+        const identificador = Number(campoArtista?.value);
+
+        if (
+            campoArtista instanceof HTMLSelectElement
+            && Number.isSafeInteger(identificador)
+            && identificador > 0
+        ) {
+            contexto.artista_id = identificador;
+        }
+
+        return contexto;
     }
 
     /**

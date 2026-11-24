@@ -110,6 +110,72 @@ final class ServicoDiscogsTest extends TestCase
     }
 
     /**
+     * Só apresenta notas válidas e ligações de vídeos individuais identificados
+     * pela ficha da edição, sem seguir endereços arbitrários.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function sugere_notas_e_ligacoes_da_edicao_sem_playlists_ou_duplicados(): void
+    {
+        Http::fake([
+            'https://api.discogs.com/releases/249504' => Http::response([
+                'id' => 249504,
+                'title' => 'Beyond The Reach Of The Sun',
+                'notes' => "Notas sobre a edição.\nSegunda linha.",
+                'videos' => [
+                    ['uri' => 'https://www.youtube.com/watch?v=abcdefghijk'],
+                    ['uri' => 'https://youtu.be/abcdefghijk'],
+                    ['uri' => 'https://www.youtube.com/watch?v=zzzzzzzzzzz&list=PL123'],
+                    ['uri' => 'https://youtube.com.exemplo.pt/watch?v=11111111111'],
+                    ['uri' => 'javascript:alert(1)'],
+                    ['uri' => 'https://youtu.be/12345678901'],
+                ],
+            ]),
+        ]);
+
+        $dados = app(ServicoDiscogs::class)->obterLancamento(249504);
+
+        self::assertSame("Notas sobre a edição.\nSegunda linha.", $dados['notas_edicao']);
+        self::assertSame([
+            [
+                'etiqueta' => 'Discogs — edição',
+                'url' => 'https://www.discogs.com/release/249504',
+            ],
+            [
+                'etiqueta' => 'YouTube — vídeo associado no Discogs',
+                'url' => 'https://www.youtube.com/watch?v=abcdefghijk',
+            ],
+            [
+                'etiqueta' => 'YouTube — vídeo associado no Discogs',
+                'url' => 'https://www.youtube.com/watch?v=12345678901',
+            ],
+        ], $dados['ligacoes_sugeridas']);
+    }
+
+    /**
+     * Notas inválidas nunca devem ser sugeridas na descrição.
+     *
+     * @since 2.0.0
+     */
+    #[Test]
+    public function ignora_notas_invalidas_da_edicao(): void
+    {
+        Http::fake([
+            'https://api.discogs.com/releases/249504' => Http::response([
+                'id' => 249504,
+                'title' => 'Álbum',
+                'notes' => "Texto\x00inválido",
+            ]),
+        ]);
+
+        $dados = app(ServicoDiscogs::class)->obterLancamento(249504);
+
+        self::assertNull($dados['notas_edicao']);
+        self::assertCount(1, $dados['ligacoes_sugeridas']);
+    }
+
+    /**
      * Confirma a normalização da tracklist da edição concreta.
      *
      * @since 2.0.0
