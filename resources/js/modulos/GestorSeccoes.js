@@ -152,6 +152,7 @@ class GestorSeccoes {
             this.calcularProximoIndice();
 
         this.normalizarSeccoesExistentes();
+        this.atualizarControlosOrdenacao();
 
         this.botaoAdicionar.addEventListener(
             'click',
@@ -285,6 +286,7 @@ class GestorSeccoes {
             novaSeccao,
         );
 
+        this.atualizarControlosOrdenacao();
         this.anunciarAlteracao('adicionada');
 
         return novaSeccao;
@@ -353,6 +355,21 @@ class GestorSeccoes {
             return;
         }
 
+        const botaoOrdenar = evento.target.closest(
+            '.botao-subir-seccao, .botao-descer-seccao',
+        );
+
+        if (botaoOrdenar instanceof HTMLButtonElement) {
+            this.mover(
+                botaoOrdenar,
+                botaoOrdenar.classList.contains('botao-subir-seccao')
+                    ? -1
+                    : 1,
+            );
+
+            return;
+        }
+
         const botaoRemover = evento.target.closest(
             '.botao-remover-seccao',
         );
@@ -362,6 +379,119 @@ class GestorSeccoes {
         }
 
         this.remover(botaoRemover);
+    }
+
+    /**
+     * Move uma secção uma posição, mantendo os nós e controlos existentes.
+     *
+     * Os nomes dos campos e os índices técnicos não são alterados. A ordem
+     * visual passa a ser a ordem de submissão dos controlos HTML e o servidor
+     * já reindexa as secções de acordo com a ordem recebida.
+     *
+     * @param {HTMLButtonElement} botao Botão que iniciou a operação.
+     * @param {-1|1} direcao Posição anterior ou seguinte.
+     * @returns {boolean} Indica se a secção foi movida.
+     *
+     * @since 2.0.0
+     */
+    mover(botao, direcao) {
+        if (
+            !(botao instanceof HTMLButtonElement)
+            || botao.disabled
+            || (direcao !== -1 && direcao !== 1)
+        ) {
+            return false;
+        }
+
+        const seccao = botao.closest('.item-seccao');
+
+        if (
+            !(seccao instanceof HTMLElement)
+            || seccao.parentElement !== this.contentor
+        ) {
+            return false;
+        }
+
+        const vizinha = direcao === -1
+            ? seccao.previousElementSibling
+            : seccao.nextElementSibling;
+
+        if (
+            !(vizinha instanceof HTMLElement)
+            || !vizinha.classList.contains('item-seccao')
+        ) {
+            return false;
+        }
+
+        this.contentor.insertBefore(
+            seccao,
+            direcao === -1
+                ? vizinha
+                : vizinha.nextSibling,
+        );
+
+        const seccoes = this.atualizarControlosOrdenacao();
+        const posicao = seccoes.indexOf(seccao) + 1;
+        const estado = this.botaoAdicionar.parentElement?.querySelector(
+            '[data-estado-seccoes]',
+        );
+
+        if (estado instanceof HTMLElement) {
+            estado.textContent =
+                `Secção movida para a posição ${posicao} de ${seccoes.length}.`;
+        }
+
+        // Ao chegar ao limite, o botão utilizado fica desativado.
+        // Transferir o foco para o sentido oposto mantém o teclado funcional.
+        const destinoFoco = botao.disabled
+            ? seccao.querySelector(
+                direcao === -1
+                    ? '.botao-descer-seccao'
+                    : '.botao-subir-seccao',
+            )
+            : botao;
+
+        if (destinoFoco instanceof HTMLButtonElement) {
+            destinoFoco.focus({ preventScroll: true });
+        }
+
+        return true;
+    }
+
+    /**
+     * Atualiza a posição apresentada e os limites dos controlos de ordenação.
+     *
+     * @returns {HTMLElement[]} Secções por ordem visual.
+     *
+     * @since 2.0.0
+     */
+    atualizarControlosOrdenacao() {
+        const seccoes = Array.from(this.contentor.children)
+            .filter((elemento) =>
+                elemento instanceof HTMLElement
+                && elemento.classList.contains('item-seccao'),
+            );
+
+        seccoes.forEach((seccao, indice) => {
+            const posicao = seccao.querySelector('[data-posicao-seccao]');
+            const subir = seccao.querySelector('.botao-subir-seccao');
+            const descer = seccao.querySelector('.botao-descer-seccao');
+
+            if (posicao instanceof HTMLElement) {
+                posicao.textContent =
+                    `Secção ${indice + 1} de ${seccoes.length}`;
+            }
+
+            if (subir instanceof HTMLButtonElement) {
+                subir.disabled = indice === 0;
+            }
+
+            if (descer instanceof HTMLButtonElement) {
+                descer.disabled = indice === seccoes.length - 1;
+            }
+        });
+
+        return seccoes;
     }
 
     /**
@@ -439,6 +569,7 @@ class GestorSeccoes {
         );
 
         seccao.remove();
+        this.atualizarControlosOrdenacao();
 
         if (reporFoco) {
             if (

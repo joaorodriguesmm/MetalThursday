@@ -33,6 +33,41 @@
         value="{{ $valores['identificador'] }}"
     >
 
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+        <span
+            class="small fw-semibold"
+            data-posicao-seccao
+        >
+            Secção
+        </span>
+
+        <div
+            class="btn-group btn-group-sm"
+            role="group"
+            aria-label="Alterar a ordem desta secção"
+        >
+            <button
+                class="btn btn-secondary botao-subir-seccao"
+                type="button"
+                aria-label="Subir esta secção"
+                title="Subir secção"
+            >
+                <i class="bi bi-arrow-up me-1" aria-hidden="true"></i>
+                Subir
+            </button>
+
+            <button
+                class="btn btn-secondary botao-descer-seccao"
+                type="button"
+                aria-label="Descer esta secção"
+                title="Descer secção"
+            >
+                <i class="bi bi-arrow-down me-1" aria-hidden="true"></i>
+                Descer
+            </button>
+        </div>
+    </div>
+
     <div class="row">
         <div class="col-12 grupo-campo-formulario mb-3">
             <label
