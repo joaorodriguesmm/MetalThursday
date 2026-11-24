@@ -831,6 +831,16 @@ a:not(.btn) {
     padding-bottom: 4.5rem !important;
 }
 
+// O espaço reservado para o botão de remoção deixa de ser necessário
+// quando os campos dessa secção estão ocultos.
+.item-seccao.item-seccao--recolhida {
+    padding-bottom: 1rem !important;
+}
+
+.item-seccao--recolhida > .cabecalho-seccao {
+    margin-bottom: 0 !important;
+}
+
 .botao-remover-seccao {
     position: absolute;
     right: 1rem;

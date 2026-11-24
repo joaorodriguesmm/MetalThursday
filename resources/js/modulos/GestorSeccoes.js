@@ -169,6 +169,19 @@ class GestorSeccoes {
             (evento) => this.tratarAlteracao(evento),
         );
 
+        this.contentor.addEventListener(
+            'input',
+            (evento) => this.atualizarResumoPorEvento(evento),
+        );
+
+        // O evento `invalid` não propaga. Capturá-lo permite expandir
+        // a secção antes de o navegador tentar focar o campo inválido.
+        this.contentor.addEventListener(
+            'invalid',
+            (evento) => this.expandirCampoInvalido(evento),
+            true,
+        );
+
         let gestoresContentor =
             GestorSeccoes.instanciasPorContentor.get(
                 this.contentor,
@@ -355,6 +368,23 @@ class GestorSeccoes {
             return;
         }
 
+        const botaoAlternar = evento.target.closest(
+            '.botao-alternar-seccao',
+        );
+
+        if (botaoAlternar instanceof HTMLButtonElement) {
+            const seccao = botaoAlternar.closest('.item-seccao');
+
+            if (seccao instanceof HTMLElement) {
+                this.definirSeccaoExpandida(
+                    seccao,
+                    botaoAlternar.getAttribute('aria-expanded') !== 'true',
+                );
+            }
+
+            return;
+        }
+
         const botaoOrdenar = evento.target.closest(
             '.botao-subir-seccao, .botao-descer-seccao',
         );
@@ -379,6 +409,138 @@ class GestorSeccoes {
         }
 
         this.remover(botaoRemover);
+    }
+
+    /**
+     * Expande ou recolhe apenas o conteúdo visual da secção.
+     * Os controlos e respetivos valores continuam no formulário.
+     *
+     * @param {HTMLElement} seccao Secção do formulário.
+     * @param {boolean} expandir Estado pretendido.
+     * @returns {boolean} Indica se os controlos existem.
+     *
+     * @since 2.0.0
+     */
+    definirSeccaoExpandida(seccao, expandir) {
+        const conteudo = seccao.querySelector('[data-conteudo-seccao]');
+        const botao = seccao.querySelector('.botao-alternar-seccao');
+
+        if (
+            !(conteudo instanceof HTMLElement)
+            || !(botao instanceof HTMLButtonElement)
+        ) {
+            return false;
+        }
+
+        if (!expandir && conteudo.contains(document.activeElement)) {
+            botao.focus({ preventScroll: true });
+        }
+
+        if (!expandir) {
+            this.atualizarResumoSeccao(seccao);
+        }
+
+        conteudo.hidden = !expandir;
+        seccao.classList.toggle('item-seccao--recolhida', !expandir);
+        botao.setAttribute('aria-expanded', String(expandir));
+
+        const rotulo = botao.querySelector('[data-rotulo-alternar-seccao]');
+        const icone = botao.querySelector('[data-icone-alternar-seccao]');
+
+        if (rotulo instanceof HTMLElement) {
+            rotulo.textContent = expandir ? 'Recolher' : 'Expandir';
+        }
+
+        if (icone instanceof HTMLElement) {
+            icone.classList.toggle('bi-chevron-up', expandir);
+            icone.classList.toggle('bi-chevron-down', !expandir);
+        }
+
+        return true;
+    }
+
+    /**
+     * Mostra a secção que contém um campo rejeitado pela validação nativa.
+     *
+     * @param {Event} evento Evento de validação.
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    expandirCampoInvalido(evento) {
+        if (!(evento.target instanceof HTMLElement)) {
+            return;
+        }
+
+        const seccao = evento.target.closest('.item-seccao');
+
+        if (seccao instanceof HTMLElement) {
+            this.definirSeccaoExpandida(seccao, true);
+        }
+    }
+
+    /**
+     * Sincroniza o resumo após edição de qualquer campo da secção.
+     *
+     * @param {Event} evento Alteração do campo.
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    atualizarResumoPorEvento(evento) {
+        if (!(evento.target instanceof HTMLElement)) {
+            return;
+        }
+
+        const seccao = evento.target.closest('.item-seccao');
+
+        if (seccao instanceof HTMLElement) {
+            this.atualizarResumoSeccao(seccao);
+        }
+    }
+
+    /**
+     * Resume os campos principais sem depender da posição técnica da secção.
+     *
+     * @param {HTMLElement} seccao Secção do formulário.
+     * @returns {void}
+     *
+     * @since 2.0.0
+     */
+    atualizarResumoSeccao(seccao) {
+        const resumo = seccao.querySelector('[data-resumo-seccao]');
+
+        if (!(resumo instanceof HTMLElement)) {
+            return;
+        }
+
+        const tipo = seccao.querySelector('.seletor-tipo-seccao');
+        const artista = seccao.querySelector('.tom-select-artistas');
+        const titulo = seccao.querySelector('[data-campo-titulo-seccao]');
+        const descricao = seccao.querySelector('textarea[name$="[descricao]"]');
+
+        const designacaoTipo = tipo instanceof HTMLSelectElement && tipo.value
+            ? tipo.selectedOptions.item(0)?.textContent.trim()
+            : '';
+        const designacaoArtista = artista instanceof HTMLSelectElement && artista.value
+            ? artista.selectedOptions.item(0)?.textContent.trim()
+            : '';
+        const designacaoTitulo = titulo instanceof HTMLInputElement
+            ? titulo.value.trim()
+            : '';
+        const excertoDescricao = descricao instanceof HTMLTextAreaElement
+            ? descricao.value.trim().replaceAll(/\s+/g, ' ').slice(0, 70)
+            : '';
+
+        const componentes = [
+            designacaoTipo,
+            designacaoArtista,
+            designacaoTitulo || (!designacaoArtista ? excertoDescricao : ''),
+        ].filter(Boolean);
+
+        resumo.textContent = componentes.length > 0
+            ? componentes.join(' · ')
+            : 'Por preencher';
     }
 
     /**
@@ -482,6 +644,8 @@ class GestorSeccoes {
                     `Secção ${indice + 1} de ${seccoes.length}`;
             }
 
+            this.atualizarResumoSeccao(seccao);
+
             if (subir instanceof HTMLButtonElement) {
                 subir.disabled = indice === 0;
             }
@@ -504,6 +668,8 @@ class GestorSeccoes {
      * @since 2.0.0
      */
     tratarAlteracao(evento) {
+        this.atualizarResumoPorEvento(evento);
+
         const selecaoTipo = evento.target;
 
         if (
