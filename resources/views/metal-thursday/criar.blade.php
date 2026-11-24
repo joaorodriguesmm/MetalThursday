@@ -137,6 +137,8 @@
                     ></p>
                 </section>
 
+                @include('metal-thursday.parciais._resumo-validacao-formulario')
+
                 <p
                     class="small text-muted mt-3 mb-0"
                     data-estado-alteracoes-metal-thursday

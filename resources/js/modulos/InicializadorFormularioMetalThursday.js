@@ -9,6 +9,7 @@ import GestorFormulariosModais from './GestorFormulariosModais';
 import GestorImportacaoLancamentoDiscogs
     from './GestorImportacaoLancamentoDiscogs';
 import GestorLigacoesSecao from './GestorLigacoesSecao';
+import GestorResumoValidacaoMetalThursday from './GestorResumoValidacaoMetalThursday';
 import GestorSeccoes from './GestorSeccoes';
 import InicializadorTomSelect from './InicializadorTomSelect';
 import InicializadorTooltips from './InicializadorTooltips';
@@ -2664,6 +2665,7 @@ function executarInicializacaoFormularioMetalThursday(
     // O estado inicial só é capturado depois de os componentes dinâmicos
     // terminarem a sua inicialização e normalização de campos.
     new GestorAlteracoesMetalThursday(formulario);
+    new GestorResumoValidacaoMetalThursday(formulario);
 }
 
 /**
