@@ -91,6 +91,7 @@ function prepararPagina() {
             <input type="hidden" name="autor_id" value="1">
             <div id="contentor-seccoes"></div>
             <div id="erro-seccoes"></div>
+            <p data-estado-alteracoes-metal-thursday></p>
         </form>
 
         <div id="estado-edicao-metal-thursday"></div>

@@ -133,6 +133,7 @@ function criarPagina() {
 
             <div id="contentor-seccoes"></div>
             <div id="erro-seccoes"></div>
+            <p data-estado-alteracoes-metal-thursday></p>
         </form>
 
         <div id="estado-edicao-metal-thursday"></div>
@@ -261,6 +262,9 @@ describe(
                 inicializar();
                 inicializar();
 
+                // Um listener é da validação de secções e outro
+                // protege as alterações por guardar. A segunda
+                // inicialização não deve duplicar nenhum deles.
                 for (
                     const evento
                     of ['submit', 'reset', 'input', 'change']
@@ -270,7 +274,7 @@ describe(
                             listenersFormulario,
                             evento,
                         ),
-                    ).toBe(1);
+                    ).toBe(2);
                 }
 
                 expect(

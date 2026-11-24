@@ -130,6 +130,14 @@
                     ></p>
                 </section>
 
+                <p
+                    class="small text-muted mt-3 mb-0"
+                    data-estado-alteracoes-metal-thursday
+                    role="status"
+                    aria-live="polite"
+                    aria-atomic="true"
+                >Sem alterações por guardar</p>
+
                 <div
                     class="d-flex flex-column flex-sm-row justify-content-end gap-2 mt-4"
                 >

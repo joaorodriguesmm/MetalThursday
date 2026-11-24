@@ -3,6 +3,7 @@ import {
     adicionarOpcaoTomSelect,
     obterOpcaoResposta,
 } from './OpcoesTomSelect';
+import GestorAlteracoesMetalThursday from './GestorAlteracoesMetalThursday';
 import GestorEdicaoMetalThursday from './GestorEdicaoMetalThursday';
 import GestorFormulariosModais from './GestorFormulariosModais';
 import GestorImportacaoLancamentoDiscogs
@@ -2659,6 +2660,10 @@ function executarInicializacaoFormularioMetalThursday(
         // existente de inicializacao incompleta.
         throw erro;
     }
+
+    // O estado inicial só é capturado depois de os componentes dinâmicos
+    // terminarem a sua inicialização e normalização de campos.
+    new GestorAlteracoesMetalThursday(formulario);
 }
 
 /**
