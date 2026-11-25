@@ -85,7 +85,7 @@
 
                     @if ($pesquisaAtual !== null)
                         <a
-                            class="btn btn-outline-secondary"
+                            class="btn btn-secondary"
                             href="{{ route('artistas.indice') }}"
                         >
                             Limpar

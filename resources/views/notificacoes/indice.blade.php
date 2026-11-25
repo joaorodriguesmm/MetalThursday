@@ -41,7 +41,7 @@
                     @csrf
 
                     <button
-                        class="btn btn-sm btn-outline-secondary"
+                        class="btn btn-sm btn-secondary"
                         type="submit"
                     >
                         <i

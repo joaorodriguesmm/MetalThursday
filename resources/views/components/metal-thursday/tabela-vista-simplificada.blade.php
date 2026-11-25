@@ -133,7 +133,7 @@
                                 >
                                     @foreach ($linha['ligacoes'] as $ligacao)
                                         <a
-                                            class="btn btn-sm btn-outline-light"
+                                            class="btn btn-sm btn-secondary"
                                             href="{{ $ligacao['url'] }}"
                                             target="_blank"
                                             rel="noopener noreferrer external"

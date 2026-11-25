@@ -1337,7 +1337,7 @@ function criarLigacaoExterna(
         );
 
     ligacao.className =
-        'btn btn-sm btn-outline-info';
+        'btn btn-sm btn-info';
 
     ligacao.href =
         endereco.trim();

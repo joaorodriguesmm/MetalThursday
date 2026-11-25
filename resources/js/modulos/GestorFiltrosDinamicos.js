@@ -604,7 +604,7 @@ class GestorFiltrosDinamicos {
 
         botaoRemover.type = 'button';
         botaoRemover.className =
-            'btn btn-sm btn-outline-light bi bi-x-lg';
+            'btn btn-sm btn-secondary bi bi-x-lg';
 
         botaoRemover.dataset.removerFiltro =
             nomeFiltro;

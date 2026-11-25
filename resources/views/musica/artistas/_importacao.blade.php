@@ -63,7 +63,7 @@
             </button>
 
             <button
-                class="btn btn-sm btn-outline-danger"
+                class="btn btn-sm btn-danger"
                 type="button"
                 data-acao-remover-importacao
                 @if (

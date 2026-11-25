@@ -443,7 +443,7 @@
 
                                         <div class="col-md-1 d-grid">
                                             <button
-                                                class="btn btn-outline-danger"
+                                                class="btn btn-danger"
                                                 type="button"
                                                 data-remover-ligacao
                                                 aria-label="Remover ligação"
@@ -483,7 +483,7 @@
 
                                         <div class="col-md-1 d-grid">
                                             <button
-                                                class="btn btn-outline-danger"
+                                                class="btn btn-danger"
                                                 type="button"
                                                 data-remover-ligacao
                                                 aria-label="Remover ligação"

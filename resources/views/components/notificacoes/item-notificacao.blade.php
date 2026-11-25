@@ -63,7 +63,7 @@
                     @csrf
 
                     <button
-                        class="btn btn-sm btn-outline-success"
+                        class="btn btn-sm btn-success"
                         type="submit"
                         aria-label="Marcar a notificação como lida"
                         title="Marcar como lida"
@@ -78,7 +78,7 @@
 
             @if ($dados['ligacao'] !== null)
                 <a
-                    class="btn btn-sm btn-outline-info"
+                    class="btn btn-sm btn-info"
                     href="{{ $dados['ligacao'] }}"
                     aria-label="Ver detalhes da notificação"
                     title="Ver detalhes"
