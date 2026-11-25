@@ -13,11 +13,13 @@ use App\Models\Interacoes\Comentario;
 use App\Models\MetalThursday\MetalThursday;
 use App\Models\MetalThursday\SeccaoMetalThursday;
 use App\Servicos\Interacoes\ServicoDisponibilidadeInteracoes;
+use App\Servicos\Interacoes\ServicoEliminacaoComentarios;
 use App\Servicos\Interacoes\ServicoIdempotenciaComentarios;
 use App\Servicos\Notificacoes\NotificadorInteracoes;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -70,6 +72,9 @@ final class ControladorComentario extends Controller
     private const ACAO_RESPONDEU =
         'respondeu';
 
+    /** Número máximo de comentários por pedido de listagem. */
+    private const COMENTARIOS_POR_PAGINA = 20;
+
     /**
      * Cria o controlador.
      *
@@ -85,6 +90,7 @@ final class ControladorComentario extends Controller
         private readonly NotificadorInteracoes $notificadorInteracoes,
         private readonly ServicoDisponibilidadeInteracoes $servicoDisponibilidadeInteracoes,
         private readonly ServicoIdempotenciaComentarios $servicoIdempotenciaComentarios,
+        private readonly ServicoEliminacaoComentarios $servicoEliminacaoComentarios,
     ) {}
 
     /**
@@ -104,9 +110,18 @@ final class ControladorComentario extends Controller
      * @since 2.0.0
      */
     public function listarPrincipais(
+        Request $pedido,
         string $tipoComentavel,
         int $identificadorComentavel,
     ): JsonResponse {
+        $pedido->validate([
+            'pagina' => ['sometimes', 'integer', 'min:1', 'max:1000000'],
+            'ordenacao' => ['sometimes', 'in:recentes,antigos,populares'],
+        ]);
+
+        $pagina = $pedido->integer('pagina', 1);
+        $ordenacao = $pedido->input('ordenacao', 'recentes');
+
         $utilizador =
             $this->obterUtilizadorAutenticado();
 
@@ -130,19 +145,31 @@ final class ControladorComentario extends Controller
         $identificadorUtilizador =
             $utilizador->id;
 
-        $comentarios =
-            $comentavel
-                ->comentarios()
-                ->principais()
-                ->comDadosApresentacao(
-                    $identificadorUtilizador,
-                )
-                ->ordenadosMaisRecentes()
-                ->get();
+        $consulta = $comentavel
+            ->comentarios()
+            ->principais()
+            ->comDadosApresentacao($identificadorUtilizador);
+
+        if ($ordenacao === 'antigos') {
+            $consulta->ordenadosCronologicamente();
+        } elseif ($ordenacao === 'populares') {
+            $consulta
+                ->orderByDesc('quantidade_gostos')
+                ->ordenadosMaisRecentes();
+        } else {
+            $consulta->ordenadosMaisRecentes();
+        }
+
+        $paginador = $consulta->simplePaginate(
+            self::COMENTARIOS_POR_PAGINA,
+            ['*'],
+            'pagina',
+            $pagina,
+        );
 
         $comentavel->setRelation(
             'comentarios',
-            $comentarios,
+            $paginador->getCollection(),
         );
 
         return response()->json([
@@ -154,6 +181,111 @@ final class ControladorComentario extends Controller
                 ->renderizarSeccaoComentarios(
                     $comentavel,
                 ),
+
+            'pagina' => $pagina,
+            'ordenacao' => $ordenacao,
+            'proxima_pagina' => $paginador->hasMorePages()
+                ? $pagina + 1
+                : null,
+        ]);
+    }
+
+    /**
+     * Obtém a localização e os ancestrais de um comentário disponível.
+     *
+     * A cadeia é validada contra a entidade comentada para impedir que
+     * referências inconsistentes permitam navegar entre publicações.
+     *
+     * @since 2.0.0
+     */
+    public function localizar(
+        Request $pedido,
+    ): JsonResponse {
+        $this->obterUtilizadorAutenticado();
+
+        $pedido->validate([
+            'comentario' => ['required', 'integer', 'min:1'],
+        ]);
+
+        $comentario = Comentario::query()
+            ->whereKey($pedido->integer('comentario'))
+            ->firstOrFail();
+
+        $this->authorize('view', $comentario);
+
+        $comentavel = $this->obterComentavelDoComentario($comentario);
+
+        $publicacao = $this->servicoDisponibilidadeInteracoes
+            ->obterMetalThursdayPublicada($comentavel);
+
+        $caminho = [];
+        $registos = [];
+        $visitados = [];
+        $atual = $comentario;
+
+        while (true) {
+            $identificador = $atual->id;
+
+            if (
+                isset($visitados[$identificador])
+                || count($caminho) >= 256
+            ) {
+                throw new NotFoundHttpException;
+            }
+
+            $visitados[$identificador] = true;
+            $caminho[] = $identificador;
+            $registos[] = $atual;
+
+            if ($atual->comentario_pai_id === null) {
+                break;
+            }
+
+            $pai = Comentario::query()
+                ->whereKey($atual->comentario_pai_id)
+                ->where('tipo_comentavel', $comentario->tipo_comentavel)
+                ->where('comentavel_id', $comentario->comentavel_id)
+                ->first();
+
+            if (! $pai instanceof Comentario) {
+                throw new NotFoundHttpException;
+            }
+
+            $atual = $pai;
+        }
+
+        $paginas = [];
+
+        foreach (array_reverse($registos) as $registo) {
+            if ($registo->created_at === null) {
+                throw new NotFoundHttpException;
+            }
+
+            $ePrincipal = $registo->comentario_pai_id === null;
+
+            $anteriores = Comentario::query()
+                ->where('tipo_comentavel', $comentario->tipo_comentavel)
+                ->where('comentavel_id', $comentario->comentavel_id)
+                ->where('comentario_pai_id', $registo->comentario_pai_id)
+                ->where(static function ($consulta) use ($registo, $ePrincipal): void {
+                    $comparador = $ePrincipal ? '>' : '<';
+                    $consulta->where('created_at', $comparador, $registo->created_at)
+                        ->orWhere(static function ($mesmaData) use ($registo, $comparador): void {
+                            $mesmaData->where('created_at', $registo->created_at)
+                                ->where('id', $comparador, $registo->id);
+                        });
+                })
+                ->count();
+
+            $paginas[] = intdiv($anteriores, self::COMENTARIOS_POR_PAGINA) + 1;
+        }
+
+        return response()->json([
+            'identificador_metal_thursday' => $publicacao->id,
+            'tipo_comentavel' => $comentario->tipo_comentavel,
+            'identificador_comentavel' => $comentario->comentavel_id,
+            'caminho' => array_reverse($caminho),
+            'paginas' => $paginas,
         ]);
     }
 
@@ -305,8 +437,14 @@ final class ControladorComentario extends Controller
      * @since 2.0.0
      */
     public function listarRespostas(
+        Request $pedido,
         Comentario $comentario,
     ): JsonResponse {
+        $pedido->validate([
+            'pagina' => ['sometimes', 'integer', 'min:1', 'max:1000000'],
+        ]);
+
+        $pagina = $pedido->integer('pagina', 1);
         $utilizador =
             $this->obterUtilizadorAutenticado();
 
@@ -334,17 +472,19 @@ final class ControladorComentario extends Controller
         $identificadorUtilizador =
             $utilizador->id;
 
-        $respostas =
-            $comentario
-                ->respostas()
-                ->comDadosApresentacao(
-                    $identificadorUtilizador,
-                )
-                ->ordenadosCronologicamente()
-                ->get();
+        $paginador = $comentario
+            ->respostas()
+            ->comDadosApresentacao($identificadorUtilizador)
+            ->ordenadosCronologicamente()
+            ->simplePaginate(
+                self::COMENTARIOS_POR_PAGINA,
+                ['*'],
+                'pagina',
+                $pagina,
+            );
 
         $respostasSerializadas =
-            $respostas
+            $paginador->getCollection()
                 ->map(
                     fn (
                         Comentario $resposta,
@@ -364,9 +504,11 @@ final class ControladorComentario extends Controller
         return response()->json([
             'comentario_id' => $comentario->id,
 
-            'numero_respostas' => count(
-                $respostasSerializadas,
-            ),
+            'numero_respostas' => $comentario->respostas()->count(),
+            'pagina' => $pagina,
+            'proxima_pagina' => $paginador->hasMorePages()
+                ? $pagina + 1
+                : null,
 
             'respostas' => $respostasSerializadas,
         ]);
@@ -691,62 +833,7 @@ final class ControladorComentario extends Controller
                         $identificadorUtilizador,
                     );
 
-                    if (
-                        $comentarioBloqueado
-                            ->respostas()
-                            ->exists()
-                    ) {
-                        $comentarioBloqueado
-                            ->conteudo_eliminado_em =
-                            now();
-
-                        $comentarioBloqueado
-                            ->saveOrFail();
-
-                        return [
-                            'modo' => 'marcador',
-
-                            'comentario' => $comentarioBloqueado,
-
-                            'comentario_pai_id' => $comentarioBloqueado
-                                ->comentario_pai_id,
-
-                            'comentarios_removidos_ids' => [],
-
-                            'pai_atualizado' => null,
-                        ];
-                    }
-
-                    $identificadorComentario =
-                        $comentarioBloqueado->id;
-
-                    $identificadorPai =
-                        $comentarioBloqueado
-                            ->comentario_pai_id;
-
-                    $comentarioBloqueado
-                        ->deleteOrFail();
-
-                    $limpeza =
-                        $this
-                            ->limparMarcadoresSemRespostas(
-                                $identificadorPai,
-                            );
-
-                    return [
-                        'modo' => 'remover',
-
-                        'comentario' => null,
-
-                        'comentario_pai_id' => $identificadorPai,
-
-                        'comentarios_removidos_ids' => [
-                            $identificadorComentario,
-                            ...$limpeza['comentarios_removidos_ids'],
-                        ],
-
-                        'pai_atualizado' => $limpeza['pai_atualizado'],
-                    ];
+                    return $this->servicoEliminacaoComentarios->eliminarComentarioBloqueado($comentarioBloqueado);
                 },
                 self::TENTATIVAS_TRANSACAO,
             );
@@ -951,95 +1038,6 @@ final class ControladorComentario extends Controller
             'gostos as quantidade_gostos',
             'respostas as quantidade_respostas',
         ]);
-    }
-
-    /**
-     * Remove tombstones ancestrais que deixaram de possuir respostas.
-     *
-     * A limpeza propaga-se para cima até encontrar um comentário com conteúdo,
-     * um tombstone que ainda possua descendentes ou a raiz da conversa.
-     *
-     * O primeiro pai que permanece ativo é devolvido com a quantidade atualizada
-     * das respetivas respostas, permitindo sincronizar a interface sem novo
-     * pedido HTTP.
-     *
-     * @param  int|null  $identificadorPai  Primeiro pai verificado.
-     * @return array{
-     *     comentarios_removidos_ids: list<int>,
-     *     pai_atualizado: array{
-     *         id: int,
-     *         numero_respostas: int
-     *     }|null
-     * } Resultado da limpeza.
-     *
-     * @since 2.0.0
-     */
-    private function limparMarcadoresSemRespostas(
-        ?int $identificadorPai,
-    ): array {
-        $identificadoresRemovidos =
-            [];
-
-        $identificadorAtual =
-            $identificadorPai;
-
-        while ($identificadorAtual !== null) {
-            $comentarioPai =
-                Comentario::query()
-                    ->whereKey(
-                        $identificadorAtual,
-                    )
-                    ->lockForUpdate()
-                    ->first();
-
-            if (! $comentarioPai instanceof Comentario) {
-                return [
-                    'comentarios_removidos_ids' => $identificadoresRemovidos,
-
-                    'pai_atualizado' => null,
-                ];
-            }
-
-            $numeroRespostas =
-                $comentarioPai
-                    ->respostas()
-                    ->count();
-
-            if (
-                ! $comentarioPai
-                    ->temConteudoEliminado()
-                || $numeroRespostas > 0
-            ) {
-                return [
-                    'comentarios_removidos_ids' => $identificadoresRemovidos,
-
-                    'pai_atualizado' => [
-                        'id' => $comentarioPai->id,
-
-                        'numero_respostas' => $numeroRespostas,
-                    ],
-                ];
-            }
-
-            $proximoIdentificadorPai =
-                $comentarioPai
-                    ->comentario_pai_id;
-
-            $identificadoresRemovidos[] =
-                $comentarioPai->id;
-
-            $comentarioPai
-                ->deleteOrFail();
-
-            $identificadorAtual =
-                $proximoIdentificadorPai;
-        }
-
-        return [
-            'comentarios_removidos_ids' => $identificadoresRemovidos,
-
-            'pai_atualizado' => null,
-        ];
     }
 
     /**

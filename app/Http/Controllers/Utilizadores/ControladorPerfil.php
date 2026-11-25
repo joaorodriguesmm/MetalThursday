@@ -12,6 +12,7 @@ use App\Models\Comunicacao\PermissaoEmail;
 use App\Servicos\Utilizadores\ServicoAtualizacaoPerfil;
 use DomainException;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -127,6 +128,14 @@ final class ControladorPerfil extends Controller
                     'descricao',
                     'ordem',
                 ])
+                ->when(
+                    ! $utilizador->eSuperAdministrador(),
+                    static fn (Builder $consulta): Builder => $consulta->where(
+                        'identificador',
+                        '!=',
+                        IdentificadorPermissaoEmail::NovasDenunciasComentarios->value,
+                    ),
+                )
                 ->orderBy(
                     'ordem',
                 )

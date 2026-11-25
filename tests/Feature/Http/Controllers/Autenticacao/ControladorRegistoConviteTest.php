@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Http\Controllers\Autenticacao;
 
+use App\Enumeracoes\IdentificadorPermissaoEmail;
+use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\Utilizador;
+use App\Models\Comunicacao\PermissaoEmail;
 use App\Servicos\Autenticacao\ServicoConvites;
 use Database\Seeders\PermissaoEmailSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -70,6 +74,10 @@ final class ControladorRegistoConviteTest extends TestCase
                 escape: false,
             );
 
+        $resposta
+            ->assertSee(IdentificadorPermissaoEmail::DecisoesDenunciasComentarios->nome())
+            ->assertDontSee(IdentificadorPermissaoEmail::NovasDenunciasComentarios->nome());
+
         $conteudo =
             $resposta->getContent();
 
@@ -86,7 +94,7 @@ final class ControladorRegistoConviteTest extends TestCase
         );
 
         self::assertSame(
-            6,
+            count(IdentificadorPermissaoEmail::cases()) - 2,
             substr_count(
                 $conteudo,
                 'data-permissao-email-individual',
@@ -323,5 +331,96 @@ final class ControladorRegistoConviteTest extends TestCase
                 );
             }
         }
+    }
+
+    #[Test]
+    public function registo_rejeita_preferencia_reservada_sem_consumir_convite(): void
+    {
+        Notification::fake();
+
+        $this->seed(PermissaoEmailSeeder::class);
+
+        $criador = Utilizador::factory()->create();
+        $email = 'convidado@exemplo.pt';
+
+        $resultado = app(ServicoConvites::class)->criar(
+            nomeConvidado: 'Novo Utilizador',
+            emailDestino: $email,
+            criador: $criador,
+            expiraEm: null,
+        );
+
+        $convite = $resultado->obterConvite();
+
+        $nova = PermissaoEmail::query()
+            ->where(
+                'identificador',
+                IdentificadorPermissaoEmail::NovasDenunciasComentarios->value,
+            )
+            ->sole();
+
+        $decisao = PermissaoEmail::query()
+            ->where(
+                'identificador',
+                IdentificadorPermissaoEmail::DecisoesDenunciasComentarios->value,
+            )
+            ->sole();
+
+        $dados = [
+            'codigo_convite' => $resultado->obterCodigo(),
+            'nome' => 'Novo Utilizador',
+            'email' => $email,
+            'palavra_passe' => 'MetalThursday#2026',
+            'confirmacao_palavra_passe' => 'MetalThursday#2026',
+            'permissoes_email' => [$nova->id, $decisao->id],
+        ];
+
+        $this->postJson(route('convites.registar'), $dados)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('permissoes_email.0');
+
+        $this->assertDatabaseMissing('utilizadores', [
+            'email' => $email,
+        ]);
+
+        $this->assertDatabaseHas('convites', [
+            'id' => $convite->getKey(),
+            'utilizado_por_id' => null,
+            'utilizado_em' => null,
+        ]);
+
+        Notification::assertNothingSent();
+
+        $dados['permissoes_email'] = [$decisao->id];
+
+        $this->post(route('convites.registar'), $dados)
+            ->assertRedirect(route('login'))
+            ->assertSessionHasNoErrors();
+
+        $utilizador = Utilizador::query()
+            ->where('email', $email)
+            ->sole();
+
+        self::assertSame(
+            PapelUtilizador::Utilizador,
+            $utilizador->papel,
+        );
+
+        $this->assertDatabaseHas('convites', [
+            'id' => $convite->getKey(),
+            'utilizado_por_id' => $utilizador->id,
+        ]);
+
+        $this->assertDatabaseHas('permissao_email_utilizador', [
+            'utilizador_id' => $utilizador->id,
+            'permissao_email_id' => $decisao->id,
+        ]);
+
+        $this->assertDatabaseMissing('permissao_email_utilizador', [
+            'utilizador_id' => $utilizador->id,
+            'permissao_email_id' => $nova->id,
+        ]);
+
+        self::assertSame(1, $utilizador->permissoesEmail()->count());
     }
 }

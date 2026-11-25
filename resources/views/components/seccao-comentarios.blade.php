@@ -86,6 +86,21 @@
         </div>
     </form>
 
+    <div class="d-flex justify-content-end align-items-center mb-3 gap-2">
+        <label class="small text-muted" for="ordenacao-comentarios-{{ $identificadorFormulario }}">
+            Ordenar comentários
+        </label>
+        <select
+            id="ordenacao-comentarios-{{ $identificadorFormulario }}"
+            class="form-select form-select-sm w-auto bg-secondary text-white border-secondary"
+            data-ordenacao-comentarios
+        >
+            <option value="recentes">Mais recentes</option>
+            <option value="antigos">Mais antigos</option>
+            <option value="populares">Mais populares</option>
+        </select>
+    </div>
+
     <div class="lista-comentarios">
         @forelse ($comentarios as $comentario)
             <x-comentario

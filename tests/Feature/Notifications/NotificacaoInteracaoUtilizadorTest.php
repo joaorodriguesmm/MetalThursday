@@ -269,4 +269,50 @@ final class NotificacaoInteracaoUtilizadorTest extends TestCase
             $consultas,
         );
     }
+
+    /**
+     * As notificações de comentários, respostas e gostos incluem a âncora
+     * de navegação. As avaliações mantêm a ligação à publicação.
+     */
+    #[Test]
+    public function ligacoes_apontam_para_o_comentario_correspondente(): void
+    {
+        $autor = Utilizador::factory()->create();
+        $causador = Utilizador::factory()->create();
+        $publicacao = MetalThursday::factory()->comAutor($autor)->create();
+
+        $comentario = $publicacao->comentarios()->create([
+            'utilizador_id' => $autor->id,
+            'conteudo' => 'Comentário principal.',
+            'comentario_pai_id' => null,
+        ]);
+
+        $resposta = $publicacao->comentarios()->create([
+            'utilizador_id' => $causador->id,
+            'conteudo' => 'Resposta.',
+            'comentario_pai_id' => $comentario->id,
+        ]);
+
+        $comentario->gostos()->create(['utilizador_id' => $causador->id]);
+
+        $notificacoes = [
+            [new NotificacaoInteracaoUtilizador($publicacao, $causador, 'comentou', $comentario), $comentario->id],
+            [new NotificacaoInteracaoUtilizador($comentario, $causador, 'respondeu', $resposta), $resposta->id],
+            [new NotificacaoInteracaoUtilizador($comentario, $causador, 'gostou'), $comentario->id],
+            [new NotificacaoInteracaoUtilizador($publicacao, $causador, 'avaliou'), null],
+        ];
+
+        foreach ($notificacoes as [$notificacao, $id]) {
+            $parametros = ['metalThursday' => $publicacao->id];
+
+            if ($id !== null) {
+                $parametros['comentario'] = $id;
+            }
+
+            self::assertSame(
+                route('metal-thursday.detalhes', $parametros),
+                $notificacao->toArray($autor)['ligacao'],
+            );
+        }
+    }
 }

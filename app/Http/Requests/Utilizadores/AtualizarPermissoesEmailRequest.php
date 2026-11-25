@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Utilizadores;
 
+use App\Enumeracoes\IdentificadorPermissaoEmail;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\Comunicacao\PermissaoEmail;
 use Illuminate\Foundation\Http\FormRequest;
@@ -108,6 +109,13 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
      */
     public function rules(): array
     {
+        $utilizador = $this->user('sessao');
+        $regraPermissao = Rule::exists(PermissaoEmail::class, 'id');
+
+        if (! $utilizador instanceof Utilizador || ! $utilizador->eSuperAdministrador()) {
+            $regraPermissao->whereNot('identificador', IdentificadorPermissaoEmail::NovasDenunciasComentarios->value);
+        }
+
         return [
             'permissoes_email' => [
                 'bail',
@@ -122,10 +130,7 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
                 'min:1',
                 'distinct:strict',
 
-                Rule::exists(
-                    PermissaoEmail::class,
-                    'id',
-                ),
+                $regraPermissao,
             ],
         ];
     }
@@ -152,7 +157,7 @@ final class AtualizarPermissoesEmailRequest extends FormRequest
 
             'permissoes_email.*.distinct' => 'A mesma permissão de e-mail não pode ser selecionada mais do que uma vez.',
 
-            'permissoes_email.*.exists' => 'A permissão de e-mail selecionada não existe.',
+            'permissoes_email.*.exists' => 'A permissão de e-mail selecionada não existe ou não está disponível para o teu perfil.',
         ];
     }
 

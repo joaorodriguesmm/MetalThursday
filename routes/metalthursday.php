@@ -6,7 +6,9 @@ use App\Enumeracoes\Interacoes\TipoEntidadeInteracao;
 use App\Http\Controllers\Interacoes\ControladorAudicao;
 use App\Http\Controllers\Interacoes\ControladorAvaliacao;
 use App\Http\Controllers\Interacoes\ControladorComentario;
+use App\Http\Controllers\Interacoes\ControladorDenunciaComentario;
 use App\Http\Controllers\Interacoes\ControladorGosto;
+use App\Http\Controllers\Interacoes\ControladorModeracaoDenuncias;
 use App\Http\Controllers\MetalThursday\ControladorEdicao;
 use App\Http\Controllers\MetalThursday\ControladorMetalThursday;
 use App\Http\Controllers\Musica\ControladorArtista;
@@ -539,6 +541,14 @@ Route::middleware([
             );
 
         Route::get(
+            'comentarios/localizacao',
+            [
+                ControladorComentario::class,
+                'localizar',
+            ],
+        )->name('comentarios.localizacao');
+
+        Route::get(
             'comentarios/{comentario}/respostas',
             [
                 ControladorComentario::class,
@@ -602,6 +612,38 @@ Route::middleware([
             ->name(
                 'comentarios.eliminar',
             );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Denúncias e moderação dos comentários
+        |--------------------------------------------------------------------------
+        */
+
+        Route::post(
+            'comentarios/{comentario}/denuncias',
+            [ControladorDenunciaComentario::class, 'guardar'],
+        )
+            ->whereNumber('comentario')
+            ->middleware('throttle:interacoes-escrita')
+            ->name('comentarios.denuncias.guardar');
+
+        Route::get(
+            'moderacao/denuncias-comentarios',
+            [ControladorModeracaoDenuncias::class, 'indice'],
+        )->name('moderacao.denuncias-comentarios.indice');
+
+        Route::get(
+            'moderacao/denuncias-comentarios/painel',
+            [ControladorModeracaoDenuncias::class, 'painel'],
+        )->name('moderacao.denuncias-comentarios.painel');
+
+        Route::patch(
+            'moderacao/denuncias-comentarios/{denuncia}',
+            [ControladorModeracaoDenuncias::class, 'decidir'],
+        )
+            ->whereNumber('denuncia')
+            ->middleware('throttle:interacoes-escrita')
+            ->name('moderacao.denuncias-comentarios.decidir');
 
         /*
         |--------------------------------------------------------------------------

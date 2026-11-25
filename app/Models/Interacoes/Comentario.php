@@ -38,6 +38,7 @@ use InvalidArgumentException;
  * @property CarbonInterface|null $deleted_at
  * @property int $quantidade_gostos
  * @property bool $gostado_pelo_utilizador_autenticado
+ * @property bool $denunciado_pelo_utilizador_autenticado
  * @property-read Utilizador|null $utilizador
  * @property-read MetalThursday|SeccaoMetalThursday|null $comentavel
  * @property-read Comentario|null $comentarioPai
@@ -117,6 +118,8 @@ class Comentario extends Model
             'quantidade_gostos' => 'integer',
 
             'gostado_pelo_utilizador_autenticado' => 'boolean',
+
+            'denunciado_pelo_utilizador_autenticado' => 'boolean',
 
             'quantidade_respostas' => 'integer',
 
@@ -310,6 +313,19 @@ class Comentario extends Model
     }
 
     /**
+     * Obtém as denúncias associadas ao comentário.
+     *
+     * @return HasMany<DenunciaComentario, $this> Denúncias do comentário.
+     */
+    public function denuncias(): HasMany
+    {
+        return $this->hasMany(
+            DenunciaComentario::class,
+            'comentario_id',
+        );
+    }
+
+    /**
      * Limita a consulta aos comentários principais.
      *
      * Um comentário principal não responde a qualquer outro comentário.
@@ -419,6 +435,12 @@ class Comentario extends Model
                 Builder $construtor,
             ): Builder => $construtor->where(
                 'utilizador_id',
+                $identificadorUtilizador,
+            ),
+            'denuncias as denunciado_pelo_utilizador_autenticado' => static fn (
+                Builder $construtor,
+            ): Builder => $construtor->where(
+                'denunciante_id',
                 $identificadorUtilizador,
             ),
         ]);

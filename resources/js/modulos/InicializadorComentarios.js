@@ -179,6 +179,10 @@ class InicializadorComentarios {
             },
         );
 
+        this.contentor.addEventListener('change', (evento) => {
+            void this.tratarAlteracaoOrdenacao(evento);
+        });
+
         InicializadorComentarios
             .instanciasPorContentor.set(
                 contentor,
@@ -379,6 +383,28 @@ class InicializadorComentarios {
             return;
         }
 
+        const botaoMaisPrincipais = evento.target.closest(
+            'button[data-acao-comentarios="mais-principais"]',
+        );
+
+        if (botaoMaisPrincipais instanceof HTMLButtonElement
+            && this.contentor.contains(botaoMaisPrincipais)) {
+            evento.preventDefault();
+            void this.carregarMaisPrincipais(botaoMaisPrincipais);
+            return;
+        }
+
+        const botaoMaisRespostas = evento.target.closest(
+            'button[data-acao-comentarios="mais-respostas"]',
+        );
+
+        if (botaoMaisRespostas instanceof HTMLButtonElement
+            && this.contentor.contains(botaoMaisRespostas)) {
+            evento.preventDefault();
+            void this.carregarMaisRespostas(botaoMaisRespostas);
+            return;
+        }
+
         const botao =
             evento.target.closest(
                 InicializadorComentarios
@@ -509,6 +535,7 @@ class InicializadorComentarios {
     async executarCarregamentoSeccaoComentarios(
         botao,
         contentor,
+        ordenacao = null,
     ) {
         const endereco =
             this.normalizarEndereco(
@@ -542,10 +569,9 @@ class InicializadorComentarios {
         );
 
         try {
-            const resposta =
-                await axios.get(
-                    endereco,
-                );
+            const resposta = ordenacao === null
+                ? await axios.get(endereco)
+                : await axios.get(endereco, { params: { ordenacao } });
 
             if (!botao.isConnected || !contentor.isConnected) {
                 return;
@@ -586,6 +612,18 @@ class InicializadorComentarios {
             contentor.dataset
                 .comentariosCarregados =
                     'true';
+
+            const seletorOrdenacao = contentor.querySelector(
+                'select[data-ordenacao-comentarios]',
+            );
+            if (seletorOrdenacao instanceof HTMLSelectElement) {
+                seletorOrdenacao.value = dados.ordenacao ?? 'recentes';
+            }
+
+            this.atualizarBotaoMaisPrincipais(
+                contentor,
+                dados.proxima_pagina ?? null,
+            );
 
             contador.textContent =
                 String(
@@ -638,6 +676,145 @@ class InicializadorComentarios {
             botao.removeAttribute(
                 'aria-busy',
             );
+        }
+    }
+
+    /** Encontra o alternador de uma secção de comentários. */
+    obterAlternadorSeccao(contentor) {
+        return Array.from(this.contentor.querySelectorAll(
+            InicializadorComentarios.SELETOR_CARREGAMENTO_SECCAO,
+        )).find((botao) => botao.getAttribute('aria-controls') === contentor.id) ?? null;
+    }
+
+    /** Sincroniza o botão de carregamento adicional dos comentários principais. */
+    atualizarBotaoMaisPrincipais(contentor, proximaPagina) {
+        const lista = contentor.querySelector('.lista-comentarios');
+        if (!(lista instanceof HTMLElement)) {
+            return;
+        }
+
+        contentor.querySelector('button[data-acao-comentarios="mais-principais"]')?.remove();
+        if (!Number.isSafeInteger(proximaPagina) || proximaPagina <= 1) {
+            return;
+        }
+
+        const botao = document.createElement('button');
+        botao.type = 'button';
+        botao.className = 'btn btn-sm btn-secondary mt-3';
+        botao.dataset.acaoComentarios = 'mais-principais';
+        botao.dataset.pagina = String(proximaPagina);
+        botao.textContent = 'Carregar mais comentários';
+        lista.after(botao);
+    }
+
+    /** Carrega uma página dos comentários principais sem repetir as restantes. */
+    async carregarPaginaPrincipais(contentor, pagina, substituir = false) {
+        const alternador = this.obterAlternadorSeccao(contentor);
+        const lista = contentor.querySelector('.lista-comentarios');
+        const seletor = contentor.querySelector('select[data-ordenacao-comentarios]');
+
+        if (!(alternador instanceof HTMLButtonElement)
+            || !(lista instanceof HTMLElement)
+            || !Number.isSafeInteger(pagina)
+            || pagina < 1) {
+            throw new Error('Não foi possível carregar a página de comentários.');
+        }
+
+        const endereco = this.normalizarEndereco(alternador.dataset.enderecoComentarios);
+        if (endereco === null) {
+            throw new Error('O endereço dos comentários é inválido.');
+        }
+
+        const ordenacao = seletor instanceof HTMLSelectElement ? seletor.value : 'recentes';
+        const resposta = await axios.get(endereco, { params: { pagina, ordenacao } });
+        const dados = resposta.data;
+        if (!this.eObjeto(dados)
+            || dados.pagina !== pagina
+            || dados.ordenacao !== ordenacao
+            || typeof dados.comentarios_html !== 'string') {
+            throw new Error('A resposta da paginação é inválida.');
+        }
+
+        const temporario = document.createElement('div');
+        temporario.innerHTML = dados.comentarios_html;
+        const listaRecebida = temporario.querySelector('.lista-comentarios');
+        if (!(listaRecebida instanceof HTMLElement)) {
+            throw new Error('A lista de comentários é inválida.');
+        }
+
+        if (substituir) {
+            lista.replaceChildren(...Array.from(listaRecebida.children));
+        } else {
+            lista.querySelector('.sem-comentarios')?.remove();
+            const existentes = new Set(Array.from(lista.querySelectorAll(':scope > .comentario'))
+                .map((comentario) => comentario.id));
+            Array.from(listaRecebida.children).forEach((elemento) => {
+                if (elemento.classList.contains('comentario') && !existentes.has(elemento.id)) {
+                    lista.append(elemento);
+                }
+            });
+        }
+
+        this.inicializarFormularios(lista);
+        new InicializadorTooltips(
+            lista.querySelectorAll('[data-bs-toggle="tooltip"]'),
+        );
+        this.atualizarBotaoMaisPrincipais(contentor, dados.proxima_pagina ?? null);
+    }
+
+    /** A página indicada pode ser consultada diretamente a partir de uma notificação. */
+    async carregarPaginaPrincipalParaNavegacao(alternador, pagina) {
+        await this.carregarSeccaoComentarios(alternador);
+        if (pagina > 1) {
+            const contentor = document.getElementById(alternador.getAttribute('aria-controls'));
+            if (!(contentor instanceof HTMLElement)) {
+                throw new Error('Secção de comentários indisponível.');
+            }
+            await this.carregarPaginaPrincipais(contentor, pagina, true);
+        }
+    }
+
+    /** Obtém a página seguinte e mantém os comentários já apresentados. */
+    async carregarMaisPrincipais(botao) {
+        const contentor = botao.closest('[data-comentarios-carregados]');
+        const pagina = Number(botao.dataset.pagina);
+        if (!(contentor instanceof HTMLElement) || botao.disabled) {
+            return;
+        }
+        botao.disabled = true;
+        botao.setAttribute('aria-busy', 'true');
+        try {
+            await this.carregarPaginaPrincipais(contentor, pagina);
+        } catch {
+            botao.textContent = 'Tentar carregar mais comentários';
+        } finally {
+            botao.disabled = false;
+            botao.removeAttribute('aria-busy');
+        }
+    }
+
+    /** Atualiza a listagem quando o utilizador altera a ordenação. */
+    async tratarAlteracaoOrdenacao(evento) {
+        if (!(evento.target instanceof HTMLSelectElement)
+            || !evento.target.matches('select[data-ordenacao-comentarios]')) {
+            return;
+        }
+        const seletor = evento.target;
+        const contentor = seletor.closest('[data-comentarios-carregados]');
+        if (!(contentor instanceof HTMLElement)) {
+            return;
+        }
+        const alternador = this.obterAlternadorSeccao(contentor);
+        if (!(alternador instanceof HTMLButtonElement)) {
+            return;
+        }
+        seletor.disabled = true;
+        try {
+            await this.executarCarregamentoSeccaoComentarios(alternador, contentor, seletor.value);
+        } catch {
+            // O carregador apresenta o erro e permite repetir a operação.
+        } finally {
+            seletor.disabled = false;
         }
     }
 
@@ -800,10 +977,73 @@ class InicializadorComentarios {
         }
     }
 
+    /** Apresenta um controlo de continuação para as respostas do ramo. */
+    atualizarBotaoMaisRespostas(contentor, proximaPagina) {
+        contentor.querySelector('button[data-acao-comentarios="mais-respostas"]')?.remove();
+        if (!Number.isSafeInteger(proximaPagina) || proximaPagina <= 1) {
+            return;
+        }
+        const botao = document.createElement('button');
+        botao.type = 'button';
+        botao.className = 'btn btn-sm btn-secondary mt-2';
+        botao.dataset.acaoComentarios = 'mais-respostas';
+        botao.dataset.pagina = String(proximaPagina);
+        botao.textContent = 'Carregar mais respostas';
+        contentor.append(botao);
+    }
+
+    /** Carrega a página seguinte de respostas e mantém as anteriores. */
+    async carregarMaisRespostas(botao) {
+        const contentor = botao.closest('[data-respostas-comentario]');
+        const comentario = contentor?.closest('.comentario');
+        const alternador = comentario instanceof HTMLElement
+            ? this.obterAlternadorRespostas(comentario)
+            : null;
+        const pagina = Number(botao.dataset.pagina);
+        if (!(comentario instanceof HTMLElement)
+            || !(contentor instanceof HTMLElement)
+            || !(alternador instanceof HTMLButtonElement)
+            || !Number.isSafeInteger(pagina)
+            || pagina < 2
+            || botao.disabled) {
+            return;
+        }
+        botao.disabled = true;
+        botao.setAttribute('aria-busy', 'true');
+        try {
+            await this.executarCarregamentoRespostas(
+                comentario, alternador, contentor, pagina, true,
+            );
+        } catch {
+            botao.textContent = 'Tentar carregar mais respostas';
+        } finally {
+            botao.disabled = false;
+            botao.removeAttribute('aria-busy');
+        }
+    }
+
+    /** Abre diretamente a página do ramo onde se encontra a resposta. */
+    async carregarPaginaRespostasParaNavegacao(alternador, pagina) {
+        const comentario = alternador.closest('.comentario');
+        const contentor = comentario instanceof HTMLElement
+            ? this.obterContentorRespostas(comentario)
+            : null;
+        if (!(comentario instanceof HTMLElement)
+            || !(contentor instanceof HTMLElement)) {
+            throw new Error('Respostas indisponíveis.');
+        }
+        await this.executarCarregamentoRespostas(
+            comentario, alternador, contentor, pagina, false,
+        );
+        this.expandirRespostas(alternador, contentor);
+    }
+
     async executarCarregamentoRespostas(
         comentario,
         botao,
         contentorRespostas,
+        pagina = 1,
+        acrescentar = false,
     ) {
         const endereco =
             this.normalizarEndereco(
@@ -835,10 +1075,9 @@ class InicializadorComentarios {
         );
 
         try {
-            const resposta =
-                await axios.get(
-                    endereco,
-                );
+            const resposta = pagina === 1
+                ? await axios.get(endereco)
+                : await axios.get(endereco, { params: { pagina } });
 
             if (
                 !comentario.isConnected
@@ -869,10 +1108,27 @@ class InicializadorComentarios {
                     dados.numero_respostas,
                 );
 
+            const proximaPagina =
+                dados.proxima_pagina ?? null;
+
+            const respostasAtePagina =
+                (pagina - 1) * 20 + dados.respostas.length;
+
             if (
                 numeroRespostas === null
-                || numeroRespostas
-                !== dados.respostas.length
+                || (
+                    proximaPagina === null
+                    && numeroRespostas !== respostasAtePagina
+                )
+                || (
+                    proximaPagina !== null
+                    && (
+                        !Number.isSafeInteger(proximaPagina)
+                        || proximaPagina !== pagina + 1
+                        || dados.respostas.length !== 20
+                        || numeroRespostas <= respostasAtePagina
+                    )
+                )
             ) {
                 throw new Error(
                     'A quantidade de respostas devolvida pelo servidor é inválida.',
@@ -935,15 +1191,21 @@ class InicializadorComentarios {
                 },
             );
 
-            contentorRespostas
-                .replaceChildren(
-                    fragmento,
-                );
+            if (acrescentar) {
+                contentorRespostas.append(fragmento);
+            } else {
+                contentorRespostas.replaceChildren(fragmento);
+            }
 
             contentorRespostas
                 .dataset
                 .respostasCarregadas =
                     'true';
+
+            this.atualizarBotaoMaisRespostas(
+                contentorRespostas,
+                dados.proxima_pagina ?? null,
+            );
 
             novosComentarios.forEach(
                 (novoComentario) => {
@@ -1138,9 +1400,16 @@ class InicializadorComentarios {
             )
             ?.remove();
 
-        listaComentarios.prepend(
-            novoComentario,
+        const seletorOrdenacao = seccaoComentarios.querySelector(
+            'select[data-ordenacao-comentarios]',
         );
+
+        if (seletorOrdenacao instanceof HTMLSelectElement
+            && seletorOrdenacao.value !== 'recentes') {
+            listaComentarios.append(novoComentario);
+        } else {
+            listaComentarios.prepend(novoComentario);
+        }
 
         this.inicializarFormularios(
             novoComentario,
@@ -1276,9 +1545,15 @@ class InicializadorComentarios {
                         'true';
             }
 
-            contentorRespostas.append(
-                novaResposta,
+            const botaoMais = contentorRespostas.querySelector(
+                'button[data-acao-comentarios="mais-respostas"]',
             );
+
+            if (botaoMais instanceof HTMLButtonElement) {
+                botaoMais.before(novaResposta);
+            } else {
+                contentorRespostas.append(novaResposta);
+            }
 
             this.inicializarFormularios(
                 novaResposta,

@@ -153,14 +153,14 @@ SQL);
     }
 
     #[Test]
-    public function falha_no_despacho_reverte_nova_audicao(): void
+    public function nova_audicao_nao_depende_do_despacho_de_notificacoes(): void
     {
-        Utilizador::factory()->create();
-
         $utilizador = Utilizador::factory()->create();
         $alvo = MetalThursday::factory()->create();
 
-        $this->simularFalhaNoDespacho();
+        $despachante = Mockery::mock(DespachanteNotificacoes::class);
+        $despachante->shouldNotReceive('send');
+        $this->app->instance(DespachanteNotificacoes::class, $despachante);
 
         $this->actingAs($utilizador, 'sessao')
             ->postJson(
@@ -169,9 +169,10 @@ SQL);
                     'identificadorAudivel' => $alvo->id,
                 ]),
             )
-            ->assertInternalServerError();
+            ->assertOk()
+            ->assertJsonPath('marcado_como_ouvido', true);
 
-        $this->assertDatabaseMissing('audicoes', [
+        $this->assertDatabaseHas('audicoes', [
             'utilizador_id' => $utilizador->id,
             'tipo_audivel' => $alvo->getMorphClass(),
             'audivel_id' => $alvo->id,
@@ -231,13 +232,8 @@ SQL);
         ]);
 
         $url = route('gostos.alternar', $comentario);
-        // O notificador cria um trabalho por destinatário elegível.
-        $numeroDestinatarios = Utilizador::query()
-            ->comAcessoAtivo()
-            ->whereKeyNot($utilizador->getKey())
-            ->count();
-
-        self::assertGreaterThan(0, $numeroDestinatarios);
+        // Apenas o autor do comentário recebe o gosto.
+        $numeroDestinatarios = 1;
         $antes = DB::table('jobs')->count();
 
         $this->actingAs($utilizador, 'sessao')
@@ -267,13 +263,8 @@ SQL);
             'tipoAvaliavel' => TipoEntidadeInteracao::MetalThursday->value,
             'identificadorAvaliavel' => $alvo->id,
         ]);
-        // O notificador cria um trabalho por destinatário elegível.
-        $numeroDestinatarios = Utilizador::query()
-            ->comAcessoAtivo()
-            ->whereKeyNot($utilizador->getKey())
-            ->count();
-
-        self::assertGreaterThan(0, $numeroDestinatarios);
+        // Apenas o autor da publicação recebe a avaliação.
+        $numeroDestinatarios = 1;
         $antes = DB::table('jobs')->count();
 
         $this->actingAs($utilizador, 'sessao')
@@ -302,13 +293,8 @@ SQL);
             'tipoAudivel' => TipoEntidadeInteracao::MetalThursday->value,
             'identificadorAudivel' => $alvo->id,
         ]);
-        // O notificador cria um trabalho por destinatário elegível.
-        $numeroDestinatarios = Utilizador::query()
-            ->comAcessoAtivo()
-            ->whereKeyNot($utilizador->getKey())
-            ->count();
-
-        self::assertGreaterThan(0, $numeroDestinatarios);
+        // Uma audição não enfileira notificações.
+        $numeroDestinatarios = 0;
         $antes = DB::table('jobs')->count();
 
         $this->actingAs($utilizador, 'sessao')

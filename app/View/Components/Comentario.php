@@ -6,6 +6,7 @@ namespace App\View\Components;
 
 use App\Models\Autenticacao\Utilizador;
 use App\Models\Interacoes\Comentario as ModeloComentario;
+use App\Models\Interacoes\DenunciaComentario;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -55,6 +56,11 @@ final class Comentario extends Component
      * @since 2.0.0
      */
     public readonly ?Utilizador $utilizadorAutenticado;
+
+    /**
+     * Indica se o utilizador autenticado já denunciou este comentário.
+     */
+    public readonly bool $jaDenunciadoPeloUtilizador;
 
     /**
      * Nome apresentado como autor do comentário.
@@ -183,6 +189,28 @@ final class Comentario extends Component
 
         $this->utilizadorAutenticado =
             $this->obterUtilizadorAutenticado();
+
+        $utilizadorAutenticado = $this->utilizadorAutenticado;
+
+        if (
+            $utilizadorAutenticado === null
+            || $comentario->utilizador_id === $utilizadorAutenticado->id
+            || $comentario->temConteudoEliminado()
+        ) {
+            $this->jaDenunciadoPeloUtilizador = false;
+        } elseif (array_key_exists(
+            'denunciado_pelo_utilizador_autenticado',
+            $comentario->getAttributes(),
+        )) {
+            $this->jaDenunciadoPeloUtilizador =
+                $comentario->denunciado_pelo_utilizador_autenticado;
+        } else {
+            // Recurso isolado: os carregamentos paginados já incluem withExists.
+            $this->jaDenunciadoPeloUtilizador = DenunciaComentario::query()
+                ->where('comentario_id', $comentario->id)
+                ->where('denunciante_id', $utilizadorAutenticado->id)
+                ->exists();
+        }
     }
 
     /**

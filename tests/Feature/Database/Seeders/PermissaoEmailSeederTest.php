@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Database\Seeders;
 
 use App\Enumeracoes\IdentificadorPermissaoEmail;
+use App\Models\Autenticacao\Utilizador;
 use Database\Seeders\PermissaoEmailSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -174,6 +175,73 @@ final class PermissaoEmailSeederTest extends TestCase
         self::assertSame(
             $permissaoGlobal->ordem(),
             (int) $permissaoAtualizada->ordem,
+        );
+    }
+
+    /**
+     * Converte a antiga permissão global de interações na nova escolha pessoal
+     * e preserva a associação mesmo quando a permissão nova já existia.
+     */
+    #[Test]
+    public function converte_permissao_antiga_sem_perder_as_preferencias(): void
+    {
+        $seeder = app(PermissaoEmailSeeder::class);
+        $seeder->run();
+
+        $permissaoPessoal = DB::table('permissoes_email')
+            ->where(
+                'identificador',
+                IdentificadorPermissaoEmail::InteracoesNasMinhasPublicacoes->value,
+            )
+            ->value('id');
+
+        self::assertNotNull($permissaoPessoal);
+
+        $permissaoAntiga = DB::table('permissoes_email')->insertGetId([
+            'identificador' => 'todas_interacoes',
+            'nome' => 'Todas as interações',
+            'descricao' => 'Permissão antiga.',
+            'ordem' => 3,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $utilizadorA = Utilizador::factory()->create();
+        $utilizadorB = Utilizador::factory()->create();
+
+        DB::table('permissao_email_utilizador')->insert([
+            [
+                'utilizador_id' => $utilizadorA->id,
+                'permissao_email_id' => $permissaoAntiga,
+            ],
+            [
+                'utilizador_id' => $utilizadorB->id,
+                'permissao_email_id' => $permissaoAntiga,
+            ],
+            [
+                'utilizador_id' => $utilizadorB->id,
+                'permissao_email_id' => $permissaoPessoal,
+            ],
+        ]);
+
+        $seeder->run();
+
+        $this->assertDatabaseMissing('permissoes_email', [
+            'identificador' => 'todas_interacoes',
+        ]);
+
+        foreach ([$utilizadorA, $utilizadorB] as $utilizador) {
+            $this->assertDatabaseHas('permissao_email_utilizador', [
+                'utilizador_id' => $utilizador->id,
+                'permissao_email_id' => $permissaoPessoal,
+            ]);
+        }
+
+        self::assertSame(
+            2,
+            DB::table('permissao_email_utilizador')
+                ->where('permissao_email_id', $permissaoPessoal)
+                ->count(),
         );
     }
 }

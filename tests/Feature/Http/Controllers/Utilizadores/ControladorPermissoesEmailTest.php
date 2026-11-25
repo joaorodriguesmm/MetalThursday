@@ -7,7 +7,11 @@ namespace Tests\Feature\Http\Controllers\Utilizadores;
 use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\Comunicacao\PermissaoEmail;
+use App\Servicos\Comunicacoes\ServicoPermissoesEmail;
+use Carbon\CarbonImmutable;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -91,13 +95,13 @@ final class ControladorPermissoesEmailTest extends TestCase
             );
 
         $identificadorPermissaoAnterior =
-            (int) $permissaoAnterior->getKey();
+            $permissaoAnterior->id;
 
         $identificadorPermissaoInteracoes =
-            (int) $permissaoInteracoes->getKey();
+            $permissaoInteracoes->id;
 
         $identificadorPermissaoMetalThursday =
-            (int) $permissaoMetalThursday->getKey();
+            $permissaoMetalThursday->id;
 
         $utilizador
             ->permissoesEmail()
@@ -208,10 +212,10 @@ final class ControladorPermissoesEmailTest extends TestCase
             );
 
         $identificadorPrimeiraPermissao =
-            (int) $primeiraPermissao->getKey();
+            $primeiraPermissao->id;
 
         $identificadorSegundaPermissao =
-            (int) $segundaPermissao->getKey();
+            $segundaPermissao->id;
 
         $utilizador
             ->permissoesEmail()
@@ -303,7 +307,7 @@ final class ControladorPermissoesEmailTest extends TestCase
             );
 
         $identificadorPermissaoExistente =
-            (int) $permissaoExistente->getKey();
+            $permissaoExistente->id;
 
         $utilizador
             ->permissoesEmail()
@@ -379,7 +383,7 @@ final class ControladorPermissoesEmailTest extends TestCase
             );
 
         $identificadorPermissaoExistente =
-            (int) $permissaoExistente->getKey();
+            $permissaoExistente->id;
 
         $utilizador
             ->permissoesEmail()
@@ -468,7 +472,7 @@ final class ControladorPermissoesEmailTest extends TestCase
             );
 
         $identificadorPermissaoExistente =
-            (int) $permissaoExistente->getKey();
+            $permissaoExistente->id;
 
         $utilizador
             ->permissoesEmail()
@@ -545,7 +549,7 @@ final class ControladorPermissoesEmailTest extends TestCase
             );
 
         $identificadorPermissaoExistente =
-            (int) $permissaoExistente->getKey();
+            $permissaoExistente->id;
 
         $utilizador
             ->permissoesEmail()
@@ -620,7 +624,7 @@ final class ControladorPermissoesEmailTest extends TestCase
             );
 
         $identificadorPermissaoExistente =
-            (int) $permissaoExistente->getKey();
+            $permissaoExistente->id;
 
         $utilizador
             ->permissoesEmail()
@@ -704,7 +708,7 @@ final class ControladorPermissoesEmailTest extends TestCase
             PapelUtilizador::Utilizador;
 
         $utilizador->email_verified_at =
-            now()
+            CarbonImmutable::now()
                 ->subDay()
                 ->startOfSecond();
 
@@ -761,18 +765,114 @@ final class ControladorPermissoesEmailTest extends TestCase
     private function obterIdentificadoresPermissoes(
         Utilizador $utilizador,
     ): array {
-        return $utilizador
-            ->permissoesEmail()
-            ->pluck(
-                'permissoes_email.id',
-            )
-            ->map(
-                static fn (
-                    mixed $identificador,
-                ): int => (int) $identificador,
-            )
-            ->sort()
-            ->values()
-            ->all();
+        return array_values(
+            $utilizador->permissoesEmail()
+                ->orderBy('permissoes_email.id')
+                ->get(['permissoes_email.id'])
+                ->map(static fn (PermissaoEmail $permissao): int => $permissao->id)
+                ->all(),
+        );
+    }
+
+    /**
+     * @return array<string, array{PapelUtilizador, bool}>
+     */
+    public static function papeisParaDenuncias(): array
+    {
+        return [
+            'utilizador' => [PapelUtilizador::Utilizador, false],
+            'administrador' => [PapelUtilizador::Administrador, false],
+            'superadministrador' => [PapelUtilizador::SuperAdministrador, true],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('papeisParaDenuncias')]
+    public function preferencias_de_denuncias_respeitam_papel(
+        PapelUtilizador $papel,
+        bool $autorizado,
+    ): void {
+        $utilizador = Utilizador::factory()->comPapel($papel)->create();
+
+        $nova = $this->criarPermissaoEmail(
+            'Novas denúncias de comentários',
+            'novas_denuncias_comentarios',
+            8,
+        );
+
+        $decisao = $this->criarPermissaoEmail(
+            'Decisões sobre as minhas denúncias',
+            'decisoes_denuncias_comentarios',
+            9,
+        );
+
+        $this->actingAs($utilizador, 'sessao');
+
+        $this->patchJson(
+            route('perfil.permissoes-email.atualizar'),
+            ['permissoes_email' => [$decisao->id]],
+        )->assertRedirect(route('perfil.editar'));
+
+        $resposta = $this->patchJson(
+            route('perfil.permissoes-email.atualizar'),
+            ['permissoes_email' => [$nova->id, $decisao->id]],
+        );
+
+        if ($autorizado) {
+            $resposta->assertRedirect(route('perfil.editar'));
+
+            self::assertSame(
+                [$nova->id, $decisao->id],
+                $this->obterIdentificadoresPermissoes($utilizador),
+            );
+        } else {
+            $resposta->assertUnprocessable()
+                ->assertJsonValidationErrors('permissoes_email.0');
+
+            self::assertSame(
+                [$decisao->id],
+                $this->obterIdentificadoresPermissoes($utilizador),
+            );
+        }
+    }
+
+    #[Test]
+    public function servico_revalida_papel_antes_de_sincronizar(): void
+    {
+        $utilizador = Utilizador::factory()
+            ->comPapel(PapelUtilizador::SuperAdministrador)
+            ->create();
+
+        $nova = $this->criarPermissaoEmail(
+            'Novas denúncias de comentários',
+            'novas_denuncias_comentarios',
+            8,
+        );
+
+        $decisao = $this->criarPermissaoEmail(
+            'Decisões sobre as minhas denúncias',
+            'decisoes_denuncias_comentarios',
+            9,
+        );
+
+        $utilizador->permissoesEmail()->attach($decisao->id);
+
+        Utilizador::query()->whereKey($utilizador->id)->update([
+            'papel' => PapelUtilizador::Utilizador->value,
+        ]);
+
+        self::assertTrue($utilizador->eSuperAdministrador());
+
+        try {
+            app(ServicoPermissoesEmail::class)
+                ->sincronizar($utilizador, [$nova->id]);
+
+            self::fail('Era esperada uma exceção de autorização.');
+        } catch (AuthorizationException) {
+            self::assertSame(
+                [$decisao->id],
+                $this->obterIdentificadoresPermissoes($utilizador),
+            );
+        }
     }
 }

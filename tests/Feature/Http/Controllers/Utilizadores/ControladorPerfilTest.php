@@ -9,6 +9,7 @@ use App\Models\Autenticacao\Utilizador;
 use App\Models\Comunicacao\PermissaoEmail;
 use App\Notifications\NotificacaoVerificacaoEmail;
 use Carbon\CarbonImmutable;
+use Database\Seeders\PermissaoEmailSeeder;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -17,6 +18,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
 use Tests\TestCase;
@@ -527,6 +529,26 @@ final class ControladorPerfilTest extends TestCase
      */
         Log::spy();
 
+        $mensagemRegistada = null;
+        $contextoRegistado = null;
+
+        Log::shouldReceive('error')
+            ->once()
+            ->withArgs(
+                static function (
+                    string $mensagem,
+                    array $contexto,
+                ) use (
+                    &$mensagemRegistada,
+                    &$contextoRegistado,
+                ): bool {
+                    $mensagemRegistada = $mensagem;
+                    $contextoRegistado = $contexto;
+
+                    return true;
+                },
+            );
+
         $resposta = $this
             ->actingAs(
                 $utilizador,
@@ -556,26 +578,6 @@ final class ControladorPerfilTest extends TestCase
         $this->assertGuest(
             'sessao',
         );
-
-        $mensagemRegistada = null;
-        $contextoRegistado = null;
-
-        Log::shouldHaveReceived('error')
-            ->once()
-            ->withArgs(
-                static function (
-                    string $mensagem,
-                    array $contexto,
-                ) use (
-                    &$mensagemRegistada,
-                    &$contextoRegistado,
-                ): bool {
-                    $mensagemRegistada = $mensagem;
-                    $contextoRegistado = $contexto;
-
-                    return true;
-                },
-            );
 
         self::assertIsString(
             $mensagemRegistada,
@@ -736,6 +738,8 @@ final class ControladorPerfilTest extends TestCase
         self::assertNull($utilizador->fotografia);
         self::assertSame('Utilizador Teste', $utilizador->nome);
         self::assertSame('utilizador@exemplo.pt', $utilizador->email);
+        self::assertInstanceOf(CarbonImmutable::class, $verificacaoOriginal);
+        self::assertInstanceOf(CarbonImmutable::class, $utilizador->email_verified_at);
         self::assertTrue($verificacaoOriginal->equalTo(
             $utilizador->email_verified_at,
         ));
@@ -1125,5 +1129,42 @@ final class ControladorPerfilTest extends TestCase
             UPLOAD_ERR_OK,
             true,
         );
+    }
+
+    /**
+     * @return array<string, array{PapelUtilizador, bool}>
+     */
+    public static function papeisParaPreferenciasDenuncias(): array
+    {
+        return [
+            'utilizador' => [PapelUtilizador::Utilizador, false],
+            'administrador' => [PapelUtilizador::Administrador, false],
+            'superadministrador' => [PapelUtilizador::SuperAdministrador, true],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('papeisParaPreferenciasDenuncias')]
+    public function apresenta_preferencias_de_denuncias_conforme_papel(
+        PapelUtilizador $papel,
+        bool $apresentaNovasDenuncias,
+    ): void {
+        $this->seed(PermissaoEmailSeeder::class);
+
+        $utilizador = Utilizador::factory()
+            ->comPapel($papel)
+            ->create();
+
+        $resposta = $this->actingAs($utilizador, 'sessao')
+            ->get(route('perfil.editar'))
+            ->assertOk()
+            ->assertSee('Todas as notificações')
+            ->assertSee('Decisões sobre as minhas denúncias');
+
+        if ($apresentaNovasDenuncias) {
+            $resposta->assertSee('Novas denúncias de comentários');
+        } else {
+            $resposta->assertDontSee('Novas denúncias de comentários');
+        }
     }
 }

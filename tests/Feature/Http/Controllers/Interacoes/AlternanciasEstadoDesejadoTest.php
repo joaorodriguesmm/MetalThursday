@@ -18,26 +18,31 @@ final class AlternanciasEstadoDesejadoTest extends TestCase
     use RefreshDatabase;
 
     /**
-     * Confirma uma única notificação por destinatário ativo, sem assumir
-     * quantos utilizadores as factories criaram indiretamente.
+     * Confirma um único aviso por destinatário pessoal, sem avisos globais.
+     *
+     * @param  list<Utilizador>  $envolvidos
      */
-    private function afirmarUmaNotificacaoPorDestinatarioAtivo(Utilizador $causador): void
-    {
-        $destinatarios = Utilizador::query()
-            ->comAcessoAtivo()
-            ->whereKeyNot($causador->id)
-            ->get();
+    private function afirmarNotificacoesPessoais(
+        Utilizador $causador,
+        array $envolvidos,
+    ): void {
+        $identificadores = [];
 
-        self::assertGreaterThan(0, $destinatarios->count());
+        foreach ($envolvidos as $utilizador) {
+            if ($utilizador->id !== $causador->id) {
+                $identificadores[$utilizador->id] = $utilizador;
+            }
+        }
 
-        foreach ($destinatarios as $destinatario) {
+        foreach ($identificadores as $destinatario) {
             Notification::assertSentTo(
                 $destinatario,
                 NotificacaoInteracaoUtilizador::class,
+                1,
             );
         }
 
-        Notification::assertCount($destinatarios->count());
+        Notification::assertCount(count($identificadores));
     }
 
     #[Test]
@@ -73,7 +78,7 @@ final class AlternanciasEstadoDesejadoTest extends TestCase
         ]);
 
         $this->assertDatabaseCount('gostos', 1);
-        $this->afirmarUmaNotificacaoPorDestinatarioAtivo($utilizador);
+        $this->afirmarNotificacoesPessoais($utilizador, [$autor]);
     }
 
     #[Test]
@@ -81,7 +86,6 @@ final class AlternanciasEstadoDesejadoTest extends TestCase
     {
         Notification::fake();
 
-        Utilizador::factory()->create();
         $utilizador = Utilizador::factory()->create();
         $metalThursday = MetalThursday::factory()->create();
 
@@ -108,7 +112,7 @@ final class AlternanciasEstadoDesejadoTest extends TestCase
         ]);
 
         $this->assertDatabaseCount('audicoes', 1);
-        $this->afirmarUmaNotificacaoPorDestinatarioAtivo($utilizador);
+        Notification::assertNothingSent();
     }
 
     #[Test]
@@ -132,7 +136,7 @@ final class AlternanciasEstadoDesejadoTest extends TestCase
             ->assertOk()
             ->assertJsonPath('adicionado', true);
 
-        $this->afirmarUmaNotificacaoPorDestinatarioAtivo($utilizador);
+        $this->afirmarNotificacoesPessoais($utilizador, [$autor]);
 
         $this->postJson($url, ['estado_desejado' => false])
             ->assertOk()
@@ -146,7 +150,7 @@ final class AlternanciasEstadoDesejadoTest extends TestCase
             'comentario_id' => $comentario->id,
             'utilizador_id' => $utilizador->id,
         ]);
-        $this->afirmarUmaNotificacaoPorDestinatarioAtivo($utilizador);
+        $this->afirmarNotificacoesPessoais($utilizador, [$autor]);
     }
 
     #[Test]
@@ -154,7 +158,6 @@ final class AlternanciasEstadoDesejadoTest extends TestCase
     {
         Notification::fake();
 
-        Utilizador::factory()->create();
         $utilizador = Utilizador::factory()->create();
         $metalThursday = MetalThursday::factory()->create();
         $url = route('audicoes.alternar', [
@@ -167,7 +170,7 @@ final class AlternanciasEstadoDesejadoTest extends TestCase
             ->assertOk()
             ->assertJsonPath('marcado_como_ouvido', true);
 
-        $this->afirmarUmaNotificacaoPorDestinatarioAtivo($utilizador);
+        Notification::assertNothingSent();
 
         $this->postJson($url, ['estado_desejado' => false])
             ->assertOk()
@@ -182,7 +185,7 @@ final class AlternanciasEstadoDesejadoTest extends TestCase
             'tipo_audivel' => $metalThursday->getMorphClass(),
             'audivel_id' => $metalThursday->id,
         ]);
-        $this->afirmarUmaNotificacaoPorDestinatarioAtivo($utilizador);
+        Notification::assertNothingSent();
     }
 
     #[Test]

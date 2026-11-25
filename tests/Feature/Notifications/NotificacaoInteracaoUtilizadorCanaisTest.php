@@ -103,39 +103,46 @@ final class NotificacaoInteracaoUtilizadorCanaisTest extends TestCase
     }
 
     /**
-     * Confirma que a permissão para todas as interações autoriza o envio por
-     * e-mail independentemente da autoria da publicação.
+     * Uma resposta ao comentário do utilizador origina e-mail mesmo quando
+     * a publicação pertence a outra pessoa.
      *
      * @since 2.0.0
      */
     #[Test]
-    public function permissao_todas_interacoes_ativa_email(): void
+    public function interacoes_pessoais_notificam_resposta_a_comentario_alheio_a_publicacao(): void
     {
-        $autor = Utilizador::factory()
-            ->create();
-
-        $destinatario = Utilizador::factory()
-            ->create();
+        $autorPublicacao = Utilizador::factory()->create();
+        $autorComentario = Utilizador::factory()->create();
+        $causador = Utilizador::factory()->create();
 
         $this->atribuirPermissao(
-            $destinatario,
-            IdentificadorPermissaoEmail::TodasInteracoes,
+            $autorComentario,
+            IdentificadorPermissaoEmail::InteracoesNasMinhasPublicacoes,
         );
 
-        $notificacao =
-            $this->criarNotificacao(
-                $autor,
-            );
-
-        self::assertSame(
-            [
-                'database',
-                'mail',
-            ],
-            $notificacao->via(
-                $destinatario,
-            ),
+        $this->atribuirPermissao(
+            $autorPublicacao,
+            IdentificadorPermissaoEmail::TodasNotificacoes,
         );
+
+        $metalThursday = MetalThursday::factory()
+            ->comAutor($autorPublicacao)
+            ->create();
+
+        $comentario = $metalThursday->comentarios()->create([
+            'utilizador_id' => $autorComentario->getKey(),
+            'conteudo' => 'Comentário a responder.',
+            'comentario_pai_id' => null,
+        ]);
+
+        $notificacao = new NotificacaoInteracaoUtilizador(
+            $comentario,
+            $causador,
+            'respondeu',
+        );
+
+        self::assertSame(['database', 'mail'], $notificacao->via($autorComentario));
+        self::assertSame(['database'], $notificacao->via($autorPublicacao));
     }
 
     /**
@@ -222,7 +229,7 @@ final class NotificacaoInteracaoUtilizadorCanaisTest extends TestCase
             ->create();
 
         $this->atribuirPermissao(
-            $destinatario,
+            $autor,
             IdentificadorPermissaoEmail::TodasNotificacoes,
         );
 
@@ -237,9 +244,11 @@ final class NotificacaoInteracaoUtilizadorCanaisTest extends TestCase
                 'mail',
             ],
             $notificacao->via(
-                $destinatario,
+                $autor,
             ),
         );
+
+        self::assertSame(['database'], $notificacao->via($destinatario));
     }
 
     /**
@@ -265,7 +274,7 @@ final class NotificacaoInteracaoUtilizadorCanaisTest extends TestCase
         return new NotificacaoInteracaoUtilizador(
             $metalThursday,
             $causador,
-            'gostou',
+            'comentou',
         );
     }
 

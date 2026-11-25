@@ -62,19 +62,46 @@ final class PermissaoEmailSeeder extends Seeder
             IdentificadorPermissaoEmail::cases(),
         );
 
-        DB::table(
-            'permissoes_email',
-        )->upsert(
-            $registos,
-            [
-                'identificador',
-            ],
-            [
-                'nome',
-                'descricao',
-                'ordem',
-                'updated_at',
-            ],
-        );
+        DB::transaction(static function () use ($registos): void {
+            DB::table('permissoes_email')->upsert(
+                $registos,
+                ['identificador'],
+                ['nome', 'descricao', 'ordem', 'updated_at'],
+            );
+
+            $permissaoAntiga = DB::table('permissoes_email')
+                ->where('identificador', 'todas_interacoes')
+                ->value('id');
+
+            if ($permissaoAntiga === null) {
+                return;
+            }
+
+            $permissaoPessoal = DB::table('permissoes_email')
+                ->where(
+                    'identificador',
+                    IdentificadorPermissaoEmail::InteracoesNasMinhasPublicacoes->value,
+                )
+                ->value('id');
+
+            if (! is_numeric($permissaoPessoal)) {
+                throw new \LogicException('Não existe a permissão de interações pessoais.');
+            }
+
+            DB::table('permissao_email_utilizador')
+                ->where('permissao_email_id', $permissaoAntiga)
+                ->orderBy('utilizador_id')
+                ->pluck('utilizador_id')
+                ->each(static function (mixed $identificadorUtilizador) use ($permissaoPessoal): void {
+                    DB::table('permissao_email_utilizador')->insertOrIgnore([
+                        'utilizador_id' => $identificadorUtilizador,
+                        'permissao_email_id' => $permissaoPessoal,
+                    ]);
+                });
+
+            DB::table('permissoes_email')
+                ->where('id', $permissaoAntiga)
+                ->delete();
+        });
     }
 }

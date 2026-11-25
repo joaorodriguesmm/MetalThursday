@@ -25,11 +25,12 @@ final class IdentificadorPermissaoEmailTest extends TestCase
             [
                 'todas_notificacoes',
                 'novas_publicacoes',
-                'todas_interacoes',
                 'interacoes_nas_minhas_publicacoes',
                 'lembrete_diario_tarefas',
                 'lembrete_diario_atrasos',
                 'alerta_nomeacao',
+                'novas_denuncias_comentarios',
+                'decisoes_denuncias_comentarios',
             ],
             array_map(
                 static fn (
@@ -141,15 +142,9 @@ final class IdentificadorPermissaoEmailTest extends TestCase
                 'ordem' => 2,
             ],
 
-            IdentificadorPermissaoEmail::TodasInteracoes->value => [
-                'nome' => 'Todas as interações',
-                'descricao' => 'Receber e-mails sobre comentários, avaliações, gostos e outras interações realizadas em qualquer publicação.',
-                'ordem' => 3,
-            ],
-
             IdentificadorPermissaoEmail::InteracoesNasMinhasPublicacoes->value => [
-                'nome' => 'Interações nas minhas publicações',
-                'descricao' => 'Receber e-mails sobre comentários, avaliações, gostos e outras interações realizadas nas minhas publicações.',
+                'nome' => 'Interações relacionadas comigo',
+                'descricao' => 'Receber e-mails quando alguém comentar ou avaliar uma publicação minha, responder a um comentário meu ou lhe atribuir um gosto.',
                 'ordem' => 4,
             ],
 
@@ -169,6 +164,18 @@ final class IdentificadorPermissaoEmailTest extends TestCase
                 'nome' => 'Nomeação para uma MetalThursday',
                 'descricao' => 'Receber um e-mail quando for nomeado para apresentar a próxima MetalThursday.',
                 'ordem' => 7,
+            ],
+
+            IdentificadorPermissaoEmail::NovasDenunciasComentarios->value => [
+                'nome' => 'Novas denúncias de comentários',
+                'descricao' => 'Receber um e-mail quando for apresentada uma denúncia de comentário, enquanto tiveres o papel de superadministrador.',
+                'ordem' => 8,
+            ],
+
+            IdentificadorPermissaoEmail::DecisoesDenunciasComentarios->value => [
+                'nome' => 'Decisões sobre as minhas denúncias',
+                'descricao' => 'Receber um e-mail quando a moderação decidir sobre uma denúncia apresentada por mim.',
+                'ordem' => 9,
             ],
         ];
 

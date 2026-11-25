@@ -65,13 +65,17 @@ final class NotificadorInteracoesTest extends TestCase
             );
 
         $metalThursday = MetalThursday::factory()
-            ->comAutor(
-                $causador,
-            )
-            ->comProximoNomeado(
-                $causador,
-            )
+            ->comAutor($destinatarioSemEmail)
+            ->comProximoNomeado($causador)
             ->create();
+
+        $comentario = $metalThursday->comentarios()->create([
+            'utilizador_id' => $destinatarioComEmail->getKey(),
+            'conteudo' => 'Comentário a responder.',
+            'comentario_pai_id' => null,
+        ]);
+
+        $utilizadorSemRelacao = Utilizador::factory()->create();
 
         $consultas = [];
 
@@ -104,6 +108,7 @@ final class NotificadorInteracoesTest extends TestCase
                     &$consultas,
                     $destinatarioComEmail,
                     $destinatarioSemEmail,
+                    $utilizadorSemRelacao,
                 ): void {
                     self::assertInstanceOf(
                         ColecaoEloquent::class,
@@ -115,9 +120,20 @@ final class NotificadorInteracoesTest extends TestCase
                         $notificacao,
                     );
 
-                    self::assertCount(
-                        2,
-                        $destinatarios,
+                    self::assertCount(1, $destinatarios);
+
+                    self::assertFalse(
+                        $destinatarios->contains(
+                            'id',
+                            $utilizadorSemRelacao->getKey(),
+                        ),
+                    );
+
+                    self::assertFalse(
+                        $destinatarios->contains(
+                            'id',
+                            $destinatarioSemEmail->getKey(),
+                        ),
                     );
 
                     foreach ($destinatarios as $destinatario) {
@@ -150,19 +166,9 @@ final class NotificadorInteracoesTest extends TestCase
                             $destinatarioComEmail->getKey(),
                         );
 
-                    $utilizadorSemEmail =
-                        $destinatariosPorIdentificador->get(
-                            $destinatarioSemEmail->getKey(),
-                        );
-
                     self::assertInstanceOf(
                         Utilizador::class,
                         $utilizadorComEmail,
-                    );
-
-                    self::assertInstanceOf(
-                        Utilizador::class,
-                        $utilizadorSemEmail,
                     );
 
                     self::assertSame(
@@ -172,15 +178,6 @@ final class NotificadorInteracoesTest extends TestCase
                         ],
                         $notificacao->via(
                             $utilizadorComEmail,
-                        ),
-                    );
-
-                    self::assertSame(
-                        [
-                            'database',
-                        ],
-                        $notificacao->via(
-                            $utilizadorSemEmail,
                         ),
                     );
 
@@ -197,9 +194,9 @@ final class NotificadorInteracoesTest extends TestCase
             );
 
         $servico->notificarOutrosUtilizadores(
-            sujeito: $metalThursday,
+            sujeito: $comentario,
             causador: $causador,
-            acao: 'comentou',
+            acao: 'respondeu',
         );
 
         $consultasPermissoes =
@@ -218,6 +215,60 @@ final class NotificadorInteracoesTest extends TestCase
         self::assertCount(
             1,
             $consultasPermissoes,
+        );
+    }
+
+    /**
+     * Uma interação do autor na sua publicação não gera avisos globais.
+     */
+    #[Test]
+    public function nao_notifica_atividade_sem_destinatarios_pessoais(): void
+    {
+        $autor = Utilizador::factory()->create();
+        Utilizador::factory()->count(3)->create();
+
+        $metalThursday = MetalThursday::factory()
+            ->comAutor($autor)
+            ->create();
+
+        $despachante = Mockery::mock(DespachanteNotificacoes::class);
+        $despachante->shouldNotReceive('send');
+
+        (new NotificadorInteracoes($despachante))->notificarOutrosUtilizadores(
+            sujeito: $metalThursday,
+            causador: $autor,
+            acao: 'ouviu',
+        );
+    }
+
+    /**
+     * Os utilizadores alheios à publicação não recebem avisos.
+     */
+    #[Test]
+    public function notifica_apenas_autor_da_publicacao(): void
+    {
+        $autor = Utilizador::factory()->create();
+        $causador = Utilizador::factory()->create();
+        $alheio = Utilizador::factory()->create();
+
+        $metalThursday = MetalThursday::factory()
+            ->comAutor($autor)
+            ->create();
+
+        $despachante = Mockery::mock(DespachanteNotificacoes::class);
+        $despachante->shouldReceive('send')
+            ->once()
+            ->withArgs(static function ($destinatarios) use ($autor, $alheio): bool {
+                return $destinatarios instanceof ColecaoEloquent
+                    && $destinatarios->count() === 1
+                    && $destinatarios->first()?->getKey() === $autor->getKey()
+                    && ! $destinatarios->contains('id', $alheio->getKey());
+            });
+
+        (new NotificadorInteracoes($despachante))->notificarOutrosUtilizadores(
+            sujeito: $metalThursday,
+            causador: $causador,
+            acao: 'avaliou',
         );
     }
 }

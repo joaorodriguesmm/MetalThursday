@@ -115,6 +115,11 @@ final class ControladorRegistoConvite extends Controller
 
         $permissoesEmail =
             PermissaoEmail::query()
+                ->where(
+                    'identificador',
+                    '!=',
+                    IdentificadorPermissaoEmail::NovasDenunciasComentarios->value,
+                )
                 ->select([
                     'id',
                     'identificador',

@@ -103,12 +103,12 @@ final class NotificacaoAplicacaoEntregaTest extends TestCase
         $causador = Utilizador::factory()->create();
         $destinatario = Utilizador::factory()->create();
         $permissao = $this->obterPermissao(
-            IdentificadorPermissaoEmail::TodasInteracoes,
+            IdentificadorPermissaoEmail::InteracoesNasMinhasPublicacoes,
         );
         $destinatario->permissoesEmail()->attach($permissao->getKey());
 
         $metalThursday = MetalThursday::factory()
-            ->comAutor($causador)
+            ->comAutor($destinatario)
             ->comProximoNomeado($causador)
             ->create();
 

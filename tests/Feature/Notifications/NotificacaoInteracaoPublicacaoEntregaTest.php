@@ -45,10 +45,14 @@ final class NotificacaoInteracaoPublicacaoEntregaTest extends TestCase
     {
         [$publicacao, $causador, $destinatario] = $this->criarCenario();
 
+        $publicacao->forceFill([
+            'autor_id' => $destinatario->getKey(),
+        ])->saveOrFail();
+
         app(PermissaoEmailSeeder::class)->run();
 
         $permissao = PermissaoEmail::query()
-            ->where('identificador', IdentificadorPermissaoEmail::TodasInteracoes->value)
+            ->where('identificador', IdentificadorPermissaoEmail::InteracoesNasMinhasPublicacoes->value)
             ->sole();
 
         $destinatario->permissoesEmail()->attach($permissao->getKey());

@@ -222,6 +222,50 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
     }
 
     /**
+     * Identifica os destinatários diretamente envolvidos na interação.
+     *
+     * Comentários novos e avaliações notificam o autor da publicação.
+     * Respostas e gostos notificam apenas o autor do comentário respondido
+     * ou apreciado. Audições não originam notificações, pois o seu estado
+     * continua visível nos indicadores sem gerar ruído nas caixas pessoais.
+     * O causador nunca recebe o seu próprio aviso.
+     *
+     * @return list<int> Identificadores positivos e sem repetições.
+     *
+     * @since 2.0.0
+     */
+    public function obterDestinatariosPessoais(): array
+    {
+        $destinatarios = match ($this->acao) {
+            'comentou', 'avaliou' => [
+                $this->identificadorAutorMetalThursday,
+            ],
+
+            'respondeu', 'gostou' => $this->tipoSujeito === self::TIPO_COMENTARIO
+                ? [$this->identificadorAutorComentario]
+                : [],
+
+            default => [],
+        };
+
+        $identificadores = [];
+
+        foreach ($destinatarios as $identificador) {
+            if (
+                $identificador === null
+                || $identificador < 1
+                || $identificador === $this->identificadorCausador
+            ) {
+                continue;
+            }
+
+            $identificadores[$identificador] = $identificador;
+        }
+
+        return array_values($identificadores);
+    }
+
+    /**
      * Captura o registo concreto de uma interação reversível.
      *
      * Consultar apenas a existência de outra interação do mesmo utilizador
@@ -494,24 +538,22 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
                 $utilizador->getKey(),
             );
 
-        $eAutor =
-            $identificadorDestinatario !== null
-            && $this->identificadorAutorMetalThursday !== null
-            && $identificadorDestinatario
-            === $this->identificadorAutorMetalThursday;
+        if (
+            $identificadorDestinatario === null
+            || ! in_array(
+                $identificadorDestinatario,
+                $this->obterDestinatariosPessoais(),
+                true,
+            )
+        ) {
+            return false;
+        }
 
         return $utilizador->temPermissaoEmail(
             IdentificadorPermissaoEmail::TodasNotificacoes->value,
-        )
-            || $utilizador->temPermissaoEmail(
-                IdentificadorPermissaoEmail::TodasInteracoes->value,
-            )
-            || (
-                $eAutor
-                && $utilizador->temPermissaoEmail(
-                    IdentificadorPermissaoEmail::InteracoesNasMinhasPublicacoes->value,
-                )
-            );
+        ) || $utilizador->temPermissaoEmail(
+            IdentificadorPermissaoEmail::InteracoesNasMinhasPublicacoes->value,
+        );
     }
 
     /**
@@ -624,12 +666,23 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
             );
         }
 
-        return route(
-            'metal-thursday.detalhes',
-            [
-                'metalThursday' => $this->identificadorMetalThursday,
-            ],
-        );
+        $identificadorComentario = match ($this->acao) {
+            'comentou', 'respondeu' => $this->identificadorRegistoAcao,
+            'gostou' => $this->tipoSujeito === self::TIPO_COMENTARIO
+                ? $this->identificadorSujeito
+                : null,
+            default => null,
+        };
+
+        $parametros = [
+            'metalThursday' => $this->identificadorMetalThursday,
+        ];
+
+        if ($identificadorComentario !== null) {
+            $parametros['comentario'] = $identificadorComentario;
+        }
+
+        return route('metal-thursday.detalhes', $parametros);
     }
 
     /**

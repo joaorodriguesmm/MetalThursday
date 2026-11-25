@@ -15,6 +15,8 @@ import 'bootstrap/js/dist/modal';
 import { iniciarModulosGlobais }
     from './modulos/CarregadorModulosGlobais';
 
+import DenunciadorComentarios from './modulos/DenunciadorComentarios';
+
 /**
  * Seletores utilizados pelos comportamentos globais.
  *
@@ -74,6 +76,7 @@ function iniciarTerminoSessao() {
 function iniciarAplicacao() {
     void iniciarModulosGlobais();
     iniciarTerminoSessao();
+    new DenunciadorComentarios();
 }
 
 if (document.readyState === 'loading') {

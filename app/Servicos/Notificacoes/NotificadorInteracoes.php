@@ -16,11 +16,12 @@ use InvalidArgumentException;
 use LogicException;
 
 /**
- * Envia notificações relacionadas com interações dos utilizadores.
+ * Envia notificações pessoais relacionadas com interações dos utilizadores.
  *
- * O serviço exclui o utilizador responsável pela interação e processa os
- * restantes utilizadores com acesso ativo por lotes, evitando carregá-los
- * todos simultaneamente em memória.
+ * Só os autores diretamente envolvidos recebem avisos: o autor da
+ * publicação para comentários e avaliações, ou o autor do comentário para
+ * respostas e gostos. As audições não geram notificações pessoais.
+ * O serviço exclui o causador e processa os destinatários por lotes.
  *
  * As permissões de e-mail são carregadas juntamente com cada lote. A
  * determinação dos canais da notificação utiliza, assim, a relação já
@@ -56,10 +57,10 @@ final class NotificadorInteracoes
     ) {}
 
     /**
-     * Notifica os restantes utilizadores sobre uma interação.
+     * Notifica os utilizadores pessoalmente envolvidos numa interação.
      *
      * O utilizador responsável pela interação é excluído dos destinatários.
-     * Apenas utilizadores com acesso ativo recebem a notificação.
+     * Apenas autores com acesso ativo recebem a notificação.
      *
      * A notificação é construída antes da consulta dos destinatários, fazendo
      * com que eventuais dados inválidos sejam rejeitados mesmo quando não
@@ -130,7 +131,14 @@ final class NotificadorInteracoes
                 ->beforeCommit();
         }
 
+        $destinatariosPessoais = $notificacao->obterDestinatariosPessoais();
+
+        if ($destinatariosPessoais === []) {
+            return;
+        }
+
         Utilizador::query()
+            ->whereIn('utilizadores.id', $destinatariosPessoais)
             ->with([
                 'permissoesEmail',
             ])

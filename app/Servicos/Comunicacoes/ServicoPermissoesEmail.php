@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Servicos\Comunicacoes;
 
+use App\Enumeracoes\IdentificadorPermissaoEmail;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\Comunicacao\PermissaoEmail;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -171,6 +173,23 @@ final class ServicoPermissoesEmail
         $this->validarExistencia(
             $identificadores,
         );
+
+        if (
+            ! $utilizadorBloqueado->eSuperAdministrador()
+            && $identificadores !== []
+            && PermissaoEmail::query()
+                ->whereKey($identificadores)
+                ->where(
+                    'identificador',
+                    IdentificadorPermissaoEmail::NovasDenunciasComentarios->value,
+                )
+                ->lockForUpdate()
+                ->first(['id']) !== null
+        ) {
+            throw new AuthorizationException(
+                'Não podes configurar esta permissão de e-mail.',
+            );
+        }
 
         $utilizadorBloqueado
             ->permissoesEmail()

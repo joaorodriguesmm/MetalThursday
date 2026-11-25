@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Autenticacao;
 
+use App\Enumeracoes\IdentificadorPermissaoEmail;
 use App\Models\Autenticacao\Convite;
 use App\Models\Comunicacao\PermissaoEmail;
 use App\ObjetosValor\Utilizadores\EnderecoEmail;
@@ -183,7 +184,7 @@ final class AceitarConviteRequest extends FormRequest
                 Rule::exists(
                     PermissaoEmail::class,
                     'id',
-                ),
+                )->whereNot('identificador', IdentificadorPermissaoEmail::NovasDenunciasComentarios->value),
             ],
         ];
     }
@@ -246,7 +247,7 @@ final class AceitarConviteRequest extends FormRequest
 
             'permissoes_email.*.distinct' => 'A mesma permissão de e-mail foi selecionada mais do que uma vez.',
 
-            'permissoes_email.*.exists' => 'Uma das permissões de e-mail selecionadas não existe.',
+            'permissoes_email.*.exists' => 'Uma das permissões de e-mail selecionadas não existe ou não está disponível para o teu perfil.',
         ];
     }
 

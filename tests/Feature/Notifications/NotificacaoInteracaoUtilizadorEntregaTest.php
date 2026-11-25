@@ -38,13 +38,13 @@ final class NotificacaoInteracaoUtilizadorEntregaTest extends TestCase
         app(PermissaoEmailSeeder::class)->run();
 
         $permissao = PermissaoEmail::query()
-            ->where('identificador', IdentificadorPermissaoEmail::TodasInteracoes->value)
+            ->where('identificador', IdentificadorPermissaoEmail::InteracoesNasMinhasPublicacoes->value)
             ->sole();
 
         $destinatario->permissoesEmail()->attach($permissao->getKey());
 
         $metalThursday = MetalThursday::factory()
-            ->comAutor($causador)
+            ->comAutor($destinatario)
             ->comProximoNomeado($causador)
             ->create();
 

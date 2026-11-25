@@ -34,15 +34,10 @@ enum IdentificadorPermissaoEmail: string
     case NovasPublicacoes = 'novas_publicacoes';
 
     /**
-     * Autoriza notificações relativas a interações em qualquer publicação.
+     * Autoriza e-mails sobre interações pessoalmente relevantes.
      *
-     * @since 2.0.0
-     */
-    case TodasInteracoes = 'todas_interacoes';
-
-    /**
-     * Autoriza notificações relativas a interações nas publicações do
-     * utilizador.
+     * O identificador histórico é preservado para não invalidar as
+     * preferências individuais já guardadas.
      *
      * @since 2.0.0
      */
@@ -70,6 +65,20 @@ enum IdentificadorPermissaoEmail: string
     case AlertaNomeacao = 'alerta_nomeacao';
 
     /**
+     * Autoriza e-mails sobre novas denúncias para superadministradores.
+     *
+     * @since 2.0.0
+     */
+    case NovasDenunciasComentarios = 'novas_denuncias_comentarios';
+
+    /**
+     * Autoriza e-mails sobre decisões de denúncias apresentadas pelo utilizador.
+     *
+     * @since 2.0.0
+     */
+    case DecisoesDenunciasComentarios = 'decisoes_denuncias_comentarios';
+
+    /**
      * Obtém o nome apresentado ao utilizador.
      *
      * @return string Nome da permissão.
@@ -83,15 +92,17 @@ enum IdentificadorPermissaoEmail: string
 
             self::NovasPublicacoes => 'Novas publicações',
 
-            self::TodasInteracoes => 'Todas as interações',
-
-            self::InteracoesNasMinhasPublicacoes => 'Interações nas minhas publicações',
+            self::InteracoesNasMinhasPublicacoes => 'Interações relacionadas comigo',
 
             self::LembreteDiarioTarefas => 'Lembrete diário de tarefas',
 
             self::LembreteDiarioAtrasos => 'Lembrete diário de atrasos',
 
             self::AlertaNomeacao => 'Nomeação para uma MetalThursday',
+
+            self::NovasDenunciasComentarios => 'Novas denúncias de comentários',
+
+            self::DecisoesDenunciasComentarios => 'Decisões sobre as minhas denúncias',
         };
     }
 
@@ -109,15 +120,17 @@ enum IdentificadorPermissaoEmail: string
 
             self::NovasPublicacoes => 'Receber um e-mail sempre que for publicada uma nova MetalThursday.',
 
-            self::TodasInteracoes => 'Receber e-mails sobre comentários, avaliações, gostos e outras interações realizadas em qualquer publicação.',
-
-            self::InteracoesNasMinhasPublicacoes => 'Receber e-mails sobre comentários, avaliações, gostos e outras interações realizadas nas minhas publicações.',
+            self::InteracoesNasMinhasPublicacoes => 'Receber e-mails quando alguém comentar ou avaliar uma publicação minha, responder a um comentário meu ou lhe atribuir um gosto.',
 
             self::LembreteDiarioTarefas => 'Receber um e-mail no dia em que exista uma tarefa por concluir, como a submissão de uma MetalThursday.',
 
             self::LembreteDiarioAtrasos => 'Receber diariamente um e-mail quando existir uma tarefa em atraso, como uma MetalThursday ainda não submetida.',
 
             self::AlertaNomeacao => 'Receber um e-mail quando for nomeado para apresentar a próxima MetalThursday.',
+
+            self::NovasDenunciasComentarios => 'Receber um e-mail quando for apresentada uma denúncia de comentário, enquanto tiveres o papel de superadministrador.',
+
+            self::DecisoesDenunciasComentarios => 'Receber um e-mail quando a moderação decidir sobre uma denúncia apresentada por mim.',
         };
     }
 
@@ -135,8 +148,6 @@ enum IdentificadorPermissaoEmail: string
 
             self::NovasPublicacoes => 2,
 
-            self::TodasInteracoes => 3,
-
             self::InteracoesNasMinhasPublicacoes => 4,
 
             self::LembreteDiarioTarefas => 5,
@@ -144,6 +155,10 @@ enum IdentificadorPermissaoEmail: string
             self::LembreteDiarioAtrasos => 6,
 
             self::AlertaNomeacao => 7,
+
+            self::NovasDenunciasComentarios => 8,
+
+            self::DecisoesDenunciasComentarios => 9,
         };
     }
 

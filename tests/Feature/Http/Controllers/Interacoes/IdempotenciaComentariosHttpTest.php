@@ -49,7 +49,9 @@ final class IdempotenciaComentariosHttpTest extends TestCase
     {
         $autor = Utilizador::factory()->create();
         $destinatario = Utilizador::factory()->create();
-        $alvo = MetalThursday::factory()->create();
+        $alvo = MetalThursday::factory()
+            ->comAutor($destinatario)
+            ->create();
 
         $url = $this->urlComentario($alvo);
 

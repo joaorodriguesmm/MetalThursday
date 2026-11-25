@@ -124,6 +124,20 @@
                     </li>
                 @endif
 
+                @if ($podeGerirUtilizadores)
+                    <li class="nav-item">
+                        <a
+                            class="nav-link {{ request()->routeIs('moderacao.*') ? 'active' : '' }}"
+                            href="{{ route('moderacao.denuncias-comentarios.painel') }}"
+                            @if (request()->routeIs('moderacao.*'))
+                                aria-current="page"
+                            @endif
+                        >
+                            Moderação
+                        </a>
+                    </li>
+                @endif
+
                 <li
                     class="nav-item d-md-none"
                     aria-hidden="true"

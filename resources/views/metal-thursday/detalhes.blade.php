@@ -50,6 +50,8 @@
 
     <x-metal-thursday.cartao-vista-completa
         :registo-metal-thursday="$metalThursday"
+        data-endereco-localizacao-comentario="{{ route('comentarios.localizacao') }}"
+        data-identificador-metal-thursday="{{ $metalThursday->id }}"
         class="mb-0"
     />
 

@@ -257,6 +257,31 @@
                         Responder
                     </button>
 
+                    @if (
+                        $utilizadorAutenticado !== null
+                        && $utilizadorAutenticado->id !== $comentario->utilizador_id
+                    )
+                        <span class="text-muted mx-1" aria-hidden="true">
+                            &middot;
+                        </span>
+
+                        @if ($jaDenunciadoPeloUtilizador)
+                            <span class="text-muted" data-denuncia-ja-enviada>
+                                Já denunciaste este comentário
+                            </span>
+                        @else
+                            <button
+                                class="btn btn-sm btn-link text-muted text-decoration-none p-0"
+                                type="button"
+                                data-abrir-denuncia-comentario
+                                aria-controls="denuncia-comentario-{{ $identificadorComentario }}"
+                                aria-expanded="false"
+                            >
+                                Denunciar
+                            </button>
+                        @endif
+                    @endif
+
                     @can('update', $comentario)
                         <span
                             class="text-muted mx-1"
@@ -305,6 +330,97 @@
                         </button>
                     @endcan
                 </div>
+
+                @if (
+                    $utilizadorAutenticado !== null
+                    && $utilizadorAutenticado->id !== $comentario->utilizador_id
+                    && ! $jaDenunciadoPeloUtilizador
+                )
+                    <div
+                        id="denuncia-comentario-{{ $identificadorComentario }}"
+                        class="mt-3 rounded border border-secondary p-3"
+                        data-contentor-denuncia-comentario
+                        hidden
+                    >
+                        <form
+                            method="POST"
+                            action="{{ route('comentarios.denuncias.guardar', $comentario) }}"
+                            data-formulario-denuncia-comentario
+                            novalidate
+                        >
+                            @csrf
+
+                            <div class="grupo-campo-formulario mb-3" data-grupo-campo>
+                                <label
+                                    class="form-label"
+                                    for="motivo-denuncia-{{ $identificadorComentario }}"
+                                >
+                                    Motivo da denúncia
+                                </label>
+
+                                <select
+                                    class="form-select form-select-sm"
+                                    id="motivo-denuncia-{{ $identificadorComentario }}"
+                                    name="motivo"
+                                    aria-describedby="erro-motivo-denuncia-{{ $identificadorComentario }}"
+                                    required
+                                >
+                                    <option value="">Selecionar motivo</option>
+                                    <option value="spam">Spam</option>
+                                    <option value="ofensivo">Conteúdo ofensivo</option>
+                                    <option value="assedio">Assédio</option>
+                                    <option value="outro">Outro</option>
+                                </select>
+
+                                <div
+                                    id="erro-motivo-denuncia-{{ $identificadorComentario }}"
+                                    class="invalid-feedback mt-1"
+                                    aria-live="polite"
+                                    hidden
+                                ></div>
+                            </div>
+
+                            <div class="grupo-campo-formulario mb-3" data-grupo-campo>
+                                <label
+                                    class="form-label"
+                                    for="detalhes-denuncia-{{ $identificadorComentario }}"
+                                >
+                                    Detalhes (obrigatórios para «Outro»)
+                                </label>
+
+                                <textarea
+                                    class="form-control form-control-sm"
+                                    id="detalhes-denuncia-{{ $identificadorComentario }}"
+                                    name="detalhes"
+                                    aria-describedby="erro-detalhes-denuncia-{{ $identificadorComentario }}"
+                                    maxlength="1000"
+                                    rows="3"
+                                ></textarea>
+
+                                <div
+                                    id="erro-detalhes-denuncia-{{ $identificadorComentario }}"
+                                    class="invalid-feedback mt-1"
+                                    aria-live="polite"
+                                    hidden
+                                ></div>
+                            </div>
+
+                            <button class="btn btn-sm btn-warning" type="submit">
+                                Enviar denúncia
+                            </button>
+                        </form>
+                    </div>
+
+                    <div
+                        class="alert alert-success mt-3 mb-0 py-2 d-none"
+                        role="status"
+                        aria-live="polite"
+                        data-confirmacao-denuncia-comentario
+                    >
+                        <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
+                        Denúncia enviada com sucesso. Será analisada pela moderação.
+                    </div>
+                @endif
 
                 <div
                     id="contentor-resposta-comentario-{{ $identificadorComentario }}"

@@ -7,6 +7,9 @@ import InicializadorComentarios
 import InicializadorTooltips
     from '../modulos/InicializadorTooltips';
 
+import NavegadorComentarios
+    from '../modulos/NavegadorComentarios';
+
 /**
  * Configura os comportamentos da página de detalhes de uma MetalThursday.
  *
@@ -23,7 +26,9 @@ import InicializadorTooltips
 function iniciarPaginaDetalhesMetalThursday() {
     new InicializadorTooltips();
     new GestorModalAvaliacao();
-    new InicializadorComentarios();
+    const gestorComentarios = new InicializadorComentarios();
+
+    void new NavegadorComentarios(gestorComentarios).navegar();
 }
 
 if (document.readyState === 'loading') {
