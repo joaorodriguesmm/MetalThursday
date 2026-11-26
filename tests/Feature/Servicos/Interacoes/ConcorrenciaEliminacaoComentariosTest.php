@@ -54,6 +54,9 @@ final class ConcorrenciaEliminacaoComentariosTest extends TestCase
         );
 
         try {
+            $identificadores = [];
+            $tentativasInsercao = 0;
+
             DB::statement('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
 
             $respostas = DB::transaction(function () use (
@@ -61,23 +64,29 @@ final class ConcorrenciaEliminacaoComentariosTest extends TestCase
                 $autor,
                 $segundaLigacao,
                 $servico,
+                &$identificadores,
+                &$tentativasInsercao,
             ): array {
-                self::assertSame(0, $comentario->respostas()->count());
+                $tentativasInsercao++;
+                $primeiraTentativa = $tentativasInsercao === 1;
 
-                $identificadores = [];
+                self::assertSame($primeiraTentativa ? 0 : 2, $comentario->respostas()->count());
 
-                for ($indice = 1; $indice <= 2; $indice++) {
-                    $identificadores[] = $segundaLigacao
-                        ->table('comentarios')
-                        ->insertGetId([
-                            'utilizador_id' => $autor->id,
-                            'tipo_comentavel' => $comentario->tipo_comentavel,
-                            'comentavel_id' => $comentario->comentavel_id,
-                            'comentario_pai_id' => $comentario->id,
-                            'conteudo' => 'Resposta '.$indice,
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ]);
+                // As inserções concorrentes são efetuadas apenas uma vez.
+                if ($primeiraTentativa) {
+                    for ($indice = 1; $indice <= 2; $indice++) {
+                        $identificadores[] = $segundaLigacao
+                            ->table('comentarios')
+                            ->insertGetId([
+                                'utilizador_id' => $autor->id,
+                                'tipo_comentavel' => $comentario->tipo_comentavel,
+                                'comentavel_id' => $comentario->comentavel_id,
+                                'comentario_pai_id' => $comentario->id,
+                                'conteudo' => 'Resposta '.$indice,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                    }
                 }
 
                 $bloqueado = Comentario::query()
@@ -85,18 +94,22 @@ final class ConcorrenciaEliminacaoComentariosTest extends TestCase
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                self::assertSame(0, $bloqueado->respostas()->count());
+                self::assertSame($primeiraTentativa ? 0 : 2, $bloqueado->respostas()->count());
 
                 $resultado = $servico->eliminarComentarioBloqueado($bloqueado);
 
                 self::assertSame('marcador', $resultado['modo']);
 
                 return $identificadores;
-            });
+            }, 3);
+
+            self::assertCount(2, $respostas);
 
             $this->assertNotSoftDeleted($comentario);
             self::assertTrue($comentario->refresh()->temConteudoEliminado());
             self::assertSame(2, $comentario->respostas()->count());
+
+            $tentativasEliminacao = 0;
 
             DB::statement('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
 
@@ -105,12 +118,22 @@ final class ConcorrenciaEliminacaoComentariosTest extends TestCase
                 $respostas,
                 $segundaLigacao,
                 $servico,
+                &$tentativasEliminacao,
             ): void {
-                self::assertSame(2, $comentario->respostas()->count());
+                $tentativasEliminacao++;
+                $primeiraTentativa = $tentativasEliminacao === 1;
 
-                $segundaLigacao->table('comentarios')
-                    ->where('id', $respostas[0])
-                    ->update(['deleted_at' => now()]);
+                self::assertSame($primeiraTentativa ? 2 : 1, $comentario->respostas()->count());
+
+                // A eliminação concorrente não deve ser repetida.
+                if ($primeiraTentativa) {
+                    self::assertSame(
+                        1,
+                        $segundaLigacao->table('comentarios')
+                            ->where('id', $respostas[0])
+                            ->update(['deleted_at' => now()]),
+                    );
+                }
 
                 $ultimaResposta = Comentario::query()
                     ->whereKey($respostas[1])
@@ -124,7 +147,7 @@ final class ConcorrenciaEliminacaoComentariosTest extends TestCase
                     $comentario->id,
                     $resultado['comentarios_removidos_ids'],
                 );
-            });
+            }, 3);
 
             $this->assertSoftDeleted($comentario);
 
