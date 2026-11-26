@@ -6,6 +6,7 @@ namespace App\Notifications;
 
 use App\Enumeracoes\IdentificadorPermissaoEmail;
 use App\Models\Autenticacao\Utilizador;
+use App\Models\Interacoes\DenunciaComentario;
 use InvalidArgumentException;
 
 /**
@@ -69,6 +70,10 @@ final class NotificacaoNovaDenunciaComentario extends NotificacaoAplicacao
         return $utilizadorAtual instanceof Utilizador
             && $utilizadorAtual->temAcessoAtivo()
             && $utilizadorAtual->eSuperAdministrador()
+            && DenunciaComentario::query()
+                ->whereKey($this->identificadorDenuncia)
+                ->where('estado', 'pendente')
+                ->exists()
             && parent::shouldSend($notificavel, $canal);
     }
 

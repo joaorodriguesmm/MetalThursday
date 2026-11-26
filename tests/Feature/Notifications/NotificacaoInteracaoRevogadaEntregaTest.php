@@ -56,13 +56,14 @@ final class NotificacaoInteracaoRevogadaEntregaTest extends TestCase
     }
 
     #[Test]
-    public function audicao_retirada_nao_e_entregue(): void
+    public function audicao_nao_e_entregue_antes_nem_apos_retirada(): void
     {
         [$publicacao, $causador, $destinatario] = $this->criarCenario();
         $audicao = $publicacao->audicoes()->create(['utilizador_id' => $causador->getKey()]);
         $notificacao = new NotificacaoInteracaoUtilizador($publicacao, $causador, 'ouviu');
 
-        self::assertTrue($notificacao->shouldSend($destinatario, 'database'));
+        self::assertFalse($notificacao->shouldSend($destinatario, 'database'));
+        self::assertFalse($notificacao->shouldSend($destinatario, 'mail'));
         $audicao->deleteOrFail();
         self::assertFalse($notificacao->shouldSend($destinatario, 'database'));
     }
@@ -109,7 +110,7 @@ final class NotificacaoInteracaoRevogadaEntregaTest extends TestCase
     }
 
     #[Test]
-    public function audicao_recriada_nao_reativa_aviso_antigo(): void
+    public function audicao_recriada_nao_origina_qualquer_aviso(): void
     {
         [$publicacao, $causador, $destinatario] = $this->criarCenario();
         $original = $publicacao->audicoes()->create(['utilizador_id' => $causador->getKey()]);
@@ -121,7 +122,8 @@ final class NotificacaoInteracaoRevogadaEntregaTest extends TestCase
 
         self::assertNotSame($identificadorOriginal, (int) $nova->getKey());
         self::assertFalse($antiga->shouldSend($destinatario, 'database'));
-        self::assertTrue($recente->shouldSend($destinatario, 'database'));
+        self::assertFalse($recente->shouldSend($destinatario, 'database'));
+        self::assertFalse($recente->shouldSend($destinatario, 'mail'));
     }
 
     #[Test]
@@ -159,7 +161,7 @@ final class NotificacaoInteracaoRevogadaEntregaTest extends TestCase
         $publicacao = MetalThursday::factory()
             ->comData($hoje->subDays(3))
             ->comEdicao($edicao)
-            ->comAutor($causador)
+            ->comAutor($destinatario)
             ->comProximoNomeado($causador)
             ->create();
 

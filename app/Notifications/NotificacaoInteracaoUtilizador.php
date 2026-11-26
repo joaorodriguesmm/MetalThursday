@@ -486,6 +486,15 @@ final class NotificacaoInteracaoUtilizador extends NotificacaoAplicacao
             return false;
         }
 
+        // Revalida os destinatários pessoais, incluindo trabalhos antigos.
+        if (! in_array(
+            $this->normalizarIdentificador($notificavel->getKey()),
+            $this->obterDestinatariosPessoais(),
+            true,
+        )) {
+            return false;
+        }
+
         // A publicação pode ter sido eliminada ou reagendada depois do COMMIT.
         // O scope exclui registos eliminados logicamente e datas futuras.
         if (

@@ -9,6 +9,7 @@ use App\Enumeracoes\PapelUtilizador;
 use App\Models\Autenticacao\Utilizador;
 use App\Models\Comunicacao\PermissaoEmail;
 use App\Models\Interacoes\Comentario;
+use App\Models\Interacoes\DenunciaComentario;
 use App\Models\MetalThursday\MetalThursday;
 use App\Notifications\NotificacaoDecisaoDenunciaComentario;
 use App\Notifications\NotificacaoNovaDenunciaComentario;
@@ -97,7 +98,8 @@ final class NotificacoesDenunciasComentariosTest extends TestCase
             IdentificadorPermissaoEmail::DecisoesDenunciasComentarios,
         );
 
-        $nova = new NotificacaoNovaDenunciaComentario(1);
+        $denuncia = $this->criarDenunciaPendente($denunciante);
+        $nova = new NotificacaoNovaDenunciaComentario($denuncia->id);
         $decisao = new NotificacaoDecisaoDenunciaComentario(1, 'rejeitada');
 
         self::assertTrue($nova->shouldSend($superadministrador, 'mail'));
@@ -123,8 +125,14 @@ final class NotificacoesDenunciasComentariosTest extends TestCase
             IdentificadorPermissaoEmail::NovasDenunciasComentarios,
         );
 
-        $notificacao = new NotificacaoNovaDenunciaComentario(1);
+        $denunciante = Utilizador::factory()->create();
+        $denuncia = $this->criarDenunciaPendente($denunciante);
+
+        $notificacao = new NotificacaoNovaDenunciaComentario($denuncia->id);
         self::assertSame(['database', 'mail'], $notificacao->via($superadministrador));
+
+        self::assertTrue($notificacao->shouldSend($superadministrador, 'database'));
+        self::assertTrue($notificacao->shouldSend($superadministrador, 'mail'));
 
         $superadministrador->papel = PapelUtilizador::Utilizador;
         $superadministrador->saveOrFail();
@@ -264,6 +272,21 @@ final class NotificacoesDenunciasComentariosTest extends TestCase
         ]);
 
         return [$publicacao, $comentario];
+    }
+
+    /**
+     * Cria uma denúncia pendente para validar a entrega efetiva.
+     */
+    private function criarDenunciaPendente(
+        Utilizador $denunciante,
+    ): DenunciaComentario {
+        [, $comentario] = $this->criarContextoDaDecisao();
+
+        return DenunciaComentario::query()->create([
+            'comentario_id' => $comentario->id,
+            'denunciante_id' => $denunciante->id,
+            'motivo' => 'spam',
+        ]);
     }
 
     private function atribuirPermissao(

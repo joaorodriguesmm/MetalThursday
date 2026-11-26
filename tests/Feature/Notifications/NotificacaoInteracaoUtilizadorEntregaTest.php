@@ -83,7 +83,7 @@ final class NotificacaoInteracaoUtilizadorEntregaTest extends TestCase
         $destinatario = Utilizador::factory()->create();
 
         $metalThursday = MetalThursday::factory()
-            ->comAutor($causador)
+            ->comAutor($destinatario)
             ->comProximoNomeado($causador)
             ->create();
 
@@ -152,7 +152,7 @@ final class NotificacaoInteracaoUtilizadorEntregaTest extends TestCase
         $destinatario = Utilizador::factory()->create();
 
         $metalThursday = MetalThursday::factory()
-            ->comAutor($causador)
+            ->comAutor($destinatario)
             ->comProximoNomeado($causador)
             ->create();
 
@@ -169,10 +169,14 @@ final class NotificacaoInteracaoUtilizadorEntregaTest extends TestCase
             $comentario,
         );
 
+        $destinatarioDesatualizado = $destinatario->fresh();
+
+        self::assertInstanceOf(Utilizador::class, $destinatarioDesatualizado);
+        self::assertTrue($notificacao->shouldSend($destinatarioDesatualizado, 'database'));
+
         $destinatario->deleteOrFail();
 
-        self::assertFalse(
-            $notificacao->shouldSend($destinatario, 'database'),
-        );
+        self::assertFalse($notificacao->shouldSend($destinatarioDesatualizado, 'database'));
+        self::assertFalse($notificacao->shouldSend($destinatarioDesatualizado, 'mail'));
     }
 }

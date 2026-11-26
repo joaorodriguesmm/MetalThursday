@@ -293,13 +293,15 @@ SQL);
     }
 
     /**
-     * @return array<string, array{bool}>
+     * @return array<string, array{bool, bool}>
      */
     public static function preferenciasNaEntrega(): array
     {
         return [
-            'permissoes mantidas' => [false],
-            'permissao revogada' => [true],
+            'entrega imediata com permissoes mantidas' => [false, false],
+            'entrega imediata com permissao revogada' => [true, false],
+            'entrega tardia com permissoes mantidas' => [false, true],
+            'entrega tardia com permissao revogada' => [true, true],
         ];
     }
 
@@ -307,6 +309,7 @@ SQL);
     #[DataProvider('preferenciasNaEntrega')]
     public function worker_entrega_notificacoes_de_denuncias(
         bool $revogarEmail,
+        bool $decidirAntesDaEntrega,
     ): void {
         $this->prepararFilaTemporaria();
 
@@ -362,23 +365,6 @@ SQL);
             ->where('denunciante_id', $denunciante->id)
             ->sole();
 
-        $this->actingAs($moderador, 'sessao')
-            ->patchJson(
-                action(
-                    [ControladorModeracaoDenuncias::class, 'decidir'],
-                    ['denuncia' => $denuncia->id],
-                ),
-                ['decisao' => 'aceitar'],
-            )
-            ->assertOk();
-
-        $this->assertDatabaseCount('jobs', 4);
-
-        if ($revogarEmail) {
-            $denunciante->permissoesEmail()
-                ->detach($permissaoDecisao->id);
-        }
-
         $entregas = [];
         $emailsEnviados = 0;
 
@@ -405,21 +391,53 @@ SQL);
         $worker = app('queue.worker');
         self::assertInstanceOf(Worker::class, $worker);
 
-        for ($indice = 0; $indice < 4; $indice++) {
-            $worker->runNextJob(
-                'database',
-                $fila,
-                new WorkerOptions(
-                    sleep: 0,
-                    maxTries: 1,
-                ),
-            );
+        $processar = static function (int $total) use ($worker, $fila): void {
+            for ($indice = 0; $indice < $total; $indice++) {
+                $worker->runNextJob(
+                    'database',
+                    $fila,
+                    new WorkerOptions(
+                        sleep: 0,
+                        maxTries: 1,
+                    ),
+                );
+            }
+        };
+
+        $this->assertDatabaseCount('jobs', 2);
+
+        if (! $decidirAntesDaEntrega) {
+            $processar(2);
+
+            $this->assertDatabaseCount('jobs', 0);
+
+            self::assertContains($moderador->id.':database', $entregas);
+            self::assertContains($moderador->id.':mail', $entregas);
         }
+
+        $this->actingAs($moderador, 'sessao')
+            ->patchJson(
+                action(
+                    [ControladorModeracaoDenuncias::class, 'decidir'],
+                    ['denuncia' => $denuncia->id],
+                ),
+                ['decisao' => 'aceitar'],
+            )
+            ->assertOk();
+
+        $this->assertDatabaseCount('jobs', $decidirAntesDaEntrega ? 4 : 2);
+
+        if ($revogarEmail) {
+            $denunciante->permissoesEmail()
+                ->detach($permissaoDecisao->id);
+        }
+
+        $processar($decidirAntesDaEntrega ? 4 : 2);
 
         $this->assertDatabaseCount('jobs', 0);
 
         self::assertSame(
-            1,
+            $decidirAntesDaEntrega ? 0 : 1,
             $moderador->notifications()
                 ->where('type', NotificacaoNovaDenunciaComentario::class)
                 ->count(),
@@ -443,8 +461,14 @@ SQL);
             $notificacaoDecisao->data['ligacao'],
         );
 
-        self::assertContains($moderador->id.':database', $entregas);
-        self::assertContains($moderador->id.':mail', $entregas);
+        if ($decidirAntesDaEntrega) {
+            self::assertNotContains($moderador->id.':database', $entregas);
+            self::assertNotContains($moderador->id.':mail', $entregas);
+        } else {
+            self::assertContains($moderador->id.':database', $entregas);
+            self::assertContains($moderador->id.':mail', $entregas);
+        }
+
         self::assertContains($denunciante->id.':database', $entregas);
 
         if ($revogarEmail) {
@@ -453,7 +477,13 @@ SQL);
             self::assertContains($denunciante->id.':mail', $entregas);
         }
 
-        self::assertCount($revogarEmail ? 3 : 4, $entregas);
-        self::assertSame($revogarEmail ? 1 : 2, $emailsEnviados);
+        $emailsEsperados = ($decidirAntesDaEntrega ? 0 : 1)
+            + ($revogarEmail ? 0 : 1);
+
+        $entregasEsperadas = ($decidirAntesDaEntrega ? 1 : 2)
+            + $emailsEsperados;
+
+        self::assertCount($entregasEsperadas, $entregas);
+        self::assertSame($emailsEsperados, $emailsEnviados);
     }
 }

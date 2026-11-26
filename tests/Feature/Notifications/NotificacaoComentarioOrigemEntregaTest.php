@@ -176,7 +176,7 @@ final class NotificacaoComentarioOrigemEntregaTest extends TestCase
         $publicacao = MetalThursday::factory()
             ->comData($hoje->subDays(3))
             ->comEdicao($edicao)
-            ->comAutor($causador)
+            ->comAutor($destinatario)
             ->comProximoNomeado($causador)
             ->create();
 

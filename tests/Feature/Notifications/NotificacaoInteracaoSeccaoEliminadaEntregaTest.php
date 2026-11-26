@@ -31,7 +31,6 @@ final class NotificacaoInteracaoSeccaoEliminadaEntregaTest extends TestCase
     {
         return [
             'avaliacao' => ['avaliou'],
-            'audicao' => ['ouviu'],
             'comentario' => ['comentou'],
             'resposta' => ['respondeu'],
             'gosto' => ['gostou'],
@@ -69,6 +68,30 @@ final class NotificacaoInteracaoSeccaoEliminadaEntregaTest extends TestCase
         $notificacao = $this->criarNotificacao($seccao, $causador, $destinatario, $acao);
 
         self::assertTrue($notificacao->shouldSend($destinatario, 'database'));
+    }
+
+    #[Test]
+    public function audicao_de_seccao_nao_origina_notificacao(): void
+    {
+        [$publicacao, $causador, $destinatario] = $this->criarCenario();
+        $seccao = SeccaoMetalThursday::factory()
+            ->paraMetalThursday($publicacao)
+            ->create();
+
+        $notificacao = $this->criarNotificacao(
+            $seccao,
+            $causador,
+            $destinatario,
+            'ouviu',
+        );
+
+        self::assertFalse($notificacao->shouldSend($destinatario, 'database'));
+        self::assertFalse($notificacao->shouldSend($destinatario, 'mail'));
+
+        $seccao->deleteOrFail();
+
+        self::assertFalse($notificacao->shouldSend($destinatario, 'database'));
+        self::assertFalse($notificacao->shouldSend($destinatario, 'mail'));
     }
 
     #[Test]
@@ -121,7 +144,7 @@ final class NotificacaoInteracaoSeccaoEliminadaEntregaTest extends TestCase
         $publicacao = MetalThursday::factory()
             ->comData($hoje->subDays(3))
             ->comEdicao($edicao)
-            ->comAutor($causador)
+            ->comAutor($destinatario)
             ->comProximoNomeado($causador)
             ->create();
 

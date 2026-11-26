@@ -94,11 +94,20 @@ final class NotificacaoInteracaoPublicacaoEntregaTest extends TestCase
     {
         [$publicacao, $causador, $destinatario] = $this->criarCenario();
 
+        $comentario = $publicacao->comentarios()->create([
+            'utilizador_id' => $causador->getKey(),
+            'conteudo' => 'Comentário antes da eliminação definitiva.',
+            'comentario_pai_id' => null,
+        ]);
+
         $notificacao = new NotificacaoInteracaoUtilizador(
             $publicacao,
             $causador,
             'comentou',
+            $comentario,
         );
+
+        self::assertTrue($notificacao->shouldSend($destinatario, 'database'));
 
         $publicacao->forceDelete();
 
@@ -138,7 +147,7 @@ final class NotificacaoInteracaoPublicacaoEntregaTest extends TestCase
         [$publicacao, $causador, $destinatario] = $this->criarCenario();
 
         $comentario = $publicacao->comentarios()->create([
-            'utilizador_id' => $causador->getKey(),
+            'utilizador_id' => $destinatario->getKey(),
             'conteudo' => 'Comentário válido antes do reagendamento.',
             'comentario_pai_id' => null,
         ]);
@@ -172,7 +181,7 @@ final class NotificacaoInteracaoPublicacaoEntregaTest extends TestCase
             ->create();
 
         $comentario = $seccao->comentarios()->create([
-            'utilizador_id' => $causador->getKey(),
+            'utilizador_id' => $destinatario->getKey(),
             'conteudo' => 'Comentário numa secção publicada.',
             'comentario_pai_id' => null,
         ]);
@@ -221,7 +230,7 @@ final class NotificacaoInteracaoPublicacaoEntregaTest extends TestCase
         $publicacao = MetalThursday::factory()
             ->comData($hoje->subDays(3))
             ->comEdicao($edicao)
-            ->comAutor($causador)
+            ->comAutor($destinatario)
             ->comProximoNomeado($causador)
             ->create();
 
