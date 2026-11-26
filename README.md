@@ -22,7 +22,7 @@ O **MetalThursday** é a aplicação web de uma rubrica semanal, criada por um g
 
 - PHP >= 8.3
 - Composer
-- Node.js 22.13+ (22.x) ou 24.x
+- Node.js 22.22.2+ (22.x) ou 24.15.0+ (24.x)
 - npm
 - MariaDB
 
