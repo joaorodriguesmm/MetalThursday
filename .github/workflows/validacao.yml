@@ -106,7 +106,9 @@ jobs:
 
       - name: Configurar o npm
         run: |
-          npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+          npm install --global --prefix "$RUNNER_TEMP/metalthursday-npm" npm@11.17.0 --ignore-scripts --no-audit --no-fund
+          export PATH="$RUNNER_TEMP/metalthursday-npm/bin:$PATH"
+          echo "$RUNNER_TEMP/metalthursday-npm/bin" >> "$GITHUB_PATH"
           test "$(npm --version)" = "11.17.0"
 
       - name: Instalar dependências JavaScript
@@ -178,7 +180,9 @@ jobs:
 
       - name: Configurar o npm
         run: |
-          npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+          npm install --global --prefix "$RUNNER_TEMP/metalthursday-npm" npm@11.17.0 --ignore-scripts --no-audit --no-fund
+          export PATH="$RUNNER_TEMP/metalthursday-npm/bin:$PATH"
+          echo "$RUNNER_TEMP/metalthursday-npm/bin" >> "$GITHUB_PATH"
           test "$(npm --version)" = "11.17.0"
 
       - name: Instalar dependências PHP
